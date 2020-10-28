@@ -38,8 +38,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("coherency-only", HelpText = "Only do coherency updates.")]
         public bool CoherencyOnly { get; set; }
 
-        [Option("strict-coherency", HelpText = "Use strict coherency.")]
-        public bool StrictCoherency { get; set; }
+        [Option("legacy-coherency", HelpText = "Use 'legacy' coherency mode (default is 'strict')")]
+        public bool LegacyCoherency { get; set; }
 
         public override Operation GetOperation()
         {

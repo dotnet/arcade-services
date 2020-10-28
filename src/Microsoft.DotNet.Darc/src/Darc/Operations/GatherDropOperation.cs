@@ -597,6 +597,12 @@ namespace Microsoft.DotNet.Darc.Operations
                         produced = build.Build.DateProduced,
                         buildNumber = build.Build.AzureDevOpsBuildNumber,
                         barBuildId = build.Build.Id,
+                        channels = build.Build.Channels.Select(channel =>
+                        new
+                        {
+                            id = channel.Id,
+                            name = channel.Name
+                        }),
                         assets = build.DownloadedAssets.Select(asset =>
                         new
                         {

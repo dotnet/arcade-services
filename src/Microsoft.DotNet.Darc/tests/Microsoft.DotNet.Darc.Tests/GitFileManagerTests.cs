@@ -58,8 +58,15 @@ namespace Microsoft.DotNet.Darc.Tests
             string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
             var inputNuGetConfigFile = GitFileManager.ReadXmlFile(inputXmlContent);
 
+            Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>();
+            configFileUpdateData.Add("testKey", new HashSet<string>(managedFeeds));
+            var managedFeedsForTest = gitFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
+
+            // 'unknown' = regex failed to match and extract repo name from feed
+            managedFeedsForTest.Keys.Should().NotContain("unknown");
+
             XmlDocument updatedConfigFile =
-                gitFileManager.UpdatePackageSources(inputNuGetConfigFile, new HashSet<string>(managedFeeds));
+                gitFileManager.UpdatePackageSources(inputNuGetConfigFile, managedFeedsForTest);
 
             var outputNugetPath = Path.Combine(
                 Environment.CurrentDirectory,

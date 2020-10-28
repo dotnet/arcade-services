@@ -89,7 +89,7 @@ namespace SubscriptionActorService.Tests
             return base.BeforeExecute(context);
         }
 
-        private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
+        private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, CoherencyMode withCoherencyMode)
         {
             var assets = new List<IEnumerable<AssetData>>();
             var dependencies = new List<IEnumerable<DependencyDetail>>();
@@ -98,7 +98,7 @@ namespace SubscriptionActorService.Tests
             DarcRemotes[TargetRepo]
                 .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
             DarcRemotes[TargetRepo]
-                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object, CoherencyMode.Legacy));
+                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object, withCoherencyMode));
             assets.Should()
                 .BeEquivalentTo(
                     new List<List<AssetData>>
@@ -257,13 +257,40 @@ namespace SubscriptionActorService.Tests
                 .Setup(
                     r => r.GetRequiredCoherencyUpdatesAsync(
                         It.IsAny<IEnumerable<DependencyDetail>>(),
-                        It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
+                        It.IsAny<IRemoteFactory>(), It.IsAny<CoherencyMode>()))
                 .ReturnsAsync(
                     (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
                     {
                         return new List<DependencyUpdate>();
                     });
         }
+
+        private void WithFailsStrictButPassesLegacyChecksForCoherencyUpdates()
+        {
+            DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+                .Setup(
+                    r => r.GetRequiredCoherencyUpdatesAsync(
+                        It.IsAny<IEnumerable<DependencyDetail>>(),
+                        It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
+                .ReturnsAsync(
+                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
+                    {
+                        return new List<DependencyUpdate>();
+                    });
+            DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+                .Setup(
+                    r => r.GetRequiredCoherencyUpdatesAsync(
+                        It.IsAny<IEnumerable<DependencyDetail>>(),
+                        It.IsAny<IRemoteFactory>(), CoherencyMode.Strict))
+                .ReturnsAsync(
+                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
+                    {
+                        CoherencyError fakeCoherencyError = new CoherencyError();
+                        fakeCoherencyError.Dependency = new DependencyDetail() { Name = "fakeDependency" };
+                        throw new DarcCoherencyException(fakeCoherencyError);
+                    });
+        }
+
 
         private IDisposable WithExistingPullRequest(SynchronizePullRequestResult checkResult)
         {
@@ -525,7 +552,7 @@ namespace SubscriptionActorService.Tests
                     await WhenProcessPendingUpdatesAsyncIsCalled();
                     ThenUpdateReminderIsRemoved();
                     AndPendingUpdateIsRemoved();
-                    ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+                    ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
                     AndCommitUpdatesShouldHaveBeenCalled(b);
                     AndUpdatePullRequestShouldHaveBeenCalled();
                     AndShouldHavePullRequestCheckReminder();
@@ -578,7 +605,7 @@ namespace SubscriptionActorService.Tests
 
                 await WhenUpdateAssetsAsyncIsCalled(b);
 
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
                 AndCreateNewBranchShouldHaveBeenCalled();
                 AndCommitUpdatesShouldHaveBeenCalled(b);
                 AndCreatePullRequestShouldHaveBeenCalled();
@@ -606,7 +633,7 @@ namespace SubscriptionActorService.Tests
                 using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
-                    ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+                    ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
                     AndCommitUpdatesShouldHaveBeenCalled(b);
                     AndUpdatePullRequestShouldHaveBeenCalled();
                     AndShouldHavePullRequestCheckReminder();
@@ -656,8 +683,38 @@ namespace SubscriptionActorService.Tests
 
                 await WhenUpdateAssetsAsyncIsCalled(b);
 
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
                 AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
+            }
+
+            [TestCase(false)]
+            [TestCase(true)]
+            public async Task UpdateWithAssetsWhenStrictFailsButLegacyWorks(bool batchable)
+            {
+                GivenATestChannel();
+                GivenASubscription(
+                    new SubscriptionPolicy
+                    {
+                        Batchable = batchable,
+                        UpdateFrequency = UpdateFrequency.EveryBuild
+                    });
+                Build b = GivenANewBuild(true);
+
+                WithRequireNonCoherencyUpdates(b);
+                WithFailsStrictButPassesLegacyChecksForCoherencyUpdates();
+
+                CreatePullRequestShouldReturnAValidValue();
+
+                await WhenUpdateAssetsAsyncIsCalled(b);
+
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Legacy);
+                AndCreateNewBranchShouldHaveBeenCalled();
+                AndCommitUpdatesShouldHaveBeenCalled(b);
+                AndCreatePullRequestShouldHaveBeenCalled();
+                AndShouldHavePullRequestCheckReminder();
+                AndShouldHaveInProgressPullRequestState(b);
+                AndDependencyFlowEventsShouldBeAdded();
             }
         }
     }

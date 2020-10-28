@@ -217,30 +217,33 @@ namespace DependencyUpdater
         {
             using (_operations.BeginOperation($"Updating {targetUpdateFrequency} subscriptions"))
             {
-                var subscriptionsToUpdate = from sub in Context.Subscriptions
-                                            where sub.Enabled
-                                            let updateFrequency = JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency")
-                                            where updateFrequency == ((int)targetUpdateFrequency).ToString()
-                                            let latestBuild =
-                                                sub.Channel.BuildChannels.Select(bc => bc.Build)
-                                                    .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
-                                                    .OrderByDescending(b => b.DateProduced)
-                                                    .FirstOrDefault()
-                                            where latestBuild != null
-                                            where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
-                                            select new
-                                            {
-                                                subscription = sub.Id,
-                                                latestBuild = latestBuild.Id
-                                            };
+                var enabledSubscriptionsWithTargetFrequency = (await Context.Subscriptions
+                    .Where(s => s.Enabled)
+                    .Include(s => s.Channel)
+                    .ThenInclude(c => c.BuildChannels)
+                    .ThenInclude(bc => bc.Build)
+                    .ToListAsync())
+                    .Where(s => s.PolicyObject.UpdateFrequency == targetUpdateFrequency);
 
-                var subscriptionsAndBuilds = await subscriptionsToUpdate.ToListAsync(cancellationToken);
-                Logger.LogInformation($"Will update '{subscriptionsAndBuilds.Count}' subscriptions");
-
-                foreach (var s in subscriptionsAndBuilds)
+                int subscriptionsUpdated = 0;
+                foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
                 {
-                    Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
-                    await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
+                    Build latestBuildInTargetChannel = subscription.Channel.BuildChannels.Select(bc => bc.Build)
+                                    .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
+                                    .OrderByDescending(b => b.DateProduced)
+                                    .FirstOrDefault();
+
+                    bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
+                        (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
+
+                    if (isThereAnUnappliedBuildInTargetChannel)
+                    {
+                        Logger.LogInformation($"Will update {subscription.Id} to build {latestBuildInTargetChannel.Id}");
+                        await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
+                        subscriptionsUpdated++;
+                    }
+
+                    Logger.LogInformation($"Updated '{subscriptionsUpdated}' subscriptions");
                 }
             }
         }

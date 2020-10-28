@@ -298,32 +298,46 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             Console.WriteLine("Checking for coherency updates...");
 
-            CoherencyMode coherencyMode = CoherencyMode.Legacy;
-            if (_options.StrictCoherency)
+            CoherencyMode coherencyMode = CoherencyMode.Strict;
+            if (_options.LegacyCoherency)
             {
-                coherencyMode = CoherencyMode.Strict;
+                coherencyMode = CoherencyMode.Legacy;
+            }
+            else
+            {
+                Console.WriteLine("Using 'Strict' coherency mode. If this fails, a second attempt utilizing 'Legacy' Coherency mode will be made.");
             }
 
             List<DependencyUpdate> coherencyUpdates = null;
+            bool updateSucceeded = false;
             try
             {
-                // Now run a coherency update based on the current set of dependencies updated
-                // from the previous pass.
-                coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(
-                    currentDependencies, remoteFactory, coherencyMode);
+                // Now run a coherency update based on the current set of dependencies updated from the previous pass.
+                coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory, coherencyMode);
+                updateSucceeded = true;
             }
             catch (DarcCoherencyException e)
             {
-                Console.WriteLine("Coherency updates failed for the following dependencies:");
-                foreach (var error in e.Errors)
+                PrettyPrintCoherencyErrors(e);
+            }
+
+            if (coherencyMode == CoherencyMode.Strict && !updateSucceeded)
+            {
+                Console.WriteLine("Attempting fallback to Legacy coherency");
+                try
                 {
-                    Console.WriteLine($"  Unable to update {error.Dependency.Name} to have coherency with " +
-                        $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
-                    foreach (string potentialSolution in error.PotentialSolutions)
-                    {
-                        Console.WriteLine($"    - {potentialSolution}");
-                    }
+                    // Now run a coherency update based on the current set of dependencies updated from the previous pass.
+                    coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory, CoherencyMode.Legacy);
+                    Console.WriteLine("... Legacy-mode fallback worked");
+                    updateSucceeded = true;
                 }
+                catch (DarcCoherencyException e)
+                {
+                    PrettyPrintCoherencyErrors(e);
+                }
+            }
+            if (!updateSucceeded)
+            {
                 return Constants.ErrorCode;
             }
 
@@ -342,6 +356,20 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             return Constants.SuccessCode;
+        }
+
+        private void PrettyPrintCoherencyErrors(DarcCoherencyException e)
+        {
+            Console.WriteLine("Coherency updates failed for the following dependencies:");
+            foreach (var error in e.Errors)
+            {
+                Console.WriteLine($"  Unable to update {error.Dependency.Name} to have coherency with " +
+                    $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
+                foreach (string potentialSolution in error.PotentialSolutions)
+                {
+                    Console.WriteLine($"    - {potentialSolution}");
+                }
+            }
         }
 
         private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)

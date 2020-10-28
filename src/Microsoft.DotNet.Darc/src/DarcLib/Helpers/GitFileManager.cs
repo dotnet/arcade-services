@@ -27,6 +27,9 @@ namespace Microsoft.DotNet.DarcLib
         private const string MaestroEndComment =
             "End: Package sources managed by Dependency Flow automation. Do not edit the sources above.";
 
+        private const string MaestroRepoSpecificBeginComment = "  Begin: Package sources from";
+        private const string MaestroRepoSpecificEndComment = "  End: Package sources from";
+
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
             _gitClient = gitRepo;
@@ -264,8 +267,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // At this point we only care about the Maestro managed locations for the assets. 
             // Flatten the dictionary into a set that has all the managed feeds
-            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations);
-
+            Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
             // Update the dotnet sdk if necessary
@@ -348,7 +350,7 @@ namespace Microsoft.DotNet.DarcLib
                 Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
         }
 
-        public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
+        public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
         {
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -362,7 +364,6 @@ namespace Microsoft.DotNet.DarcLib
 
             XmlNode currentNode = packageSourcesNode.FirstChild;
 
-            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
             // This will be used to denote whether we should delete a managed source. Managed sources should only
             // be deleted within the maestro comment block. This allows for repository owners to use specific feeds from
             // other channels or releases in special cases.
@@ -412,9 +413,9 @@ namespace Microsoft.DotNet.DarcLib
                 currentNode = currentNode.NextSibling;
             }
 
-            InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, managedSources);
+            InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, maestroManagedFeedsByRepo);
 
-            CreateOrUpdateDisabledSourcesBlock(nugetConfig, managedSources, FeedConstants.MaestroManagedInternalFeedPrefix);
+            CreateOrUpdateDisabledSourcesBlock(nugetConfig, maestroManagedFeedsByRepo, FeedConstants.MaestroManagedInternalFeedPrefix);
 
             return nugetConfig;
         }
@@ -436,7 +437,7 @@ namespace Microsoft.DotNet.DarcLib
         //   which we'll ensure are after any <clear/> tags and set to 'true'
         // - If it does not exist, add it
         // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
-        private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, List<(string key, string feed)> managedSources, string disableFeedKeyPrefix)
+        private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, string disableFeedKeyPrefix)
         {
             _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
             XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
@@ -449,46 +450,65 @@ namespace Microsoft.DotNet.DarcLib
             }
             XmlNode insertAfterNode = null;
 
-            // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
-            if (disabledSourcesNode.HasChildNodes)
+            // Do the order backwards 
+            foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderByDescending(t => t))
             {
-                for (int i = 0; i < disabledSourcesNode.ChildNodes.Count; i++)
+                var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderByDescending(t => t.feed).ToList();
+
+                // If this set of sources doesn't have one, just keep going
+                if (!managedSources.Any(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    if (disabledSourcesNode.ChildNodes[i].Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+                }
+
+                // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
+                if (disabledSourcesNode.HasChildNodes)
+                {
+                    for (int i = 0; i < disabledSourcesNode.ChildNodes.Count; i++)
                     {
-                        insertAfterNode = disabledSourcesNode.ChildNodes[i];
+                        if (disabledSourcesNode.ChildNodes[i].Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            insertAfterNode = disabledSourcesNode.ChildNodes[i];
+                        }
+                        // while we traverse, we may as well remove all the existing entries for what we're updating.
+                        if (disabledSourcesNode.ChildNodes[i].Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                            disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                            // If there somehow is an unrelated darc-* source entry in here, we'll leave it alone.
+                            managedSources.Any(ms => ms.key == disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value))
+                        {
+                            RemoveCurrentNode(disabledSourcesNode.ChildNodes[i]);
+                        }
                     }
-                    // while we traverse, we may as well remove all the existing entries for what we're updating.
-                    if (disabledSourcesNode.ChildNodes[i].Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                        disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
-                        // If there somehow is an unrelated 'disableFeedKeyPrefix' source entry in here, we'll leave it alone.
-                        managedSources.Any(ms => ms.key == disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value))
+                    if (insertAfterNode != null)
                     {
-                        RemoveCurrentNode(disabledSourcesNode.ChildNodes[i]);
+                        _logger.LogInformation("Found a <clear/> node in disabledPackageSources; will insert or update as needed after it.");
                     }
                 }
+
+                // If there's a clear, we'll insert after it
+                XmlComment startDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repoName} ");
                 if (insertAfterNode != null)
                 {
-                    _logger.LogDebug("Found a <clear/> node in disabledPackageSources; will insert or update as needed after it.");
+                    insertAfterNode = disabledSourcesNode.InsertAfter(startDisabled, insertAfterNode);
                 }
-            }
-
-            foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                XmlElement addEntry = nugetConfig.CreateElement("add");
-                addEntry.SetAttribute("key", key);
-                addEntry.SetAttribute("value", "true");
-
-                // There's a clear, we'll insert after it
-                if (insertAfterNode != null)
-                {
-                    disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
-                }
-                // No <clear/>, just put it at the end.
                 else
                 {
-                    disabledSourcesNode.AppendChild(addEntry);
+                    insertAfterNode = disabledSourcesNode.AppendChild(startDisabled);
                 }
+                foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    XmlElement addEntry = nugetConfig.CreateElement("add");
+                    addEntry.SetAttribute("key", key);
+                    addEntry.SetAttribute("value", "true");
+
+                    // There's a clear, we'll insert after it
+                    if (insertAfterNode != null)
+                    {
+                        insertAfterNode = disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
+                    }
+                }
+                XmlComment endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
+                disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
             }
         }
 
@@ -497,29 +517,39 @@ namespace Microsoft.DotNet.DarcLib
         // <MaestroBeginComment />
         // managedSources*
         // <MaestroEndComment />
-        private static void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> managedSources)
+        private void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
         {
             var clearNode = nugetConfig.CreateElement(VersionFiles.ClearElement);
             packageSourcesNode.PrependChild(clearNode);
 
-            if (managedSources.Count <= 0)
+            if (maestroManagedFeedsByRepo.Values.Count == 0)
             {
                 return;
             }
 
+            var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
             packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), clearNode);
 
             XmlNode prevNode = packageSourcesNode.FirstChild;
-            foreach ((string key, string feed) in managedSources)
+
+            foreach (string repository in repoList)
             {
-                var newElement = nugetConfig.CreateElement(VersionFiles.AddElement);
+                var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repository]).OrderByDescending(t => t.feed).ToList();
+                XmlComment startBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repository} ");
+                prevNode = packageSourcesNode.InsertAfter(startBlockComment, prevNode);
 
-                SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
-                SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
+                foreach ((string key, string feed) in managedSources)
+                {
+                    var newElement = nugetConfig.CreateElement(VersionFiles.AddElement);
 
-                prevNode = packageSourcesNode.InsertAfter(newElement, prevNode);
+                    SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
+                    SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
+
+                    prevNode = packageSourcesNode.InsertAfter(newElement, prevNode);
+                }
+                XmlComment endBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repository} ");
+                prevNode = packageSourcesNode.InsertAfter(endBlockComment, prevNode);
             }
-
             packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), packageSourcesNode.FirstChild);
         }
 
@@ -1286,17 +1316,55 @@ namespace Microsoft.DotNet.DarcLib
             return dependencyDetails.Where(d => !d.Pinned);
         }
 
-        private HashSet<string> FlattenLocations(Dictionary<string, HashSet<string>> assetLocationMap)
+        /// <summary>
+        ///  Infer repo names from feeds using regex.
+        ///  If any feed name resolution fails, we'll just put it into an "unknown" bucket.
+        /// </summary>
+        /// <param name="assetLocationMap">Dictionary of all feeds by their location</param>
+        /// <returns>Dictionary with key = repo name for logging, value = hashset of feeds</returns>
+        public Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap)
         {
-            HashSet<string> managedFeeds = new HashSet<string>();
+            HashSet<string> allManagedFeeds = new HashSet<string>();
             foreach (string asset in assetLocationMap.Keys)
             {
                 if (IsOnlyPresentInMaestroManagedFeed(assetLocationMap[asset]))
                 {
-                    managedFeeds.UnionWith(assetLocationMap[asset]);
+                    allManagedFeeds.UnionWith(assetLocationMap[asset]);
                 }
             }
-            return managedFeeds;
+
+            string unableToResolveName = "unknown";
+            Dictionary<string, HashSet<string>> result = new Dictionary<string, HashSet<string>>();
+            foreach (string feedUri in allManagedFeeds)
+            {
+                string repoNameFromFeed = string.Empty;
+                try
+                {
+                    var match = Regex.Match(feedUri, FeedConstants.MaestroManagedFeedNamePattern);
+                    // We only care about #3 (formatted repo name), but if the count isn't constant, something's wrong.
+                    if (match.Success && match.Groups.Count == 6) 
+                    {
+                        repoNameFromFeed = match.Groups[3].Value;
+                    }
+
+                    if (string.IsNullOrEmpty(repoNameFromFeed))
+                    {
+                        repoNameFromFeed = unableToResolveName;
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("Unable to use regex to determine repo information from feed", e);
+                    repoNameFromFeed = unableToResolveName;
+                }
+
+                if (!result.ContainsKey(repoNameFromFeed))
+                {
+                    result.Add(repoNameFromFeed, new HashSet<string>());
+                }
+                result[repoNameFromFeed].Add(feedUri);
+            }
+            return result;
         }
 
         public List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null)

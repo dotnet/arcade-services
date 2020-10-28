@@ -24,5 +24,11 @@
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
   <Import Project="$(RepoRoot)eng\BuildTask.targets" />
 </Project>
