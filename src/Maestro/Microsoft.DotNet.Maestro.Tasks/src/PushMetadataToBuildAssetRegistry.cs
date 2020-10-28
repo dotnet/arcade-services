@@ -615,7 +615,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <returns>An AssetData with data about the merge manifest</returns>
         private AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
         {
-            (string accountName, string projectName, string azDORepoName) = AzureDevOpsClient.ParseRepoUri(GetAzDevRepository());
+            string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/','-'); 
 
             if (string.IsNullOrEmpty(AssetVersion))
             {
@@ -633,7 +633,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     Location = location,
                 }),
-                Name = $"assets/manifests/{azDORepoName}/{AssetVersion}/{manifestFileName}",
+                Name = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}",
                 Version = AssetVersion,
             };
 
