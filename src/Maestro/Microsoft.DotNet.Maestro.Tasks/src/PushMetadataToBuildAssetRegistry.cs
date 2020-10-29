@@ -18,7 +18,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
-using Microsoft.DotNet.VersionTools.BuildManifest;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using MSBuild = Microsoft.Build.Utilities;
 

@@ -296,7 +296,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void GivenTwoPartialSigningInfoMetadatas()
         {
             Action act = () => pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo1, PartialSigningInfo2 });
-            act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");    
+            act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");
         }
 
         [Test]
@@ -323,7 +323,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenEmptySigningInfoList()
         {
-            pushMetadata.MergeSigningInfo(new List<SigningInformation>());
+            SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation>());
+            actualMerged.Should().Be(null);
         }
     }
 }
