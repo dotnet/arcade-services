@@ -242,9 +242,9 @@ namespace DependencyUpdater
                         await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
                         subscriptionsUpdated++;
                     }
-
-                    Logger.LogInformation($"Updated '{subscriptionsUpdated}' subscriptions");
                 }
+
+                Logger.LogInformation($"Updated '{subscriptionsUpdated}' subscriptions");
             }
         }
 
