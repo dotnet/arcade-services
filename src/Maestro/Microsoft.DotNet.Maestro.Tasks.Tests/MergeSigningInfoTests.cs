@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
 {
     [TestFixture]
-    public class MergeSigningInfo
+    public class MergeSigningInfoTests
     {
         private PushMetadataToBuildAssetRegistry pushMetadata;
 
