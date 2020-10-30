@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -410,17 +414,18 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(buildData1);
             actualSigningInformation.Should().BeEquivalentTo(ExpectedSigningInfo);
-            SharedMethods.CompareManifestBuildData(actualManifestBuildData, manifest1BuildData);
+            actualManifestBuildData.Should().BeEquivalentTo(manifest1BuildData);
         }
 
         [Test]
         public void ParseTwoManifests()
         {
             List<Manifest> manifests = new List<Manifest>() { manifest1, manifest2 };
-            var data = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
-            data.buildData.Should().BeEquivalentTo(buildData1.Concat(buildData2));
-            data.signingInformation.Should().BeEquivalentTo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2));
-            SharedMethods.CompareManifestBuildData(data.manifestBuildData, baseManifestBuildData);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
+            actualBuildData.Should().BeEquivalentTo(buildData1.Concat(buildData2));
+            actualSigningInformation.Should().BeEquivalentTo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2));
+            actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
+            
         }
 
         [Test]
@@ -437,7 +442,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             manifestWithoutPackages.Blobs = new List<Blob> { blob1 };
             var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutPackages }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(noPackagesManifestBuildData);
-            SharedMethods.CompareManifestBuildData(actualManifestBuildData, baseManifestBuildData);
+            actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
 
         [Test]
@@ -447,7 +452,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             manifestWithUnversionedPackage.Packages = new List<Package> { unversionedPackage };
             var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedPackage }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(unversionedPackagedManifestBuildData);
-            SharedMethods.CompareManifestBuildData(actualManifestBuildData, baseManifestBuildData);
+            actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
 
         [Test]
@@ -457,7 +462,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             manifestWithoutBlobs.Packages = new List<Package> { package1 };
             var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutBlobs }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(noBlobManifestBuildData);
-            SharedMethods.CompareManifestBuildData(actualManifestBuildData, baseManifestBuildData);
+            actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
 
         [Test]

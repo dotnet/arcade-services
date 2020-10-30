@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             pushMetadata.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
             assetData.Count.Should().Be(1);
-            CompareAssetData(assetData[0], expectedAssetData);
+            assetData.Should().BeEquivalentTo(expectedAssetData);
         }
 
         [Test]
@@ -41,10 +41,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             AssetData newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, false);
+            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
             assetData.Count.Should().Be(2);
-            CompareAssetData(assetData[0], existingAssetData);
-            CompareAssetData(assetData[1], newAssetData);
+            assetData[0].Should().BeEquivalentTo(existingAssetData);
+            assetData[1].Should().BeEquivalentTo(newAssetData);
         }
 
         [Test]
@@ -55,14 +55,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Action act = () =>
                 pushMetadata.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true);
             act.Should().Throw<NullReferenceException>();
-        }
-
-        // This method includes additional points of comparison that aren't used in the product code
-        private void CompareAssetData(AssetData actual, AssetData expected)
-        {
-            actual.Name.Should().Be(expected.Name);
-            actual.Version.Should().Be(expected.Version);
-            actual.Locations.Should().BeEquivalentTo(expected.Locations);
         }
     }
 }

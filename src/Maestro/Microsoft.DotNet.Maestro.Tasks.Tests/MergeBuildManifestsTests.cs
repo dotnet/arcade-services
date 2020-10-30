@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -266,14 +270,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void TwoCompatibleBuildData()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(twoBuildDataList);
-            SharedMethods.CompareBuildDataInformation(mergedData, ExpectedMergedBuildData);
+            mergedData.Should().BeEquivalentTo(ExpectedMergedBuildData);
         }
 
         [Test]
         public void ThreeCompatibleBuildData()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(threeBuildDataList);
-            SharedMethods.CompareBuildDataInformation(mergedData, ExpectedThreeAssetsBuildData);
+            mergedData.Should().BeEquivalentTo(ExpectedThreeAssetsBuildData);
         }
 
         [Test]
@@ -287,7 +291,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void BuildDataWithPartiallyEmptyAssets()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(ExpectedNoBlobManifestMetadata.Concat(ExpectedNoPackagesManifestMetadata).ToList());
-            SharedMethods.CompareBuildDataInformation(mergedData, ExpectedPartialAssetsBuildData);
+            mergedData.Should().BeEquivalentTo(ExpectedPartialAssetsBuildData);
         }
 
         [Test]

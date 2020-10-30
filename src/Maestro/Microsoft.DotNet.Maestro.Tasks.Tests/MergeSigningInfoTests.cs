@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -123,7 +127,26 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
             AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1
+            AzureDevOpsProject = AzureDevOpsProject1,
+            CertificatesSignInfo = new List<CertificatesSignInfo>()
+                {
+                    new CertificatesSignInfo()
+                    {
+                        DualSigningAllowed = true,
+                        Include = "ThisIsACert"
+                    }
+                },
+            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                {
+                    new FileExtensionSignInfo()
+                    {
+                        CertificateName = "ThisIsACert",
+                        Include = ".dll"
+                    }
+                },
+            FileSignInfos = new List<FileSignInfo>(),
+            ItemsToSign = new List<ItemsToSign>(),
+            StrongNameSignInfos = new List<StrongNameSignInfo>()
         };
 
         public static readonly SigningInformation MergedPartialSigningInfos = new SigningInformation()
@@ -282,14 +305,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void GivenCompatibleSigningInfo()
         {
             SigningInformation actualMerged = pushMetadata.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2).ToList());
-            SharedMethods.CompareSigningInformation(actualMerged, ExpectedMergedSigningInfo);
+            actualMerged.Should().BeEquivalentTo(ExpectedMergedSigningInfo);
         }
 
         [Test]
         public void GivenDuplicateSigningInfo()
         {
             SigningInformation actualMerged = pushMetadata.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo).ToList());
-            SharedMethods.CompareSigningInformation(actualMerged, ExpectedSigningInfo.First());
+            actualMerged.Should().BeEquivalentTo(ExpectedSigningInfo.First());
         }
 
         [Test]
@@ -303,7 +326,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void GivenTwoPartialSigningInfosWithEmptySections()
         {
             SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo3, PartialSigningInfo4 });
-            SharedMethods.CompareSigningInformation(actualMerged, MergedPartialSigningInfos);
+            actualMerged.Should().BeEquivalentTo(MergedPartialMetadataSigningInfos);
         }
 
         [Test]
