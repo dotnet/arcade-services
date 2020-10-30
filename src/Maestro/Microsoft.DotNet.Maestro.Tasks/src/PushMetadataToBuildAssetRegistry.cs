@@ -17,7 +17,7 @@ using Microsoft.Build.Framework;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.VersionTools.BuildManifest;
+using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using MSBuild = Microsoft.Build.Utilities;
 
@@ -37,7 +37,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private bool IsStableBuild { get; set; } = false;
 
         private bool IsReleaseOnlyPackageVersion { get; set; } = false;
-        
+
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -49,6 +49,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string MergedManifestFileName = "MergedManifest.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly HashSet<string> blobSet = new HashSet<string>();
+
+        // Set up proxy objects to allow unit test mocking
+        internal IVersionIdentifierProxy versionIdentifier = new VersionIdentifierProxy();
 
         public void Cancel()
         {
@@ -279,99 +282,112 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetVersion(string assetId)
         {
-            return VersionIdentifier.GetVersion(assetId);
+            return versionIdentifier.GetVersion(assetId);
         }
 
-        private (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
+        internal (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
             string manifestsFolderPath,
+            CancellationToken cancellationToken)
+        {
+            List<Manifest> parsedManifests = new List<Manifest>();
+
+            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
+                using FileStream stream = new FileStream(manifestPath, FileMode.Open);
+                Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
+                parsedManifests.Add(manifest);
+            }
+
+            return ParseBuildManifestsMetadata(parsedManifests, cancellationToken);
+        }
+
+        internal (List<BuildData> buildData, List<SigningInformation> signingInformation, ManifestBuildData manifestBuildData) ParseBuildManifestsMetadata(
+            List<Manifest> parsedManifests,
             CancellationToken cancellationToken)
         {
             var buildsManifestMetadata = new List<BuildData>();
             var signingInfo = new List<SigningInformation>();
             ManifestBuildData manifestBuildData = null;
 
-            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
+            foreach (Manifest manifest in parsedManifests)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var xmlSerializer = new XmlSerializer(typeof(Manifest));
-                using (var stream = new FileStream(manifestPath, FileMode.Open))
+                if (manifestBuildData == null)
                 {
-                    var manifest = (Manifest)xmlSerializer.Deserialize(stream);
-
-                    if (manifestBuildData == null)
+                    manifestBuildData = new ManifestBuildData(manifest);
+                }
+                else
+                {
+                    if (!manifestBuildData.Equals(new ManifestBuildData(manifest)))
                     {
-                        manifestBuildData = new ManifestBuildData(manifest);
+                        throw new Exception("Attributes should be the same in all manifests.");
                     }
-                    else
+                }
+
+                var assets = new List<AssetData>();
+
+                foreach (Package package in manifest.Packages)
+                {
+                    AddAsset(
+                        assets,
+                        package.Id,
+                        package.Version,
+                        manifest.InitialAssetsLocation ?? manifest.Location,
+                        (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
+                        package.NonShipping);
+                }
+
+                foreach (Blob blob in manifest.Blobs)
+                {
+                    string version = GetVersion(blob.Id);
+
+                    if (string.IsNullOrEmpty(version))
                     {
-                        if (!manifestBuildData.Equals(new ManifestBuildData(manifest)))
-                        {
-                            throw new Exception("Attributes should be the same in all manifests.");
-                        }
-                    }
-
-                    var assets = new List<AssetData>();
-
-                    foreach (Package package in manifest.Packages)
-                    {
-                        AddAsset(
-                            assets,
-                            package.Id,
-                            package.Version,
-                            manifest.InitialAssetsLocation ?? manifest.Location,
-                            (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
-                            package.NonShipping);
-                    }
-
-                    foreach (Blob blob in manifest.Blobs)
-                    {
-                        string version = GetVersion(blob.Id);
-
-                        if (string.IsNullOrEmpty(version))
-                        {
-                            Log.LogWarning($"Version could not be extracted from '{blob.Id}'");
-                            version = string.Empty;
-                        }
-
-                        AddAsset(
-                            assets,
-                            blob.Id,
-                            version,
-                            manifest.InitialAssetsLocation ?? manifest.Location,
-                            LocationType.Container,
-                            blob.NonShipping);
-
-                        blobSet.Add(blob.Id);
+                        Log.LogWarning($"Version could not be extracted from '{blob.Id}'");
+                        version = string.Empty;
                     }
 
-                    // For now we aren't persisting this property, so we just record this info in the task scope
-                    IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
+                    AddAsset(
+                        assets,
+                        blob.Id,
+                        version,
+                        manifest.InitialAssetsLocation ?? manifest.Location,
+                        LocationType.Container,
+                        blob.NonShipping);
 
-                    // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
-                    var buildInfo = new BuildData(
-                        commit: manifest.Commit,
-                        azureDevOpsAccount: manifest.AzureDevOpsAccount ?? GetAzDevAccount(),
-                        azureDevOpsProject: manifest.AzureDevOpsProject ?? GetAzDevProject(),
-                        azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
-                        azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
-                        azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
-                        stable: IsStableBuild,
-                        released: false)
-                    {
-                        Assets = assets.ToImmutableList(),
-                        AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
-                        AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
-                        GitHubRepository = manifest.Name,
-                        GitHubBranch = manifest.Branch,
-                    };
+                    blobSet.Add(blob.Id);
+                }
 
-                    buildsManifestMetadata.Add(buildInfo);
+                // For now we aren't persisting this property, so we just record this info in the task scope
+                IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
-                    if (manifest.SigningInformation != null)
-                    {
-                        signingInfo.Add(manifest.SigningInformation);
-                    }
+                // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
+                var buildInfo = new BuildData(
+                    commit: manifest.Commit,
+                    azureDevOpsAccount: manifest.AzureDevOpsAccount ?? GetAzDevAccount(),
+                    azureDevOpsProject: manifest.AzureDevOpsProject ?? GetAzDevProject(),
+                    azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
+                    azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
+                    azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
+                    stable: IsStableBuild,
+                    released: false)
+                {
+                    Assets = assets.ToImmutableList(),
+                    AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
+                    AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
+                    GitHubRepository = manifest.Name,
+                    GitHubBranch = manifest.Branch,
+                };
+
+                buildsManifestMetadata.Add(buildInfo);
+
+                if (manifest.SigningInformation != null)
+                {
+                    signingInfo.Add(manifest.SigningInformation);
                 }
             }
 
@@ -467,9 +483,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
-        private BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
+        internal BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
         {
-            BuildData mergedBuild = buildsMetadata[0];
+            // Use a deep copy constructor to avoid modifying the argument objects
+            BuildData mergedBuild = new BuildData(buildsMetadata[0]);
 
             for (int i = 1; i < buildsMetadata.Count; i++)
             {
@@ -507,7 +524,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return mergedBuild;
         }
 
-        private SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
+        internal SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
         {
             SigningInformation mergedInfo = null;
 
@@ -613,7 +630,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Initial location for the merged manifest entry</param>
         /// <param name="manifestFileName">Merged manifest file name</param>
         /// <returns>An AssetData with data about the merge manifest</returns>
-        private AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
+        internal AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
         {
             string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/','-'); 
 
@@ -658,7 +675,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
                             PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
-                            IsReleaseOnlyPackageVersion =manifestBuildData.IsReleaseOnlyPackageVersion
+                            IsReleaseOnlyPackageVersion = manifestBuildData.IsReleaseOnlyPackageVersion
 
                         });
 
