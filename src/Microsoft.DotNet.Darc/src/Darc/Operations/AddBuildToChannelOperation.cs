@@ -319,7 +319,7 @@ namespace Microsoft.DotNet.Darc.Operations
             else
             {
                 Console.WriteLine("The promotion build finished but the build isn't associated with at least one of the target channels. This is an error scenario.");
-                Console.WriteLine($"Details are available in the following build: {promotionBuildUrl}. For any questions, contact @dnceng");
+                Console.WriteLine($"Details are available in the following build: {promotionBuildUrl} For any questions, contact @dnceng");
                 return Constants.ErrorCode;
             }
         }
