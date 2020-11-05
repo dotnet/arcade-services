@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1601664880256,
+  "iteration": 1604595769599,
   "links": [
     {
       "icon": "external link",
@@ -979,7 +979,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "let quotaPerSubscription = customEvents \n| where $__timeFilter(timestamp)\n| where name == \"AzureSubscriptionQuotaLimit\"\n| project \n    quota = toint(customMeasurements.quota),\n    subscription = tostring(customDimensions.subscriptionId),\n    timestamp\n| summarize arg_max(timestamp, quota) by subscription\n| project quota, subscription;\ncustomEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.localizedName == \"Total Regional vCPUs\"\n| project \n    cores = toreal(customMeasurements.current),\n    subscription = tostring(customDimensions.subscription),\n    timestamp\n| join kind=inner quotaPerSubscription on subscription\n| project ['limit'] = quota, cores, timestamp, subscription\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, cores/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), subscription\n| order by timestamp desc",
+            "rawQueryString": "let quotaPerSubscription = customEvents \n| where $__timeFilter(timestamp)\n| where name == \"AzureSubscriptionQuotaLimit\"\n| project \n    quota = toint(customMeasurements.quota),\n    subscription = tostring(customDimensions.subscriptionId),\n    timestamp\n| summarize arg_max(timestamp, quota) by subscription\n| project quota, subscription;\ncustomEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.name == \"standardDv3Family\" or customDimensions.name == \"standardDAv4Family\"\n| project \n    cores = toreal(customMeasurements.current),\n    subscription = tostring(customDimensions.subscription),\n    timestamp\n| join kind=inner quotaPerSubscription on subscription\n| project ['limit'] = quota, cores, timestamp, subscription\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, cores/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), subscription\n| order by timestamp desc",
             "segmentColumn": "subscription",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -1019,7 +1019,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Cores consumption",
+      "title": "Cores consumption by Autoscaler",
       "tooltip": {
         "shared": true,
         "sort": 0,
