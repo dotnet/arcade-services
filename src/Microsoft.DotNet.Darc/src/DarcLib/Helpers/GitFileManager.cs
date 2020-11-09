@@ -145,7 +145,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (DependencyOperations.TryGetKnownUpdater(dependency.Name, out Delegate function))
             {
-                await (Task)function.DynamicInvoke(this, repoUri, branch, dependency);
+                await (Task) function.DynamicInvoke(this, repoUri, branch, dependency);
             }
             else
             {
@@ -346,7 +346,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private bool IsMaestroManagedFeed(string feed)
         {
-            return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) || 
+            return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) ||
                 Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
         }
 
@@ -408,6 +408,12 @@ namespace Microsoft.DotNet.DarcLib
                         currentNode = RemoveCurrentNode(currentNode);
                         continue;
                     }
+                    else if (currentNode.Value.StartsWith(MaestroRepoSpecificBeginComment, StringComparison.OrdinalIgnoreCase) ||
+                             currentNode.Value.StartsWith(MaestroRepoSpecificEndComment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentNode = RemoveCurrentNode(currentNode);
+                        continue;
+                    }
                 }
 
                 currentNode = currentNode.NextSibling;
@@ -464,20 +470,31 @@ namespace Microsoft.DotNet.DarcLib
                 // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
                 if (disabledSourcesNode.HasChildNodes)
                 {
-                    for (int i = 0; i < disabledSourcesNode.ChildNodes.Count; i++)
+                    XmlNode currentNode = disabledSourcesNode.FirstChild;
+
+                    while (currentNode != null)
                     {
-                        if (disabledSourcesNode.ChildNodes[i].Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                        if (currentNode.Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
                         {
-                            insertAfterNode = disabledSourcesNode.ChildNodes[i];
+                            insertAfterNode = currentNode;
                         }
                         // while we traverse, we may as well remove all the existing entries for what we're updating.
-                        if (disabledSourcesNode.ChildNodes[i].Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                            disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                        if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                            currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
                             // If there somehow is an unrelated darc-* source entry in here, we'll leave it alone.
-                            managedSources.Any(ms => ms.key == disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value))
+                            managedSources.Any(ms => ms.key == currentNode.Attributes["key"]?.Value))
                         {
-                            RemoveCurrentNode(disabledSourcesNode.ChildNodes[i]);
+                            currentNode = RemoveCurrentNode(currentNode);
+                            continue;
                         }
+                        if (currentNode.NodeType == XmlNodeType.Comment &&
+                           (currentNode.Value.StartsWith(MaestroRepoSpecificBeginComment, StringComparison.OrdinalIgnoreCase) ||
+                            currentNode.Value.StartsWith(MaestroRepoSpecificEndComment, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            currentNode = RemoveCurrentNode(currentNode);
+                            continue;
+                        }
+                        currentNode = currentNode.NextSibling;
                     }
                     if (insertAfterNode != null)
                     {
@@ -817,7 +834,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         XmlNode parentNode = packageVersionNode.ParentNode;
                         XmlNode newPackageVersionElement = versionProps.CreateElement(
-                            foundElementName, 
+                            foundElementName,
                             versionProps.DocumentElement.NamespaceURI);
                         newPackageVersionElement.InnerText = itemToUpdate.Version;
                         parentNode.ReplaceChild(newPackageVersionElement, packageVersionNode);
@@ -939,15 +956,15 @@ namespace Microsoft.DotNet.DarcLib
                 VerifyNoDuplicatedProperties(await versionProps),
                 VerifyNoDuplicatedDependencies(await dependencyDetails),
                 VerifyMatchingVersionProps(
-                    await dependencyDetails, 
-                    await versionProps, 
+                    await dependencyDetails,
+                    await versionProps,
                     out Task<HashSet<string>> utilizedVersionPropsDependencies),
                 VerifyMatchingGlobalJson(
-                    await dependencyDetails, 
-                    await globalJson, 
+                    await dependencyDetails,
+                    await globalJson,
                     out Task<HashSet<string>> utilizedGlobalJsonDependencies),
                 VerifyUtilizedDependencies(
-                    await dependencyDetails, 
+                    await dependencyDetails,
                     new List<HashSet<string>>
                     {
                         await utilizedVersionPropsDependencies,
@@ -1097,8 +1114,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="rootToken">Root global.json token.</param>
         /// <returns></returns>
         private Task<bool> VerifyMatchingGlobalJson(
-            IEnumerable<DependencyDetail> dependencies, 
-            JObject rootToken, 
+            IEnumerable<DependencyDetail> dependencies,
+            JObject rootToken,
             out Task<HashSet<string>> utilizedDependencies)
         {
             HashSet<string> utilizedSet = new HashSet<string>();
@@ -1110,14 +1127,14 @@ namespace Microsoft.DotNet.DarcLib
                 if (dependencyNode != null)
                 {
                     // Should be a string with matching version.
-                    if (dependencyNode.Type != JTokenType.Property || ((JProperty)dependencyNode).Value.Type != JTokenType.String)
+                    if (dependencyNode.Type != JTokenType.Property || ((JProperty) dependencyNode).Value.Type != JTokenType.String)
                     {
                         _logger.LogError($"The element '{dependency.Name}' in '{VersionFiles.GlobalJson}' should be a property " +
                             $"with a value of type string.");
                         result = false;
                         continue;
                     }
-                    JProperty property = (JProperty)dependencyNode;
+                    JProperty property = (JProperty) dependencyNode;
                     // Validate that the casing matches for consistency
                     if (property.Name != versionedName)
                     {
@@ -1127,7 +1144,7 @@ namespace Microsoft.DotNet.DarcLib
                         result = false;
                     }
                     // Validate version
-                    JToken value = (JToken)property.Value;
+                    JToken value = (JToken) property.Value;
                     if (value.Value<string>() != dependency.Version)
                     {
                         _logger.LogError($"The dependency '{dependency.Name}' has a version mismatch between " +
@@ -1227,7 +1244,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="utilizedDependencySets">Bit vectors dependency expression locations.</param>
         /// <returns></returns>
         private Task<bool> VerifyUtilizedDependencies(
-            IEnumerable<DependencyDetail> dependencies, 
+            IEnumerable<DependencyDetail> dependencies,
             IEnumerable<HashSet<string>> utilizedDependencySets)
         {
             bool result = true;
@@ -1342,7 +1359,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     var match = Regex.Match(feedUri, FeedConstants.MaestroManagedFeedNamePattern);
                     // We only care about #3 (formatted repo name), but if the count isn't constant, something's wrong.
-                    if (match.Success && match.Groups.Count == 6) 
+                    if (match.Success && match.Groups.Count == 6)
                     {
                         repoNameFromFeed = match.Groups[3].Value;
                     }
@@ -1420,8 +1437,8 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            match = match.Success ? 
-                match : 
+            match = match.Success ?
+                match :
                 Regex.Match(feed, FeedConstants.AzureStorageProxyFeedPattern);
 
             if (match.Success)
