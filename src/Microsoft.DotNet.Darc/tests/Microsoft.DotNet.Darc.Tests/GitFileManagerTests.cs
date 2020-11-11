@@ -84,6 +84,13 @@ namespace Microsoft.DotNet.Darc.Tests
             expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
 
             file.Content.Should().Be(expectedOutputText);
+
+            // When this is performed via the Maestro service instead of the Darc CLI, it seemingly can 
+            // be run more than once for the same XmlDocument.  This should not impact the contents of the file; 
+            // Validate this expectation of idempotency by running the same update on the resultant file.
+            XmlDocument doubleUpdatedConfigFile = gitFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest);
+            GitFile doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
+            doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
         }
 
         [TestCase("SimpleDuplicated.props", true)]
