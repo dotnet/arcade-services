@@ -36,7 +36,7 @@ namespace Maestro.Data
             }
 
             DbContextOptions options = new DbContextOptionsBuilder()
-                .UseSqlServer(connectionString, opts =>
+                .UseSqlServerWithRetry(connectionString, opts =>
                 {
                     opts.CommandTimeout(30 * 60);
                 })
