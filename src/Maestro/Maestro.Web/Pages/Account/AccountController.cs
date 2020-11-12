@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
@@ -93,46 +94,49 @@ namespace Maestro.Web.Pages.Account
             string fullName = info.Principal.FindFirstValue("urn:github:name") ?? name;
             string accessToken = info.AuthenticationTokens.First(t => t.Name == "access_token").Value;
 
-            using (IDbContextTransaction txn = await Context.Database.BeginTransactionAsync())
+            return await Context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                var user = new ApplicationUser
+                using (IDbContextTransaction txn = await Context.Database.BeginTransactionAsync())
                 {
-                    UserName = name,
-                    FullName = fullName
-                };
-                IdentityResult result = await UserManager.CreateAsync(user);
-                if (!result.Succeeded)
-                {
-                    return null;
+                    var user = new ApplicationUser
+                    {
+                        UserName = name,
+                        FullName = fullName
+                    };
+                    IdentityResult result = await UserManager.CreateAsync(user);
+                    if (!result.Succeeded)
+                    {
+                        return null;
+                    }
+
+                    result = await UserManager.SetAuthenticationTokenAsync(
+                        user,
+                        info.LoginProvider,
+                        "access_token",
+                        accessToken);
+                    if (!result.Succeeded)
+                    {
+                        return null;
+                    }
+
+                    IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
+
+                    result = await UserManager.AddClaimsAsync(user, claimsToAdd);
+                    if (!result.Succeeded)
+                    {
+                        return null;
+                    }
+
+                    result = await UserManager.AddLoginAsync(user, info);
+                    if (!result.Succeeded)
+                    {
+                        return null;
+                    }
+
+                    txn.Commit();
+                    return user;
                 }
-
-                result = await UserManager.SetAuthenticationTokenAsync(
-                    user,
-                    info.LoginProvider,
-                    "access_token",
-                    accessToken);
-                if (!result.Succeeded)
-                {
-                    return null;
-                }
-
-                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
-
-                result = await UserManager.AddClaimsAsync(user, claimsToAdd);
-                if (!result.Succeeded)
-                {
-                    return null;
-                }
-
-                result = await UserManager.AddLoginAsync(user, info);
-                if (!result.Succeeded)
-                {
-                    return null;
-                }
-
-                txn.Commit();
-                return user;
-            }
+            });
         }
 
         public static bool ShouldAddClaimToUser(Claim c)

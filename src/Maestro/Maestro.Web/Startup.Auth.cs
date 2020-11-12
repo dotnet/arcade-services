@@ -275,24 +275,31 @@ namespace Maestro.Web
             SignInManager<ApplicationUser> signInManager,
             GitHubClaimResolver gitHubClaimResolver)
         {
-            using (IDbContextTransaction txn = await dbContext.Database.BeginTransactionAsync())
+            await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
-                var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
-                    await gitHubClaimResolver.GetMembershipClaims(token)
-                ).Where(AccountController.ShouldAddClaimToUser);
-                var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
+            });
 
-                // remove old claims
-                await userManager.RemoveClaimsAsync(user, currentClaims);
+            await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+            {
+                using (IDbContextTransaction txn = await dbContext.Database.BeginTransactionAsync())
+                {
+                    string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
+                    var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
+                        await gitHubClaimResolver.GetMembershipClaims(token)
+                    ).Where(AccountController.ShouldAddClaimToUser);
+                    var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
 
-                // add new claims
-                await userManager.AddClaimsAsync(user, newClaims);
+                    // remove old claims
+                    await userManager.RemoveClaimsAsync(user, currentClaims);
 
-                user.LastUpdated = DateTimeOffset.UtcNow;
-                await dbContext.SaveChangesAsync();
-                txn.Commit();
-            }
+                    // add new claims
+                    await userManager.AddClaimsAsync(user, newClaims);
+
+                    user.LastUpdated = DateTimeOffset.UtcNow;
+                    await dbContext.SaveChangesAsync();
+                    txn.Commit();
+                }
+            });
         }
     }
 }
