@@ -277,10 +277,6 @@ namespace Maestro.Web
         {
             await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-            });
-
-            await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
-            {
                 using (IDbContextTransaction txn = await dbContext.Database.BeginTransactionAsync())
                 {
                     string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
