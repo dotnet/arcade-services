@@ -76,6 +76,7 @@
     <PackageReference Update="Microsoft.Extensions.Logging.Console" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging.Debug" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Options" Version="$(DotNetAssemblyVersion)" /> 
+    <PackageReference Update="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(DotNetAssemblyVersion)" /> 
     <PackageReference Update="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.0" />
     <PackageReference Update="Microsoft.IdentityModel.Tokens" Version="5.4.0" />
     <PackageReference Update="Microsoft.Net.Http" Version="2.2.29" />
