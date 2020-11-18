@@ -88,7 +88,7 @@
     <PackageReference Update="Microsoft.ServiceFabric.Data" Version="3.4.677" />
     <PackageReference Update="Microsoft.ServiceFabric.Services" Version="3.4.677" />
     <PackageReference Update="Microsoft.ServiceFabric.Services.Remoting" Version="3.4.677" />
-    <PackageReference Update="Microsoft.TeamFoundationServer.Client" Version="16.138.0-preview" />
+    <PackageReference Update="Microsoft.TeamFoundationServer.Client" Version="16.153.0" />
     <PackageReference Update="Microsoft.VisualStudio.Web.BrowserLink" Version="2.1.0" />
     <PackageReference Update="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.3" />
     <PackageReference Update="Mono.Options" Version="5.3.0.1" />
