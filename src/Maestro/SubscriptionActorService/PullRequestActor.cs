@@ -1006,7 +1006,14 @@ namespace SubscriptionActorService
                         if (entry.Value == i)
                         {
                             DependencyDetail to = deps.Find(d => d.To.Commit == entry.Key.Item2).To;
-                            subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
+                            try
+                            {
+                                subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
+                            }
+                            catch(ArgumentNullException e)
+                            {
+                                Logger.LogError(e, $"Failed to create SHA comparison link for dependency {to.Name} during asset update for subscription {update.SubscriptionId}");
+                            }
                         }
                     }
                 }
