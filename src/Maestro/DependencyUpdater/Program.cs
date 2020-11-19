@@ -39,7 +39,7 @@ namespace DependencyUpdater
             services.AddBuildAssetRegistry((provider, options) =>
             {
                 var config = provider.GetRequiredService<IConfiguration>();
-                options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
             });
 
             services.Configure<GitHubClientOptions>(o =>

@@ -51,7 +51,7 @@ namespace FeedCleanerService
             services.AddBuildAssetRegistry((provider, options) =>
             {
                 var config = provider.GetRequiredService<IConfiguration>();
-                options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
             });
             services.AddAzureDevOpsTokenProvider();
             services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>

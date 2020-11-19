@@ -182,7 +182,7 @@ namespace Maestro.Web
             services.AddBuildAssetRegistry(
                 options =>
                 {
-                    options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                    options.UseSqlServerWithRetry(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
                 });
 
             services.AddRazorPages(options =>
