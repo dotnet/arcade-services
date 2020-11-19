@@ -116,15 +116,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
     [XmlRoot(ElementName = "SigningInformation")]
     public class SigningInformation
     {
-        [XmlAttribute(AttributeName = "AzureDevOpsCollectionUri")]
-        public string AzureDevOpsCollectionUri { get; set; }
-
-        [XmlAttribute(AttributeName = "AzureDevOpsProject")]
-        public string AzureDevOpsProject { get; set; }
-
-        [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
-        public string AzureDevOpsBuildId { get; set; }
-
         [XmlElement(ElementName = "FileExtensionSignInfo")]
         public List<FileExtensionSignInfo> FileExtensionSignInfos { get; set; }
 

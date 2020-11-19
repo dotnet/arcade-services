@@ -29,9 +29,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 new SigningInformation()
                 {
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-                    AzureDevOpsProject = AzureDevOpsProject1,
                     CertificatesSignInfo = new List<CertificatesSignInfo>()
                     {
                         new CertificatesSignInfo()
@@ -72,23 +69,12 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 }
             };
 
-        public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation()
-        {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/"
-        };
+        public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation();
 
-        public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation()
-        {
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1
-        };
+        public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation();
 
         public static readonly SigningInformation PartialSigningInfo3 = new SigningInformation()
         {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
                 {
                     new CertificatesSignInfo()
@@ -106,9 +92,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly SigningInformation PartialSigningInfo4 = new SigningInformation()
         {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>(),
             FileExtensionSignInfos = new List<FileExtensionSignInfo>()
                 {
@@ -125,9 +108,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly SigningInformation MergedPartialMetadataSigningInfos = new SigningInformation()
         {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
                 {
                     new CertificatesSignInfo()
@@ -151,9 +131,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly SigningInformation MergedPartialSigningInfos = new SigningInformation()
         {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
                 {
                     new CertificatesSignInfo()
@@ -175,20 +152,12 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             ItemsToSign = new List<ItemsToSign>()
         };
 
-        public static readonly SigningInformation IncompatibleSigningInfo = new SigningInformation()
-        {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/newProject",
-            AzureDevOpsProject = AzureDevOpsProject1,
-        };
+        public static readonly SigningInformation IncompatibleSigningInfo = new SigningInformation();
 
         public static readonly List<SigningInformation> ExpectedSigningInfo2 = new List<SigningInformation>()
             {
                 new SigningInformation()
                 {
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-                    AzureDevOpsProject = AzureDevOpsProject1,
                     CertificatesSignInfo = new List<CertificatesSignInfo>()
                     {
                         new CertificatesSignInfo()
@@ -232,9 +201,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public static readonly SigningInformation ExpectedMergedSigningInfo =
                 new SigningInformation()
                 {
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-                    AzureDevOpsProject = AzureDevOpsProject1,
                     CertificatesSignInfo = new List<CertificatesSignInfo>()
                     {
                         new CertificatesSignInfo()
