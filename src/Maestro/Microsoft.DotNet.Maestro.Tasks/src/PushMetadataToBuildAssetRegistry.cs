@@ -127,7 +127,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
 
-                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
+                        BuildModel modelForManifest = CreateMergedManifestBuildModel(finalBuild.Assets, manifestBuildData);
+                        PushMergedManifest(modelForManifest, finalSigningInfo);
                     }
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
@@ -648,13 +649,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return assetData;
         }
 
-        private void CreateAndPushMergedManifest(
+        private BuildModel CreateMergedManifestBuildModel(
             IImmutableList<AssetData> assets,
-            SigningInformation finalSigningInfo,
             ManifestBuildData manifestBuildData)
         {
-            string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
-
             BuildModel buildModel = new BuildModel(
                         new BuildIdentity
                         {
@@ -697,6 +695,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     buildModel.Artifacts.Packages.Add(packageArtifactModel);
                 }
             }
+
+            return buildModel;
+        }
+
+        private void PushMergedManifest(BuildModel buildModel, SigningInformation finalSigningInfo)
+        {
+            string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
 
             XElement buildModelXml = buildModel.ToXml();
 
