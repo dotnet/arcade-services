@@ -52,6 +52,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         // Set up proxy objects to allow unit test mocking
         internal IVersionIdentifierProxy versionIdentifier = new VersionIdentifierProxy();
+        internal IGetEnvProxy getEnvProxy = new GetEnvProxy();
 
         public void Cancel()
         {
@@ -394,20 +395,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return (buildsManifestMetadata, signingInfo, manifestBuildData);
         }
 
-        private string GetEnv(string key)
-        {
-            var value = Environment.GetEnvironmentVariable(key);
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new InvalidOperationException($"Required Environment variable {key} not found.");
-            }
-
-            return value;
-        }
-
         private string GetAzDevAccount()
         {
-            var uri = new Uri(GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
+            var uri = new Uri(getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
             if (uri.Host == "dev.azure.com")
             {
                 return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
@@ -418,47 +408,47 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevProject()
         {
-            return GetEnv("SYSTEM_TEAMPROJECT");
+            return getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
         }
 
         private string GetAzDevBuildNumber()
         {
-            return GetEnv("BUILD_BUILDNUMBER");
+            return getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
         }
 
         private string GetAzDevRepository()
         {
-            return GetEnv("BUILD_REPOSITORY_URI");
+            return getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
         }
 
         private string GetAzDevRepositoryName()
         {
-            return GetEnv("BUILD_REPOSITORY_NAME");
+            return getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
         }
 
         private string GetAzDevBranch()
         {
-            return GetEnv("BUILD_SOURCEBRANCH");
+            return getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
         }
 
         private int GetAzDevBuildId()
         {
-            return int.Parse(GetEnv("BUILD_BUILDID"));
+            return int.Parse(getEnvProxy.GetEnv("BUILD_BUILDID"));
         }
 
         private int GetAzDevBuildDefinitionId()
         {
-            return int.Parse(GetEnv("SYSTEM_DEFINITIONID"));
+            return int.Parse(getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
         }
 
         private string GetAzDevCommit()
         {
-            return GetEnv("BUILD_SOURCEVERSION");
+            return getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
         }
 
         private string GetAzDevStagingDirectory()
         {
-            return GetEnv("BUILD_STAGINGDIRECTORY");
+            return getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
         }
 
         /// <summary>
