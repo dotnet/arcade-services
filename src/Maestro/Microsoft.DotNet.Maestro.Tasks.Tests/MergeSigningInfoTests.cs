@@ -150,8 +150,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             ItemsToSign = new List<ItemsToSign>()
         };
 
-        public static readonly SigningInformation IncompatibleSigningInfo = new SigningInformation();
-
         public static readonly List<SigningInformation> ExpectedSigningInfo2 = new List<SigningInformation>()
             {
                 new SigningInformation()
@@ -284,13 +282,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo2, PartialSigningInfo4 });
             actualMerged.Should().BeEquivalentTo(MergedPartialMetadataSigningInfos);
-        }
-
-        [Test]
-        public void GivenIncompatibleSigningInfos()
-        {
-            Action act = () => pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo2, IncompatibleSigningInfo });
-            act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");
         }
 
         [Test]
