@@ -71,9 +71,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation();
 
-        public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation();
-
-        public static readonly SigningInformation PartialSigningInfo3 = new SigningInformation()
+        public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation()
         {
             CertificatesSignInfo = new List<CertificatesSignInfo>()
                 {
@@ -282,23 +280,16 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        public void GivenTwoPartialSigningInfoMetadatas()
-        {
-            Action act = () => pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo1, PartialSigningInfo2 });
-            act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");
-        }
-
-        [Test]
         public void GivenTwoPartialSigningInfosWithEmptySections()
         {
-            SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo3, PartialSigningInfo4 });
+            SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo2, PartialSigningInfo4 });
             actualMerged.Should().BeEquivalentTo(MergedPartialMetadataSigningInfos);
         }
 
         [Test]
         public void GivenIncompatibleSigningInfos()
         {
-            Action act = () => pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo3, IncompatibleSigningInfo });
+            Action act = () => pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo2, IncompatibleSigningInfo });
             act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");
         }
 
