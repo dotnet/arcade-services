@@ -182,7 +182,7 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
   var render_graph = new render();
 
   select('svg.flowgraph').selectAll('*').remove();
-  select('svg.flowgraph').attr("viewBox", "");
+  select('svg.flowgraph').attr("viewBox", null);
 
   var svg = select("svg.flowgraph"),
       inner = svg.append("g");
@@ -204,10 +204,9 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
     .text(function(v:any) { return g.edge(v).description });
 
   var bbox = (svg.node() as SVGGraphicsElement).getBBox();
-  var height = bbox.height < 800 ? 810 : bbox.height+10;
-  var width = bbox.width < 800 ? 810 :bbox.width+10;
-
-  svg.attr("viewBox", `-5 -5 ${width} ${height}`);
+  svg.style('width', `${Math.ceil(bbox.width)}px`);
+  svg.style('height', `${Math.ceil(bbox.height)}px`);
+  svg.attr("viewBox", `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
 }
 
 @Component({
