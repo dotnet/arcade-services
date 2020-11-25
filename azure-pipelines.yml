@@ -24,7 +24,7 @@ pr:
 
 stages:
 - stage: build
-  displayName: Build  
+  displayName: Build
   # Three phases for each of the three OSes we want to run on
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
@@ -70,7 +70,7 @@ stages:
         # and so we can't stabilize for right now.
         # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - _ProductionArgs: /p:DotNetFinalVersionKind=release
-              
+
         strategy:
           matrix:
             # Only build debug in non-official builds
@@ -140,7 +140,7 @@ stages:
         - template: /eng/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-        
+
           ## Prepare service fabric artifact
           - task: ServiceFabricUpdateManifests@2
             inputs:
@@ -156,7 +156,7 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
             artifact: MaestroApplication
             displayName: Publish MaestroApplication
-            
+
           - task: ServiceFabricUpdateManifests@2
             inputs:
               applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\applicationpackage
@@ -203,26 +203,26 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/package
             artifact: RolloutScorer
             displayName: Publish RolloutScorerAzureFunction
-          
+
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
             workingDirectory: src/Maestro/Maestro.Data
             displayName: Create Data Package
-            
+
           - task: CopyFiles@2
             displayName: Copy update-database.ps1
             inputs:
               sourceFolder: $(Build.SourcesDirectory)\src\Maestro
-              contents: update-database.ps1 
+              contents: update-database.ps1
               targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
-            
+
           - task: PublishBuildArtifacts@1
             displayName: Publish Maestro.Data Artifact
             inputs:
               PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
               ArtifactName: Maestro.Data
               ArtifactType: Container
-          
+
           ## Prepare release utilities artifact
           - task: CopyFiles@2
             displayName: Prepare Release Utilities
@@ -230,7 +230,7 @@ stages:
               sourceFolder: $(Build.SourcesDirectory)\eng
               contents: '*'
               targetFolder: $(Build.ArtifactStagingDirectory)\eng
-              
+
           - publish: $(Build.ArtifactStagingDirectory)\eng
             artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
@@ -242,7 +242,7 @@ stages:
               sourceFolder: $(Build.SourcesDirectory)\src\maestro\tests\scenarios
               contents: '*'
               targetFolder: $(Build.ArtifactStagingDirectory)\tests\scenarios
-              
+
           - task: PublishBuildArtifacts@1
             displayName: Publish Scenario test scripts Artifact
             inputs:
@@ -258,7 +258,7 @@ stages:
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+- ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
   - template: eng\common\templates\post-build\post-build.yml
     parameters:
       # Symbol validation isn't being very reliable lately. This should be enabled back
@@ -268,7 +268,7 @@ stages:
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
         enable: true
-        params: '-SourceToolsList @("policheck","credscan")
+        params: '-SourceToolsList @("policheck","credscan","roslynanalyzers")
         -TsaInstanceURL $(_TsaInstanceURL)
         -TsaProjectName $(_TsaProjectName)
         -TsaNotificationEmail $(_TsaNotificationEmail)
@@ -277,7 +277,7 @@ stages:
         -TsaIterationPath $(_TsaIterationPath)
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
-        -TsaPublish $True'
+        -TsaPublish $False'
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/master', 'refs/heads/production'))}}:
   - template: eng\deploy.yaml
     parameters:
