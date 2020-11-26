@@ -266,55 +266,22 @@ stages:
           # https://github.com/dotnet/arcade-services/issues/59
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
-  - template: eng\common\templates\post-build\post-build.yml
-    parameters:
-      # Symbol validation isn't being very reliable lately. This should be enabled back
-      # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
-      enableSymbolValidation: false
-      enableSigningValidation: false
-      # This is to enable SDL runs part of Post-Build Validation Stage
-      SDLValidationParameters:
-        enable: true
-        params: '-SourceToolsList @("policheck","credscan", "roslynanalyzers")
-        -TsaInstanceURL $(_TsaInstanceURL)
-        -TsaProjectName $(_TsaProjectName)
-        -TsaNotificationEmail $(_TsaNotificationEmail)
-        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-        -TsaBugAreaPath $(_TsaBugAreaPath)
-        -TsaIterationPath $(_TsaIterationPath)
-        -TsaRepositoryName "Arcade-Services"
-        -TsaCodebaseName "Arcade-Services"
-        -TsaPublish $False'
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/master', 'refs/heads/production'))}}:
-  - template: eng\deploy.yaml
-    parameters:
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        DeploymentEnvironment: Staging
-        DotNetStatusAppName: dotneteng-status-staging
-        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
-        PublishProfile: Int
-        RolloutScorerAppName: rollout-scorer-int
-        ServiceFabricConnection: Maestro-Int
-        Subscription: NetHelixStaging
-        VariableGroup: MaestroInt KeyVault
-        StatusVariableGroup: DotNetStatus Staging
-        GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
-        GrafanaKeyVault: dotnet-grafana-staging
-        GrafanaVariableGroup: Dotnet-Grafana-Staging
-      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        DeploymentEnvironment: Production
-        DotNetStatusAppName: dotneteng-status
-        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-        PublishProfile: Prod
-        RolloutScorerAppName: rollout-scorer-prod
-        ServiceFabricConnection: Maestro-Prod
-        Subscription: NetHelix
-        VariableGroup: MaestroProd KeyVault
-        StatusVariableGroup: DotNetStatus Production
-        GrafanaHost: https://dotnet-eng-grafana.westus2.cloudapp.azure.com
-        GrafanaKeyVault: dotnet-grafana
-        GrafanaVariableGroup: Dotnet-Grafana-Production
+- template: eng\common\templates\post-build\post-build.yml
+  parameters:
+    # Symbol validation isn't being very reliable lately. This should be enabled back
+    # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
+    enableSymbolValidation: false
+    enableSigningValidation: false
+    # This is to enable SDL runs part of Post-Build Validation Stage
+    SDLValidationParameters:
+      enable: true
+      params: '-SourceToolsList @("policheck","credscan", "roslynanalyzers")
+      -TsaInstanceURL $(_TsaInstanceURL)
+      -TsaProjectName $(_TsaProjectName)
+      -TsaNotificationEmail $(_TsaNotificationEmail)
+      -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+      -TsaBugAreaPath $(_TsaBugAreaPath)
+      -TsaIterationPath $(_TsaIterationPath)
+      -TsaRepositoryName "Arcade-Services"
+      -TsaCodebaseName "Arcade-Services"
+      -TsaPublish $False'
