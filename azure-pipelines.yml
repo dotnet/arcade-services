@@ -266,22 +266,22 @@ stages:
           # https://github.com/dotnet/arcade-services/issues/59
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
-- template: eng\common\templates\post-build\post-build.yml
-  parameters:
-    # Symbol validation isn't being very reliable lately. This should be enabled back
-    # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
-    enableSymbolValidation: false
-    enableSigningValidation: false
-    # This is to enable SDL runs part of Post-Build Validation Stage
-    SDLValidationParameters:
-      enable: true
-      params: '-SourceToolsList @("policheck","credscan", "roslynanalyzers")
-      -TsaInstanceURL $(_TsaInstanceURL)
-      -TsaProjectName $(_TsaProjectName)
-      -TsaNotificationEmail $(_TsaNotificationEmail)
-      -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-      -TsaBugAreaPath $(_TsaBugAreaPath)
-      -TsaIterationPath $(_TsaIterationPath)
-      -TsaRepositoryName "Arcade-Services"
-      -TsaCodebaseName "Arcade-Services"
-      -TsaPublish $False'
+# - template: eng\common\templates\post-build\post-build.yml
+#   parameters:
+#     # Symbol validation isn't being very reliable lately. This should be enabled back
+#     # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
+#     enableSymbolValidation: false
+#     enableSigningValidation: false
+#     # This is to enable SDL runs part of Post-Build Validation Stage
+#     SDLValidationParameters:
+#       enable: true
+#       params: '-SourceToolsList @("policheck","credscan", "roslynanalyzers")
+#       -TsaInstanceURL $(_TsaInstanceURL)
+#       -TsaProjectName $(_TsaProjectName)
+#       -TsaNotificationEmail $(_TsaNotificationEmail)
+#       -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+#       -TsaBugAreaPath $(_TsaBugAreaPath)
+#       -TsaIterationPath $(_TsaIterationPath)
+#       -TsaRepositoryName "Arcade-Services"
+#       -TsaCodebaseName "Arcade-Services"
+#       -TsaPublish $False'
