@@ -8,7 +8,6 @@ variables:
     value: .NETCore
   - name: skipComponentGovernanceDetection
     value: true
-  - group: SDL_Settings
 
 # CI and PR triggers
 trigger:
