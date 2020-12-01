@@ -22,7 +22,7 @@ namespace DotNet.Status.Web
     {
         private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
         private static readonly string _markingLabelName = "darcbot";
-        private static readonly string[] _issueLabels = new[] { "Detected By - Ad Hoc", "First Responder", "Build Failed" };
+        private static readonly string[] _issueLabels = new[] { "Detected By - Ad-Hoc Testing", "First Responder", "Build Failed" };
 
         private readonly ILogger<TimelineIssueTriage> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
