@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "defaultProvider": "unpkg",
+  "libraries": [
+    {
+      "library": "bootstrap@4.1.2",
+      "destination": "wwwroot/libs/bootstrap",
+      "files": [
+        "dist/css/bootstrap.min.css",
+        "dist/css/bootstrap-reboot.min.css",
+        "dist/js/bootstrap.min.js"
+      ]
+    },
+    {
+      "library": "popper.js@1.14.3",
+      "destination": "wwwroot/libs/popper.js",
+      "files": [
+        "dist/umd/popper.min.js"
+      ]
+    },
+    {
+      "library": "d3@5.15.0",
+      "destination": "wwwroot/libs/d3",
+      "files": [
+        "dist/d3.min.js"
+      ]
+    }
+  ]
+}

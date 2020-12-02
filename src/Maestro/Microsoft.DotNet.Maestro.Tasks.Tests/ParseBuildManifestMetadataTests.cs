@@ -169,9 +169,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         private static readonly SigningInformation signingInfo1 = new SigningInformation()
         {
-            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-            AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
                     {
                         new CertificatesSignInfo()
@@ -214,9 +211,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public static readonly SigningInformation signingInfo2 =
             new SigningInformation()
             {
-                AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
-                AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
-                AzureDevOpsProject = AzureDevOpsProject1,
                 CertificatesSignInfo = new List<CertificatesSignInfo>()
                 {
                     new CertificatesSignInfo()

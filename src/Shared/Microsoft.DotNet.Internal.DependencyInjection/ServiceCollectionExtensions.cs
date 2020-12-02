@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +27,11 @@ namespace Microsoft.Extensions.DependencyInjection
             string sectionName,
             Action<TOptions, IConfiguration> configure) where TOptions : class
         {
+            services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(provider =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>().GetSection(sectionName);
+                return new ConfigurationChangeTokenSource<TOptions>(Options.Options.DefaultName, config);
+            });
             return services.AddSingleton<IConfigureOptions<TOptions>>(
                 provider => new ConfigureOptions<TOptions>(
                     options => configure(options,

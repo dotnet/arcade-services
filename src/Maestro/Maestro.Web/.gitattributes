@@ -1,0 +1,3 @@
+# Don't normalize line endings in libraries managed by libman
+# so that their checksum does not change between checkouts
+wwwroot/libs/** -text
