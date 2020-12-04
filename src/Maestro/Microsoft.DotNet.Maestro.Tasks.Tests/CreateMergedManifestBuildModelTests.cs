@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using FluentAssertions;
@@ -204,7 +205,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
                 ImmutableList.Create(dataInBlobSet, shippingAssetData), manifestBuildData);
 
-            // actualModel.IsSameOrEqualTo(expectedBuildModel);
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
@@ -229,10 +229,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
                 ImmutableList.Create(nonShippingAssetData), manifestBuildData);
-            actualModel.Artifacts.Packages[0].Id.Should().Be(expectedBuildModel.Artifacts.Packages[0].Id);
-            actualModel.Artifacts.Packages[0].NonShipping.Should().Be(expectedBuildModel.Artifacts.Packages[0].NonShipping);
-            actualModel.Artifacts.Packages[0].Version.Should().Be(expectedBuildModel.Artifacts.Packages[0].Version);
-            actualModel.Artifacts.Packages[0].Attributes.Should().BeEquivalentTo(expectedBuildModel.Artifacts.Packages[0].Attributes);
+
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
@@ -264,19 +261,24 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenNullAssetsList_ExpectNullReferenceException()
         {
-
+            Action act = () => pushMetadata.CreateMergedManifestBuildModel(null, manifestBuildData);
+            act.Should().Throw<NullReferenceException>();
         }
 
         [Test]
         public void GivenEmptyAssetsList()
         {
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), manifestBuildData);
+            expectedBuildModel.Artifacts = new ArtifactSet { };
 
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
         public void GivenNullManifestBuildData_ExpectNullReferenceException()
         {
-
+            Action act = () => pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), null);
+            act.Should().Throw<NullReferenceException>();
         }
     }
 }
