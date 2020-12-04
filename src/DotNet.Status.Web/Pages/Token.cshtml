@@ -4,6 +4,7 @@
 @using DotNet.Status.Web
 @model DotNet.Status.Web.Pages.TokenModel
 @{
+    ViewData["Title"] = "Tokens";
     string userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     long userId = long.TryParse(userIdString, out var temp) ? temp : 0;
 

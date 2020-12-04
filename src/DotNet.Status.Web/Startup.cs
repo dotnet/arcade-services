@@ -42,7 +42,7 @@ namespace DotNet.Status.Web
             Configuration = configuration;
             Env = env;
         }
-        
+
         public IWebHostEnvironment Env { get; }
         public IConfiguration Configuration { get; }
 
@@ -185,7 +185,7 @@ namespace DotNet.Status.Web
                 .AddCookie(IdentityConstants.ApplicationScheme,
                     o =>
                     {
-                        o.ExpireTimeSpan = TimeSpan.FromDays(7);
+                        o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                         o.SlidingExpiration = true;
                         o.Cookie.IsEssential = true;
                         o.LoginPath = "/signin";
