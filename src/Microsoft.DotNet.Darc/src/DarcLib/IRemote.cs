@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.DarcLib
         #region Repo/Dependency Operations
 
         /// <summary>
-        /// Get the tools.dotnet section of the global.json from a target repo URI
+        /// Reads the nuget config and gets the package source
         /// </summary>
         /// <param name="repoUri">repo to get the version from</param>
         /// <param name="commit">commit sha to query</param>
