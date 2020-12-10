@@ -274,6 +274,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">commit sha to query</param>
         /// <returns></returns>
         Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit);
+
         /// <summary>
         ///     Get the list of dependencies in the specified repo and branch/commit
         /// </summary>
@@ -415,7 +416,6 @@ namespace Microsoft.DotNet.DarcLib
             bool includeBuildTimes,
             bool includeDisabledSubscriptions,
             IReadOnlyList<string> includedFrequencies = default);
-
 
 
         #endregion
