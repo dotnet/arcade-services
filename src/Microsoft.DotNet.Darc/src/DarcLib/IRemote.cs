@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Xml;
 using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NuGet.Versioning;
@@ -266,6 +268,13 @@ namespace Microsoft.DotNet.DarcLib
         #region Repo/Dependency Operations
 
         /// <summary>
+        /// Get the tools.dotnet section of the global.json from a target repo URI
+        /// </summary>
+        /// <param name="repoUri">repo to get the version from</param>
+        /// <param name="commit">commit sha to query</param>
+        /// <returns></returns>
+        Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit);
+        /// <summary>
         ///     Get the list of dependencies in the specified repo and branch/commit
         /// </summary>
         /// <param name="repoUri">Repository to get dependencies from</param>
@@ -406,6 +415,8 @@ namespace Microsoft.DotNet.DarcLib
             bool includeBuildTimes,
             bool includeDisabledSubscriptions,
             IReadOnlyList<string> includedFrequencies = default);
+
+
 
         #endregion
 
