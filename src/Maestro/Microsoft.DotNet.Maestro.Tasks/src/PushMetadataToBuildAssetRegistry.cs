@@ -529,13 +529,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
                     else
                     {
-                        if (mergedInfo.AzureDevOpsBuildId != signInfo.AzureDevOpsBuildId ||
-                            mergedInfo.AzureDevOpsCollectionUri != signInfo.AzureDevOpsCollectionUri ||
-                            mergedInfo.AzureDevOpsProject != signInfo.AzureDevOpsProject)
-                        {
-                            throw new Exception("Can't merge if one or more manifests have different build id, collection URI or project.");
-                        }
-
                         mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
                         mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
                         mergedInfo.CertificatesSignInfo.AddRange(signInfo.CertificatesSignInfo);
@@ -718,13 +711,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private XElement SigningInfoToXml(SigningInformation signingInformation)
         {
-            XAttribute[] attributes = new XAttribute[]
-                {
-                    new XAttribute(nameof(signingInformation.AzureDevOpsCollectionUri), signingInformation.AzureDevOpsCollectionUri),
-                    new XAttribute(nameof(signingInformation.AzureDevOpsProject), signingInformation.AzureDevOpsProject),
-                    new XAttribute(nameof(signingInformation.AzureDevOpsBuildId), signingInformation.AzureDevOpsBuildId)
-                };
-
             List<XElement> signingMetadata = new List<XElement>();
 
             foreach (FileExtensionSignInfo fileExtensionSignInfo in signingInformation.FileExtensionSignInfos)
@@ -782,7 +768,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }));
             }
 
-            return new XElement(nameof(SigningInformation), attributes, signingMetadata);
+            return new XElement(nameof(SigningInformation), signingMetadata);
         }
     }
 }
