@@ -1247,10 +1247,10 @@ namespace Microsoft.DotNet.Darc.Tests
                     u.To.Name.Should().Be(depB.Name);
                     u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json");
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
                         {
-                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json");
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
 );
                 });
