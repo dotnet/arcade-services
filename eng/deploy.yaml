@@ -170,24 +170,24 @@ stages:
         ServicesSourceFolder: $(Build.SourcesDirectory)/src/Telemetry/
 
   - job: deployStatus
-   displayName: Deploy dotnet-status web app
-   dependsOn:
-   steps:
-   - download: current
-     artifact: DotNetStatus
-   - task: AzureRmWebAppDeployment@4
-     inputs:
-       ConnectionType: AzureRM
-       azureSubscription: ${{ parameters.Subscription }}
-       appType: webApp
-       WebAppName: ${{ parameters.DotNetStatusAppName }}
-       deployToSlotOrASE: true
-       ResourceGroupName: monitoring
-       SlotName: staging
-       Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
-       enableCustomDeployment: true
-       DeploymentType: webDeploy
-       RemoveAdditionalFilesFlag: true
+    displayName: Deploy dotnet-status web app
+    dependsOn:
+    steps:
+    - download: current
+      artifact: DotNetStatus
+    - task: AzureRmWebAppDeployment@4
+      inputs:
+        ConnectionType: AzureRM
+        azureSubscription: ${{ parameters.Subscription }}
+        appType: webApp
+        WebAppName: ${{ parameters.DotNetStatusAppName }}
+        deployToSlotOrASE: true
+        ResourceGroupName: monitoring
+        SlotName: staging
+        Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
+        enableCustomDeployment: true
+        DeploymentType: webDeploy
+        RemoveAdditionalFilesFlag: true
   
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
