@@ -702,10 +702,7 @@ namespace Microsoft.DotNet.DarcLib
                 if (!nugetConfigCache.TryGetValue(parentCoherentDependencyCacheKey, out IEnumerable<string> nugetFeeds))
                 {
                     IRemote remoteClient = await remoteFactory.GetRemoteAsync(parentCoherentDependency.RepoUri, _logger);
-                    XmlDocument nugetConfig = await _fileManager.ReadNugetConfigAsync(parentCoherentDependency.RepoUri, parentCoherentDependency.Commit);
-                    nugetFeeds = _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
-
-                    nugetConfigCache.Add(parentCoherentDependencyCacheKey, nugetFeeds);
+                    nugetFeeds = await remoteClient.GetPackageSourcesAsync(parentCoherentDependency.RepoUri, parentCoherentDependency.Commit);
                 }
 
                 // Find assets with locations that match any feed in the nuget.config file.
@@ -736,6 +733,13 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return coherentAsset;
+        }
+
+        public async Task<IEnumerable<string>> GetPackageSourcesAsync(string repoUri, string commit)
+        {
+            CheckForValidGitClient();
+            XmlDocument nugetConfig = await _fileManager.ReadNugetConfigAsync(repoUri, commit);
+            return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
         }
 
         /// <summary>
