@@ -95,7 +95,6 @@ namespace DependencyUpdater
                          .Where(b => b.Id == buildId)
                          .FirstOrDefault()
                  where specificBuild != null
-                 where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != specificBuild.Id
                  select new
                  {
                      subscription = sub.Id,
@@ -127,7 +126,6 @@ namespace DependencyUpdater
                          .OrderByDescending(b => b.DateProduced)
                          .FirstOrDefault()
                  where latestBuild != null
-                 where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
                  select new
                  {
                      subscription = sub.Id,

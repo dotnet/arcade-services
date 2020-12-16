@@ -456,7 +456,6 @@ namespace Microsoft.DotNet.DarcLib
             }
             XmlNode insertAfterNode = null;
 
-            // Do the order backwards 
             foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderByDescending(t => t))
             {
                 var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderByDescending(t => t.feed).ToList();
@@ -488,8 +487,8 @@ namespace Microsoft.DotNet.DarcLib
                             continue;
                         }
                         if (currentNode.NodeType == XmlNodeType.Comment &&
-                           (currentNode.Value.StartsWith(MaestroRepoSpecificBeginComment, StringComparison.OrdinalIgnoreCase) ||
-                            currentNode.Value.StartsWith(MaestroRepoSpecificEndComment, StringComparison.OrdinalIgnoreCase)))
+                           (currentNode.Value.StartsWith($"{MaestroRepoSpecificBeginComment} {repoName}", StringComparison.OrdinalIgnoreCase) ||
+                            currentNode.Value.StartsWith($"{MaestroRepoSpecificEndComment} {repoName}", StringComparison.OrdinalIgnoreCase)))
                         {
                             currentNode = RemoveCurrentNode(currentNode);
                             continue;
@@ -525,7 +524,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
                 XmlComment endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
-                disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
+                insertAfterNode = disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
             }
         }
 
