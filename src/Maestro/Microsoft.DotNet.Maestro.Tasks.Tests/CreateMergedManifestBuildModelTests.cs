@@ -33,28 +33,25 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly string sourceBranch = "thisIsASourceBranch";
         private static readonly string commitSourceVersion = "thisIsASourceVersion";
 
-        private PushMetadataToBuildAssetRegistry pushMetadata;
-        private BuildModel expectedBuildModel;
-
-        private AssetData assetDataWithoutName = new AssetData(true)
+        private readonly AssetData assetDataWithoutName = new AssetData(true)
         { Version = "noNameVersion" };
 
-        private AssetData assetDataWithoutVersion = new AssetData(true)
+        private readonly AssetData assetDataWithoutVersion = new AssetData(true)
         { Name = "noVersionData" };
 
-        private AssetData nonShippingAssetData = new AssetData(true)
+        private readonly AssetData nonShippingAssetData = new AssetData(true)
         {
             Name = "NonShippingAssetData",
             Version = "nonShippingAsssetVersion"
         };
 
-        private AssetData shippingAssetData = new AssetData(false)
+        private readonly AssetData shippingAssetData = new AssetData(false)
         {
             Name = "ShippingAssetData",
             Version = "shippingAssetVersion"
         };
 
-        private ManifestBuildData manifestBuildData = new ManifestBuildData(
+        private readonly ManifestBuildData manifestBuildData = new ManifestBuildData(
             new Manifest
             {
                 InitialAssetsLocation = initialAssetsLocation,
@@ -69,8 +66,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 IsReleaseOnlyPackageVersion = isReleasePackage
             });
 
-        [SetUp]
-        public void TestCaseSetup()
+        private PushMetadataToBuildAssetRegistry GetPushMetadata()
         {
             Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
             getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(buildRepoName);
@@ -79,34 +75,44 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             getEnvMock.Setup(d => d.GetEnv("BUILD_SOURCEVERSION")).Returns(commitSourceVersion);
             getEnvMock.SetReturnsDefault("MissingEnvVariableCheck!");
 
-            pushMetadata = new PushMetadataToBuildAssetRegistry
+            PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry
             {
                 getEnvProxy = getEnvMock.Object
             };
 
-            expectedBuildModel = new BuildModel(
-            new BuildIdentity
-            {
-                Attributes = manifestBuildData.ToDictionary(),
-                Name = buildRepoName,
-                BuildId = buildNumber,
-                Branch = sourceBranch,
-                Commit = commitSourceVersion,
-                IsStable = false,
-                PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
-                IsReleaseOnlyPackageVersion = bool.Parse(isReleasePackage)
-            });
+            return pushMetadata;
+        }
+
+        private BuildModel GetBuildModel()
+        {
+            BuildModel expectedBuildModel = new BuildModel(
+                new BuildIdentity
+                {
+                    Attributes = manifestBuildData.ToDictionary(),
+                    Name = buildRepoName,
+                    BuildId = buildNumber,
+                    Branch = sourceBranch,
+                    Commit = commitSourceVersion,
+                    IsStable = false,
+                    PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
+                    IsReleaseOnlyPackageVersion = bool.Parse(isReleasePackage)
+                });
+
+            return expectedBuildModel;
         }
 
         [Test]
         [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetDataWithoutName()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             PackageArtifactModel packageArtifact = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", true.ToString().ToLower() }
+                    { "NonShipping", "true" }
                 },
                 Id = null,
                 Version = assetDataWithoutName.Version
@@ -128,11 +134,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetWithoutVersion()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             PackageArtifactModel packageArtifact = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", true.ToString().ToLower() },
+                        { "NonShipping", "true" },
                         { "Id", assetDataWithoutVersion.Name },
                         { "Version", null }
                     }
@@ -154,12 +163,15 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetsInBlobSet()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", true.ToString().ToLower() }
+                    { "NonShipping", "true" }
                 },
                 Id = dataInBlobSet.Name
             };
@@ -179,13 +191,16 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenSomeAssetsInBlobSetAndSomeNot()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
 
             PackageArtifactModel shippingPackageArtifact = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", false.ToString().ToLower() },
+                        { "NonShipping", "false" },
                     },
                 Id = shippingAssetData.Name,
                 Version = shippingAssetData.Version
@@ -195,7 +210,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", true.ToString().ToLower() }
+                    { "NonShipping", "true" }
                 },
                 Id = dataInBlobSet.Name
             };
@@ -216,11 +231,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenNonShippingAssets()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             PackageArtifactModel packageArtifact = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", true.ToString().ToLower() },
+                        { "NonShipping", "true" },
                     },
                 Id = nonShippingAssetData.Name,
                 Version = nonShippingAssetData.Version
@@ -241,11 +259,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenShippingAssets()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             PackageArtifactModel packageArtifact = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", false.ToString().ToLower() },
+                        { "NonShipping", "false" },
                     },
                 Id = shippingAssetData.Name,
                 Version = shippingAssetData.Version
@@ -266,6 +287,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenNullAssetsList_ExpectNullReferenceException()
         {
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             Action act = () => pushMetadata.CreateMergedManifestBuildModel(null, manifestBuildData);
             act.Should().Throw<NullReferenceException>();
         }
@@ -273,6 +296,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenEmptyAssetsList()
         {
+            BuildModel expectedBuildModel = GetBuildModel();
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), manifestBuildData);
             expectedBuildModel.Artifacts = new ArtifactSet { };
 
@@ -282,6 +308,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void GivenNullManifestBuildData_ExpectNullReferenceException()
         {
+            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+
             Action act = () => pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), null);
             act.Should().Throw<NullReferenceException>();
         }
