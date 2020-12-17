@@ -12,13 +12,14 @@ namespace Microsoft.DotNet.DarcLib.Helpers
 {
     public class ManifestHelper
     {
-        public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string assetsRelativePath = "")
+        public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
         {
             // Construct an ad-hoc object with the necessary fields and use the json
             // serializer to write it to disk
             // If this type ever changes, we should consider giving it a specific versioned model object 
             var manifestObject = new
             {
+                outputPath = outputPath,
                 builds = downloadedBuilds.Select(build =>
                     new
                     {
@@ -50,7 +51,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             // If assetsRelativePath is provided, calculate the target path list as relative to the overall output directory
             List<string> GetTargetPaths(DownloadedAsset asset)
             {
-                if (string.IsNullOrEmpty(assetsRelativePath))
+                if (makeAssetsRelativePaths == false)
                 {
                     return new List<string>
                     {
@@ -62,8 +63,8 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 {
                     return new List<string>
                     {
-                        Path.GetRelativePath(assetsRelativePath, asset.ReleaseLayoutTargetLocation),
-                        Path.GetRelativePath(assetsRelativePath, asset.UnifiedLayoutTargetLocation)
+                        Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
+                        Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
                     };
                 }
             }

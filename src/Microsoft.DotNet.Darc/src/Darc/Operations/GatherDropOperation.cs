@@ -548,7 +548,8 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, 
-                                                                            _options.UseRelativePathsInManifest ? _options.OutputDirectory : "");
+                                                                            _options.OutputDirectory,
+                                                                            _options.UseRelativePathsInManifest);
 
             await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
         }

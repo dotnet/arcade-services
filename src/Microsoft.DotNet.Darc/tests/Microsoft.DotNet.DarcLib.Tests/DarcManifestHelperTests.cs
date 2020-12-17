@@ -18,12 +18,13 @@ namespace Microsoft.DotNet.DarcLib.Tests
     public class DarcManifestHelperTests
     {
         const int FakeBuildCount = 10;
+        const string FakeOutputPath = @"F:\A\";
 
         [Test]
         public void GenerateManifestWithAbsolutePaths()
         {
             List<DownloadedBuild> downloadedBuilds = GetSomeShippingAssetsBuilds();
-            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds);
+            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
             var builds = testManifest["builds"].ToList();
             builds.Count.Should().Be(FakeBuildCount);
 
@@ -31,8 +32,8 @@ namespace Microsoft.DotNet.DarcLib.Tests
             {
                 // Make sure everything has its distinct, correctly calculated target paths
                 var targetPaths = builds[i]["assets"].First()["targets"];
-                targetPaths[0].Value<string>().Should().Be(@$"F:\A\K\E\Path\SomeAsset.{i}.zip");
-                targetPaths[1].Value<string>().Should().Be(@$"F:\A\KE\Other\Path\SomeAsset.{i}.zip");
+                targetPaths[0].Value<string>().Should().Be(@$"{FakeOutputPath}K\E\Path\SomeAsset.{i}.zip");
+                targetPaths[1].Value<string>().Should().Be(@$"{FakeOutputPath}KE\Other\Path\SomeAsset.{i}.zip");
 
                 // Everything else is just passed-along values, so make sure they're present / not null.
                 builds[i]["repo"].Value<string>().Should().NotBeNullOrEmpty();
@@ -43,14 +44,14 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 builds[i]["channels"].Children().Count().Should().Be(2);
                 builds[i]["assets"].Children().Count().Should().Be(1);
             }
+            testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
         }
-
 
         [Test]
         public void GenerateManifestWithRelativePaths()
         {
             List<DownloadedBuild> downloadedBuilds = GetSomeShippingAssetsBuilds();
-            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, @"F:\A");
+            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, true);
             var builds = testManifest["builds"].ToList();
             builds.Count.Should().Be(FakeBuildCount);
 
@@ -70,15 +71,17 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 builds[i]["channels"].Children().Count().Should().Be(2);
                 builds[i]["assets"].Children().Count().Should().Be(1);
             }
+            testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
         }
 
         [Test]
         public void NoDownloadedBuildsProvided()
         {
             List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
-            JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds);
+            JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
             var builds = emptyManifest["builds"].ToList();
             builds.Count.Should().Be(0);
+            emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
         }
 
         private List<DownloadedBuild> GetSomeShippingAssetsBuilds()
