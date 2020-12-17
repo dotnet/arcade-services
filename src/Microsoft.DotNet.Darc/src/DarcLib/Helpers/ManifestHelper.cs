@@ -51,20 +51,20 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             // If assetsRelativePath is provided, calculate the target path list as relative to the overall output directory
             List<string> GetTargetPaths(DownloadedAsset asset)
             {
-                if (makeAssetsRelativePaths == false)
+                if (makeAssetsRelativePaths)
                 {
                     return new List<string>
                     {
-                        asset.ReleaseLayoutTargetLocation,
-                        asset.UnifiedLayoutTargetLocation
+                        Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
+                        Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
                     };
                 }
                 else
                 {
                     return new List<string>
                     {
-                        Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
-                        Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
+                        asset.ReleaseLayoutTargetLocation,
+                        asset.UnifiedLayoutTargetLocation
                     };
                 }
             }
