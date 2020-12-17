@@ -26,6 +26,9 @@ namespace Microsoft.DotNet.Darc.Options
         [RedactFromLogging]
         public string OutputDirectory { get; set; }
 
+        [Option("use-relative-paths", Default = false,  HelpText = "If true, make all paths in the resultant manifest relative to the value of output-dir")]
+        public bool UseRelativePathsInManifest { get; set; }
+
         [Option("max-downloads", Default = 4, HelpText = "Maximum concurrent downloads.")]
         public int MaxConcurrentDownloads { get; set; }
 
