@@ -1055,6 +1055,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
+            remoteMock.Setup(m => m.GetPackageSourcesAsync("repoA", "commit1")).ReturnsAsync(
+                new String[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json" });
 
             // Always return the main remote.
             var remoteFactoryMock = new Mock<IRemoteFactory>();
@@ -1084,9 +1086,6 @@ namespace Microsoft.DotNet.Darc.Tests
                         } )
                     })
                 });
-
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-                new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json" });
 
             List <DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
