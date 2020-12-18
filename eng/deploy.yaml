@@ -188,7 +188,6 @@ stages:
         enableCustomDeployment: true
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
-        appSettings: WEBSITE_RUN_FROM_PACKAGE 0
   
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
