@@ -285,15 +285,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        public void GivenNullAssetsList_ExpectNullReferenceException()
-        {
-            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
-
-            Action act = () => pushMetadata.CreateMergedManifestBuildModel(null, manifestBuildData);
-            act.Should().Throw<NullReferenceException>();
-        }
-
-        [Test]
         public void GivenEmptyAssetsList()
         {
             BuildModel expectedBuildModel = GetBuildModel();
@@ -303,15 +294,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             expectedBuildModel.Artifacts = new ArtifactSet { };
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
-        }
-
-        [Test]
-        public void GivenNullManifestBuildData_ExpectNullReferenceException()
-        {
-            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
-
-            Action act = () => pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), null);
-            act.Should().Throw<NullReferenceException>();
         }
     }
 }
