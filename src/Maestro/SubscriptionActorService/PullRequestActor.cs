@@ -1085,6 +1085,16 @@ namespace SubscriptionActorService
                 return;
             }
 
+            pr.RequiredUpdates = requiredUpdates
+                    .SelectMany(update => update.deps)
+                    .Select(du => new DependencyUpdateSummary
+                    {
+                        DependencyName = du.To.Name,
+                        FromVersion = du.From.Version,
+                        ToVersion = du.To.Version
+                    })
+                    .ToList();
+
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
