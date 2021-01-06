@@ -169,7 +169,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authen
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.Testing.Utility", "src\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj", "{EEECCBBC-25E9-471E-A37D-06059ED85847}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.DarcLib.Tests", "Microsoft.DotNet.DarcLib.Tests\Microsoft.DotNet.DarcLib.Tests.csproj", "{F78EA40D-7926-4B38-AB4A-ED1E85FAF32C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.DarcLib.Tests", "src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.DarcLib.Tests\Microsoft.DotNet.DarcLib.Tests.csproj", "{F78EA40D-7926-4B38-AB4A-ED1E85FAF32C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Kusto.Tests", "src\Shared\Microsoft.DotNet.Kusto.Tests\Microsoft.DotNet.Kusto.Tests.csproj", "{626E4211-458D-4A28-9744-56A0350C8373}"
 EndProject
