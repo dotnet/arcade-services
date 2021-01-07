@@ -129,7 +129,8 @@ namespace Maestro.Web
             Configuration = configuration;
         }
 
-        public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
+        public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(hours: 0, minutes: 30, seconds: 0);
+        public static readonly TimeSpan DataProtectionKeyLifetime = new TimeSpan(days: 240, hours: 0, minutes: 0, seconds: 0);
 
         public IHostEnvironment HostingEnvironment { get; }
         public IConfiguration Configuration { get; }
@@ -139,7 +140,7 @@ namespace Maestro.Web
             if (HostingEnvironment.IsDevelopment())
             {
                 services.AddDataProtection()
-                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2);
+                    .SetDefaultKeyLifetime(DataProtectionKeyLifetime);
             }
             else
             {
@@ -155,7 +156,7 @@ namespace Maestro.Web
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(new Uri(dpConfig["KeyFileUri"]))
                     .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
-                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2)
+                    .SetDefaultKeyLifetime(DataProtectionKeyLifetime)
                     .SetApplicationName(typeof(Startup).FullName);
             }
 
