@@ -250,7 +250,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 { "BarBuildId", build.Id.ToString() },
                 { "PublishingInfraVersion", _options.PublishingInfraVersion.ToString() },
-                { "PromoteToChannelIds", string.Join(",", targetChannels.Select(tch => tch.Id)) },
+                { "PromoteToChannelIds", string.Join("-", targetChannels.Select(tch => tch.Id)) },
                 { "EnableSigningValidation", _options.DoSigningValidation.ToString() },
                 { "SigningValidationAdditionalParameters", _options.SigningValidationAdditionalParameters },
                 { "EnableNugetValidation", _options.DoNuGetValidation.ToString() },
