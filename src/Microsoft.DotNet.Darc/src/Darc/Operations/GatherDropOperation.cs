@@ -5,6 +5,8 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
@@ -26,49 +28,6 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    internal class DownloadedAsset
-    {
-        /// <summary>
-        /// Asset that was downloaded.
-        /// </summary>
-        public Asset Asset { get; set; }
-        /// <summary>
-        /// Source location (uri) where the asset came from.
-        /// </summary>
-        public string SourceLocation { get; set; }
-        /// <summary>
-        /// Target location where the asset was downloaded to for the release style layout
-        /// </summary>
-        public string ReleaseLayoutTargetLocation { get; set; }
-        /// <summary>
-        /// Target location where the asset was downloaded to for the release style layout
-        /// </summary>
-        public string UnifiedLayoutTargetLocation { get; set; }
-        /// <summary>
-        /// True if the asset download was successful. If false, Asset is the only valid property
-        /// </summary>
-        public bool Successful { get; set; }
-        /// <summary>
-        /// Location type of the asset that actually got downloaded.
-        /// </summary>
-        public LocationType LocationType { get; set; }
-    }
-
-    internal class DownloadedBuild
-    {
-        public Build Build { get; set; }
-        public bool Successful { get; set; }
-        public IEnumerable<DownloadedAsset> DownloadedAssets { get; set; }
-        /// <summary>
-        ///     Root output directory for this build.
-        /// </summary>
-        public string ReleaseLayoutOutputDirectory { get; set; }
-        /// <summary>
-        ///     True if the output has any shipping assets.
-        /// </summary>
-        public bool AnyShippingAssets { get; set; }
-    }
-
     internal class InputBuilds
     {
         public IEnumerable<Build> Builds { get; set; }
@@ -540,7 +499,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
         /// </summary>
         /// <param name="downloadedBuilds">List of downloaded builds</param>
-        /// <param name="outputDirectory">Output directory write the release json</param>
+        /// <param name="outputDirectory">Output directory for the release json</param>
         /// <returns>Async task</returns>
         private async Task WriteReleaseJson(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
@@ -571,55 +530,26 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Write out a manifest of the items in the drop. Writes in json format.
+        ///     Write out a manifest of the items in the drop in json format.
         /// </summary>
         /// <returns></returns>
-        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string specificOutputDirectory)
         {
             if (_options.DryRun)
             {
                 return;
             }
 
-            string outputPath = Path.Combine(outputDirectory, "manifest.json");
-
-            // Construct an ad-hoc object with the necessary fields and use the json
-            // serializer to write it to disk
-
-            var manifestJson = new
-            {
-                builds = downloadedBuilds.Select(build =>
-                    new
-                    {
-                        repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
-                        commit = build.Build.Commit,
-                        branch = build.Build.AzureDevOpsBranch,
-                        produced = build.Build.DateProduced,
-                        buildNumber = build.Build.AzureDevOpsBuildNumber,
-                        barBuildId = build.Build.Id,
-                        channels = build.Build.Channels.Select(channel =>
-                        new
-                        {
-                            id = channel.Id,
-                            name = channel.Name
-                        }),
-                        assets = build.DownloadedAssets.Select(asset =>
-                        new
-                        {
-                            name = asset.Asset.Name,
-                            version = asset.Asset.Version,
-                            nonShipping = asset.Asset.NonShipping,
-                            source = asset.SourceLocation,
-                            targets = new List<string> { asset.ReleaseLayoutTargetLocation, asset.UnifiedLayoutTargetLocation },
-                            barAssetId = asset.Asset.Id
-                        })
-                    })
-            };
+            string outputPath = Path.Combine(specificOutputDirectory, "manifest.json");
 
             if (_options.Overwrite)
             {
                 File.Delete(outputPath);
             }
+
+            var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, 
+                                                                            _options.OutputDirectory,
+                                                                            _options.UseRelativePathsInManifest);
 
             await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
         }
