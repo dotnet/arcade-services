@@ -4,6 +4,8 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
@@ -42,9 +44,18 @@ namespace SubscriptionActorService
         public async Task<string> GetPathToLocalGitAsync()
         {
             // Determine whether we need to do any downloading at all.
-            if (!string.IsNullOrEmpty(_gitExecutable))
+            if (!string.IsNullOrEmpty(_gitExecutable) && File.Exists(_gitExecutable))
             {
-                return _gitExecutable;
+                // We should also mke sure that the git executable that exists runs properly
+                try
+                {
+                    LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
+                    return _gitExecutable;
+                }
+                catch (DarcException)
+                { 
+                    _logger.LogWarning($"Something went wrong with the git executable at {_gitExecutable}. Downloading new version.");
+                }
             }
 
             await _semaphoreSlim.WaitAsync();
@@ -52,7 +63,7 @@ namespace SubscriptionActorService
             {
                 // Determine whether another thread ended up getting the lock and downloaded git
                 // in the meantime.
-                if (string.IsNullOrEmpty(_gitExecutable))
+                if (string.IsNullOrEmpty(_gitExecutable) || !File.Exists(_gitExecutable))
                 {
                     using (_operations.BeginOperation($"Installing a local copy of git"))
                     {
@@ -80,6 +91,8 @@ namespace SubscriptionActorService
                         ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
 
                         _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
+
+                        LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
                     }
                 }
             }

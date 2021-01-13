@@ -200,7 +200,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="logger">Logger</param>
         /// <param name="workingDirectory">Working directory</param>
         /// <param name="secretToMask">Mask this secret when calling the logger.</param>
-        private static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
+        public static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
         {
             string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
             logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory);
