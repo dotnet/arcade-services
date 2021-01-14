@@ -9,7 +9,6 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <MicrosoftNetFrameworkReferenceAssembliesVersion>1.0.0-preview.1</MicrosoftNetFrameworkReferenceAssembliesVersion>
     <!-- Libs -->
-    
     <MicrosoftDotNetSignToolVersion>6.0.0-beta.21062.10</MicrosoftDotNetSignToolVersion>
     <MicrosoftDotNetBuildTasksFeedVersion>6.0.0-beta.21062.10</MicrosoftDotNetBuildTasksFeedVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.21062.10</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
