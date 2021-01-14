@@ -77,6 +77,11 @@ namespace SubscriptionActorService
 
                         _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
 
+                        if (Directory.Exists(targetPath))
+                        {
+                            Directory.Delete(targetPath, true);
+                        }
+                        
                         Directory.CreateDirectory(targetPath);
 
                         using (HttpClient client = new HttpClient())
