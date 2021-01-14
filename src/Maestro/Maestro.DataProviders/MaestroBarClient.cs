@@ -441,9 +441,15 @@ namespace Maestro.DataProviders
                     Repository = dc.Repository,
                     Branch = dc.Branch,
                     ChannelId = dc.ChannelId,
+
+                    // Get AzDO BuildDefinitionId for the most recent build in the default channel.
+                    // It will be used to restrict the average build time query in Kusto
+                    // to official builds only.
                     BuildDefinitionId = dc.Channel.BuildChannels
                         .Select(bc => bc.Build)
-                        .Where(b => b.AzureDevOpsBuildDefinitionId.HasValue)
+                        .Where(b => b.AzureDevOpsBuildDefinitionId.HasValue
+                            && ((b.GitHubRepository == dc.Repository && b.GitHubBranch == dc.Branch)
+                                || (b.AzureDevOpsRepository == dc.Repository && b.AzureDevOpsBranch == dc.Branch)))
                         .OrderByDescending(b => b.DateProduced)
                         .Select(b => b.AzureDevOpsBuildDefinitionId)
                         .FirstOrDefault()
@@ -461,7 +467,11 @@ namespace Maestro.DataProviders
                 };
             }
 
-            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(
+                defaultChannel.Repository,
+                defaultChannel.Branch,
+                days,
+                defaultChannel.BuildDefinitionId);
 
             var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));

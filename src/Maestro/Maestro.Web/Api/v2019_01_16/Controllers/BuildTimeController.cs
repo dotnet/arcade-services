@@ -58,7 +58,11 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 return NotFound();
             }
 
-            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(
+                defaultChannel.Repository,
+                defaultChannel.Branch,
+                days,
+                buildDefinitionId: null /* include all build definitions */);
 
             var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));

@@ -8,7 +8,11 @@ namespace Maestro.DataProviders
 {
     public static class SharedKustoQueries
     {
-        public static MultiProjectKustoQuery CreateBuildTimesQueries(string repository, string branch, int days)
+        public static MultiProjectKustoQuery CreateBuildTimesQueries(
+            string repository,
+            string branch,
+            int days,
+            int? buildDefinitionId)
         {
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
@@ -34,6 +38,21 @@ namespace Maestro.DataProviders
                 | where FinishTime > ago(_Days) 
                 | extend duration = FinishTime - StartTime 
                 | summarize average_duration = avg(duration) by DefinitionId";
+
+            if (buildDefinitionId.HasValue)
+            {
+                // Build definition ID is stored in BAR as int
+                // but in Kusto it's a string instead so we need
+                // to convert it.
+                parameters.Add(new KustoParameter(
+                    "_BuildDefinitionId",
+                    buildDefinitionId.ToString(),
+                    KustoDataType.String));
+                
+                commonQueryText =
+                    $@"| where DefinitionId == _BuildDefinitionId
+                    {commonQueryText}";
+            }
 
             // We only want the pull request time from the public ci. We exclude on target branch,
             // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
