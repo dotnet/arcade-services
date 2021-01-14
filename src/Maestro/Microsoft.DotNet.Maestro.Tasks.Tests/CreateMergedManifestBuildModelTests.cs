@@ -102,7 +102,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetDataWithoutName()
         {
             BuildModel expectedBuildModel = GetBuildModel();
@@ -131,7 +130,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetWithoutVersion()
         {
             BuildModel expectedBuildModel = GetBuildModel();
@@ -160,7 +158,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenAssetsInBlobSet()
         {
             BuildModel expectedBuildModel = GetBuildModel();
@@ -188,7 +185,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        [Ignore("Fails due to bug https://github.com/dotnet/arcade/issues/6677")]
         public void GivenSomeAssetsInBlobSetAndSomeNot()
         {
             BuildModel expectedBuildModel = GetBuildModel();
