@@ -434,7 +434,21 @@ namespace Maestro.DataProviders
 
         public async Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
         {
-            Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(defaultChannelId);
+            var defaultChannel = await _context.DefaultChannels
+                .Where(dc => dc.Id == defaultChannelId)
+                .Select(dc => new
+                {
+                    Repository = dc.Repository,
+                    Branch = dc.Branch,
+                    ChannelId = dc.ChannelId,
+                    BuildDefinitionId = dc.Channel.BuildChannels
+                        .Select(bc => bc.Build)
+                        .Where(b => b.AzureDevOpsBuildDefinitionId.HasValue)
+                        .OrderByDescending(b => b.DateProduced)
+                        .Select(b => b.AzureDevOpsBuildDefinitionId)
+                        .FirstOrDefault()
+                })
+                .FirstOrDefaultAsync();
 
             if (defaultChannel == null)
             {
