@@ -91,8 +91,6 @@ namespace SubscriptionActorService
                         ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
 
                         _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
-
-                        LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
                     }
                 }
             }
@@ -101,6 +99,8 @@ namespace SubscriptionActorService
                 _semaphoreSlim.Release();
             }
 
+            // Will throw if something is wrong with the git executable, forcing a retry
+            LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
             return _gitExecutable;
         }
     }
