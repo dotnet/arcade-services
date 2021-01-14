@@ -152,6 +152,23 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return workingDirectory;
         }
 
+        /// <summary>
+        /// Check that the git installation is valid by running git version --build-options
+        /// and checking the outputs to confirm that it is well-formed
+        /// </summary>
+        /// <param name="gitLocation">The location of git.exe</param>
+        /// <param name="logger">The logger</param>
+        public static void CheckGitInstallation(string gitLocation, ILogger logger)
+        {
+            string versionInfo = LocalHelpers.ExecuteGitCommand(gitLocation, "version --build-options", logger, Environment.CurrentDirectory);
+
+            if (!versionInfo.StartsWith("git version") && !versionInfo.Contains("cpu:"))
+            {
+                throw new DarcException(
+                    $"Something failed when checking the git installation {gitLocation}");
+            }
+        }
+
         public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
         {
             if (string.IsNullOrEmpty(command))
@@ -200,7 +217,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="logger">Logger</param>
         /// <param name="workingDirectory">Working directory</param>
         /// <param name="secretToMask">Mask this secret when calling the logger.</param>
-        public static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
+        private static string ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
         {
             string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
             logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory);
@@ -211,6 +228,8 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 throw new DarcException(
                     $"Something failed when executing command git {maskedArguments} in {workingDirectory}");
             }
+
+            return result;
         }
     }
 }

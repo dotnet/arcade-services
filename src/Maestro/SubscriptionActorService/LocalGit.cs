@@ -49,7 +49,7 @@ namespace SubscriptionActorService
                 // We should also mke sure that the git executable that exists runs properly
                 try
                 {
-                    LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
+                    LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
                     return _gitExecutable;
                 }
                 catch (DarcException)
@@ -81,7 +81,7 @@ namespace SubscriptionActorService
                         {
                             Directory.Delete(targetPath, true);
                         }
-                        
+
                         Directory.CreateDirectory(targetPath);
 
                         using (HttpClient client = new HttpClient())
@@ -105,7 +105,7 @@ namespace SubscriptionActorService
             }
 
             // Will throw if something is wrong with the git executable, forcing a retry
-            LocalHelpers.ExecuteGitCommand(_gitExecutable, "--version", _logger, Environment.CurrentDirectory);
+            LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
             return _gitExecutable;
         }
     }
