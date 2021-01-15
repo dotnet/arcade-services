@@ -52,9 +52,9 @@ namespace SubscriptionActorService
                     LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
                     return _gitExecutable;
                 }
-                catch (DarcException)
+                catch
                 { 
-                    _logger.LogWarning($"Something went wrong with the git executable at {_gitExecutable}. Downloading new version.");
+                    _logger.LogWarning($"Something went wrong with validating git executable at {_gitExecutable}. Downloading new version.");
                 }
             }
 

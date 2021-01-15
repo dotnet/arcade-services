@@ -160,12 +160,11 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="logger">The logger</param>
         public static void CheckGitInstallation(string gitLocation, ILogger logger)
         {
-            string versionInfo = LocalHelpers.ExecuteGitCommand(gitLocation, "version --build-options", logger, Environment.CurrentDirectory);
+            string versionInfo = LocalHelpers.ExecuteCommand(gitLocation, "version --build-options", logger);
 
-            if (!versionInfo.StartsWith("git version") && !versionInfo.Contains("cpu:"))
+            if (!versionInfo.StartsWith("git version") || !versionInfo.Contains("cpu:"))
             {
-                throw new DarcException(
-                    $"Something failed when checking the git installation {gitLocation}");
+                throw new Exception($"Something failed when validating the git installation {gitLocation}");
             }
         }
 
@@ -217,7 +216,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="logger">Logger</param>
         /// <param name="workingDirectory">Working directory</param>
         /// <param name="secretToMask">Mask this secret when calling the logger.</param>
-        private static string ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
+        private static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
         {
             string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
             logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory);
@@ -228,8 +227,6 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 throw new DarcException(
                     $"Something failed when executing command git {maskedArguments} in {workingDirectory}");
             }
-
-            return result;
         }
     }
 }
