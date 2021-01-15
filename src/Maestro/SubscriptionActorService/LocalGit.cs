@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
@@ -42,9 +43,18 @@ namespace SubscriptionActorService
         public async Task<string> GetPathToLocalGitAsync()
         {
             // Determine whether we need to do any downloading at all.
-            if (!string.IsNullOrEmpty(_gitExecutable))
+            if (!string.IsNullOrEmpty(_gitExecutable) && File.Exists(_gitExecutable))
             {
-                return _gitExecutable;
+                // We should also mke sure that the git executable that exists runs properly
+                try
+                {
+                    LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
+                    return _gitExecutable;
+                }
+                catch
+                { 
+                    _logger.LogWarning($"Something went wrong with validating git executable at {_gitExecutable}. Downloading new version.");
+                }
             }
 
             await _semaphoreSlim.WaitAsync();
@@ -52,7 +62,7 @@ namespace SubscriptionActorService
             {
                 // Determine whether another thread ended up getting the lock and downloaded git
                 // in the meantime.
-                if (string.IsNullOrEmpty(_gitExecutable))
+                if (string.IsNullOrEmpty(_gitExecutable) || !File.Exists(_gitExecutable))
                 {
                     using (_operations.BeginOperation($"Installing a local copy of git"))
                     {
@@ -65,6 +75,11 @@ namespace SubscriptionActorService
                         string gitZipFile = Path.Combine(gitRoot, remoteFileName);
 
                         _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
+
+                        if (Directory.Exists(targetPath))
+                        {
+                            Directory.Delete(targetPath, true);
+                        }
 
                         Directory.CreateDirectory(targetPath);
 
@@ -88,6 +103,8 @@ namespace SubscriptionActorService
                 _semaphoreSlim.Release();
             }
 
+            // Will throw if something is wrong with the git executable, forcing a retry
+            LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
             return _gitExecutable;
         }
     }
