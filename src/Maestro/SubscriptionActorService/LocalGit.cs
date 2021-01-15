@@ -4,7 +4,6 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
