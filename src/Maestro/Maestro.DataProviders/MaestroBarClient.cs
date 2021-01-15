@@ -458,13 +458,7 @@ namespace Maestro.DataProviders
 
             if (defaultChannel == null)
             {
-                return new BuildTime
-                {
-                    DefaultChannelId = 0,
-                    OfficialBuildTime = 0,
-                    PrBuildTime = 0,
-                    GoalTimeInMinutes = 0
-                };
+                return null;
             }
 
             MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(

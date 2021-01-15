@@ -12,7 +12,7 @@ namespace Maestro.DataProviders
             string repository,
             string branch,
             int days,
-            int? buildDefinitionId)
+            int? officialBuildDefinitionId)
         {
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
@@ -39,21 +39,6 @@ namespace Maestro.DataProviders
                 | extend duration = FinishTime - StartTime 
                 | summarize average_duration = avg(duration) by DefinitionId";
 
-            if (buildDefinitionId.HasValue)
-            {
-                // Build definition ID is stored in BAR as int
-                // but in Kusto it's a string instead so we need
-                // to convert it.
-                parameters.Add(new KustoParameter(
-                    "_BuildDefinitionId",
-                    buildDefinitionId.ToString(),
-                    KustoDataType.String));
-                
-                commonQueryText =
-                    $@"| where DefinitionId == _BuildDefinitionId
-                    {commonQueryText}";
-            }
-
             // We only want the pull request time from the public ci. We exclude on target branch,
             // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
             // apply to.
@@ -73,7 +58,22 @@ namespace Maestro.DataProviders
                 | where Project == 'internal' 
                 | where Repository endswith _Repository
                 | where Reason == 'batchedCI' or Reason == 'individualCI' or Reason == 'manual'
-                | where SourceBranch == _SourceBranch
+                | where SourceBranch == _SourceBranch";
+
+            if (officialBuildDefinitionId.HasValue)
+            {
+                // Build definition ID is stored in BAR as int but in Kusto it's a string instead
+                // so we need to convert it.
+                parameters.Add(new KustoParameter(
+                    "_OfficialBuildDefinitionId",
+                    officialBuildDefinitionId.ToString(),
+                    KustoDataType.String));
+
+                internalQueryText += $@"
+                | where DefinitionId == _OfficialBuildDefinitionId";
+            }
+
+            internalQueryText += $@"
                 {commonQueryText}";
 
             return new MultiProjectKustoQuery(new KustoQuery(internalQueryText, parameters), new KustoQuery(publicQueryText, parameters));

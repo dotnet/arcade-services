@@ -2,23 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Kusto.Data.Common;
-using Kusto.Data.Exceptions;
-using Maestro.Data;
-using Maestro.DataProviders;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Kusto;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Data;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
@@ -29,15 +21,15 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
     [ApiVersion("2019-01-16")]
     public class BuildTimeController : ControllerBase
     {
-        protected readonly BuildAssetRegistryContext _context;
-        private readonly KustoClientProvider _kustoClientProvider;
+        private readonly ILogger<BuildTimeController> _logger;
+        private readonly IRemoteFactory _remoteFactory;
 
         public BuildTimeController(
-            BuildAssetRegistryContext context,
-            IKustoClientProvider kustoClientProvider)
+            ILogger<BuildTimeController> logger,
+            IRemoteFactory remoteFactory)
         {
-            _context = context;
-            _kustoClientProvider = (KustoClientProvider) kustoClientProvider;
+            _logger = logger;
+            _remoteFactory = remoteFactory;
         }
 
         /// <summary>
@@ -51,49 +43,20 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [ValidateModelState]
         public virtual async Task<IActionResult> GetBuildTimes([Required]int id, int days = 7)
         {
-            Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(id);
-
-            if (defaultChannel == null)
+            var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(_logger);
+            var buildTime = await barOnlyRemote.GetBuildTimeAsync(id, days);
+            if (buildTime != null)
+            {
+                return Ok(new BuildTime(
+                    buildTime.DefaultChannelId ?? 0,
+                    buildTime.OfficialBuildTime ?? 0,
+                    buildTime.PrBuildTime ?? 0,
+                    buildTime.GoalTimeInMinutes ?? 0));
+            }
+            else
             {
                 return NotFound();
             }
-
-            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(
-                defaultChannel.Repository,
-                defaultChannel.Branch,
-                days,
-                buildDefinitionId: null /* include all build definitions */);
-
-            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
-                _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
-
-            (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);
-            (int prBuildId, TimeSpan prBuildTime) = SharedKustoQueries.ParseBuildTime(results[1]);
-
-            double officialTime = 0;
-            double prTime = 0;
-            int goalTime = 0;
-
-            if (officialBuildId != -1)
-            {
-                officialTime = officialBuildTime.TotalMinutes;
-                
-                // Get goal time for definition id
-                Data.Models.GoalTime goal = await _context.GoalTime
-                    .FirstOrDefaultAsync(g => g.DefinitionId == officialBuildId && g.ChannelId == defaultChannel.ChannelId);
-
-                if (goal != null)
-                {
-                    goalTime = goal.Minutes;
-                }
-            }
-
-            if (prBuildId != -1)
-            {
-                prTime = prBuildTime.TotalMinutes;
-            }
-
-            return Ok(new BuildTime(id, officialTime, prTime, goalTime));
         }
     }
 }
