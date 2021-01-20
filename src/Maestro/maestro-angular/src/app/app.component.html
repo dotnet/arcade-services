@@ -11,7 +11,7 @@
 
 <div class="d-flex flex-column" style="height: 100%; width: 100%;">
   <div class="d-flex flex-row flex-grow-1" style="overflow: visible; min-height: 56px; max-height: 56px;">
-    <nav class="navbar navbar-expand-md navbar-light bg-light" style="min-height: 56px; width: 100%;">
+    <nav class="navbar navbar-expand-md navbar-light bg-light" style="min-height: 56px; width: 100%;" role="navigation">
       <a class="navbar-brand" href="/">{{brand}}</a>
       <button class="navbar-toggler" type="button" (click)="navbarOpen = !navbarOpen" [attr.aria-expanded]="navbarOpen"
         aria-controls="bs-navbar-collapse">
@@ -57,21 +57,21 @@
         </div>
       </ng-container>
       <ng-template #notAuthorized>
-        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
+        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;" role="main">
           <p class="p-2">You are not authorized to use this site. If you have not done so yet, please submit a request to join the <a href="https://github.com/orgs/dotnet/teams/arcade-contrib/members">arcade-contrib group on GitHub</a>. After approval, it will take about 15 minutes for those permissions to propagate. </p>
           <p class="p2">If you have joined the group and are still facing problems, please contact <a href="mailto:dnceng@microsoft.com">dnceng</a>.</p>
         </div>
       </ng-template>
     </ng-container>
     <ng-container *ngIf="!userName">
-      <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
+      <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;" role="main">
         <p class="p-2">Please <a href="/Account/SignIn?returnUrl={{returnUrl | uriEncode}}">Sign In</a> to use this
           site.</p>
       </div>
     </ng-container>
   </div>
 
-  <div class="d-flex justify-content-end p-1 border-top">
+  <div class="d-flex justify-content-end p-1 border-top" role="contentinfo">
     <a href="mailto:dnceng@microsoft.com">Contact Us</a>
     &nbsp;|&nbsp;
     <a href="https://go.microsoft.com/fwlink/?LinkId=521839">Privacy &amp; Cookies</a>
