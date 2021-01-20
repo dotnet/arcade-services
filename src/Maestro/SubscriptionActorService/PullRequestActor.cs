@@ -1168,15 +1168,15 @@ namespace SubscriptionActorService
                     }).ToList();
 
             // Project to a form that is easy to search
-            Dictionary<string, DependencyUpdateSummary> searchableUpdates =
-                mergedUpdates.ToDictionary(u => u.DependencyName, u => u);
+            var searchableUpdates =
+                mergedUpdates.Select( u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Add any existing assets that weren't modified by the incoming update
             if (existingUpdates != null)
             {
                 foreach (DependencyUpdateSummary update in existingUpdates)
                 {
-                    if (!searchableUpdates.ContainsKey(update.DependencyName))
+                    if (!searchableUpdates.Contains(update.DependencyName))
                     {
                         mergedUpdates.Add(update);
                     }

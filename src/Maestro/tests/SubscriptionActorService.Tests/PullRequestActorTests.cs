@@ -314,7 +314,13 @@ namespace SubscriptionActorService.Tests
                             DependencyName = "Ham",
                             FromVersion = "1.0.0-beta.1",
                             ToVersion = "1.0.1-beta.1"
-                        }
+                        },
+                        new DependencyUpdateSummary
+                        {
+                            DependencyName = "Ham",
+                            FromVersion = "1.0.0-beta.1",
+                            ToVersion = "1.0.1-beta.1"
+                        },
                     }
                 };
                 StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
