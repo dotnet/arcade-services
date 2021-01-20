@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -44,6 +45,14 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                             source = asset.SourceLocation,
                             targets = GetTargetPaths(asset),
                             barAssetId = asset.Asset.Id
+                        }),
+                        dependencies = build.Dependencies?.Select(dependency =>
+                        new
+                        {
+                            name = dependency.Name,
+                            commit = dependency.Commit,
+                            version = dependency.Version,
+                            repoUri = dependency.RepoUri
                         })
                     })
             };
@@ -68,8 +77,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     };
                 }
             }
-
-            return JObject.FromObject(manifestObject);
+            return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
         }
     }
 }

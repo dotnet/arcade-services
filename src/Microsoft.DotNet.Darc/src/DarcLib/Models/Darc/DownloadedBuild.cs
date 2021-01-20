@@ -20,5 +20,6 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc
         ///     True if the output has any shipping assets.
         /// </summary>
         public bool AnyShippingAssets { get; set; }
+        public IEnumerable<DependencyDetail> Dependencies { get; set; }
     }
 }
