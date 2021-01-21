@@ -454,6 +454,7 @@ namespace Microsoft.DotNet.DarcLib
             // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
             else if (disabledSourcesNode.HasChildNodes)
             {
+                bool withinMaestroComments = false;
                 var allPossibleManagedSources = new List<string>();
 
                 foreach (var repoName in maestroManagedFeedsByRepo.Keys)
@@ -469,14 +470,24 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         insertAfterNode = currentNode;
                     }
-                    // while we traverse, we may as well remove all the existing entries for what we're updating.
-                    if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                        currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
-                        // If there somehow is an unrelated darc-* source entry in here, we'll leave it alone.
-                        allPossibleManagedSources.Any(ms => ms == currentNode.Attributes["key"]?.Value))
+                    // while we traverse, remove all existing entries for what we're updating if inside the comment block
+                    else if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                             currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                             withinMaestroComments)
                     {
                         currentNode = RemoveCurrentNode(currentNode);
                         continue;
+                    }
+                    else if (currentNode.NodeType == XmlNodeType.Comment)
+                    {
+                        if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
+                        {
+                            withinMaestroComments = true;
+                        }
+                        else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                        {
+                            withinMaestroComments = false;
+                        }
                     }
                     currentNode = currentNode.NextSibling;
                 }
