@@ -580,6 +580,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
                     string repoName = segments[segments.Length - 1];
+                    if(repoName.Contains("-Trusted"))
+                    {
+                        repoName = repoName.Replace("-trusted", "");
+                    }
                     int index = repoName.IndexOf('-');
 
                     StringBuilder builder = new StringBuilder(repoName);
