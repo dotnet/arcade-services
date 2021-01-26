@@ -141,7 +141,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             string repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
             IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
-            return await remote.GetDependenciesAsync(build.GitHubRepository, build.Commit);
+            return await remote.GetDependenciesAsync(repoUri, build.Commit);
         }
 
         /// <summary>
