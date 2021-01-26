@@ -582,7 +582,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     string repoName = segments[segments.Length - 1];
                     if(repoName.Contains("-Trusted"))
                     {
-                        repoName = repoName.Replace("-trusted", "");
+                        repoName = repoName.Replace("-Trusted", "");
                     }
                     int index = repoName.IndexOf('-');
 
