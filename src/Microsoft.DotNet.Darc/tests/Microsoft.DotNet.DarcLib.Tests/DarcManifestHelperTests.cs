@@ -43,16 +43,6 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 builds[i]["barBuildId"].Value<int>().Should().Be(i);
                 builds[i]["channels"].Children().Count().Should().Be(2);
                 builds[i]["assets"].Children().Count().Should().Be(1);
-
-                if (i == 0) // Dependencies included in test data
-                {
-                    CheckExpectedDependencies(builds[i]["dependencies"]);
-                }
-                else
-                {
-                    // Non-root builds won't populate these so expect to not even find the node.
-                    builds[i]["dependencies"].Should().BeNull();
-                }
             }
             testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
         }
@@ -80,34 +70,9 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 builds[i]["barBuildId"].Value<int>().Should().Be(i);
                 builds[i]["channels"].Children().Count().Should().Be(2);
                 builds[i]["assets"].Children().Count().Should().Be(1);
-
-                if (i == 0) // Dependencies included in test data
-                {
-                    CheckExpectedDependencies(builds[i]["dependencies"]);
-                }
-                else
-                {
-                    // Non-root builds won't populate these so expect to not even find the node.
-                    builds[i]["dependencies"].Should().BeNull();
-                }
             }
             testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
         }
-
-        private void CheckExpectedDependencies(JToken dependenciesNode)
-        {
-            dependenciesNode.Children().Count().Should().Be(2);
-            dependenciesNode.Children().ToArray()[0]["commit"].Value<string>().Should().Be("fakehash1");
-            dependenciesNode.Children().ToArray()[0]["name"].Value<string>().Should().Be("Fake.Dependency.One");
-            dependenciesNode.Children().ToArray()[0]["repoUri"].Value<string>().Should().Be("https://github.com/dotnet/fakerepository1");
-            dependenciesNode.Children().ToArray()[0]["version"].Value<string>().Should().Be("1.2.3-prerelease");
-
-            dependenciesNode.Children().ToArray()[1]["commit"].Value<string>().Should().Be("fakehash2");
-            dependenciesNode.Children().ToArray()[1]["name"].Value<string>().Should().Be("Fake.Dependency.Two");
-            dependenciesNode.Children().ToArray()[1]["repoUri"].Value<string>().Should().Be("https://github.com/dotnet/fakerepository2");
-            dependenciesNode.Children().ToArray()[1]["version"].Value<string>().Should().Be("4.5.6");
-        }
-
 
         [Test]
         public void NoDownloadedBuildsProvided()
@@ -131,7 +96,8 @@ namespace Microsoft.DotNet.DarcLib.Tests
 
             for (int i = 0; i < FakeBuildCount; i++)
             {
-                var buildToAdd = new DownloadedBuild()
+
+                fakeDownloadedBuilds.Add(new DownloadedBuild()
                 {
                     ReleaseLayoutOutputDirectory = @"F:\A",
                     AnyShippingAssets = true,
@@ -156,29 +122,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
                             UnifiedLayoutTargetLocation = @$"F:\A\KE\Other\Path\SomeAsset.{i}.zip",
                         }
                     },
-                };
-
-                if (i == 0) // Include some dependency details if it's the first build, so we test both the null and has-values possibilities
-                {
-                    buildToAdd.Dependencies = new List<DependencyDetail>()
-                    {
-                        new DependencyDetail()
-                        {
-                             Commit = "fakehash1",
-                             Name = "Fake.Dependency.One",
-                             RepoUri = "https://github.com/dotnet/fakerepository1",
-                             Version = "1.2.3-prerelease"
-                        },
-                        new DependencyDetail()
-                        {
-                             Commit = "fakehash2",
-                             Name = "Fake.Dependency.Two",
-                             RepoUri = "https://github.com/dotnet/fakerepository2",
-                             Version = "4.5.6"
-                        }
-                    };
-                }
-                fakeDownloadedBuilds.Add(buildToAdd);
+                }); ;
             }
             return fakeDownloadedBuilds;
         }
