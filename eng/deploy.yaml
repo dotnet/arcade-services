@@ -272,8 +272,6 @@ stages:
     timeoutInMinutes: 90
     steps:
     - download: current
-      artifact: ScenarioTests
-    - download: current
       artifact: PackageArtifacts
     - download: current
       artifact: Maestro.ScenarioTests
@@ -312,15 +310,6 @@ stages:
         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
         Write-Host "Using Darc version $latestDarcVersion to run the tests"
       displayName: Get DARC version
-
-    - task: PowerShell@2
-      displayName: Run Scenario Tests
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
-        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
-        workingDirectory: $(Pipeline.Workspace)/ScenarioTests
-      timeoutInMinutes: 90
 
 
     

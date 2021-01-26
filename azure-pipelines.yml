@@ -252,13 +252,6 @@ stages:
               sourceFolder: $(Build.SourcesDirectory)\src\maestro\tests\scenarios
               contents: '*'
               targetFolder: $(Build.ArtifactStagingDirectory)\tests\scenarios
-              
-          - task: PublishBuildArtifacts@1
-            displayName: Publish Scenario test scripts Artifact
-            inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\tests\scenarios
-              ArtifactName: ScenarioTests
-              ArtifactType: Container
 
           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
             artifact: Maestro.ScenarioTests
