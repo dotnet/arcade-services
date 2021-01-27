@@ -97,7 +97,15 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                     if (rootBuilds.Contains(build))
                     {
-                        downloadedBuild.Dependencies = await GetBuildDependenciesAsync(build);
+                        try
+                        {
+                            downloadedBuild.Dependencies = await GetBuildDependenciesAsync(build);
+                        }
+                        catch (DependencyFileNotFoundException)
+                        {
+                            // Ignore: this is a repository without a dependencies xml file.
+                            // It may be an artificial scenario for a "root" build to have no dependencies.
+                        }
                     }
 
                     downloadedBuilds.Add(downloadedBuild);
@@ -141,7 +149,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             string repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
             IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
-            return await remote.GetDependenciesAsync(build.GitHubRepository, build.Commit);
+            return await remote.GetDependenciesAsync(repoUri, build.Commit);
         }
 
         /// <summary>
