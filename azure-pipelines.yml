@@ -245,14 +245,6 @@ stages:
             artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
 
-          ## Prepare scenario tests artifact
-          - task: CopyFiles@2
-            displayName: Prepare Scenario test scripts
-            inputs:
-              sourceFolder: $(Build.SourcesDirectory)\src\maestro\tests\scenarios
-              contents: '*'
-              targetFolder: $(Build.ArtifactStagingDirectory)\tests\scenarios
-
           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
             artifact: Maestro.ScenarioTests
 
