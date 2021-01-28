@@ -42,7 +42,7 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeBuilds_EndToEnd()
         {
-            TestContext.WriteLine("Darc/Maestro build handing tests");
+            TestContext.WriteLine("Darc/Maestro build-handling tests");
 
             repoUrl = GetRepoUrl(repoName);
 

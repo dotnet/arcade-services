@@ -300,13 +300,28 @@ namespace SubscriptionActorService.Tests
                 {
                     Url = InProgressPrUrl,
                     ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
-                    new SubscriptionPullRequestUpdate
                     {
-                        BuildId = -1,
-                        SubscriptionId = Subscription.Id
+                        new SubscriptionPullRequestUpdate
+                        {
+                            BuildId = -1,
+                            SubscriptionId = Subscription.Id
+                        }
+                    },
+                    RequiredUpdates = new List<DependencyUpdateSummary>
+                    {
+                        new DependencyUpdateSummary
+                        {
+                            DependencyName = "Ham",
+                            FromVersion = "1.0.0-beta.1",
+                            ToVersion = "1.0.1-beta.1"
+                        },
+                        new DependencyUpdateSummary
+                        {
+                            DependencyName = "Ham",
+                            FromVersion = "1.0.0-beta.1",
+                            ToVersion = "1.0.1-beta.1"
+                        },
                     }
-                }
                 };
                 StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
                 ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);

@@ -434,20 +434,38 @@ namespace Maestro.DataProviders
 
         public async Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
         {
-            Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(defaultChannelId);
+            var defaultChannel = await _context.DefaultChannels
+                .Where(dc => dc.Id == defaultChannelId)
+                .Select(dc => new
+                {
+                    Repository = dc.Repository,
+                    Branch = dc.Branch,
+                    ChannelId = dc.ChannelId,
+
+                    // Get AzDO BuildDefinitionId for the most recent build in the default channel.
+                    // It will be used to restrict the average build time query in Kusto
+                    // to official builds only.
+                    BuildDefinitionId = dc.Channel.BuildChannels
+                        .Select(bc => bc.Build)
+                        .Where(b => b.AzureDevOpsBuildDefinitionId.HasValue
+                            && ((b.GitHubRepository == dc.Repository && b.GitHubBranch == dc.Branch)
+                                || (b.AzureDevOpsRepository == dc.Repository && b.AzureDevOpsBranch == dc.Branch)))
+                        .OrderByDescending(b => b.DateProduced)
+                        .Select(b => b.AzureDevOpsBuildDefinitionId)
+                        .FirstOrDefault()
+                })
+                .FirstOrDefaultAsync();
 
             if (defaultChannel == null)
             {
-                return new BuildTime
-                {
-                    DefaultChannelId = 0,
-                    OfficialBuildTime = 0,
-                    PrBuildTime = 0,
-                    GoalTimeInMinutes = 0
-                };
+                return null;
             }
 
-            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(
+                defaultChannel.Repository,
+                defaultChannel.Branch,
+                days,
+                defaultChannel.BuildDefinitionId);
 
             var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));

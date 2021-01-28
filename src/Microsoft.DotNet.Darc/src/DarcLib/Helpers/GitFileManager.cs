@@ -401,18 +401,13 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else if (currentNode.NodeType == XmlNodeType.Comment)
                 {
-                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) ||
-                        currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
                     {
-                        withinMaestroComments = currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase);
-                        currentNode = RemoveCurrentNode(currentNode);
-                        continue;
+                        withinMaestroComments = true;
                     }
-                    else if (currentNode.Value.StartsWith(MaestroRepoSpecificBeginComment, StringComparison.OrdinalIgnoreCase) ||
-                             currentNode.Value.StartsWith(MaestroRepoSpecificEndComment, StringComparison.OrdinalIgnoreCase))
+                    else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
                     {
-                        currentNode = RemoveCurrentNode(currentNode);
-                        continue;
+                        withinMaestroComments = false;
                     }
                 }
 
@@ -447,6 +442,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
             XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
+            XmlNode insertAfterNode = null;
+
             if (disabledSourcesNode == null)
             {
                 XmlNode configNode = nugetConfig.SelectSingleNode("//configuration");
@@ -454,12 +451,65 @@ namespace Microsoft.DotNet.DarcLib
                 disabledSourcesNode = nugetConfig.CreateElement("disabledPackageSources");
                 configNode.AppendChild(disabledSourcesNode);
             }
-            XmlNode insertAfterNode = null;
-
-            // Do the order backwards 
-            foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderByDescending(t => t))
+            // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
+            else if (disabledSourcesNode.HasChildNodes)
             {
-                var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderByDescending(t => t.feed).ToList();
+                bool withinMaestroComments = false;
+                var allPossibleManagedSources = new List<string>();
+
+                foreach (var repoName in maestroManagedFeedsByRepo.Keys)
+                {
+                    allPossibleManagedSources.AddRange(GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).Select(ms => ms.key).ToList());
+                }
+
+                XmlNode currentNode = disabledSourcesNode.FirstChild;
+
+                while (currentNode != null)
+                {
+                    if (currentNode.Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        insertAfterNode = currentNode;
+                    }
+                    // while we traverse, remove all existing entries for what we're updating if inside the comment block
+                    else if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                             currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                             withinMaestroComments)
+                    {
+                        currentNode = RemoveCurrentNode(currentNode);
+                        continue;
+                    }
+                    else if (currentNode.NodeType == XmlNodeType.Comment)
+                    {
+                        if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
+                        {
+                            withinMaestroComments = true;
+                        }
+                        else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                        {
+                            withinMaestroComments = false;
+                        }
+                    }
+                    currentNode = currentNode.NextSibling;
+                }
+
+                if (insertAfterNode != null)
+                {
+                    _logger.LogInformation("Found a <clear/> in disabledPackageSources; will insert or update as needed after it.");
+                }
+            }
+
+            XmlComment startCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroBeginComment);
+            if (startCommentBlock != null)
+            {
+                insertAfterNode = startCommentBlock;
+            }
+
+            XmlComment endCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroEndComment);
+            bool introducedAStartCommentBlock = false;
+
+            foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderBy(t => t))
+            {
+                var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderBy(t => t.feed).ToList();
 
                 // If this set of sources doesn't have one, just keep going
                 if (!managedSources.Any(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
@@ -467,65 +517,58 @@ namespace Microsoft.DotNet.DarcLib
                     continue;
                 }
 
-                // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
-                if (disabledSourcesNode.HasChildNodes)
+                // For a config that doesn't already have the outermost 'begin' comment, create it.
+                if (startCommentBlock == null)
                 {
-                    XmlNode currentNode = disabledSourcesNode.FirstChild;
-
-                    while (currentNode != null)
-                    {
-                        if (currentNode.Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            insertAfterNode = currentNode;
-                        }
-                        // while we traverse, we may as well remove all the existing entries for what we're updating.
-                        if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                            currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
-                            // If there somehow is an unrelated darc-* source entry in here, we'll leave it alone.
-                            managedSources.Any(ms => ms.key == currentNode.Attributes["key"]?.Value))
-                        {
-                            currentNode = RemoveCurrentNode(currentNode);
-                            continue;
-                        }
-                        if (currentNode.NodeType == XmlNodeType.Comment &&
-                           (currentNode.Value.StartsWith(MaestroRepoSpecificBeginComment, StringComparison.OrdinalIgnoreCase) ||
-                            currentNode.Value.StartsWith(MaestroRepoSpecificEndComment, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            currentNode = RemoveCurrentNode(currentNode);
-                            continue;
-                        }
-                        currentNode = currentNode.NextSibling;
-                    }
                     if (insertAfterNode != null)
                     {
-                        _logger.LogInformation("Found a <clear/> node in disabledPackageSources; will insert or update as needed after it.");
+                        insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), insertAfterNode);
                     }
+                    else
+                    {
+                        insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), disabledSourcesNode.FirstChild);
+                    }
+                    startCommentBlock = (XmlComment) insertAfterNode;
+                    introducedAStartCommentBlock = true;
                 }
 
-                // If there's a clear, we'll insert after it
-                XmlComment startDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repoName} ");
-                if (insertAfterNode != null)
+                // We'll insert after the begin comment
+                XmlComment startDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificBeginComment} {repoName} ");
+                if (startDisabled != null)
                 {
-                    insertAfterNode = disabledSourcesNode.InsertAfter(startDisabled, insertAfterNode);
+                    insertAfterNode = startDisabled;
                 }
                 else
                 {
-                    insertAfterNode = disabledSourcesNode.AppendChild(startDisabled);
+                    startDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repoName} ");
+                    insertAfterNode = disabledSourcesNode.InsertAfter(startDisabled, insertAfterNode);
                 }
+
                 foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     XmlElement addEntry = nugetConfig.CreateElement("add");
                     addEntry.SetAttribute("key", key);
                     addEntry.SetAttribute("value", "true");
-
-                    // There's a clear, we'll insert after it
-                    if (insertAfterNode != null)
-                    {
-                        insertAfterNode = disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
-                    }
+                    insertAfterNode = disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
                 }
-                XmlComment endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
-                disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
+
+                // We'll insert after the begin comment
+                XmlComment endDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificEndComment} {repoName} ");
+                if (endDisabled != null)
+                {
+                    insertAfterNode = startDisabled;
+                }
+                else
+                {
+                    endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
+                    insertAfterNode = disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
+                }
+            }
+
+            // For a config that doesn't already have the end comment, create it.
+            if (endCommentBlock == null && introducedAStartCommentBlock)
+            {
+                endCommentBlock = (XmlComment) disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), insertAfterNode);
             }
         }
 
@@ -537,7 +580,7 @@ namespace Microsoft.DotNet.DarcLib
         private void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
         {
             var clearNode = nugetConfig.CreateElement(VersionFiles.ClearElement);
-            packageSourcesNode.PrependChild(clearNode);
+            XmlNode currentNode = packageSourcesNode.PrependChild(clearNode);
 
             if (maestroManagedFeedsByRepo.Values.Count == 0)
             {
@@ -545,15 +588,28 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
-            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), clearNode);
 
-            XmlNode prevNode = packageSourcesNode.FirstChild;
+            XmlComment blockBeginComment = GetFirstMatchingComment(packageSourcesNode, MaestroBeginComment);
+            if (blockBeginComment == null)
+            {
+                blockBeginComment = (XmlComment) packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
+            }
+            currentNode = blockBeginComment;
 
             foreach (string repository in repoList)
             {
                 var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repository]).OrderByDescending(t => t.feed).ToList();
-                XmlComment startBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repository} ");
-                prevNode = packageSourcesNode.InsertAfter(startBlockComment, prevNode);
+
+                var startBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificBeginComment} {repository} ");
+                if (startBlockComment == null)
+                {
+                    startBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repository} ");
+                    currentNode = packageSourcesNode.InsertAfter(startBlockComment, currentNode);
+                }
+                else
+                {
+                    currentNode = startBlockComment;
+                }
 
                 foreach ((string key, string feed) in managedSources)
                 {
@@ -562,12 +618,44 @@ namespace Microsoft.DotNet.DarcLib
                     SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
                     SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
 
-                    prevNode = packageSourcesNode.InsertAfter(newElement, prevNode);
+                    currentNode = packageSourcesNode.InsertAfter(newElement, currentNode);
                 }
-                XmlComment endBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repository} ");
-                prevNode = packageSourcesNode.InsertAfter(endBlockComment, prevNode);
+
+                var endBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificEndComment} {repository} ");
+                if (endBlockComment == null)
+                {
+                    endBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repository} ");
+                    currentNode = packageSourcesNode.InsertAfter(endBlockComment, currentNode);
+                }
+                else
+                {
+                    currentNode = endBlockComment;
+                }
             }
-            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), packageSourcesNode.FirstChild);
+
+            if (GetFirstMatchingComment(packageSourcesNode, MaestroEndComment) == null)
+            {
+                packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), currentNode);
+            }
+        }
+
+        private XmlComment GetFirstMatchingComment(XmlNode nodeToCheck, string commentText)
+        {
+            if (nodeToCheck.HasChildNodes)
+            {
+                XmlNode currentNode = nodeToCheck.FirstChild;
+
+                while (currentNode != null)
+                {
+                    if (currentNode.NodeType == XmlNodeType.Comment &&
+                       (currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return (XmlComment) currentNode;
+                    }
+                    currentNode = currentNode.NextSibling;
+                }
+            }
+            return null;
         }
 
         public async Task AddDependencyToVersionDetailsAsync(

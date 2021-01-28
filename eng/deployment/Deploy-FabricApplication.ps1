@@ -135,6 +135,9 @@ if (-not $UseExistingClusterConnection)
 
 $IsUpgrade = ($publishProfile.UpgradeDeployment -and $publishProfile.UpgradeDeployment.Enabled -and $OverrideUpgradeBehavior -ne 'VetoUpgrade') -or $OverrideUpgradeBehavior -eq 'ForceUpgrade'
 
+$applicationName = Get-ApplicationNameFromApplicationParameterFile $publishProfile.ApplicationParameterFile
+$app = Get-ServiceFabricApplication -ApplicationName $applicationName
+
 $PublishParameters = @{
     'ApplicationPackagePath' = $ApplicationPackagePath
     'ApplicationParameterFilePath' = $publishProfile.ApplicationParameterFile
@@ -158,7 +161,7 @@ if ($CopyPackageTimeoutSec)
     $PublishParameters['CopyPackageTimeoutSec'] = $CopyPackageTimeoutSec
 }
 
-if ($IsUpgrade)
+if ($IsUpgrade -and $app)
 {
     $Action = "RegisterAndUpgrade"
     if ($DeployOnly)

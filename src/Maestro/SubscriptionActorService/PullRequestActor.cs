@@ -1085,6 +1085,8 @@ namespace SubscriptionActorService
                 return;
             }
 
+            pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, requiredUpdates);
+
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
@@ -1142,6 +1144,46 @@ namespace SubscriptionActorService
                 null,
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5));
+        }
+
+
+        /// <summary>
+        /// Merges the list of existing updates in a PR with a list of incoming udpates
+        /// </summary>
+        /// <param name="existingUpdates">pr object to update</param>
+        /// <param name="incomingUpdates">list of new incoming updates</param>
+        /// <returns>Merged list of existing updates along with the new</returns>
+        private List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
+            List<DependencyUpdateSummary> existingUpdates,
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> incomingUpdates)
+        {
+            // First project the new updates to the final list
+            List<DependencyUpdateSummary> mergedUpdates = 
+                incomingUpdates.SelectMany(update => update.deps)
+                    .Select(du => new DependencyUpdateSummary
+                    {
+                        DependencyName = du.To.Name,
+                        FromVersion = du.From.Version,
+                        ToVersion = du.To.Version
+                    }).ToList();
+
+            // Project to a form that is easy to search
+            var searchableUpdates =
+                mergedUpdates.Select( u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Add any existing assets that weren't modified by the incoming update
+            if (existingUpdates != null)
+            {
+                foreach (DependencyUpdateSummary update in existingUpdates)
+                {
+                    if (!searchableUpdates.Contains(update.DependencyName))
+                    {
+                        mergedUpdates.Add(update);
+                    }
+                }
+            }
+
+            return mergedUpdates;
         }
 
         /// <summary>
