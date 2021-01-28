@@ -23,6 +23,7 @@ namespace DotNet.Status.Web.Options
                 public string DefinitionPath { get; set; }
                 public string[] Branches { get; set; }
                 public string Assignee { get; set; }
+                public string[] Labels { get; set; }
             }
         }
 
