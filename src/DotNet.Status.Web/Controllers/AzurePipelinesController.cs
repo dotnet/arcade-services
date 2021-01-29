@@ -229,8 +229,13 @@ namespace DotNet.Status.Web.Controllers
                 {
                     newIssue.Assignees.Add(monitor.Assignee);
                 }
-
+                
                 foreach (string label in repo.Labels.OrEmpty())
+                {
+                    newIssue.Labels.Add(label);
+                }
+
+                foreach (string label in monitor.Labels.OrEmpty())
                 {
                     newIssue.Labels.Add(label);
                 }
