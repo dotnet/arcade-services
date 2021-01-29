@@ -266,20 +266,20 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             pushMetadata = new PushMetadataToBuildAssetRegistry();
         }
 
-/*        [Test]
+        [Test]
         public void TwoCompatibleBuildData()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(twoBuildDataList);
             mergedData.Should().BeEquivalentTo(ExpectedMergedBuildData);
-        }*/
+        }
 
-/*        [Test]
+        [Test]
         public void ThreeCompatibleBuildData()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(threeBuildDataList);
             mergedData.Should().BeEquivalentTo(ExpectedThreeAssetsBuildData);
         }
-*/
+
         [Test]
         public void BuildDataWithNullAndEmptyAssets()
         {
@@ -287,12 +287,12 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             act.Should().Throw<ArgumentNullException>().WithMessage("Value cannot be null. (Parameter 'items')");
         }
 
-/*        [Test]
+        [Test]
         public void BuildDataWithPartiallyEmptyAssets()
         {
             BuildData mergedData = pushMetadata.MergeBuildManifests(ExpectedNoBlobManifestMetadata.Concat(ExpectedNoPackagesManifestMetadata).ToList());
             mergedData.Should().BeEquivalentTo(ExpectedPartialAssetsBuildData);
-        }*/
+        }
 
         [Test]
         public void IncompatibleBuildData()
