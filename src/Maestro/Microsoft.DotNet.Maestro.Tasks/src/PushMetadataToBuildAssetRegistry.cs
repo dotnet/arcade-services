@@ -580,7 +580,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
                     string repoName = segments[segments.Length - 1];
-                    if (repoName.EndsWith("-Trusted", StringComparison.OrdinalIgnoreCase))
+                    if (mergedBuild.AzureDevOpsRepository.Contains("DevDiv", StringComparison.OrdinalIgnoreCase) 
+                        && repoName.EndsWith("-Trusted", StringComparison.OrdinalIgnoreCase))
                     {
                         repoName = repoName.Remove(repoName.LastIndexOf("-Trusted"));
                     }
