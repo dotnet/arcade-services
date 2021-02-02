@@ -600,7 +600,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         /// <summary>
-        /// Get the github repo name from the AzdoRepo url
+        /// Get repo name from the AzdoRepo url
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <returns></returns>
