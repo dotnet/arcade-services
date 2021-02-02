@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -15,9 +16,23 @@ namespace Microsoft.DotNet.DarcLib.Helpers
     {
         public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
         {
+            return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths);
+        }
+
+
+        public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,  string outputPath, bool makeAssetsRelativePaths)
+        {
+
             // Construct an ad-hoc object with the necessary fields and use the json
             // serializer to write it to disk
             // If this type ever changes, we should consider giving it a specific versioned model object 
+
+            // Null out the alwaysDownloadedAssets collection in the case where it's empty, so as to avoid serializing it.
+            if (alwaysDownloadedAssets?.Count == 0)
+            {
+                alwaysDownloadedAssets = null;
+            }
+
             var manifestObject = new
             {
                 outputPath = outputPath,
@@ -54,7 +69,17 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                             version = dependency.Version,
                             repoUri = dependency.RepoUri
                         })
-                    })
+                    }),
+                extraAssets = alwaysDownloadedAssets?.Select(extraAsset =>
+                new
+                {
+                    name = extraAsset.Asset.Name,
+                    version = extraAsset.Asset.Version,
+                    nonShipping = extraAsset.Asset.NonShipping,
+                    source = extraAsset.SourceLocation,
+                    targets = GetTargetPaths(extraAsset),
+                    barAssetId = extraAsset.Asset.Id
+                })
             };
 
             // If assetsRelativePath is provided, calculate the target path list as relative to the overall output directory

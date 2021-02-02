@@ -28,7 +28,8 @@ namespace Maestro.ScenarioTests
             string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
             string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
 
-            using var testDir = Shareable.Create(TemporaryDirectory.Get());
+            var testDir = TemporaryDirectory.Get();
+            var testDirSharedWrapper = Shareable.Create(testDir);
 
             IMaestroApi maestroApi = maestroToken == null
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
@@ -40,7 +41,7 @@ namespace Maestro.ScenarioTests
             var toolInstallArgs = new List<string>
             {
                 "tool", "install",
-                "--tool-path", testDir.Peek()!.Directory,
+                "--tool-path", testDirSharedWrapper.Peek()!.Directory,
                 "--version", darcVersion,
                 "Microsoft.DotNet.Darc",
             };
@@ -51,7 +52,7 @@ namespace Maestro.ScenarioTests
             }
             await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
 
-            string darcExe = Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+            string darcExe = Path.Join(testDirSharedWrapper.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 
             Assembly assembly = typeof(TestParameters).Assembly;
             var githubApi =
@@ -59,9 +60,9 @@ namespace Maestro.ScenarioTests
                     new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                     new InMemoryCredentialStore(new Credentials(githubToken)));
             var azDoClient =
-                new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDir.TryTake()!.Directory);
+                new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
 
-            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir.TryTake()!, azdoToken);
+            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken);
         }
 
         private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,

@@ -20,11 +20,20 @@ namespace Microsoft.DotNet.DarcLib.Tests
         const int FakeBuildCount = 10;
         const string FakeOutputPath = @"F:\A\";
 
-        [Test]
-        public void GenerateManifestWithAbsolutePaths()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void GenerateManifestWithAbsolutePaths(bool includeExtraAssets)
         {
-            List<DownloadedBuild> downloadedBuilds = GetSomeShippingAssetsBuilds();
-            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
+            JObject testManifest;
+            if (includeExtraAssets)
+            {
+                testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, false);
+            }
+            else
+            {
+                testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, false);
+            }
+
             var builds = testManifest["builds"].ToList();
             builds.Count.Should().Be(FakeBuildCount);
 
@@ -55,13 +64,30 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 }
             }
             testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+            if (includeExtraAssets)
+            {
+                CheckExpectedExtraAssets(testManifest["extraAssets"], false);
+            }
+            else
+            {
+                testManifest["extraAssets"].Should().BeNull(); // Don't generate the extra Assets entry unless we have some.
+            }
         }
 
-        [Test]
-        public void GenerateManifestWithRelativePaths()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void GenerateManifestWithRelativePaths(bool includeExtraAssets)
         {
-            List<DownloadedBuild> downloadedBuilds = GetSomeShippingAssetsBuilds();
-            JObject testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, true);
+            JObject testManifest;
+            if (includeExtraAssets)
+            {
+                testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, true);
+            }
+            else
+            {
+                testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, true);
+            }
+
             var builds = testManifest["builds"].ToList();
             builds.Count.Should().Be(FakeBuildCount);
 
@@ -92,6 +118,44 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 }
             }
             testManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+            if (includeExtraAssets)
+            {
+                CheckExpectedExtraAssets(testManifest["extraAssets"], true);
+            }
+            else
+            {
+                testManifest["extraAssets"].Should().BeNull(); // Don't generate the extra Assets entry unless we have some.
+            }
+        }
+
+        private void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
+        {
+            extraAssetsNode.Children().Count().Should().Be(2);
+            extraAssetsNode[0]["name"].Value<string>().Should().Be("FakeExtraAssetOne");
+            extraAssetsNode[0]["version"].Value<string>().Should().Be("1.0.0");
+            extraAssetsNode[0]["nonShipping"].Value<bool>().Should().Be(false);
+            extraAssetsNode[0]["source"].Value<string>().Should().Be("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip");
+            extraAssetsNode[0]["barAssetId"].Value<int>().Should().Be(123);
+            extraAssetsNode[1]["name"].Value<string>().Should().Be("FakeExtraAssetTwo");
+            extraAssetsNode[1]["version"].Value<string>().Should().Be("1.2.0");
+            extraAssetsNode[1]["nonShipping"].Value<bool>().Should().Be(true);
+            extraAssetsNode[1]["source"].Value<string>().Should().Be("https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip");
+            extraAssetsNode[1]["barAssetId"].Value<int>().Should().Be(789);
+
+            if (relativePaths)
+            {
+                extraAssetsNode[0]["targets"][0].Value<string>().Should().Be(@$"KE\Path\FakeExtraAssetOne.blob");
+                extraAssetsNode[0]["targets"][1].Value<string>().Should().Be(@$"K\E\OtherPath\FakeExtraAssetOne.blob");
+                extraAssetsNode[1]["targets"][0].Value<string>().Should().Be(@$"KE\Path\FakeExtraAssetTwo.blob");
+                extraAssetsNode[1]["targets"][1].Value<string>().Should().Be(@$"K\E\OtherPath\FakeExtraAssetTwo.blob");
+            }
+            else
+            {
+                extraAssetsNode[0]["targets"][0].Value<string>().Should().Be(@$"F:\A\KE\Path\FakeExtraAssetOne.blob");
+                extraAssetsNode[0]["targets"][1].Value<string>().Should().Be(@$"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob");
+                extraAssetsNode[1]["targets"][0].Value<string>().Should().Be(@$"F:\A\KE\Path\FakeExtraAssetTwo.blob");
+                extraAssetsNode[1]["targets"][1].Value<string>().Should().Be(@$"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob");
+            }
         }
 
         private void CheckExpectedDependencies(JToken dependenciesNode)
@@ -117,6 +181,28 @@ namespace Microsoft.DotNet.DarcLib.Tests
             var builds = emptyManifest["builds"].ToList();
             builds.Count.Should().Be(0);
             emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
+        }
+
+        private List<DownloadedAsset> GetSomeExtraDownloadedAssets()
+        {
+            List<DownloadedAsset> fakeAssets = new List<DownloadedAsset>();
+            fakeAssets.Add(new DownloadedAsset()
+            {
+                Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
+            });
+            fakeAssets.Add(new DownloadedAsset()
+            {
+                Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
+            });
+            return fakeAssets;
         }
 
         private List<DownloadedBuild> GetSomeShippingAssetsBuilds()
