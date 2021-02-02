@@ -578,19 +578,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
-                    string repoName = segments[segments.Length - 1];
-                    if (mergedBuild.AzureDevOpsRepository.Contains("DevDiv", StringComparison.OrdinalIgnoreCase) 
-                        && repoName.EndsWith("-Trusted", StringComparison.OrdinalIgnoreCase))
-                    {
-                        repoName = repoName.Remove(repoName.LastIndexOf("-Trusted"));
-                    }
-                    int index = repoName.IndexOf('-');
-
-                    StringBuilder builder = new StringBuilder(repoName);
-                    builder[index] = '/';
-
-                    repoIdentity = builder.ToString();
+                    repoIdentity = GetGithubRepoName(mergedBuild.AzureDevOpsRepository);
                 }
 
                 client.BaseAddress = new Uri($"https://api.{gitHubHost}");
@@ -609,6 +597,29 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     mergedBuild.GitHubBranch = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Get the github repo name from the AzdoRepo url
+        /// </summary>
+        /// <param name="repoUrl"></param>
+        /// <returns></returns>
+        public string GetGithubRepoName(string repoUrl)
+        {
+            string[] segments = repoUrl.Split('/');
+            string repoName = segments[segments.Length - 1].ToLower();
+
+            if (repoUrl.Contains("DevDiv", StringComparison.OrdinalIgnoreCase)
+                && repoName.EndsWith("-Trusted", StringComparison.OrdinalIgnoreCase))
+            {
+                repoName = repoName.Remove(repoName.LastIndexOf("-trusted"));
+            }
+            int index = repoName.IndexOf('-');
+
+            StringBuilder builder = new StringBuilder(repoName);
+            builder[index] = '/';
+
+            return builder.ToString();
         }
 
         /// <summary>
