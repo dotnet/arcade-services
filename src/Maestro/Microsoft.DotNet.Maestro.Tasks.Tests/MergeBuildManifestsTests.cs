@@ -307,5 +307,18 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Action act = () => pushMetadata.MergeBuildManifests(ExpectedBuildDataIncompatibleList);
             act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
         }
+
+        [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
+        [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
+        [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-trusted-packages", "dotnet/trusted-packages")]
+        [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/dotnet-trusted-packages-trusted", "dotnet/trusted-packages")]
+        [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-images-trusted", "dotnet/images-trusted")]
+        [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/dotnet-images-trusted-trusted", "dotnet/images-trusted")]
+        [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/NuGet-NuGet.Client-Trusted", "nuget/nuget.client")]
+        public void GetGithubRepoNameTest(string azdoRepoUrl , string expectedRepo )
+        {
+            string actualRepo = pushMetadata.GetGithubRepoName(azdoRepoUrl);
+            Assert.AreEqual(expectedRepo,actualRepo);
+        }
     }
 }
