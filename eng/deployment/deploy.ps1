@@ -27,6 +27,7 @@ try {
     "PublishProfileFile" = $PublishProfile;
     "ApplicationPackagePath" = $ApplicationPackage;
     "UseExistingClusterConnection" = $true;
+    "UnregisterUnusedApplicationVersionsAfterUpgrade" = $true;
   }
 
   if ($ForceUpgrade) {
