@@ -13,6 +13,7 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
+using NuGet.Packaging.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -70,7 +71,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 bool success = true;
 
                 // Gather the list of builds that need to be downloaded.
-                InputBuilds buildsToDownload = await GatherBuildsToDownloadAsync();
+                var rootBuilds = await GetRootBuildsAsync();
+                InputBuilds buildsToDownload = await GatherBuildsToDownloadAsync(rootBuilds);
 
                 if (!buildsToDownload.Successful)
                 {
@@ -93,6 +95,19 @@ namespace Microsoft.DotNet.Darc.Operations
                             return Constants.ErrorCode;
                         }
                     }
+                    if (rootBuilds.Contains(build))
+                    {
+                        try
+                        {
+                            downloadedBuild.Dependencies = await GetBuildDependenciesAsync(build);
+                        }
+                        catch (DependencyFileNotFoundException)
+                        {
+                            // Ignore: this is a repository without a dependencies xml file.
+                            // It may be an artificial scenario for a "root" build to have no dependencies.
+                        }
+                    }
+
                     downloadedBuilds.Add(downloadedBuild);
                 }
 
@@ -128,6 +143,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(e, "Error: Failed to gather drop.");
                 return Constants.ErrorCode;
             }
+        }
+
+        private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
+        {
+            string repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
+            IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
+            return await remote.GetDependenciesAsync(repoUri, build.Commit);
         }
 
         /// <summary>
@@ -175,6 +197,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
         private async Task<IEnumerable<Build>> GetRootBuildsAsync()
         {
+            if (!ValidateRootBuildsOptions())
+            {
+                return null;
+            }
+
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             string repoUri = _options.RepoUri;
@@ -587,17 +614,10 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     not desired (just determine the root build and return it) or it could
         ///     be a matter of determining all builds that contributed to all dependencies.
         /// </remarks>
-        private async Task<InputBuilds> GatherBuildsToDownloadAsync()
+        private async Task<InputBuilds> GatherBuildsToDownloadAsync(IEnumerable<Build> rootBuilds)
         {
-            if (!ValidateRootBuildsOptions())
-            {
-                return new InputBuilds { Successful = false };
-            }
-
             Console.WriteLine("Determining what builds to download...");
 
-            // Gather the root build 
-            IEnumerable<Build> rootBuilds = await GetRootBuildsAsync();
             if (rootBuilds == null)
             {
                 return new InputBuilds { Successful = false };

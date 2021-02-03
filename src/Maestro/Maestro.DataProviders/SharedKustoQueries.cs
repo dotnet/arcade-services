@@ -8,7 +8,11 @@ namespace Maestro.DataProviders
 {
     public static class SharedKustoQueries
     {
-        public static MultiProjectKustoQuery CreateBuildTimesQueries(string repository, string branch, int days)
+        public static MultiProjectKustoQuery CreateBuildTimesQueries(
+            string repository,
+            string branch,
+            int days,
+            int? officialBuildDefinitionId)
         {
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
@@ -54,7 +58,22 @@ namespace Maestro.DataProviders
                 | where Project == 'internal' 
                 | where Repository endswith _Repository
                 | where Reason == 'batchedCI' or Reason == 'individualCI' or Reason == 'manual'
-                | where SourceBranch == _SourceBranch
+                | where SourceBranch == _SourceBranch";
+
+            if (officialBuildDefinitionId.HasValue)
+            {
+                // Build definition ID is stored in BAR as int but in Kusto it's a string instead
+                // so we need to convert it.
+                parameters.Add(new KustoParameter(
+                    "_OfficialBuildDefinitionId",
+                    officialBuildDefinitionId.ToString(),
+                    KustoDataType.String));
+
+                internalQueryText += $@"
+                | where DefinitionId == _OfficialBuildDefinitionId";
+            }
+
+            internalQueryText += $@"
                 {commonQueryText}";
 
             return new MultiProjectKustoQuery(new KustoQuery(internalQueryText, parameters), new KustoQuery(publicQueryText, parameters));

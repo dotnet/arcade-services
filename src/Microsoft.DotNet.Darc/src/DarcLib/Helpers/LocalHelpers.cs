@@ -152,6 +152,22 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return workingDirectory;
         }
 
+        /// <summary>
+        /// Check that the git installation is valid by running git version --build-options
+        /// and checking the outputs to confirm that it is well-formed
+        /// </summary>
+        /// <param name="gitLocation">The location of git.exe</param>
+        /// <param name="logger">The logger</param>
+        public static void CheckGitInstallation(string gitLocation, ILogger logger)
+        {
+            string versionInfo = LocalHelpers.ExecuteCommand(gitLocation, "version --build-options", logger);
+
+            if (!versionInfo.StartsWith("git version") || !versionInfo.Contains("cpu:"))
+            {
+                throw new Exception($"Something failed when validating the git installation {gitLocation}");
+            }
+        }
+
         public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
         {
             if (string.IsNullOrEmpty(command))

@@ -47,9 +47,17 @@ namespace Microsoft.DotNet.Darc.Tests
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json" })]
         [TestCase("EnsureMultipleDisabledSourcesGetComments", new string[] { // If there are more than one disabled source, all need comments
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
-            "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-runtime-c13a8a85/nuget/v3/index.json"
-        })]
-        
+            "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-runtime-c13a8a85/nuget/v3/index.json" })]
+        [TestCase("RemovingAllSourcesKeepsTheComments", new string[] { })] // Make sure we always preserve comments even with no feeds.
+        [TestCase("MalformedMaestroManagedFeedComentsJustBegin", new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
+        [TestCase("MalformedMaestroManagedFeedComentsJustEnd", new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
+        [TestCase("ExistingFeedsHaveCommentsOutOfAlphabeticOrder", new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
         public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
         {
             GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
