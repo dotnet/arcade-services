@@ -54,7 +54,7 @@ namespace Maestro.ScenarioTests
             Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id); 
             Assert.IsFalse(retrievedBuild.Released, "Retrieved build has Released set to true when it should be false");
 
-            // Release the build; this means gather-drop would not fetch anything unless --include-released were included in its args (which the next operation does)
+            // Release the build; gather-drop does not fetch anything unless the flag '--include-released' is included in its arguments (which the next operation does set)
             Build updatedBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = true }, build.Id);
             Assert.IsTrue(updatedBuild.Released, "Retrieved build has Released set to false when it should be true");
 
