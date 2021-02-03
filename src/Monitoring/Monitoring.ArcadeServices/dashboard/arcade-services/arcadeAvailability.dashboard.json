@@ -3539,6 +3539,9 @@
         "notifications": [
           {
             "uid": "statusHook"
+          },
+          {
+            "uid": "teamsHook"
           }
         ]
       },
