@@ -715,9 +715,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Figure out what is missing
                 // This is pretty common actually, and not an error. There are cases where very old versions of specific dependencies
-                // are referenced, typically pre-dependency flow. If we were to have to supply --continue-on-error to get past this,
+                // are referenced, typically pre-dependency-flow. If we were to have to supply --continue-on-error to get past this,
                 // we'd always have it on and would probably miss some real errors. The good news is that this is basically always the
-                // same two nodes in the graph. Specifically exclude these known missing items
+                // same two nodes in the graph; specifically exclude these known missing items.
 
                 var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any() &&
                     !DependenciesAlwaysMissingBuilds.Any(missingNode => node.Repository == missingNode.repo && node.Commit == missingNode.sha)).ToList();
@@ -758,7 +758,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Get an asset name that has the version (without it being double included)
+        /// Get an asset name that has the version (without it being double-included)
         /// </summary>
         /// <param name="asset">Asset</param>
         /// <returns>Name for logging.</returns>
@@ -773,7 +773,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Gather the drop for a specific build.
+        /// Gather the drop for a specific build.
         /// </summary>
         /// <param name="build">Build to gather drop for</param>
         /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
@@ -809,91 +809,37 @@ namespace Microsoft.DotNet.Darc.Operations
             List<Asset> mustDownloadAssets = new List<Asset>();
             string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
+            var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
+            if (!string.IsNullOrEmpty(_options.AssetFilter))
             {
-                var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
-                if (!string.IsNullOrEmpty(_options.AssetFilter))
+                assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
+            }
+
+            foreach (string nameMatchRegex in alwaysDownloadRegexes)
+            {
+                mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
+            }
+
+            (bool success, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+            success &= primaryAssetDownloadResult.success;
+            downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
+            if (!success && !_options.ContinueOnError)
+            {
+                throw new Exception("Failed downloading primary assets; please see logs");
+            }
+
+            // Now download the extras (if any)
+            if (mustDownloadAssets.Any())
+            {
+                string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
+                Directory.CreateDirectory(extraAssetsDirectory);
+
+                (bool success, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+                extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
+                success &= extraAssetDownloadResult.success;
+                if (!success && !_options.ContinueOnError)
                 {
-                    assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
-                }
-
-                foreach (string nameMatchRegex in alwaysDownloadRegexes)
-                {
-                    mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
-                }
-
-                using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
-                {
-                    await Task.WhenAll(assets.Select(async asset =>
-                    {
-                        await clientThrottle.WaitAsync();
-
-                        try
-                        {
-                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, releaseOutputDirectory, unifiedOutputDirectory);
-                            if (downloadedAsset == null)
-                            {
-                                // Do nothing, decided not to download.
-                            }
-                            else if (!downloadedAsset.Successful)
-                            {
-                                success = false;
-                                if (!_options.ContinueOnError)
-                                {
-                                    Console.WriteLine($"Aborting download.");
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                anyShipping |= !asset.NonShipping;
-                                downloadedAssets.Add(downloadedAsset);
-                            }
-
-                        }
-                        finally
-                        {
-                            clientThrottle.Release();
-                        }
-                    }));
-
-                    // Now download the extras (if any)
-                    if (mustDownloadAssets.Any())
-                    {
-                        string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
-                        Directory.CreateDirectory(extraAssetsDirectory);
-
-                        await Task.WhenAll(mustDownloadAssets.Select(async asset =>
-                        {
-                            await clientThrottle.WaitAsync();
-
-                            try
-                            {
-                                DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, extraAssetsDirectory, unifiedOutputDirectory);
-                                if (downloadedAsset == null)
-                                {
-                                    // Do nothing, decided not to download.
-                                }
-                                else if (!downloadedAsset.Successful)
-                                {
-                                    success = false;
-                                    if (!_options.ContinueOnError)
-                                    {
-                                        Console.WriteLine($"Aborting download.");
-                                        return;
-                                    }
-                                }
-                                else
-                                {
-                                    extraDownloadedAssets.Add(downloadedAsset);
-                                }
-                            }
-                            finally
-                            {
-                                clientThrottle.Release();
-                            }
-                        }));
-                    }
+                    throw new Exception("Failed downloading extra assets; please see logs");
                 }
             }
 
@@ -910,6 +856,51 @@ namespace Microsoft.DotNet.Darc.Operations
             await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
 
             return newBuild;
+        }
+
+
+        private async Task<(bool success, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
+        {
+            bool success = true;
+            var downloaded = new ConcurrentBag<DownloadedAsset>();
+            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
+            {
+                using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
+                {
+
+                    await Task.WhenAll(assets.Select(async asset =>
+                    {
+                        await clientThrottle.WaitAsync();
+
+                        try
+                        {
+                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, specificAssetDirectory, unifiedOutputDirectory);
+                            if (downloadedAsset == null)
+                            {
+                                // Do nothing, decided not to download.
+                            }
+                            else if (!downloadedAsset.Successful)
+                            {
+                                success = false;
+                                if (!_options.ContinueOnError)
+                                {
+                                    Console.WriteLine($"Aborting download.");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                downloaded.Add(downloadedAsset);
+                            }
+                        }
+                        finally
+                        {
+                            clientThrottle.Release();
+                        }
+                    }));
+                }
+            }
+            return (success, downloaded);
         }
 
         /// <summary>
@@ -1542,6 +1533,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         {
                             if (!File.Exists(targetFile))
                             {
+                                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
                                 File.Copy(existingFile, targetFile);
                             }
                         }
