@@ -83,7 +83,7 @@ namespace Microsoft.DotNet.Darc.Helpers
         {
             if (string.IsNullOrEmpty(_editorPath))
             {
-                _logger.LogError("Failed to define an editor for the pop ups...");
+                _logger.LogError("Failed to define an editor for the pop ups. Please verify that your git settings (`git config core.editor`) specify the path correctly.");
                 return Constants.ErrorCode;
             }
 
