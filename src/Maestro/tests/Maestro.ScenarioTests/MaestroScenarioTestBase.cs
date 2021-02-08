@@ -643,13 +643,18 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased)
+        public async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
         {
             string[] args = new[] { "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir };
 
             if (includeReleased)
             {
                 args = args.Append("--include-released").ToArray();
+            }
+
+            if (!string.IsNullOrEmpty(extraAssetsRegex))
+            {
+                args = args.Append($"--always-download-asset-filters").Append(extraAssetsRegex).ToArray();
             }
 
             return await RunDarcAsync(args);

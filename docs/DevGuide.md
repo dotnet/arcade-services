@@ -49,12 +49,13 @@ If you want to run the C# scenario tests (make sure that you followed the gettin
    1. MAESTRO_TOKEN : Get a maestro bearer token (you can create one after running maestro app)
    1. DARC_PACKAGE_SOURCE : Get the path to the darc nuget package (which would be in `arcade-services\artifacts\packages\Debug\NonShipping\`, see below for getting this built)
    1. MAESTRO_BASEURI : Run ngrok and get the https url
-   
+
 Generally this is easiest if you want to debug both sides to simply have two instances of Visual Studio 2019 running. See below if you do not have the file paths mentioned for DARC_PACKAGE_SOURCE
 
 Since Visual Studio's Debug Environment variable settings do not apply to debugging tests, you'll need to set them, preferably from a command prompt:
 
 1. Start command prompt
+1. set AZDO_TOKEN=...
 1. set GITHUB_TOKEN=...
 1. set MAESTRO_TOKEN=...
 1. set DARC_PACKAGE_SOURCE=...
@@ -68,7 +69,7 @@ When debugging the tests, you can check this via the Immediate window, e.g. by r
 
 Things to try:
 - If Visual Studio hangs, edit the properties of MaestroApplication and change `Application Debug Mode` to `Remove Application`
-- If Visual Studio still hungs, under Debug->Options, uncheck "Enable Diagnostic Tools while debugging"
+- If Visual Studio still hangs, under Debug->Options, uncheck "Enable Diagnostic Tools while debugging"
 - Clean your repository before building/running. (e.g. cd to repo, `git clean -xdf`)
 - Ensure the ASP.NET Workload is installed for Visual Studio.
 - If you are using your own PATs for debugging tests, your account needs to have permissions to the repositories involved and include appropriate scopes (default is just 'public')

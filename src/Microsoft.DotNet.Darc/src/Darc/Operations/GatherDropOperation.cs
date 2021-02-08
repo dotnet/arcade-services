@@ -82,6 +82,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine();
 
                 List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
+                List<DownloadedAsset> extraDownloadedAssets = new List<DownloadedAsset>();
 
                 foreach (var build in buildsToDownload.Builds)
                 {
@@ -107,12 +108,21 @@ namespace Microsoft.DotNet.Darc.Operations
                             // It may be an artificial scenario for a "root" build to have no dependencies.
                         }
                     }
+                    if (downloadedBuild.ExtraDownloadedAssets.Any())
+                    {
+                        Console.WriteLine($"Found {downloadedBuild.ExtraDownloadedAssets.Count()} always-download asset(s) in build {build.Id}:");
+                        foreach (var asset in downloadedBuild.ExtraDownloadedAssets)
+                        {
+                            Console.WriteLine($"   - {asset.Asset.Name}");
+                        }
+                        extraDownloadedAssets.AddRange(downloadedBuild.ExtraDownloadedAssets);
+                    }
 
                     downloadedBuilds.Add(downloadedBuild);
                 }
 
                 // Write the unified drop manifest
-                await WriteDropManifestAsync(downloadedBuilds, _options.OutputDirectory);
+                await WriteDropManifestAsync(downloadedBuilds, extraDownloadedAssets, _options.OutputDirectory);
 
                 // Write the release json
                 await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
@@ -324,7 +334,7 @@ namespace Microsoft.DotNet.Darc.Operations
         private const string coreRepoCategory = "core";
         private const string aspnetCategory = "aspnet";
         private const string wcfCategory = "wcf";
-        
+
         // The following is the list of repos that should be picked up by the tooling
         // This list is effectively static, but not the full set of repos that are in the graph,
         // as our release process does not publish all of the packages (e.g. not nuget.client).
@@ -480,7 +490,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
                     else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
                     {
-                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => 
+                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix =>
                             Path.GetFileName(asset.ReleaseLayoutTargetLocation).StartsWith(doNotListPrefix)))
                         {
                             continue;
@@ -501,10 +511,10 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             Directory.CreateDirectory(outputDirectory);
-            
+
             File.WriteAllText(Path.Combine(outputDirectory, allNupkgsFileName), allNupkgsFileContent.ToString());
             File.WriteAllText(Path.Combine(outputDirectory, sympkgsFileName), sympkgsFileContent.ToString());
-                
+
             // Write out for each category
             foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
             {
@@ -560,7 +570,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     Write out a manifest of the items in the drop in json format.
         /// </summary>
         /// <returns></returns>
-        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string specificOutputDirectory)
+        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> extraAssets, string specificOutputDirectory)
         {
             if (_options.DryRun)
             {
@@ -574,7 +584,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 File.Delete(outputPath);
             }
 
-            var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, 
+            var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds,
+                                                                            extraAssets,
                                                                             _options.OutputDirectory,
                                                                             _options.UseRelativePathsInManifest);
 
@@ -656,7 +667,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
 
-            // Flatten for convencience and remove dependencies of types that we don't want if need be.
+            // Flatten for convenience and remove dependencies of types that we don't want if need be.
             if (!_options.IncludeToolset)
             {
                 Console.WriteLine("Filtering toolset dependencies from the graph...");
@@ -691,7 +702,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine("Full set of builds in graph:");
                 foreach (var build in graph.ContributingBuilds)
                 {
-                    if ((build.GitHubRepository ?? build.AzureDevOpsRepository) == rootBuildRepository && 
+                    if ((build.GitHubRepository ?? build.AzureDevOpsRepository) == rootBuildRepository &&
                         build.Commit == rootBuild.Commit &&
                         build.Id != rootBuild.Id)
                     {
@@ -704,11 +715,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Figure out what is missing
                 // This is pretty common actually, and not an error. There are cases where very old versions of specific dependencies
-                // are referenced, typically pre-dependency flow. If we were to have to supply --continue-on-error to get past this,
+                // are referenced, typically pre-dependency-flow. If we were to have to supply --continue-on-error to get past this,
                 // we'd always have it on and would probably miss some real errors. The good news is that this is basically always the
-                // same two nodes in the graph. Specifically exclude these known missing items
+                // same two nodes in the graph; specifically exclude these known missing items.
 
-                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any() && 
+                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any() &&
                     !DependenciesAlwaysMissingBuilds.Any(missingNode => node.Repository == missingNode.repo && node.Commit == missingNode.sha)).ToList();
                 if (nodesWithNoContributingBuilds.Any())
                 {
@@ -747,7 +758,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Get an asset name that has the version (without it being double included)
+        /// Get an asset name that has the version (without it being double-included)
         /// </summary>
         /// <param name="asset">Asset</param>
         /// <returns>Name for logging.</returns>
@@ -762,7 +773,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Gather the drop for a specific build.
+        /// Gather the drop for a specific build.
         /// </summary>
         /// <param name="build">Build to gather drop for</param>
         /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
@@ -770,7 +781,6 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
             bool success = true;
-
             string unifiedOutputDirectory = rootOutputDirectory;
             Directory.CreateDirectory(unifiedOutputDirectory);
 
@@ -791,26 +801,80 @@ namespace Microsoft.DotNet.Darc.Operations
             Directory.CreateDirectory(releaseOutputDirectory);
 
             ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
+            ConcurrentBag<DownloadedAsset> extraDownloadedAssets = new ConcurrentBag<DownloadedAsset>();
             bool anyShipping = false;
 
             Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
+
+            List<Asset> mustDownloadAssets = new List<Asset>();
+            string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+            var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
+            if (!string.IsNullOrEmpty(_options.AssetFilter))
+            {
+                assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
+            }
+
+            foreach (string nameMatchRegex in alwaysDownloadRegexes)
+            {
+                mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
+            }
+
+            (bool success, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+            success &= primaryAssetDownloadResult.success;
+            downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
+            if (!success && !_options.ContinueOnError)
+            {
+                throw new Exception("Failed downloading primary assets; please see logs");
+            }
+
+            // Now download the extras (if any)
+            if (mustDownloadAssets.Any())
+            {
+                string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
+                Directory.CreateDirectory(extraAssetsDirectory);
+
+                (bool success, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+                extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
+                success &= extraAssetDownloadResult.success;
+                if (!success && !_options.ContinueOnError)
+                {
+                    throw new Exception("Failed downloading extra assets; please see logs");
+                }
+            }
+
+            DownloadedBuild newBuild = new DownloadedBuild
+            {
+                Successful = success,
+                Build = build,
+                DownloadedAssets = downloadedAssets,
+                ExtraDownloadedAssets = extraDownloadedAssets,
+                ReleaseLayoutOutputDirectory = releaseOutputDirectory,
+                AnyShippingAssets = anyShipping
+            };
+
+            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
+
+            return newBuild;
+        }
+
+
+        private async Task<(bool success, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
+        {
+            bool success = true;
+            var downloaded = new ConcurrentBag<DownloadedAsset>();
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
-                if (!string.IsNullOrEmpty(_options.AssetFilter))
-                {
-                    assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
-                }
-
                 using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
                 {
+
                     await Task.WhenAll(assets.Select(async asset =>
                     {
                         await clientThrottle.WaitAsync();
 
                         try
                         {
-                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, releaseOutputDirectory, unifiedOutputDirectory);
+                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, specificAssetDirectory, unifiedOutputDirectory);
                             if (downloadedAsset == null)
                             {
                                 // Do nothing, decided not to download.
@@ -826,10 +890,8 @@ namespace Microsoft.DotNet.Darc.Operations
                             }
                             else
                             {
-                                anyShipping |= !asset.NonShipping;
-                                downloadedAssets.Add(downloadedAsset);
+                                downloaded.Add(downloadedAsset);
                             }
-
                         }
                         finally
                         {
@@ -838,19 +900,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }));
                 }
             }
-
-            DownloadedBuild newBuild = new DownloadedBuild
-            {
-                Successful = success,
-                Build = build,
-                DownloadedAssets = downloadedAssets,
-                ReleaseLayoutOutputDirectory = releaseOutputDirectory,
-                AnyShippingAssets = anyShipping
-            };
-
-            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, releaseOutputDirectory);
-
-            return newBuild;
+            return (success, downloaded);
         }
 
         /// <summary>
@@ -974,8 +1024,8 @@ namespace Microsoft.DotNet.Darc.Operations
         /// until the asset download succeed or all locations have been tested.
         /// </summary>
         private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
-                                                                            Build build, 
-                                                                            Asset asset, 
+                                                                            Build build,
+                                                                            Asset asset,
                                                                             List<AssetLocation> assetLocations,
                                                                             string releaseOutputDirectory,
                                                                             string unifiedOutputDirectory,
@@ -1022,9 +1072,9 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
 
-            return await DownloadAssetFromLocation(client, 
-                build, 
-                asset, 
+            return await DownloadAssetFromLocation(client,
+                build,
+                asset,
                 latestLocation,
                 releaseOutputDirectory,
                 unifiedOutputDirectory,
@@ -1431,7 +1481,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return downloadedAsset;
             }
-            
+
             if (string.IsNullOrEmpty(assetLocation.Location))
             {
                 errors.Add($"Asset location for {asset.Name} is not available.");
@@ -1454,11 +1504,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="downloadOutput">Console output for the download.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileAsync(HttpClient client, 
-            string sourceUri, 
-            AuthenticationHeaderValue authHeader, 
+        private async Task<bool> DownloadFileAsync(HttpClient client,
+            string sourceUri,
+            AuthenticationHeaderValue authHeader,
             IEnumerable<string> targetFilePaths,
-            List<string> errors, 
+            List<string> errors,
             StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
@@ -1483,6 +1533,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         {
                             if (!File.Exists(targetFile))
                             {
+                                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
                                 File.Copy(existingFile, targetFile);
                             }
                         }
@@ -1524,11 +1575,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
         /// <param name="downloadOutput">Console output for the download.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileImplAsync(HttpClient client, 
-            string sourceUri, 
-            AuthenticationHeaderValue authHeader, 
+        private async Task<bool> DownloadFileImplAsync(HttpClient client,
+            string sourceUri,
+            AuthenticationHeaderValue authHeader,
             IEnumerable<string> targetFiles,
-            List<string> errors, 
+            List<string> errors,
             StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
