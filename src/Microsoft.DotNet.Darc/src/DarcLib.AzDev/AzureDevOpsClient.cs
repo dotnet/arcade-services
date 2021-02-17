@@ -126,7 +126,7 @@ namespace Microsoft.DotNet.DarcLib
                         logFailure: false);
                     return content["content"].ToString();
                 }
-                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()) || reqEx.Message.Contains(((int)HttpStatusCode.BadRequest).ToString()))
                 {
                     // Continue
                     lastException = reqEx;
@@ -707,7 +707,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                     Valid = true
                 };
             }
-            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {
                 return GitDiff.UnknownDiff();
             }
