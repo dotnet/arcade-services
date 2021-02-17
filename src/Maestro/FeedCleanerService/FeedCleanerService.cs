@@ -331,7 +331,7 @@ namespace FeedCleanerService
                 Logger.LogInformation($"Found {name}.{version} in nuget.org URI: {packageContentsUri}");
                 return true;
             }
-            catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
             {
                 Logger.LogInformation($"Unable to find {name}.{version} in nuget.org URI: {packageContentsUri}");
                 return false;
