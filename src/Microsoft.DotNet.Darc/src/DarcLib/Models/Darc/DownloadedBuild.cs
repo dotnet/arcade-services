@@ -13,6 +13,10 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc
         public bool Successful { get; set; }
         public IEnumerable<DownloadedAsset> DownloadedAssets { get; set; }
         /// <summary>
+        /// If the 'always-download-asset-filters' value is set and contains a regex which matches assets that would otherwise be skipped or ignored, they are downloaded to a parallel folder, and added to this collection.
+        /// </summary>
+        public IEnumerable<DownloadedAsset> ExtraDownloadedAssets { get; set; }
+        /// <summary>
         ///     Root output directory for this build.
         /// </summary>
         public string ReleaseLayoutOutputDirectory { get; set; }

@@ -108,11 +108,11 @@ namespace Maestro.ScenarioTests
                 throw new InvalidOperationException("Unexpected Task completed.");
             }
 
-
-
             if (process.ExitCode != 0)
             {
-                throw new MaestroTestException($"{executable} exited with code {process.ExitCode}");
+                MaestroTestException exceptionWithConsoleLog = new MaestroTestException($"{executable} exited with code {process.ExitCode}");
+                exceptionWithConsoleLog.Data.Add("ConsoleOutput", output.ToString());
+                throw exceptionWithConsoleLog;
             }
 
             return output.ToString();

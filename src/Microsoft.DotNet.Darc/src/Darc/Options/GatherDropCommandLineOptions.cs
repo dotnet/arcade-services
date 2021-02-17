@@ -76,6 +76,9 @@ namespace Microsoft.DotNet.Darc.Options
         [RedactFromLogging]
         public IEnumerable<string> SASSuffixes { get; set; }
 
+        [Option("always-download-asset-filters", HelpText = "Comma-separated list of exact names or regexes which will always be downloaded. If not part of the usual payload, they will be downloaded to an 'extra-assets' folder.")]
+        public string AlwaysDownloadAssetPatterns { get; set; } = "";
+
         [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
         public string AssetFilter { get; set; }
 
