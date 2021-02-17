@@ -58,11 +58,11 @@ while true; do
     esac
 done
 
-if [ -z "${GRAFANA_BIN}"]; then
+if [ -z "${GRAFANA_BIN}" ]; then
   echo "Empty --grafana-bin, using /usr/sbin/grafana-server"
   GRAFANA_BIN=/usr/sbin/grafana-server
 fi
-if [ -z "${GRAFANA_DOMAIN}"]; then
+if [ -z "${GRAFANA_DOMAIN}" ]; then
   echo "Empty --domain"
   exit 3
 fi
@@ -80,6 +80,18 @@ case "${ENVIRONMENT}" in
     ;;
 esac
 
+GRAFANA_VERSION_FILE="$DIR/grafana-version.txt"
+if [ ! -f "$GRAFANA_VERSION_FILE" ]; then
+  echo "Grafana version file '$GRAFANA_VERSION_FILE' does not exist"
+  exit 5
+fi
+
+GRAFANA_VERSION="$(cat "$GRAFANA_VERSION_FILE")"
+if [[ ! "$GRAFANA_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Grafana version specified in '$GRAFANA_VERSION_FILE' is invalid. File should contain valid three part version number, e.g. 6.6.0"
+  exit 5
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 
 # This is the grafana package repo that allos us to apt-get grafana
@@ -88,17 +100,17 @@ wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
 add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
 
 apt-get update
-apt-get -y install python3-pip grafana
+apt-get -y install python3-pip "grafana=$GRAFANA_VERSION"
 
 # These are needed for vault-env.py
 python3 -m pip install azure-keyvault==1.1.0 msrestazure==0.6.2
 
 # Plop this wherever so that we can access (and execute) it to replace environment
-cp $DIR/vault-env.py /usr/local/bin/vault-env.py
+cp "$DIR/vault-env.py" /usr/local/bin/vault-env.py
 chmod a+rx /usr/local/bin/vault-env.py
 
 # Get this file in a place and permission it so grafana can read it
-cp $DIR/grafana.ini /etc/grafana/local.ini
+cp "$DIR/grafana.ini" /etc/grafana/local.ini
 chown root:grafana /etc/grafana/local.ini
 chmod g+r /etc/grafana/local.ini
 
@@ -106,12 +118,12 @@ chmod g+r /etc/grafana/local.ini
 # Ideally we'd just be able to use Environment= values,
 # But grafana uses EnvironmentFile= values, which override all
 # Environment= values, so we have to use it to
-cp $DIR/grafana.env /etc/grafana/grafana.env
+cp "$DIR/grafana.env" /etc/grafana/grafana.env
 
 # Set up some service overrides to point to stuff we want and get some
 # external configuration (secrets) ready to go
 mkdir -p /etc/systemd/system/grafana-server.service.d
-cp $DIR/grafana-override.conf /etc/systemd/system/grafana-server.service.d/override.conf
+cp "$DIR/grafana-override.conf" /etc/systemd/system/grafana-server.service.d/override.conf
 cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 [Service]
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
