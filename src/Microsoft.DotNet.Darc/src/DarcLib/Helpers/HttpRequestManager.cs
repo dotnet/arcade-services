@@ -89,7 +89,7 @@ namespace Microsoft.DotNet.DarcLib
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
                     // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
-                    if (ex is HttpRequestException && ex.Message.Contains("401 (Unauthorized)"))
+                    if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
                     {
                         _logger.LogError(ex, "Non-continuable HTTP 401 error encountered while making request");
                         throw new DarcAuthenticationFailureException($"Failure to authenticate: {ex.Message}");

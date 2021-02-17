@@ -114,7 +114,7 @@ namespace Microsoft.DotNet.DarcLib
 
                 return this.GetDecodedContent(content);
             }
-            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
             {
                 throw new DependencyFileNotFoundException(filePath, $"{owner}/{repo}", branch, reqEx);
             }
@@ -1192,7 +1192,7 @@ namespace Microsoft.DotNet.DarcLib
                     Valid = true
                 };
             }
-            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
             {
                 return GitDiff.UnknownDiff();
             }
