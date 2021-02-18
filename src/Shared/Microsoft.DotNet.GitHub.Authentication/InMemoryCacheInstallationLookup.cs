@@ -7,12 +7,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace DotNet.Status.Web
+namespace Microsoft.DotNet.GitHub.Authentication
 {
     public class InMemoryCacheInstallationLookup : IInstallationLookup
     {

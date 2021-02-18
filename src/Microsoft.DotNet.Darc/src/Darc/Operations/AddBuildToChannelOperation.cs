@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -352,12 +353,12 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return true;
             }
-            catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {
                 Console.Write("The build that you want to add to a new channel isn't available in AzDO anymore. Aborting.");
                 return false;
             }
-            catch (HttpRequestException e) when (e.Message.Contains("401 (Unauthorized)"))
+            catch (HttpRequestException e) when (e.Message.Contains(((int)HttpStatusCode.Unauthorized).ToString()))
             {
                 Console.WriteLine("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
                 Console.Write("Please make sure that your Azure DevOps PAT has the build read and execute scopes set.");

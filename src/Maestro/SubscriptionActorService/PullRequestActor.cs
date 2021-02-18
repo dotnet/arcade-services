@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text;
@@ -628,7 +629,7 @@ namespace SubscriptionActorService
 
                 return ActionResult.Create<object>(null, $"Pull request '{prUrl}' created.");
             }
-            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("401 (Unauthorized)"))
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
             {
                 // We want to preserve the HttpRequestException's information but it's not serializable
                 // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure 
