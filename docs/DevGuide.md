@@ -1,7 +1,7 @@
 # Gettings started developing
 
 ## Getting started
-1. Install Visual Studio 2019 with the '.NET Core' and 'Azure Development' workloads.
+1. Install Visual Studio 2019 with the '.NET Core', 'Desktop Development with C++'. and 'Azure Development' workloads.
 1. Install Azure Service Fabric SDK: https://www.microsoft.com/web/handlers/webpi.ashx?command=getinstallerredirect&appid=MicrosoftAzure-ServiceFabric-CoreSDK
 1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-editions-express
 1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
@@ -74,3 +74,9 @@ Things to try:
 - Ensure the ASP.NET Workload is installed for Visual Studio.
 - If you are using your own PATs for debugging tests, your account needs to have permissions to the repositories involved and include appropriate scopes (default is just 'public')
 - To build the packages folder starting from a clean repository, run **desktop** `nuget restore arcade-services.sln` then **desktop** `msbuild arcade-services.sln /t:Restore,Build,Pack`.  Non-desktop versions of build, including dotnet.exe, will fail building the .sfproj projects and then not pack the nupkgs.
+- Seeing errors like
+```
+EXEC : gyp verb `which` failed error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
+EXEC : gyp verb `which` failed  python2 error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
+```
+  Make sure python 2.7 is installed and on your path.  You may have to copy `python27\python.exe` to `python27\python2.exe`
