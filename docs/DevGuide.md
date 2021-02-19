@@ -13,7 +13,7 @@
 1. From the Maestro.Data project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
 1. Join the @maestro-auth-test org in GitHub (you will need to ask someone to manually add you to the org).
-1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpression database for the build asset registry and populate the Repositories table with the following rows:
+1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
 
     1. 
         - Repository: https://github.com/maestro-auth-test/maestro-test
