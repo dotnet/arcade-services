@@ -94,12 +94,24 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 default,
                 default,
                 default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
+                default,
                 default);
         }
 
         private Team MockTeam(int id, string name, Organization org)
         {
             return new Team(
+                default,
                 default,
                 id,
                 default,

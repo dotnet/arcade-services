@@ -4,11 +4,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Models;
 using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
@@ -16,6 +18,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
+using Octokit.Internal;
 
 namespace DotNet.Status.Web.Controllers
 {
@@ -26,15 +29,18 @@ namespace DotNet.Status.Web.Controllers
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly ITimelineIssueTriage _timelineIssueTriage;
+        private readonly IIssueMentionForwarder _issueMentionForwarder;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             ITimelineIssueTriage timelineIssueTriage,
-            ILogger<GitHubHookController> logger)
+            ILogger<GitHubHookController> logger,
+            IIssueMentionForwarder issueMentionForwarder)
         {
             _githubOptions = githubOptions;
             _logger = logger;
+            _issueMentionForwarder = issueMentionForwarder;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
@@ -53,20 +59,185 @@ namespace DotNet.Status.Web.Controllers
             );
         }
 
-        [GitHubWebHook(EventName = "issues")]
-        public async Task<IActionResult> IssuesHook(JsonElement data)
+        private readonly SimpleJsonSerializer _serializer = new SimpleJsonSerializer();
+
+        private async Task<T> DeserializeGitHubWebHook<T>()
         {
-            // because system.text.json default serialization setting can't deser web hook json payload we need custom JsonSerializerOptions
-            // just for this controller. see https://github.com/dotnet/core-eng/issues/10378
-            var issueEvent = JsonSerializer.Deserialize<IssuesHookData>(data.ToString(), SerializerOptions());
+            // Octokit has a serializer and types built for github rest apis, use them
+            string data;
+            using (var reader = new StreamReader(Request.Body))
+            {
+                data = await reader.ReadToEndAsync();
+            }
+
+            var payload = _serializer.Deserialize<T>(data);
+            return payload;
+        }
+
+        [GitHubWebHook(EventName = "pull_request_review_comment")]
+        public async Task<IActionResult> PullRequestReviewComment()
+        {
+            var payload = await DeserializeGitHubWebHook<PullRequestCommentPayloadWithChanges>();
+
+            string repo = payload.Repository.Owner.Login + "/" + payload.Repository.Name;
+            int number = payload.PullRequest.Number;
+            _logger.LogInformation("Received webhook for pull request {repo}#{number}", repo, number);
+
+            string title = payload.PullRequest.Title;
+            string uri = payload.Comment.HtmlUrl;
+            string username = payload.PullRequest.User.Login;
+            DateTimeOffset date = payload.PullRequest.UpdatedAt;
+            try
+            {
+                bool sent = false;
+                switch (payload.Action)
+                {
+                    case "created":
+                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.Comment.Body, title, uri, username, date);
+                        break;
+                    case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
+                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
+                        break;
+                }
+
+                if (sent)
+                {
+                    _logger.LogInformation("Sent teams notification for pull request {repo}#{number}", repo, number);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Unable to send teams notification for pull request {repo}#{number}", repo, number);
+            }
+
+            return Ok();
+        }
+
+        [GitHubWebHook(EventName = "issue_comment")]
+        public async Task<IActionResult> IssueComment()
+        {
+            var payload = await DeserializeGitHubWebHook<IssueCommentPayloadWithChanges>();
+
+            string repo = payload.Repository.Name;
+            int number = payload.Issue.Number;
+            _logger.LogInformation("Received comment webhook for issue {repo}#{number}", repo, number);
+
+            string title = payload.Issue.Title;
+            string uri = payload.Comment.HtmlUrl;
+            string username = payload.Issue.User.Login;
+            DateTimeOffset date = payload.Issue.UpdatedAt ?? DateTimeOffset.UtcNow;
+            try
+            {
+                bool sent = false;
+                switch (payload.Action)
+                {
+                    case "created":
+                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.Comment.Body, title, uri, username, date);
+                        break;
+                    case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
+                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
+                        break;
+                }
+
+                if (sent)
+                {
+                    _logger.LogInformation("Sent teams notification for issue {repo}#{number}", repo, number);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+            }
+
+            return Ok();
+        }
+
+        [GitHubWebHook(EventName = "pull_request")]
+        public async Task<IActionResult> PullRequestHook()
+        {
+            var payload = await DeserializeGitHubWebHook<PullRequestEventPayloadWithChanges>();
+
+            string repo = payload.Repository.Owner.Login + "/" + payload.Repository.Name;
+            int number = payload.PullRequest.Number;
+            _logger.LogInformation("Received webhook for pull request {repo}#{number}", repo, number);
+            try
+            {
+                string title = payload.PullRequest.Title;
+                string uri = payload.PullRequest.HtmlUrl;
+                string username = payload.PullRequest.User.Login;
+                DateTimeOffset date = payload.PullRequest.UpdatedAt;
+                bool sent = false;
+                switch (payload.Action)
+                {
+                    case "opened":
+                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.PullRequest.Body, title, uri, username,
+                            date);
+                        break;
+                    case "edited":
+                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.PullRequest.Body, title, uri, username, date);
+                        break;
+                }
+
+                if (sent)
+                {
+                    _logger.LogInformation("Sent teams notification for pull request {repo}#{number}", repo, number);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+            }
+
+            return Ok();
+        }
+
+        [GitHubWebHook(EventName = "issues")]
+        public async Task<IActionResult> IssuesHook()
+        {
+            var issueEvent = await DeserializeGitHubWebHook<IssuesHookData>();
 
             string action = issueEvent.Action;
             _logger.LogInformation("Processing issues action '{action}' for issue {repo}/{number}", issueEvent.Action, issueEvent.Repository.Name, issueEvent.Issue.Number);
 
+            await ProcessNotifications(issueEvent);
             await ProcessRcaRulesAsync(issueEvent, action);
             await ProcessTimelineIssueTriageAsync(issueEvent, action);
 
             return NoContent();
+        }
+
+        private async Task ProcessNotifications(IssuesHookData issueEvent)
+        {
+            string repo = issueEvent.Repository.Owner.Login + "/" + issueEvent.Repository.Name;
+            int number = issueEvent.Issue.Number;
+            try
+            {
+                bool sent = false;
+                string title = issueEvent.Issue.Title;
+                string uri = issueEvent.Issue.HtmlUrl;
+                string username = issueEvent.Issue.User.Login;
+                DateTimeOffset date = issueEvent.Issue.UpdatedAt ?? DateTimeOffset.UtcNow;
+                switch (issueEvent.Action)
+                {
+                    case "opened":
+                        sent = await _issueMentionForwarder.HandleIssueBody(null, issueEvent.Issue.Body, title, uri, username,
+                            date);
+                        break;
+                    case "edited":
+                        sent = await _issueMentionForwarder.HandleIssueBody(issueEvent.Changes.Body.From,
+                            issueEvent.Issue.Body, title, uri, username, date);
+                        break;
+                }
+
+                if (sent)
+                {
+                    _logger.LogInformation("Sent teams notification for issue {repo}#{number}", repo, number);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+            }
         }
 
         public static JsonSerializerOptions SerializerOptions()
@@ -226,45 +397,5 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
             // Ignore them, none are interesting
             return NoContent();
         }
-    }
-
-    public class IssuesHookData
-    {
-        public string Action { get; set; }
-        public IssuesHookIssue Issue { get; set; }
-        public IssuesHookUser Sender { get; set; }
-        public IssuesHookRepository Repository { get; set; }
-        public IssuesHookLabel Label { get; set; }
-    }
-
-    public class IssuesHookRepository
-    {
-        public string Name { get; set; }
-        public IssuesHookUser Owner { get; set; }
-        public long Id { get; set; }
-    }
-
-    public class IssuesHookIssue
-    {
-        public int Number { get; set; }
-        public string Title { get; set; }
-        public string Body { get; set; }
-        public IssuesHookUser Assignee { get; set; }
-        public ImmutableArray<IssuesHookLabel> Labels { get; set; }
-        public ItemState State { get; set; }
-        public string Url { get; set; }
-        [JsonPropertyName("html_url")]
-        [Newtonsoft.Json.JsonProperty("html_url")]
-        public string HtmlUrl { get; set; }
-    }
-
-    public class IssuesHookLabel
-    {
-        public string Name { get; set; }
-    }
-
-    public class IssuesHookUser
-    {
-        public string Login { get; set; }
     }
 }

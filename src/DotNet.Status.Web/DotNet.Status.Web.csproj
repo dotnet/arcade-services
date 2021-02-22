@@ -11,6 +11,7 @@
     <PackageReference Include="GitHubJwt" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.Storage.Queues" />
+    <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" />
@@ -18,6 +19,7 @@
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="WindowsAzure.Storage" /> 
   </ItemGroup>

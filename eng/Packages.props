@@ -99,7 +99,7 @@
     <PackageReference Update="NuGet.Packaging" Version="4.8.0" />
     <PackageReference Update="NUnit" Version="3.12.0" />  
     <PackageReference Update="NUnit3TestAdapter" Version="3.16.1" />
-    <PackageReference Update="Octokit" Version="0.40.0" />
+    <PackageReference Update="Octokit" Version="0.49.0" />
     <PackageReference Update="Quartz" Version="3.0.6" />
     <PackageReference Update="Swashbuckle.AspNetCore.Annotations" Version="5.2.1" />
     <PackageReference Update="Swashbuckle.AspNetCore.Newtonsoft" Version="5.2.1" />
