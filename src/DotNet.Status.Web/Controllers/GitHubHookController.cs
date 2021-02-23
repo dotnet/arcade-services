@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -15,6 +14,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -29,18 +29,21 @@ namespace DotNet.Status.Web.Controllers
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly ITimelineIssueTriage _timelineIssueTriage;
-        private readonly IIssueMentionForwarder _issueMentionForwarder;
+        private readonly ITeamMentionForwarder _teamMentionForwarder;
+        private readonly ISystemClock _systemClock;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             ITimelineIssueTriage timelineIssueTriage,
             ILogger<GitHubHookController> logger,
-            IIssueMentionForwarder issueMentionForwarder)
+            ITeamMentionForwarder teamMentionForwarder,
+            ISystemClock systemClock)
         {
             _githubOptions = githubOptions;
             _logger = logger;
-            _issueMentionForwarder = issueMentionForwarder;
+            _teamMentionForwarder = teamMentionForwarder;
+            _systemClock = systemClock;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
@@ -87,30 +90,19 @@ namespace DotNet.Status.Web.Controllers
             string uri = payload.Comment.HtmlUrl;
             string username = payload.PullRequest.User.Login;
             DateTimeOffset date = payload.PullRequest.UpdatedAt;
-            try
+            using IDisposable scope = _logger.BeginScope("Handling pull request {repo}#{prNumber}", repo, number);
+            switch (payload.Action)
             {
-                bool sent = false;
-                switch (payload.Action)
-                {
-                    case "created":
-                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.Comment.Body, title, uri, username, date);
-                        break;
-                    case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
-                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
-                        break;
-                }
-
-                if (sent)
-                {
-                    _logger.LogInformation("Sent teams notification for pull request {repo}#{number}", repo, number);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogWarning(ex, "Unable to send teams notification for pull request {repo}#{number}", repo, number);
+                case "created":
+                    await _teamMentionForwarder.HandleMentions(repo, null, payload.Comment.Body, title, uri, username, date);
+                    break;
+                case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
+                    await _teamMentionForwarder.HandleMentions(repo, payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
+                    break;
             }
 
-            return Ok();
+
+            return NoContent();
         }
 
         [GitHubWebHook(EventName = "issue_comment")]
@@ -125,31 +117,19 @@ namespace DotNet.Status.Web.Controllers
             string title = payload.Issue.Title;
             string uri = payload.Comment.HtmlUrl;
             string username = payload.Issue.User.Login;
-            DateTimeOffset date = payload.Issue.UpdatedAt ?? DateTimeOffset.UtcNow;
-            try
+            DateTimeOffset date = payload.Issue.UpdatedAt ?? _systemClock.UtcNow;
+            using IDisposable scope = _logger.BeginScope("Handling issue {repo}#{issueNumber}", repo, number);
+            switch (payload.Action)
             {
-                bool sent = false;
-                switch (payload.Action)
-                {
-                    case "created":
-                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.Comment.Body, title, uri, username, date);
-                        break;
-                    case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
-                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
-                        break;
-                }
-
-                if (sent)
-                {
-                    _logger.LogInformation("Sent teams notification for issue {repo}#{number}", repo, number);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+                case "created":
+                    await _teamMentionForwarder.HandleMentions(repo, null, payload.Comment.Body, title, uri, username, date);
+                    break;
+                case "edited" when !string.IsNullOrEmpty(payload.Changes.Body?.From):
+                    await _teamMentionForwarder.HandleMentions(repo, payload.Changes.Body.From, payload.Comment.Body, title, uri, username, date);
+                    break;
             }
 
-            return Ok();
+            return NoContent();
         }
 
         [GitHubWebHook(EventName = "pull_request")]
@@ -160,35 +140,24 @@ namespace DotNet.Status.Web.Controllers
             string repo = payload.Repository.Owner.Login + "/" + payload.Repository.Name;
             int number = payload.PullRequest.Number;
             _logger.LogInformation("Received webhook for pull request {repo}#{number}", repo, number);
-            try
+            string title = payload.PullRequest.Title;
+            string uri = payload.PullRequest.HtmlUrl;
+            string username = payload.PullRequest.User.Login;
+            DateTimeOffset date = payload.PullRequest.UpdatedAt;
+            using IDisposable scope = _logger.BeginScope("Handling pull request {repo}#{prNumber}", repo, number);
+            switch (payload.Action)
             {
-                string title = payload.PullRequest.Title;
-                string uri = payload.PullRequest.HtmlUrl;
-                string username = payload.PullRequest.User.Login;
-                DateTimeOffset date = payload.PullRequest.UpdatedAt;
-                bool sent = false;
-                switch (payload.Action)
-                {
-                    case "opened":
-                        sent = await _issueMentionForwarder.HandleIssueBody(null, payload.PullRequest.Body, title, uri, username,
-                            date);
-                        break;
-                    case "edited":
-                        sent = await _issueMentionForwarder.HandleIssueBody(payload.Changes.Body.From, payload.PullRequest.Body, title, uri, username, date);
-                        break;
-                }
-
-                if (sent)
-                {
-                    _logger.LogInformation("Sent teams notification for pull request {repo}#{number}", repo, number);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+                case "opened":
+                    await _teamMentionForwarder.HandleMentions(repo, null, payload.PullRequest.Body, title, uri, username,
+                        date);
+                    break;
+                case "edited":
+                    await _teamMentionForwarder.HandleMentions(repo, payload.Changes.Body.From, payload.PullRequest.Body, title, uri, username, date);
+                    break;
             }
 
-            return Ok();
+
+            return NoContent();
         }
 
         [GitHubWebHook(EventName = "issues")]
@@ -210,33 +179,21 @@ namespace DotNet.Status.Web.Controllers
         {
             string repo = issueEvent.Repository.Owner.Login + "/" + issueEvent.Repository.Name;
             int number = issueEvent.Issue.Number;
-            try
+            string title = issueEvent.Issue.Title;
+            string uri = issueEvent.Issue.HtmlUrl;
+            string username = issueEvent.Issue.User.Login;
+            DateTimeOffset date = issueEvent.Issue.UpdatedAt ?? _systemClock.UtcNow;
+            using IDisposable scope = _logger.BeginScope("Handling issue {repo}#{issueNumber}", repo, number);
+            switch (issueEvent.Action)
             {
-                bool sent = false;
-                string title = issueEvent.Issue.Title;
-                string uri = issueEvent.Issue.HtmlUrl;
-                string username = issueEvent.Issue.User.Login;
-                DateTimeOffset date = issueEvent.Issue.UpdatedAt ?? DateTimeOffset.UtcNow;
-                switch (issueEvent.Action)
-                {
-                    case "opened":
-                        sent = await _issueMentionForwarder.HandleIssueBody(null, issueEvent.Issue.Body, title, uri, username,
-                            date);
-                        break;
-                    case "edited":
-                        sent = await _issueMentionForwarder.HandleIssueBody(issueEvent.Changes.Body.From,
-                            issueEvent.Issue.Body, title, uri, username, date);
-                        break;
-                }
-
-                if (sent)
-                {
-                    _logger.LogInformation("Sent teams notification for issue {repo}#{number}", repo, number);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogWarning(ex, "Unable to send teams notification for issue {repo}#{number}", repo, number);
+                case "opened":
+                    await _teamMentionForwarder.HandleMentions(repo, null, issueEvent.Issue.Body, title, uri, username,
+                        date);
+                    break;
+                case "edited":
+                    await _teamMentionForwarder.HandleMentions(repo, issueEvent.Changes.Body.From,
+                        issueEvent.Issue.Body, title, uri, username, date);
+                    break;
             }
         }
 

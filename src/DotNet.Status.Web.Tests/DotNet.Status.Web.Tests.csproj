@@ -20,7 +20,6 @@
     <None Remove="TestCasesData\triage-items-with-multi-builds.expected.json" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="EventPayloads\IssueEventPayload.json" />
     <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.body.txt" />
     <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.expected.json" />
     <EmbeddedResource Include="TestCasesData\triage-items-with-diff-cat.body.txt" />

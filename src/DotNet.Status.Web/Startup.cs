@@ -274,7 +274,7 @@ namespace DotNet.Status.Web
                     b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
                 });
 
-            services.AddScoped<IIssueMentionForwarder, IssueMentionForwarder>();
+            services.AddScoped<ITeamMentionForwarder, TeamMentionForwarder>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
