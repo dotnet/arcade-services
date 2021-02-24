@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
@@ -139,6 +140,30 @@ namespace DotNet.Status.Web
             }
         }
 
+        private Task AddSecurityHeaders(HttpContext context, Func<Task> next)
+        {
+            if (!context.Response.Headers.ContainsKey("X-XSS-Protection"))
+            {
+                context.Response.Headers.Add("X-XSS-Protection", "1");
+            }
+
+            if (!context.Response.Headers.ContainsKey("X-Frame-Options"))
+            {
+                context.Response.Headers.Add("X-Frame-Options", "DENY");
+            }
+
+            if (!context.Response.Headers.ContainsKey("X-Content-Type-Options"))
+            {
+                context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+            }
+
+            if (!context.Response.Headers.ContainsKey("Referrer-Policy"))
+            {
+                context.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
+            }
+            return next();
+        }
+
         private void AddServices(IServiceCollection services)
         {
             services.AddRazorPages(o =>
@@ -256,6 +281,7 @@ namespace DotNet.Status.Web
             app.UseAuthentication();
             app.UseRouting();
             app.UseAuthorization();
+            app.Use(AddSecurityHeaders);
             app.UseEndpoints(e =>
             {
                 e.MapRazorPages();
