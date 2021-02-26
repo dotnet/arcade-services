@@ -26,8 +26,6 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
                 .WithExpectation("Expected {context:collection} to satisfy inspector{reason}, ")
                 .ForCondition(assertions.Subject != null)
                 .FailWith("but collection is <null>.")
-                .Then.ForCondition(assertions.Subject.Any())
-                .FailWith("but collection is empty.")
                 .Then.ClearExpectation();
 
             string[] strArray = assertions.CollectFailuresFromInspectors(inspector);
@@ -65,7 +63,12 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
                     {
                         string str = string.Join(Environment.NewLine,
                             strArray.Select(x => x.IndentLines().TrimEnd('.')));
-                        assertionScope1.AddPreFormattedFailure($"At index {num}:{Environment.NewLine}{str}");
+                        string valueText = "";
+                        if (obj != null && obj.GetType().GetMethod("ToString")?.DeclaringType != typeof(object))
+                        {
+                            valueText = $" with value {obj}";
+                        }
+                        assertionScope1.AddPreFormattedFailure($"At index {num}{valueText}:{Environment.NewLine}{str}");
                     }
 
                     ++num;

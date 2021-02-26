@@ -9,10 +9,8 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Models;
 using DotNet.Status.Web.Options;
-using Kusto.Ingest;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -84,7 +82,7 @@ namespace DotNet.Status.Web
 
         private void ConfigureConfiguration(IServiceCollection services)
         {
-            services.Configure<IssueMentionForwardingOptions>(Configuration.GetSection("IssueMentionForwarding"));
+            services.Configure<TeamMentionForwardingOptions>(Configuration.GetSection("IssueMentionForwarding"));
             services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub"));
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana"));
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth"));
@@ -266,6 +264,8 @@ namespace DotNet.Status.Web
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();
+            services.AddSingleton<ISystemClock, SystemClock>();
+            services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
             services.AddHttpClient();
             services.AddHealthReporting(
                 b =>
@@ -311,7 +311,7 @@ namespace DotNet.Status.Web
 
     internal class NothingHandler : AuthenticationHandler<NothingOptions>
     {
-        public NothingHandler(IOptionsMonitor<NothingOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock)
+        public NothingHandler(IOptionsMonitor<NothingOptions> options, ILoggerFactory logger, UrlEncoder encoder, Microsoft.AspNetCore.Authentication.ISystemClock clock) : base(options, logger, encoder, clock)
         {
         }
 

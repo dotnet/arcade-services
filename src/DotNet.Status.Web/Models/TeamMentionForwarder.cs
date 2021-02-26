@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 
 namespace DotNet.Status.Web.Models
 {
-    public class IssueMentionForwardingOptions
+    public class TeamMentionForwardingOptions
     {
         public string WatchedTeam { get; set; }
         public string[] IgnoreRepos { get; set; }
@@ -26,11 +26,11 @@ namespace DotNet.Status.Web.Models
 
     public class TeamMentionForwarder : ITeamMentionForwarder
     {
-        private readonly IOptionsSnapshot<IssueMentionForwardingOptions> _options;
+        private readonly IOptionsSnapshot<TeamMentionForwardingOptions> _options;
         private readonly ILogger<TeamMentionForwarder> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public TeamMentionForwarder(IHttpClientFactory httpClientFactory, IOptionsSnapshot<IssueMentionForwardingOptions> options, ILogger<TeamMentionForwarder> logger)
+        public TeamMentionForwarder(IHttpClientFactory httpClientFactory, IOptionsSnapshot<TeamMentionForwardingOptions> options, ILogger<TeamMentionForwarder> logger)
         {
             _httpClientFactory = httpClientFactory;
             _options = options;
@@ -111,7 +111,7 @@ namespace DotNet.Status.Web.Models
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Unable to send notification about mention of {teamName} at {uri}.", teamName, commentUri);
+                _logger.LogError(ex, "Unable to send notification about mention of {teamName} at {uri}.", teamName, commentUri);
             }
         }
     }

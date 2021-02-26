@@ -88,8 +88,8 @@ namespace DotNet.Status.Web.Controllers
 
             string title = payload.PullRequest.Title;
             string uri = payload.Comment.HtmlUrl;
-            string username = payload.PullRequest.User.Login;
-            DateTimeOffset date = payload.PullRequest.UpdatedAt;
+            string username = payload.Comment.User.Login;
+            DateTimeOffset date = payload.Comment.UpdatedAt;
             using IDisposable scope = _logger.BeginScope("Handling pull request {repo}#{prNumber}", repo, number);
             switch (payload.Action)
             {
@@ -116,8 +116,8 @@ namespace DotNet.Status.Web.Controllers
 
             string title = payload.Issue.Title;
             string uri = payload.Comment.HtmlUrl;
-            string username = payload.Issue.User.Login;
-            DateTimeOffset date = payload.Issue.UpdatedAt ?? _systemClock.UtcNow;
+            string username = payload.Comment.User.Login;
+            DateTimeOffset date = payload.Comment.UpdatedAt ?? _systemClock.UtcNow;
             using IDisposable scope = _logger.BeginScope("Handling issue {repo}#{issueNumber}", repo, number);
             switch (payload.Action)
             {

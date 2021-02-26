@@ -3,6 +3,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IsPackable>false</IsPackable>
     <SignAssembly>false</SignAssembly>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="TestCasesData\IssueEventPayload.json" />
@@ -35,10 +36,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
+    <ProjectReference Include="..\Shared\Microsoft.DotNet.Web.Authentication.Tests\Microsoft.DotNet.Web.Authentication.Tests.csproj" />
   </ItemGroup>
 </Project>
