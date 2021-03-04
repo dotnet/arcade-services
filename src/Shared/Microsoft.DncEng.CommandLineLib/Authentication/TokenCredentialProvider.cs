@@ -7,6 +7,7 @@ namespace Microsoft.DncEng.CommandLineLib.Authentication
 {
     public class TokenCredentialProvider
     {
+        public static string MsftAdTenantId => "72f988bf-86f1-41af-91ab-2d7cd011db47";
         private readonly IConsole _console;
         private readonly InteractiveTokenCredentialProvider _interactiveTokenCredentialProvider;
 
@@ -20,7 +21,7 @@ namespace Microsoft.DncEng.CommandLineLib.Authentication
         {
             var creds = new List<TokenCredential>
             {
-                new AzureServiceTokenProviderCredential(Constants.MsftAdTenantId),
+                new AzureServiceTokenProviderCredential(MsftAdTenantId),
             };
             if (_console.IsInteractive)
             {

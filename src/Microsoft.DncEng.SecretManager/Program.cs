@@ -13,9 +13,9 @@ namespace Microsoft.DncEng.SecretManager
 {
     public class Program : DependencyInjectedConsoleApp
     {
-        static async Task<int> Main(string[] args)
+        public static Task<int> Main(string[] args)
         {
-            return await new Program().RunAsync(args);
+            return new Program().RunAsync(args);
         }
 
         protected override void ConfigureServices(IServiceCollection services)
