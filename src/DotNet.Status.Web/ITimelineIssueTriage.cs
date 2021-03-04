@@ -4,6 +4,7 @@
 
 using DotNet.Status.Web.Controllers;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Models;
 
 namespace DotNet.Status.Web
 {

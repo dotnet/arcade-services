@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DotNet.Status.Web.Controllers
+namespace DotNet.Status.Web.Models
 {
     internal static class GitHubModifications
     {
