@@ -95,7 +95,7 @@ namespace DotNet.Status.Web.Models
                         new Section
                         {
                             ActivityTitle = $"{username}",
-                            ActivitySubtitle = "on {date:g}",
+                            ActivitySubtitle = $"on {date:g}",
                             ActivityText = body
                         }
                     }
