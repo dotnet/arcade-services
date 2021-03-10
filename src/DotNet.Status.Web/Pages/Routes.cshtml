@@ -1,0 +1,40 @@
+@page
+@model HelixAPI.Pages.RoutesModel
+@{
+    ViewData["Title"] = "Routes";
+}
+
+<h2>@ViewData["Title"]</h2>
+<h3>Route Debug Info</h3>
+
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th>Route Template</th>
+            <th>Target</th>
+            <th>Constraints/Verbs</th>
+            <th>Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var route in Model.Routes)
+        {
+            @if (!String.IsNullOrEmpty(route.Template))
+            {
+                <tr>
+                    <td>@route.Template</td>
+                    @if (string.IsNullOrEmpty(route.Page))
+                    {
+                        <td>Controller @route.Controller, Action @route.Action</td>
+                    }
+                    else
+                    {
+                        <td>Page @route.Page</td>
+                    }
+                    <td>@route.Constraint</td>
+                    <td>@route.Name</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>

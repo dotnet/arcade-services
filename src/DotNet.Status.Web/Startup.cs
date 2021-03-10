@@ -7,9 +7,11 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Models;
 using DotNet.Status.Web.Options;
-using Kusto.Ingest;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -80,12 +82,13 @@ namespace DotNet.Status.Web
 
         private void ConfigureConfiguration(IServiceCollection services)
         {
-            services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
-            services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
-            services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
-            services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
-            services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
-            services.Configure<KustoOptions>(Configuration.GetSection("Kusto").Bind);
+            services.Configure<TeamMentionForwardingOptions>(Configuration.GetSection("IssueMentionForwarding"));
+            services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub"));
+            services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana"));
+            services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth"));
+            services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub"));
+            services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor"));
+            services.Configure<KustoOptions>(Configuration.GetSection("Kusto"));
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -172,6 +175,7 @@ namespace DotNet.Status.Web
                         .AuthorizeFolder("/", MsftAuthorizationPolicyName)
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
+                        .AllowAnonymousToPage("/Routes")
                         .AllowAnonymousToPage("/Error");
                     o.RootDirectory = "/Pages";
                 });
@@ -198,6 +202,10 @@ namespace DotNet.Status.Web
                 .AddPolicyScheme("contextual", "Contextual Scheme",
                     o => { o.ForwardDefaultSelector = context =>
                     {
+                        if (context.Request.Path.StartsWithSegments("/api/webhooks"))
+                        {
+                            return "nothing";
+                        }
                         if (context.Request.Path.StartsWithSegments("/api"))
                         {
                             return "github-token";
@@ -206,6 +214,7 @@ namespace DotNet.Status.Web
                         return IdentityConstants.ApplicationScheme;
                     }; })
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
+                .AddScheme<NothingOptions, NothingHandler>("nothing", o => { })
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
                     o =>
@@ -255,6 +264,8 @@ namespace DotNet.Status.Web
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();
+            services.AddSingleton<ISystemClock, SystemClock>();
+            services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
             services.AddHttpClient();
             services.AddHealthReporting(
                 b =>
@@ -262,6 +273,8 @@ namespace DotNet.Status.Web
                     b.AddLogging();
                     b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
                 });
+
+            services.AddScoped<ITeamMentionForwarder, TeamMentionForwarder>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -289,6 +302,22 @@ namespace DotNet.Status.Web
             });
             app.UseStaticFiles();
             app.UseMiddleware<SimpleSigninMiddleware>();
+        }
+    }
+
+    internal class NothingOptions : AuthenticationSchemeOptions
+    {
+    }
+
+    internal class NothingHandler : AuthenticationHandler<NothingOptions>
+    {
+        public NothingHandler(IOptionsMonitor<NothingOptions> options, ILoggerFactory logger, UrlEncoder encoder, Microsoft.AspNetCore.Authentication.ISystemClock clock) : base(options, logger, encoder, clock)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
     }
 }

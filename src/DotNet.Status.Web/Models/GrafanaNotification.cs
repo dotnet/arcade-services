@@ -4,7 +4,7 @@
 
 using System.Collections.Immutable;
 
-namespace DotNet.Status.Web.Controllers
+namespace DotNet.Status.Web.Models
 {
     public class GrafanaNotification
     {
