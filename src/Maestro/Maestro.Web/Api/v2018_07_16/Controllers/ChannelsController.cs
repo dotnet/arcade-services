@@ -7,7 +7,6 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,8 +19,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
 using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
-using FlowRef = Maestro.Web.Api.v2018_07_16.Models.FlowRef;
-using FlowEdge = Maestro.Web.Api.v2018_07_16.Models.FlowEdge;
 using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
@@ -175,15 +172,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
             }
 
-            Build build = await _context.Builds.FindAsync(buildId);
+            Build build = await _context.Builds
+                .Where(b => b.Id == buildId)
+                .Include(b => b.BuildChannels)
+                .FirstOrDefaultAsync();
+
             if (build == null)
             {
                 return NotFound(new ApiError($"The build with id '{buildId}' was not found."));
             }
 
             // If build is already in channel, nothing to do
-            if (build.BuildChannels != null &&
-                build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
+            if (build.BuildChannels?.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId) ?? false)
             {
                 return StatusCode((int)HttpStatusCode.Created);
             }

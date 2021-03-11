@@ -102,6 +102,53 @@ namespace Maestro.Web.Tests
             repositories.Should().ContainSingle();
         }
 
+        [Test]
+        public async Task AddingBuildToChannelTwiceWorks()
+        {
+            using TestData data = await BuildDefaultAsync();
+            const string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
+            const string classification = "TEST-CLASSIFICATION";
+            const string commitHash = "FAKE-COMMIT";
+            const string account = "FAKE-ACCOUNT";
+            const string project = "FAKE-PROJECT";
+            const string buildNumber = "20.5.19.20";
+            const string repository = "FAKE-REPOSITORY";
+            const string branch = "FAKE-BRANCH";
+
+            Channel channel;
+            {
+                var result = await data.Controller.CreateChannel(channelName, classification);
+                channel = (Channel) ((ObjectResult) result).Value;
+            }
+
+            Build build;
+            {
+                IActionResult result = await data.BuildsController.Create(new BuildData
+                {
+                    Commit = commitHash,
+                    AzureDevOpsAccount = account,
+                    AzureDevOpsProject = project,
+                    AzureDevOpsBuildNumber = buildNumber,
+                    AzureDevOpsRepository = repository,
+                    AzureDevOpsBranch = branch,
+                });
+                build = (Build) ((ObjectResult) result).Value;
+            }
+
+            {
+                IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
+                result.Should().BeAssignableTo<StatusCodeResult>();
+                var objResult = (StatusCodeResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+            }
+
+            {
+                IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
+                result.Should().BeAssignableTo<StatusCodeResult>();
+                var objResult = (StatusCodeResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+            }
+        }
 
         private Task<TestData> BuildDefaultAsync()
         {
