@@ -183,7 +183,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             }
 
             // If build is already in channel, nothing to do
-            if (build.BuildChannels?.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId) ?? false)
+            if (build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
             {
                 return StatusCode((int)HttpStatusCode.Created);
             }

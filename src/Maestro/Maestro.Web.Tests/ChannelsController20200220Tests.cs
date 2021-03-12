@@ -106,7 +106,7 @@ namespace Maestro.Web.Tests
         public async Task AddingBuildToChannelTwiceWorks()
         {
             using TestData data = await BuildDefaultAsync();
-            const string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
+            const string channelName = "TEST-CHANNEL-ADD-TWICE-2020";
             const string classification = "TEST-CLASSIFICATION";
             const string commitHash = "FAKE-COMMIT";
             const string account = "FAKE-ACCOUNT";
