@@ -79,8 +79,9 @@ namespace RolloutScorer
 
             if (!skipPr)
             {
-                Reference masterBranch = await githubClient.Git.Reference
-                .Get(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, "heads/master");
+                Reference mainBranch = await githubClient.Git.Reference
+                    .Get(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, "heads/main");
+
                 string newBranchName = $"{DateTime.Today:yyyy-MM-dd}-Scorecard-Update";
                 string newBranchRef = $"heads/{newBranchName}";
                 Reference newBranch;
@@ -95,7 +96,7 @@ namespace RolloutScorer
                 catch (NotFoundException)
                 {
                     newBranch = await githubClient.Git.Reference.CreateBranch(githubConfig.ScorecardsGithubOrg,
-                        githubConfig.ScorecardsGithubRepo, newBranchName, masterBranch);
+                        githubConfig.ScorecardsGithubRepo, newBranchName, mainBranch);
                 }
 
                 TreeResponse currentTree = await githubClient.Git.Tree.Get(githubConfig.ScorecardsGithubOrg,
@@ -144,7 +145,7 @@ namespace RolloutScorer
 
                 PullRequestRequest prRequest = new PullRequestRequest
                 {
-                    Base = "master",
+                    Base = "main",
                     Head = newBranchName,
                     State = ItemStateFilter.Open,
                 };
@@ -153,7 +154,7 @@ namespace RolloutScorer
                     (await githubClient.PullRequest.GetAllForRepository(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo)).ToList();
                 if (!prs.Any(pr => pr.Head.Ref == newBranchName))
                 {
-                    NewPullRequest newPullRequest = new NewPullRequest(newCommit.Message, newBranchName, "master");
+                    NewPullRequest newPullRequest = new NewPullRequest(newCommit.Message, newBranchName, "main");
                     await githubClient.PullRequest.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newPullRequest);
                 }
             }
