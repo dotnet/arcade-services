@@ -169,15 +169,18 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
             }
 
-            Build build = await _context.Builds.FindAsync(buildId);
+            Build build = await _context.Builds
+                .Where(b => b.Id == buildId)
+                .Include(b => b.BuildChannels)
+                .FirstOrDefaultAsync();
+
             if (build == null)
             {
                 return NotFound(new ApiError($"The build with id '{buildId}' was not found."));
             }
 
             // If build is already in channel, nothing to do
-            if (build.BuildChannels != null &&
-                build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
+            if (build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
             {
                 return StatusCode((int)HttpStatusCode.Created);
             }
