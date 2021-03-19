@@ -2,7 +2,7 @@ dotnet-eng-status is a GitHub app used to categorize Azure DevOps build failures
 
 ## Background
 
-We generate [PowerBi reports](https://dev.azure.com/dnceng/public/_dashboards/dashboard/40ac4990-3498-4b3a-85dd-2ffde961d672), that include [telemetry categorization](https://github.com/dotnet/arcade/blob/master/Documentation/Projects/DevOps/CI/Telemetry-Guidance.md).  The reports are useful to show build metrics / trends.  However, there is no way to discuss failures via these reports alone and if the categorization is incorrect, there is no way to recategorize a failure and improve our reports for historical failures (see this [doc](https://github.com/dotnet/arcade/blob/master/Documentation/Projects/PKPIs/Triage-Design.md) for more information).
+We generate [PowerBi reports](https://dev.azure.com/dnceng/public/_dashboards/dashboard/40ac4990-3498-4b3a-85dd-2ffde961d672), that include [telemetry categorization](https://github.com/dotnet/arcade/blob/main/Documentation/Projects/DevOps/CI/Telemetry-Guidance.md).  The reports are useful to show build metrics / trends.  However, there is no way to discuss failures via these reports alone and if the categorization is incorrect, there is no way to recategorize a failure and improve our reports for historical failures (see this [doc](https://github.com/dotnet/arcade/blob/main/Documentation/Projects/PKPIs/Triage-Design.md) for more information).
 
 ## Build failure issue identification
 
@@ -12,7 +12,7 @@ dotnet-eng-status searches GitHub issues for issues which contain specific ident
 [BuildId=(Azure DevOps BuildId),RecordId=(Azure DevOps RecordId),Index=(Azure DevOps issue index)]
 ```
 
-It is not expected that users manually provide this information, the issue body is auto-generated via links on the reports (see https://github.com/dotnet/arcade/blob/master/Documentation/Projects/PKPIs/Triage-Design.md#powerbi).
+It is not expected that users manually provide this information, the issue body is auto-generated via links on the reports (see https://github.com/dotnet/arcade/blob/main/Documentation/Projects/PKPIs/Triage-Design.md#powerbi).
 
 When a build failure issue issue is detected, dotnet-eng-status will link the GitHub issue to the failure in the PowerBI report (see [Behavior notes](#behavior-notes)).
 

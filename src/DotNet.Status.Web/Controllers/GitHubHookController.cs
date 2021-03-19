@@ -268,9 +268,9 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
 
 ### What additional diagnostics would have reduced the time to fix the issue?
 
-### What additional [telemetry](https://github.com/dotnet/core-eng/blob/master/Documentation/Alerting.md) would have allowed us to catch the issue sooner?
+### What additional [telemetry](https://github.com/dotnet/core-eng/blob/main/Documentation/Alerting.md) would have allowed us to catch the issue sooner?
 
-### What additional [testing or validation](https://github.com/dotnet/core-eng/tree/master/Documentation/Validation) would have caught this error before rollout?
+### What additional [testing or validation](https://github.com/dotnet/core-eng/tree/main/Documentation/Validation) would have caught this error before rollout?
 
 ",
             };
@@ -338,7 +338,7 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
                         _logger.LogTrace("Label '{label}' irrelevant, taking no RCA action", triggeringLabel);
                         return false;
                     }
-                    
+
                     _logger.LogInformation("Previously closed labeled with '{label}', RCA required", triggeringLabel);
                     return true;
 

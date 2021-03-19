@@ -27,9 +27,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "devdiv", ("devdiv", 12603) }
             };
 
-        // These channels are unsupported because the Arcade master branch 
-        // (the branch that has build promotion infra) doesn't have YAML 
-        // implementation for them. There is usually not a high demand for 
+        // These channels are unsupported because the Arcade main branch
+        // (the branch that has build promotion infra) doesn't have YAML
+        // implementation for them. There is usually not a high demand for
         // promoting builds to these channels.
         private readonly Dictionary<int, string> UnsupportedChannels = new Dictionary<int, string>()
         {
@@ -107,7 +107,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (_options.AddToDefaultChannels)
                 {
                     IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync(
-                        build.GitHubRepository ?? build.AzureDevOpsRepository, 
+                        build.GitHubRepository ?? build.AzureDevOpsRepository,
                         build.GitHubBranch ?? build.AzureDevOpsBranch);
 
                     targetChannels.AddRange(
@@ -173,7 +173,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 foreach (var targetChannel in targetChannels)
                 {
                     IEnumerable<Subscription> appSubscriptions = await remote.GetSubscriptionsAsync(
-                        sourceRepo: buildRepo, 
+                        sourceRepo: buildRepo,
                         channelId: targetChannel.Id);
 
                     applicableSubscriptions.AddRange(appSubscriptions);
@@ -219,7 +219,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
-            // This condition can happen when for some reason we failed to determine the source branch/sha 
+            // This condition can happen when for some reason we failed to determine the source branch/sha
             // of the build that produced the used Arcade SDK or when the user specify an invalid combination
             // of source-sha/branch parameters.
             if (arcadeSDKSourceBranch == null && arcadeSDKSourceSHA == null)
@@ -245,7 +245,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            // Construct the templateParameters and queue time variables. 
+            // Construct the templateParameters and queue time variables.
             // Publishing v2 uses variables and v3 uses parameters, so just use the same values for both.
             var promotionPipelineVariables = new Dictionary<string, string>
             {
@@ -383,9 +383,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (_options.SourceBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"Warning: Arcade branch {_options.SourceBranch} doesn't support build promotion. Please try specifiying --source-branch 'master'.");
-                    Console.WriteLine("Switching source branch to Arcade master.");
-                    return ("master", null);
+                    Console.WriteLine($"Warning: Arcade branch {_options.SourceBranch} doesn't support build promotion. Please try specifiying --source-branch 'main'.");
+                    Console.WriteLine("Switching source branch to Arcade main.");
+                    return ("main", null);
                 }
             }
 
@@ -424,7 +424,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 .ConfigureAwait(false);
 
             Asset sourceBuildArcadeSDKDepAsset = listArcadeSDKAssets.FirstOrDefault();
-            
+
             if (sourceBuildArcadeSDKDepAsset == null)
             {
                 Console.WriteLine($"Could not fetch information about Microsoft.DotNet.Arcade.Sdk asset version {sourceBuildArcadeSDKDependency.Version}.");
@@ -441,9 +441,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (sourceBuildArcadeSDKDepBuild.GitHubBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Warning: To promote a build that uses a 3.x version of Arcade SDK you need to inform the --source-branch 'master' parameter.");
-                Console.WriteLine("Switching source branch to Arcade master.");
-                return ("master", null);
+                Console.WriteLine("Warning: To promote a build that uses a 3.x version of Arcade SDK you need to inform the --source-branch 'main' parameter.");
+                Console.WriteLine("Switching source branch to Arcade main.");
+                return ("main", null);
             }
 
             var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));

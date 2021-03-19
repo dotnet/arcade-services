@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public const string AzureDevOpsAccount1 = "dnceng";
         public const int AzureDevOpsBuildDefinitionId1 = 6;
         public const int AzureDevOpsBuildId1 = 856354;
-        public const string AzureDevOpsBranch1 = "refs/heads/master";
+        public const string AzureDevOpsBranch1 = "refs/heads/main";
         public const string AzureDevOpsBuildNumber1 = "20201016.5";
         public const string AzureDevOpsProject1 = "internal";
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
@@ -419,7 +419,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             actualBuildData.Should().BeEquivalentTo(buildData1.Concat(buildData2));
             actualSigningInformation.Should().BeEquivalentTo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2));
             actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
-            
+
         }
 
         [Test]
