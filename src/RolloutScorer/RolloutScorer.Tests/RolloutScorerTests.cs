@@ -58,7 +58,7 @@ namespace RolloutScorer.Tests
 
             HttpRequestException exception = (await (((Func<Task>)(                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
                     Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri))))).Should().ThrowAsync<HttpRequestException>()).Which;
-            exception.Message.Should().Contain(expectedMessage);
+            exception.Message.Should().NotContain(expectedMessage);
         }
     }
 }
