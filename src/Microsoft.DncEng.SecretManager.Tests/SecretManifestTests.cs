@@ -26,12 +26,16 @@ keys:
 secrets:
   secret1:
     type: three
+    owner: sally
+    description: the first secret
     parameters:
       one: 1
       two: ni
       three: san
   secret2:
     type: four
+    owner: bob
+    description: the second secret
     parameters:
       a: yon
       b: cinco
@@ -62,6 +66,8 @@ secrets:
                     ["secret1"] = new
                     {
                         Type = "three",
+                        Owner = "sally",
+                        Description = "the first secret",
                         Parameters = new Dictionary<string, string>
                         {
                             ["one"] = "1",
@@ -72,6 +78,8 @@ secrets:
                     ["secret2"] = new
                     {
                         Type = "four",
+                        Owner = "bob",
+                        Description = "the second secret",
                         Parameters = new Dictionary<string, string>
                         {
                             ["a"] = "yon",
