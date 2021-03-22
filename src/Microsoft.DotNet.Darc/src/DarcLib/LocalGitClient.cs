@@ -430,7 +430,7 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             log.LogDebug($"Submodule {sub.Name} in {subRepoPath} is already initialized, trying to adopt from super-repo {repo.Info.Path}");
 
-                            // superrepo thinks it is initialized, but it's orphaned.  Go back to the main repo to find out where this is supposed to point.
+                            // superrepo thinks it is initialized, but it's orphaned.  Go back to the master repo to find out where this is supposed to point.
                             using (LibGit2Sharp.Repository masterRepo = new LibGit2Sharp.Repository(repo.Info.WorkingDirectory))
                             {
                                 LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);

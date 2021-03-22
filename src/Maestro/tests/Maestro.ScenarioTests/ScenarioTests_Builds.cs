@@ -16,7 +16,7 @@ namespace Maestro.ScenarioTests
         private readonly string repoName = TestRepository.TestRepo1Name;
         private readonly string sourceBuildNumber = "654321";
         private readonly string sourceCommit = "123456";
-        private readonly string sourceBranch = "main";
+        private readonly string sourceBranch = "master";
 
         private readonly IImmutableList<AssetData> sourceAssets;
         private TestParameters _parameters;
