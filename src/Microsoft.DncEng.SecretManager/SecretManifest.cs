@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -29,11 +28,15 @@ namespace Microsoft.DncEng.SecretManager
         // ReSharper disable All
         private class Format
         {
-            public Guid subscription { get; set; }
-            public string name { get; set; }
-            public bool missingSecretsAllowed { get; set; }
+            public Storage storageLocation { get; set; }
             public Dictionary<string, Key> keys { get; set; }
             public Dictionary<string, Secret> secrets { get; set; }
+
+            public class Storage
+            {
+                public string type { get; set; }
+                public Dictionary<string, string> parameters { get; set; }
+            }
 
             public class Key
             {
@@ -54,18 +57,30 @@ namespace Microsoft.DncEng.SecretManager
 
         private SecretManifest(Format data)
         {
-            Subscription = data.subscription;
-            Name = data.name;
-            MissingSecretsAllowed = data.missingSecretsAllowed;
-            Keys = data.keys.ToImmutableDictionary(p => p.Key, p => CreateKey(p.Value));
-            Secrets = data.secrets.ToImmutableDictionary(p => p.Key, p => CreateSecret(p.Value));
+            StorageLocation = CreateStorage(data.storageLocation);
+            Keys = data.keys?.ToImmutableDictionary(p => p.Key, p => CreateKey(p.Value)) ?? ImmutableDictionary<string, Key>.Empty;
+            Secrets = data.secrets?.ToImmutableDictionary(p => p.Key, p => CreateSecret(p.Value)) ?? ImmutableDictionary<string, Secret>.Empty;
         }
-
-        public Guid Subscription { get; }
-        public string Name { get; }
-        public bool MissingSecretsAllowed { get; }
+        public Storage StorageLocation { get; }
         public IImmutableDictionary<string, Key> Keys { get; }
         public IImmutableDictionary<string, Secret> Secrets { get; }
+
+        private static Storage CreateStorage(Format.Storage data)
+        {
+            return new Storage(data.type, data.parameters);
+        }
+
+        public class Storage
+        {
+            public Storage(string type, Dictionary<string, string> parameters)
+            {
+                Type = type;
+                Parameters = parameters.ToImmutableDictionary(p => p.Key, p => p.Value);
+            }
+
+            public string Type { get; }
+            public IImmutableDictionary<string, string> Parameters { get; }
+        }
 
         private static Key CreateKey(Format.Key data)
         {
