@@ -44,6 +44,8 @@ namespace Microsoft.DncEng.SecretManager
             public class Secret
             {
                 public string type { get; set; }
+                public string owner { get; set; }
+                public string description { get; set; }
                 public Dictionary<string, string> parameters { get; set; }
             }
         }
@@ -84,18 +86,22 @@ namespace Microsoft.DncEng.SecretManager
 
         private static Secret CreateSecret(Format.Secret data)
         {
-            return new Secret(data.type, data.parameters);
+            return new Secret(data.type, data.parameters, data.owner, data.description);
         }
 
         public class Secret
         {
-            public Secret(string type, Dictionary<string, string> parameters)
+            public Secret(string type, Dictionary<string, string> parameters, string owner, string description)
             {
                 Type = type;
+                Owner = owner;
+                Description = description;
                 Parameters = parameters.ToImmutableDictionary(p => p.Key, p => p.Value);
             }
 
             public string Type { get; }
+            public string Owner { get; }
+            public string Description { get; }
             public IImmutableDictionary<string, string> Parameters { get; }
         }
 
