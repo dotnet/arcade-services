@@ -43,7 +43,7 @@ namespace DotNet.Status.Web.Models
             string team = _options.Value.WatchedTeam;
             string[] ignoredRepos = _options.Value.IgnoreRepos;
 
-            if (ignoredRepos.Contains(repo))
+            if (ignoredRepos != null && ignoredRepos.Contains(repo))
             {
                 shouldSend = false;
             }
