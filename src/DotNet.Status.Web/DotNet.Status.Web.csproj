@@ -25,6 +25,7 @@
     <PackageReference Include="WindowsAzure.Storage" /> 
   </ItemGroup>
 
+  
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
