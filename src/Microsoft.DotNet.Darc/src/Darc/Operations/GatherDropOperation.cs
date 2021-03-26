@@ -835,9 +835,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
                 Directory.CreateDirectory(extraAssetsDirectory);
 
-                (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+                (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
                 extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
-                anyShipping |= extraAssetDownloadResult.anyShipping;
                 success &= extraAssetDownloadResult.success;
                 if (!success && !_options.ContinueOnError)
                 {
