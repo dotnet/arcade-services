@@ -27,7 +27,6 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             ReadRequiredParameter("account", ref _accountName);
         }
 
-
         private async Task<StorageManagementClient> CreateManagementClient(CancellationToken cancellationToken)
         {
             var creds = await _tokenCredentialProvider.GetCredentialAsync();
@@ -52,28 +51,28 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new ArgumentException($"Storage account '{_accountName}' in subscription '{_subscription}' not found.");
             }
 
-            var currentKey = int.Parse(context.GetValue("currentKey", "1"));
+            var currentKey = context.GetValue("currentKey", "key1");
             var id = ResourceId.FromString(account.Id);
             StorageAccountListKeysResult keys;
-            int keyToReturn;
+            string keyToReturn;
             switch (currentKey)
             {
-                case 1:
+                case "key1":
                     keys = await client.StorageAccounts.RegenerateKeyAsync(id.ResourceGroupName, id.Name, "key2", cancellationToken: cancellationToken);
-                    keyToReturn = 2;
+                    keyToReturn = "key2";
                     break;
-                case 2:
+                case "key2":
                     keys = await client.StorageAccounts.RegenerateKeyAsync(id.ResourceGroupName, id.Name, "key1", cancellationToken: cancellationToken);
-                    keyToReturn = 1;
+                    keyToReturn = "key1";
                     break;
                 default:
                     throw new InvalidOperationException($"Unexpected 'currentKey' value '{currentKey}'.");
             }
 
-            var key = keys.Keys.ElementAt(keyToReturn-1);
+            var key = keys.Keys.FirstOrDefault(k => k.KeyName == keyToReturn) ?? throw new InvalidOperationException($"Key {keyToReturn} not found.");
             var connectionString = $"DefaultEndpointsProtocol=https;AccountName={id.Name};AccountKey={key.Value}";
 
-            context.SetValue("currentKey", keyToReturn.ToString());
+            context.SetValue("currentKey", keyToReturn);
             return new SecretData(connectionString, DateTimeOffset.MaxValue, DateTimeOffset.UtcNow.AddMonths(6));
         }
 
