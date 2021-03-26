@@ -75,7 +75,7 @@ namespace Microsoft.DncEng.SecretManager
             public Storage(string type, Dictionary<string, string> parameters)
             {
                 Type = type;
-                Parameters = parameters.ToImmutableDictionary(p => p.Key, p => p.Value);
+                Parameters = parameters?.ToImmutableDictionary(p => p.Key, p => p.Value) ?? ImmutableDictionary<string, string>.Empty;
             }
 
             public string Type { get; }
@@ -111,7 +111,7 @@ namespace Microsoft.DncEng.SecretManager
                 Type = type;
                 Owner = owner;
                 Description = description;
-                Parameters = parameters.ToImmutableDictionary(p => p.Key, p => p.Value);
+                Parameters = parameters?.ToImmutableDictionary(p => p.Key, p => p.Value) ?? ImmutableDictionary<string, string>.Empty;
             }
 
             public string Type { get; }

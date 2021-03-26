@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,6 +8,10 @@ namespace Microsoft.DncEng.SecretManager
 {
     public abstract class SecretType : ParameterizedObject, IDisposable
     {
+        protected SecretType() : base(ImmutableDictionary.Create<string, string>())
+        {
+        }
+
         protected SecretType(IReadOnlyDictionary<string, string> parameters) : base(parameters)
         {
         }

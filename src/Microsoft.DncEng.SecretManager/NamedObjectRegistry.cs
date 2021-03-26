@@ -36,7 +36,7 @@ namespace Microsoft.DncEng.SecretManager
             _types = typeMap.ToImmutable();
         }
 
-        public T Create(string name, IReadOnlyDictionary<string, string> parameters)
+        public virtual T Create(string name, IReadOnlyDictionary<string, string> parameters)
         {
             if (!_types.TryGetValue(name, out Type type))
             {

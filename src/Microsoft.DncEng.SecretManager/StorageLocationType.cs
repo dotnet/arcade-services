@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 
 namespace Microsoft.DncEng.SecretManager
 {
     public abstract class StorageLocationType : ParameterizedObject, IDisposable
     {
+        protected StorageLocationType() : base(ImmutableDictionary.Create<string, string>())
+        {
+        }
+
         protected StorageLocationType(IReadOnlyDictionary<string, string> parameters) : base(parameters)
         {
         }
