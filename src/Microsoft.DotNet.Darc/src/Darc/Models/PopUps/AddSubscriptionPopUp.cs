@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 new Line("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
                 new Line("set-repository-policies command should be used instead to set policies on the repository + branch level. ", true),
                 new Line("For additional information about subscriptions, please see", true),
-                new Line("https://github.com/dotnet/arcade/blob/master/Documentation/BranchesChannelsAndSubscriptions.md", true),
+                new Line("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
                 new Line("", true),
                 new Line("Fill out the following form.  Suggested values for fields are shown below.", true),
                 new Line()
@@ -152,7 +152,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             _yamlData.Batchable = outputYamlData.Batchable;
 
             _yamlData.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _yamlData.UpdateFrequency, false);
-            if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) || 
+            if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) ||
                 !Constants.AvailableFrequencies.Contains(_yamlData.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
             {
                 _logger.LogError($"Frequency should be provided and should be one of the following: " +

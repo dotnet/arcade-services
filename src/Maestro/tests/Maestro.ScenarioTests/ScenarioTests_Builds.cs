@@ -17,7 +17,7 @@ namespace Maestro.ScenarioTests
         private readonly string sourceBuildNumber = "654321";
         private readonly string sourceCommit = "123456";
         private readonly string sourceBranch = "master";
-        
+
         private readonly IImmutableList<AssetData> sourceAssets;
         private TestParameters _parameters;
 
@@ -51,7 +51,7 @@ namespace Maestro.ScenarioTests
 
             // Create a build for the source repo
             Build build = await CreateBuildAsync(repoUrl, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
-            Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id); 
+            Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id);
             Assert.IsFalse(retrievedBuild.Released, "Retrieved build has Released set to true when it should be false");
 
             // Release the build; gather-drop does not fetch anything unless the flag '--include-released' is included in its arguments (which the next operation does set)

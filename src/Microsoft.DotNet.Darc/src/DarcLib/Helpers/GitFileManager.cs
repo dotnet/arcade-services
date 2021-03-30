@@ -186,7 +186,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="itemsToUpdate"></param>
         /// <param name="repoUri"></param>
@@ -265,7 +265,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            // At this point we only care about the Maestro managed locations for the assets. 
+            // At this point we only care about the Maestro managed locations for the assets.
             // Flatten the dictionary into a set that has all the managed feeds
             Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
@@ -434,7 +434,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         // Ensure that the file contains a <disabledPackageSources> node.
-        // - If it exists, do not modify values other than key nodes starting with disableFeedKeyPrefix, 
+        // - If it exists, do not modify values other than key nodes starting with disableFeedKeyPrefix,
         //   which we'll ensure are after any <clear/> tags and set to 'true'
         // - If it does not exist, add it
         // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
@@ -695,7 +695,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
             // who will gather up all updates and then call the git client to write the files all at once:
-            // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so 
+            // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
             // it's okay for now.
             var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
             await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
@@ -711,8 +711,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     <PropertyGroup>
         ///         <MicrosoftDotNetApiCompatPackageVersion>1.0.0-beta.18478.5</MicrosoftDotNetApiCompatPackageVersion>
         ///     </PropertyGroup>
-        ///     
-        ///     See https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md for more
+        ///
+        ///     See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md for more
         ///     information.
         /// </summary>
         /// <param name="repo">Path to Versions.props file</param>
@@ -806,7 +806,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
             // who will gather up all updates and then call the git client to write the files all at once:
-            // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so 
+            // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
             // it's okay for now.
             var file = new GitFile(VersionFiles.VersionProps, versionProps);
             await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
@@ -1195,7 +1195,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Verify that any dependency that exists in global.json and Version.Details.xml (e.g. Arcade SDK) 
+        ///     Verify that any dependency that exists in global.json and Version.Details.xml (e.g. Arcade SDK)
         ///     has matching version numbers.
         /// </summary>
         /// <param name="dependencies">Parsed dependencies in the repository.</param>
@@ -1248,7 +1248,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Verify that any dependency details we're flowing have a matching version number 
+        ///     Verify that any dependency details we're flowing have a matching version number
         ///     in the .config/dotnet-tools.json file (but only if it exists)
         /// </summary>
         /// <param name="dependencies">Parsed dependencies in the repository.</param>
@@ -1325,7 +1325,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Check that each dependency in <paramref name="dependencies"/> exists in at least one of the 
+        ///     Check that each dependency in <paramref name="dependencies"/> exists in at least one of the
         ///     <paramref name="utilizedDependencySets"/>
         /// </summary>
         /// <param name="dependencies">Parsed dependencies in the repository.</param>
@@ -1379,7 +1379,7 @@ namespace Microsoft.DotNet.DarcLib
 
                                 bool isPinned = false;
 
-                                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
+                                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
                                 if (dependency.Attributes[VersionFiles.PinnedAttributeName] != null)
                                 {
                                     if (!bool.TryParse(dependency.Attributes[VersionFiles.PinnedAttributeName].Value, out isPinned))
