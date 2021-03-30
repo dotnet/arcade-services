@@ -172,7 +172,7 @@ namespace DependencyUpdateErrorProcessor
                 parsedRepoUri.owner,
                 parsedRepoUri.repo);
             var issueNumber = new ConditionalValue<int>();
-            Issue issue;
+            Issue issue = null;
 
             switch (updateHistoryError)
             {
