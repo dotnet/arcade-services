@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
         public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
         private const string GitHubRepositoryName = "dotnet-arcade";
-        private const string GitHubBranch = "refs/heads/master";
+        private const string GitHubBranch = "refs/heads/main";
 
         #region Assets
         internal static readonly AssetData PackageAsset1 =
