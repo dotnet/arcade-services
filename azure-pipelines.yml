@@ -137,7 +137,7 @@ stages:
           displayName: Build / Publish
           condition: succeeded()
 
-        - ${{ if eq(variables._RunAsPublic, False) }}:
+        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
           - powershell: src\Monitoring\ComponentGovernance\generate-cgmanifest.ps1
             displayName: Generate cgmanifest.json for Grafana
