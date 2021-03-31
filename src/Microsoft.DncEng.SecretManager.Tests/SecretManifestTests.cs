@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using FluentAssertions;
@@ -14,8 +13,11 @@ namespace Microsoft.DncEng.SecretManager.Tests
             var subscription = "007ae47e-f491-4706-a4ad-288c235dd30e";
             var vaultName = "pizza";
             var testManifest = $@"
-subscription: {subscription}
-name: {vaultName}
+storageLocation:
+  type: key-vault
+  parameters:
+    name: {vaultName}
+    subscription: {subscription}
 keys:
   key1:
     type: one
@@ -26,12 +28,16 @@ keys:
 secrets:
   secret1:
     type: three
+    owner: sally
+    description: the first secret
     parameters:
       one: 1
       two: ni
       three: san
   secret2:
     type: four
+    owner: bob
+    description: the second secret
     parameters:
       a: yon
       b: cinco
@@ -42,8 +48,15 @@ secrets:
 
             parsed.Should().BeEquivalentTo(new
             {
-                Subscription = new Guid(subscription),
-                Name = vaultName,
+                StorageLocation = new
+                {
+                    Type = "key-vault",
+                    Parameters = new Dictionary<string, string>
+                    {
+                        ["subscription"] = subscription,
+                        ["name"] = vaultName,
+                    },
+                },
                 Keys = new Dictionary<string, object>
                 {
                     ["key1"] = new
@@ -62,6 +75,8 @@ secrets:
                     ["secret1"] = new
                     {
                         Type = "three",
+                        Owner = "sally",
+                        Description = "the first secret",
                         Parameters = new Dictionary<string, string>
                         {
                             ["one"] = "1",
@@ -72,6 +87,8 @@ secrets:
                     ["secret2"] = new
                     {
                         Type = "four",
+                        Owner = "bob",
+                        Description = "the second secret",
                         Parameters = new Dictionary<string, string>
                         {
                             ["a"] = "yon",

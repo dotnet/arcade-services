@@ -820,8 +820,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
             }
 
-            (bool success, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+            (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
             success &= primaryAssetDownloadResult.success;
+            anyShipping |= primaryAssetDownloadResult.anyShipping;
             downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
             if (!success && !_options.ContinueOnError)
             {
@@ -834,7 +835,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
                 Directory.CreateDirectory(extraAssetsDirectory);
 
-                (bool success, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
+                (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
                 extraDownloadedAssets = extraAssetDownloadResult.downloadedExtraAssets;
                 success &= extraAssetDownloadResult.success;
                 if (!success && !_options.ContinueOnError)
@@ -859,10 +860,11 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
 
-        private async Task<(bool success, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
+        private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
         {
             bool success = true;
             var downloaded = new ConcurrentBag<DownloadedAsset>();
+            bool anyShipping = false;
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
@@ -890,6 +892,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             }
                             else
                             {
+                                anyShipping |= !asset.NonShipping;
                                 downloaded.Add(downloadedAsset);
                             }
                         }
@@ -900,7 +903,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }));
                 }
             }
-            return (success, downloaded);
+            return (success, anyShipping, downloaded);
         }
 
         /// <summary>
