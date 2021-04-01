@@ -22,6 +22,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
             var cancellationToken = cts.Token;
 
             var services = new ServiceCollection();
+            services.AddSingleton(Mock.Of<IConsole>());
 
             var storageLocationTypeRegistry = new Mock<StorageLocationTypeRegistry>(MockBehavior.Strict);
             services.AddSingleton(p => storageLocationTypeRegistry.Object);

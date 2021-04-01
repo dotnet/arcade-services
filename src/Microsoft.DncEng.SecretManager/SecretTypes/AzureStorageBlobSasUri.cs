@@ -8,16 +8,18 @@ using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
-    [Name("azure-storage-container-sas-uri")]
-    public class AzureStorageContainerSas : AzureStorageSasSecretType
+    [Name("azure-storage-blob-sas-uri")]
+    public class AzureStorageBlobSasUri : AzureStorageSasSecretType
     {
         private readonly ISystemClock _clock;
         private readonly string _containerName;
+        private readonly string _blobName;
         private readonly string _permissions;
 
-        public AzureStorageContainerSas(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
+        public AzureStorageBlobSasUri(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
         {
             _clock = clock;
+            ReadRequiredParameter("blob", ref _blobName);
             ReadRequiredParameter("container", ref _containerName);
             ReadRequiredParameter("permissions", ref _permissions);
         }
@@ -28,12 +30,13 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             CloudStorageAccount account = await ConnectToAccount(context, cancellationToken);
             CloudBlobClient blobClient = account.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference(_containerName);
-            string sas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
+            CloudBlob blob = container.GetBlobReference(_blobName);
+            string sas = blob.GetSharedAccessSignature(new SharedAccessBlobPolicy
             {
                 Permissions = SharedAccessBlobPolicy.PermissionsFromString(_permissions),
                 SharedAccessExpiryTime = now.AddMonths(1),
             });
-            string result = container.Uri.AbsoluteUri + sas;
+            string result = blob.Uri.AbsoluteUri + sas;
 
             return new SecretData(result, now.AddMonths(1), now.AddDays(15));
         }

@@ -9,13 +9,13 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-storage-table-sas-uri")]
-    public class AzureStorageTableSas : AzureStorageSasSecretType
+    public class AzureStorageTableSasUri : AzureStorageSasSecretType
     {
         private readonly ISystemClock _clock;
         private readonly string _table;
         private readonly string _permissions;
 
-        public AzureStorageTableSas(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
+        public AzureStorageTableSasUri(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
         {
             _clock = clock;
             ReadRequiredParameter("table", ref _table);
