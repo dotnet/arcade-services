@@ -1603,44 +1603,41 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Ensure the parent target directory has been created.
                 using (FileStream outStream = new FileStream(temporaryFileName,
-                                                        _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
-                                                        FileAccess.Write))
+                                                      _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
+                                                      FileAccess.Write))
                 {
-                    await ExponentialRetry.Default.RetryAsync(
+                    using (var response = await ExponentialRetry.Default.RetryAsync(
                         async () =>
                         {
+                            requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri);
                             if (authHeader != null)
                             {
-                                requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri)
-                                {
-                                    Headers =
-                                    {
-                                        { HttpRequestHeader.Authorization.ToString(), authHeader.ToString() }
-                                    }
-                                };
-                            }
-                            else
-                            {
-                                requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri);
+                                requestMessage.Headers.Authorization = authHeader;
                             }
 
-                            using (var response = await client.SendAsync(requestMessage))
-                            {
-                                response.EnsureSuccessStatusCode();
+                            var response = await client.SendAsync(requestMessage);
+                            response.EnsureSuccessStatusCode();
 
-                                using (var inStream = await response.Content.ReadAsStreamAsync())
-                                {
-                                    downloadOutput.AppendLine($"    {sourceUri} =>");
-                                    foreach (string targetFile in targetFiles)
-                                    {
-                                        downloadOutput.AppendLine($"      {targetFile}");
-                                    }
-                                    await inStream.CopyToAsync(outStream, cancellationToken);
-                                }
-                           }
+                            if (requestMessage != null)
+                            {
+                                requestMessage.Dispose();
+                            }
+
+                            return response;
                         },
-                        ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message}"),
-                        ex => ex is HttpRequestException);
+                        ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message}. Retrying."),
+                        ex => ex is HttpRequestException))
+                    {
+                        using (var inStream = await response.Content.ReadAsStreamAsync())
+                        {
+                            downloadOutput.AppendLine($"    {sourceUri} =>");
+                            foreach (string targetFile in targetFiles)
+                            {
+                                downloadOutput.AppendLine($"      {targetFile}");
+                            }
+                            await inStream.CopyToAsync(outStream, cancellationToken);
+                        }
+                    }
                 }
 
                 foreach (string targetFile in targetFiles)
