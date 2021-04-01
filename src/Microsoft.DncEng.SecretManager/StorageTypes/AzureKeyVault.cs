@@ -84,6 +84,7 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
                 properties.Tags[k] = v;
             }
             properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
+            properties.Tags["ChangedBy"] = "secret-manager.exe";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
         }

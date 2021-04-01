@@ -16,7 +16,7 @@ namespace Microsoft.DncEng.SecretManager
         {
             _provider = provider;
             var typeMap = ImmutableDictionary.CreateBuilder<string, Type>();
-            var types = Assembly.GetExecutingAssembly().DefinedTypes.Where(t => typeof(T).IsAssignableFrom(t)).Where(t => t != typeof(T));
+            var types = Assembly.GetExecutingAssembly().DefinedTypes.Where(t => typeof(T).IsAssignableFrom(t)).Where(t => !t.IsAbstract);
             foreach (var type in types)
             {
                 var name = type.GetCustomAttribute<NameAttribute>()?.Name;
