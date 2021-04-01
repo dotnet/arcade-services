@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.Azure.Management.ServiceBus;
 using Microsoft.Azure.Management.ServiceBus.Models;
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 using Microsoft.Rest;
 
@@ -16,14 +17,16 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     public class ServiceBusConnectionString : SecretType
     {
         private readonly TokenCredentialProvider _tokenCredentialProvider;
+        private readonly ISystemClock _clock;
         private readonly string _subscription;
         private readonly string _resourceGroup;
         private readonly string _namespace;
         private readonly string _permissions;
 
-        public ServiceBusConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider) : base(parameters)
+        public ServiceBusConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider, ISystemClock clock) : base(parameters)
         {
             _tokenCredentialProvider = tokenCredentialProvider;
+            _clock = clock;
             ReadRequiredParameter("subscription", ref _subscription);
             ReadRequiredParameter("resourceGroup", ref _resourceGroup);
             ReadRequiredParameter("namespace", ref _namespace);
@@ -109,7 +112,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
 
 
-            return new SecretData(result, DateTimeOffset.MaxValue, DateTimeOffset.UtcNow.AddMonths(6));
+            return new SecretData(result, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(6));
         }
     }
 }

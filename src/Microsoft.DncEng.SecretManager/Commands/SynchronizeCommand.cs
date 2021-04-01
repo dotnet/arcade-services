@@ -45,6 +45,16 @@ namespace Microsoft.DncEng.SecretManager.Commands
         public override async Task RunAsync(CancellationToken cancellationToken)
         {
             _console.WriteLine($"Synchronizing secrets contained in {_manifestFile}");
+            if (_force)
+            {
+                var confirmed = await _console.ConfirmAsync(
+                    "-force is set, this will rotate every secret that exists, possibly causing service disruption. Continue?");
+                if (!confirmed)
+                {
+                    return;
+                }
+            }
+
             var now = _clock.UtcNow;
             var manifest = SecretManifest.Read(_manifestFile);
             using var storage = _storageLocationTypeRegistry.Create(manifest.StorageLocation.Type, manifest.StorageLocation.Parameters);

@@ -7,6 +7,7 @@ using Azure.Core;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.Management.Storage;
 using Microsoft.Azure.Management.Storage.Models;
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 using Microsoft.Rest;
 using Microsoft.Rest.Azure;
@@ -17,20 +18,22 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     public class AzureStorageConnectionString : SecretType
     {
         private readonly TokenCredentialProvider _tokenCredentialProvider;
+        private readonly ISystemClock _clock;
         private readonly Guid _subscription;
         private readonly string _accountName;
 
-        public AzureStorageConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider) : base(parameters)
+        public AzureStorageConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider, ISystemClock clock) : base(parameters)
         {
             _tokenCredentialProvider = tokenCredentialProvider;
+            _clock = clock;
             ReadRequiredParameter("subscription", ref _subscription);
             ReadRequiredParameter("account", ref _accountName);
         }
 
         private async Task<StorageManagementClient> CreateManagementClient(CancellationToken cancellationToken)
         {
-            var creds = await _tokenCredentialProvider.GetCredentialAsync();
-            var token = await creds.GetTokenAsync(new TokenRequestContext(new[]
+            TokenCredential credentials = await _tokenCredentialProvider.GetCredentialAsync();
+            AccessToken token = await credentials.GetTokenAsync(new TokenRequestContext(new[]
             {
                 "https://management.azure.com/.default",
             }), cancellationToken);
@@ -44,15 +47,15 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         protected override async Task<SecretData> RotateValue(RotationContext context, CancellationToken cancellationToken)
         {
-            var client = await CreateManagementClient(cancellationToken);
-            var account = await FindAccount(client, cancellationToken);
+            StorageManagementClient client = await CreateManagementClient(cancellationToken);
+            StorageAccount account = await FindAccount(client, cancellationToken);
             if (account == null)
             {
                 throw new ArgumentException($"Storage account '{_accountName}' in subscription '{_subscription}' not found.");
             }
 
-            var currentKey = context.GetValue("currentKey", "key1");
-            var id = ResourceId.FromString(account.Id);
+            string currentKey = context.GetValue("currentKey", "key1");
+            ResourceId id = ResourceId.FromString(account.Id);
             StorageAccountListKeysResult keys;
             string keyToReturn;
             switch (currentKey)
@@ -69,11 +72,11 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                     throw new InvalidOperationException($"Unexpected 'currentKey' value '{currentKey}'.");
             }
 
-            var key = keys.Keys.FirstOrDefault(k => k.KeyName == keyToReturn) ?? throw new InvalidOperationException($"Key {keyToReturn} not found.");
-            var connectionString = $"DefaultEndpointsProtocol=https;AccountName={id.Name};AccountKey={key.Value}";
+            StorageAccountKey key = keys.Keys.FirstOrDefault(k => k.KeyName == keyToReturn) ?? throw new InvalidOperationException($"Key {keyToReturn} not found.");
+            string connectionString = $"DefaultEndpointsProtocol=https;AccountName={id.Name};AccountKey={key.Value}";
 
             context.SetValue("currentKey", keyToReturn);
-            return new SecretData(connectionString, DateTimeOffset.MaxValue, DateTimeOffset.UtcNow.AddMonths(6));
+            return new SecretData(connectionString, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(6));
         }
 
         private async Task<StorageAccount> FindAccount(StorageManagementClient client, CancellationToken cancellationToken)
