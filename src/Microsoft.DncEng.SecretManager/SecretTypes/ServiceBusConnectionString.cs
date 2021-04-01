@@ -14,26 +14,26 @@ using Microsoft.Rest;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("service-bus-connection-string")]
-    public class ServiceBusConnectionString : SecretType
+    public class ServiceBusConnectionString : SecretType<ServiceBusConnectionString.Parameters>
     {
+        public class Parameters
+        {
+            public Guid Subscription { get; set; }
+            public string ResourceGroup { get; set; }
+            public string Namespace { get; set; }
+            public string Permissions { get; set; }
+        }
+
         private readonly TokenCredentialProvider _tokenCredentialProvider;
         private readonly ISystemClock _clock;
-        private readonly string _subscription;
-        private readonly string _resourceGroup;
-        private readonly string _namespace;
-        private readonly string _permissions;
 
-        public ServiceBusConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider, ISystemClock clock) : base(parameters)
+        public ServiceBusConnectionString(TokenCredentialProvider tokenCredentialProvider, ISystemClock clock)
         {
             _tokenCredentialProvider = tokenCredentialProvider;
             _clock = clock;
-            ReadRequiredParameter("subscription", ref _subscription);
-            ReadRequiredParameter("resourceGroup", ref _resourceGroup);
-            ReadRequiredParameter("namespace", ref _namespace);
-            ReadRequiredParameter("permissions", ref _permissions);
         }
 
-        private async Task<ServiceBusManagementClient> CreateManagementClient(CancellationToken cancellationToken)
+        private async Task<ServiceBusManagementClient> CreateManagementClient(Parameters parameters, CancellationToken cancellationToken)
         {
             var creds = await _tokenCredentialProvider.GetCredentialAsync();
             var token = await creds.GetTokenAsync(new TokenRequestContext(new[]
@@ -43,17 +43,17 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             var serviceClientCredentials = new TokenCredentials(token.Token);
             return new ServiceBusManagementClient(serviceClientCredentials)
             {
-                SubscriptionId = _subscription,
+                SubscriptionId = parameters.Subscription.ToString(),
             };
         }
 
-        protected override async Task<SecretData> RotateValue(RotationContext context, CancellationToken cancellationToken)
+        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            var client = await CreateManagementClient(cancellationToken);
+            var client = await CreateManagementClient(parameters, cancellationToken);
             var accessPolicyName = context.SecretName + "-access-policy";
             var rule = new SBAuthorizationRule(new List<AccessRights?>(), name: accessPolicyName);
             bool updateRule = false;
-            foreach (var c in _permissions)
+            foreach (var c in parameters.Permissions)
             {
                 switch (c)
                 {
@@ -72,7 +72,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
             try
             {
-                var existingRule = await client.Namespaces.GetAuthorizationRuleAsync(_resourceGroup, _namespace, accessPolicyName, cancellationToken);
+                var existingRule = await client.Namespaces.GetAuthorizationRuleAsync(parameters.ResourceGroup, parameters.Namespace, accessPolicyName, cancellationToken);
                 if (existingRule.Rights.Count != rule.Rights.Count ||
                     existingRule.Rights.Zip(rule.Rights).Any((p) => p.First != p.Second))
                 {
@@ -86,7 +86,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             if (updateRule)
             {
-                await client.Namespaces.CreateOrUpdateAuthorizationRuleAsync(_resourceGroup, _namespace,
+                await client.Namespaces.CreateOrUpdateAuthorizationRuleAsync(parameters.ResourceGroup, parameters.Namespace,
                     accessPolicyName, rule, cancellationToken);
             }
 
@@ -96,13 +96,13 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             switch (currentKey)
             {
                 case "primary":
-                    keys = await client.Namespaces.RegenerateKeysAsync(_resourceGroup, _namespace, accessPolicyName,
+                    keys = await client.Namespaces.RegenerateKeysAsync(parameters.ResourceGroup, parameters.Namespace, accessPolicyName,
                         new RegenerateAccessKeyParameters(KeyType.SecondaryKey), cancellationToken);
                     result = keys.SecondaryConnectionString;
                     context.SetValue("currentKey", "secondary");
                     break;
                 case "secondary":
-                    keys = await client.Namespaces.RegenerateKeysAsync(_resourceGroup, _namespace, accessPolicyName,
+                    keys = await client.Namespaces.RegenerateKeysAsync(parameters.ResourceGroup, parameters.Namespace, accessPolicyName,
                         new RegenerateAccessKeyParameters(KeyType.PrimaryKey), cancellationToken);
                     result = keys.PrimaryConnectionString;
                     context.SetValue("currentKey", "primary");

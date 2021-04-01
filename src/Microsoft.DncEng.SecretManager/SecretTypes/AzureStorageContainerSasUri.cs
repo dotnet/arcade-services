@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
@@ -9,28 +8,31 @@ using Microsoft.WindowsAzure.Storage.Blob;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-storage-container-sas-uri")]
-    public class AzureStorageContainerSasUri : AzureStorageSasSecretType
+    public class AzureStorageContainerSasUri : SecretType<AzureStorageContainerSasUri.Parameters>
     {
-        private readonly ISystemClock _clock;
-        private readonly string _containerName;
-        private readonly string _permissions;
-
-        public AzureStorageContainerSasUri(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
+        public class Parameters
         {
-            _clock = clock;
-            ReadRequiredParameter("container", ref _containerName);
-            ReadRequiredParameter("permissions", ref _permissions);
+            public string ConnectionStringName { get; set; }
+            public string Container { get; set; }
+            public string Permissions { get; set; }
         }
 
-        protected override async Task<SecretData> RotateValue(RotationContext context, CancellationToken cancellationToken)
+        private readonly ISystemClock _clock;
+
+        public AzureStorageContainerSasUri(ISystemClock clock)
+        {
+            _clock = clock;
+        }
+
+        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             DateTimeOffset now = _clock.UtcNow;
-            CloudStorageAccount account = await ConnectToAccount(context, cancellationToken);
+            CloudStorageAccount account = CloudStorageAccount.Parse(await context.GetSecretValue(parameters.ConnectionStringName));
             CloudBlobClient blobClient = account.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference(_containerName);
+            CloudBlobContainer container = blobClient.GetContainerReference(parameters.Container);
             string sas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
             {
-                Permissions = SharedAccessBlobPolicy.PermissionsFromString(_permissions),
+                Permissions = SharedAccessBlobPolicy.PermissionsFromString(parameters.Permissions),
                 SharedAccessExpiryTime = now.AddMonths(1),
             });
             string result = container.Uri.AbsoluteUri + sas;

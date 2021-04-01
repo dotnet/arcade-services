@@ -9,28 +9,31 @@ using Microsoft.WindowsAzure.Storage.Table;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-storage-table-sas-uri")]
-    public class AzureStorageTableSasUri : AzureStorageSasSecretType
+    public class AzureStorageTableSasUri : SecretType<AzureStorageTableSasUri.Parameters>
     {
-        private readonly ISystemClock _clock;
-        private readonly string _table;
-        private readonly string _permissions;
-
-        public AzureStorageTableSasUri(IReadOnlyDictionary<string, string> parameters, ISystemClock clock) : base(parameters)
+        public class Parameters
         {
-            _clock = clock;
-            ReadRequiredParameter("table", ref _table);
-            ReadRequiredParameter("permissions", ref _permissions);
+            public string ConnectionStringName { get; set; }
+            public string Table { get; set; }
+            public string Permissions { get; set; }
         }
 
-        protected override async Task<SecretData> RotateValue(RotationContext context, CancellationToken cancellationToken)
+        private readonly ISystemClock _clock;
+
+        public AzureStorageTableSasUri(ISystemClock clock)
+        {
+            _clock = clock;
+        }
+
+        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             DateTimeOffset now = _clock.UtcNow;
-            CloudStorageAccount account = await ConnectToAccount(context, cancellationToken);
+            CloudStorageAccount account = CloudStorageAccount.Parse(await context.GetSecretValue(parameters.ConnectionStringName));
             CloudTableClient tableClient = account.CreateCloudTableClient();
-            CloudTable table = tableClient.GetTableReference(_table);
+            CloudTable table = tableClient.GetTableReference(parameters.Table);
             string sas = table.GetSharedAccessSignature(new SharedAccessTablePolicy
             {
-                Permissions = SharedAccessTablePolicy.PermissionsFromString(_permissions),
+                Permissions = SharedAccessTablePolicy.PermissionsFromString(parameters.Permissions),
                 SharedAccessExpiryTime = now.AddMonths(1),
             });
             string result = table.Uri.AbsoluteUri + sas;

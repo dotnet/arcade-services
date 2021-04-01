@@ -7,10 +7,10 @@ namespace Microsoft.DncEng.SecretManager
 {
     public class RotationContext
     {
-        private readonly StorageLocationType _storage;
+        private readonly StorageLocationType.Bound _storage;
         private readonly Dictionary<string, string> _values;
 
-        public RotationContext(string name, IReadOnlyDictionary<string, string> values, StorageLocationType storage)
+        public RotationContext(string name, IReadOnlyDictionary<string, string> values, StorageLocationType.Bound storage)
         {
             _storage = storage;
             SecretName = name;

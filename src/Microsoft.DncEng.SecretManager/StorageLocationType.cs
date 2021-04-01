@@ -1,23 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Threading.Tasks;
 
 namespace Microsoft.DncEng.SecretManager
 {
-    public abstract class StorageLocationType : ParameterizedObject, IDisposable
+    public abstract class StorageLocationType : IDisposable
     {
-        protected StorageLocationType() : base(ImmutableDictionary.Create<string, string>())
-        {
-        }
-
-        protected StorageLocationType(IReadOnlyDictionary<string, string> parameters) : base(parameters)
-        {
-        }
-
-        public abstract Task<List<SecretProperties>> ListSecretsAsync();
-        public abstract Task<SecretValue> GetSecretValueAsync(string name);
-        public abstract Task SetSecretValueAsync(string name, SecretValue value);
+        public abstract Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters);
+        public abstract Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name);
+        public abstract Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -28,5 +19,68 @@ namespace Microsoft.DncEng.SecretManager
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        public Bound BindParameters(IReadOnlyDictionary<string, string> parameters)
+        {
+            return new Bound(this, parameters);
+        }
+
+        public class Bound : IDisposable
+        {
+            private readonly StorageLocationType _that;
+            private readonly IReadOnlyDictionary<string, string> _parameters;
+
+            public Bound(StorageLocationType that, IReadOnlyDictionary<string, string> parameters)
+            {
+                _that = that;
+                _parameters = parameters;
+            }
+
+            public Task<List<SecretProperties>> ListSecretsAsync()
+            {
+                return _that.ListSecretsAsync(_parameters);
+            }
+
+            public Task<SecretValue> GetSecretValueAsync(string name)
+            {
+                return _that.GetSecretValueAsync(_parameters, name);
+            }
+
+            public Task SetSecretValueAsync(string name, SecretValue value)
+            {
+                return _that.SetSecretValueAsync(_parameters, name, value);
+            }
+
+            public void Dispose()
+            {
+                _that.Dispose();
+            }
+        }
+    }
+
+    public abstract class StorageLocationType<TParameters> : StorageLocationType
+        where TParameters : new()
+    {
+        public sealed override Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters)
+        {
+            var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
+            return ListSecretsAsync(p);
+        }
+
+        public sealed override Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name)
+        {
+            var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
+            return GetSecretValueAsync(p, name);
+        }
+
+        public sealed override Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value)
+        {
+            var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
+            return SetSecretValueAsync(p, name, value);
+        }
+
+        public abstract Task<List<SecretProperties>> ListSecretsAsync(TParameters parameters);
+        public abstract Task<SecretValue> GetSecretValueAsync(TParameters parameters, string name);
+        public abstract Task SetSecretValueAsync(TParameters parameters, string name, SecretValue value);
     }
 }

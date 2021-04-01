@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,8 @@ namespace Microsoft.DncEng.SecretManager
         {
             services.AddSingleton<SecretTypeRegistry>();
             services.AddSingleton<StorageLocationTypeRegistry>();
+            services.AddNamedFromAssembly<SecretType>(Assembly.GetExecutingAssembly());
+            services.AddNamedFromAssembly<StorageLocationType>(Assembly.GetExecutingAssembly());
         }
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,22 +14,24 @@ using Microsoft.Rest.Azure;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-storage-connection-string")]
-    public class AzureStorageConnectionString : SecretType
+    public class AzureStorageConnectionString : SecretType<AzureStorageConnectionString.Parameters>
     {
+        public class Parameters
+        {
+            public Guid Subscription { get; set; }
+            public string Account { get; set; }
+        }
+
         private readonly TokenCredentialProvider _tokenCredentialProvider;
         private readonly ISystemClock _clock;
-        private readonly Guid _subscription;
-        private readonly string _accountName;
 
-        public AzureStorageConnectionString(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider, ISystemClock clock) : base(parameters)
+        public AzureStorageConnectionString(TokenCredentialProvider tokenCredentialProvider, ISystemClock clock)
         {
             _tokenCredentialProvider = tokenCredentialProvider;
             _clock = clock;
-            ReadRequiredParameter("subscription", ref _subscription);
-            ReadRequiredParameter("account", ref _accountName);
         }
 
-        private async Task<StorageManagementClient> CreateManagementClient(CancellationToken cancellationToken)
+        private async Task<StorageManagementClient> CreateManagementClient(Parameters parameters, CancellationToken cancellationToken)
         {
             TokenCredential credentials = await _tokenCredentialProvider.GetCredentialAsync();
             AccessToken token = await credentials.GetTokenAsync(new TokenRequestContext(new[]
@@ -40,18 +41,18 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             var serviceClientCredentials = new TokenCredentials(token.Token);
             var client = new StorageManagementClient(serviceClientCredentials)
             {
-                SubscriptionId = _subscription.ToString(),
+                SubscriptionId = parameters.Subscription.ToString(),
             };
             return client;
         }
 
-        protected override async Task<SecretData> RotateValue(RotationContext context, CancellationToken cancellationToken)
+        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            StorageManagementClient client = await CreateManagementClient(cancellationToken);
-            StorageAccount account = await FindAccount(client, cancellationToken);
+            StorageManagementClient client = await CreateManagementClient(parameters, cancellationToken);
+            StorageAccount account = await FindAccount(parameters, client, cancellationToken);
             if (account == null)
             {
-                throw new ArgumentException($"Storage account '{_accountName}' in subscription '{_subscription}' not found.");
+                throw new ArgumentException($"Storage account '{parameters.Account}' in subscription '{parameters.Subscription}' not found.");
             }
 
             string currentKey = context.GetValue("currentKey", "key1");
@@ -79,14 +80,14 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             return new SecretData(connectionString, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(6));
         }
 
-        private async Task<StorageAccount> FindAccount(StorageManagementClient client, CancellationToken cancellationToken)
+        private async Task<StorageAccount> FindAccount(Parameters parameters, StorageManagementClient client, CancellationToken cancellationToken)
         {
             IPage<StorageAccount> page = await client.StorageAccounts.ListAsync(cancellationToken);
             while (true)
             {
                 foreach (StorageAccount account in page)
                 {
-                    if (account.Name == _accountName)
+                    if (account.Name == parameters.Account)
                     {
                         return account;
                     }

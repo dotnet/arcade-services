@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -47,27 +48,27 @@ namespace Microsoft.DncEng.SecretManager.Commands
             _console.WriteLine($"Synchronizing secrets contained in {_manifestFile}");
             if (_force)
             {
-                var confirmed = await _console.ConfirmAsync(
-                    "-force is set, this will rotate every secret that exists, possibly causing service disruption. Continue?");
+                bool confirmed = await _console.ConfirmAsync(
+                    "-force is set, this will rotate every secret that exists, possibly causing service disruption. Continue? ");
                 if (!confirmed)
                 {
                     return;
                 }
             }
 
-            var now = _clock.UtcNow;
-            var manifest = SecretManifest.Read(_manifestFile);
-            using var storage = _storageLocationTypeRegistry.Create(manifest.StorageLocation.Type, manifest.StorageLocation.Parameters);
-            var existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
+            DateTimeOffset now = _clock.UtcNow;
+            SecretManifest manifest = SecretManifest.Read(_manifestFile);
+            using StorageLocationType.Bound storage = _storageLocationTypeRegistry.Get(manifest.StorageLocation.Type).BindParameters(manifest.StorageLocation.Parameters);
+            Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
             foreach (var (name, secret) in manifest.Secrets)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
-                var secretType = _secretTypeRegistry.Create(secret.Type, secret.Parameters);
-                var names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
+                using SecretType.Bound secretType = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
+                List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
-                foreach (var n in names)
+                foreach (string n in names)
                 {
-                    existingSecrets.TryGetValue(n, out var e);
+                    existingSecrets.TryGetValue(n, out SecretProperties e);
                     existing.Add(e); // here we intentionally ignore the result of TryGetValue because we want to add null to the list to represent "this isn't in the store"
                 }
 
@@ -87,8 +88,8 @@ namespace Microsoft.DncEng.SecretManager.Commands
                 else
                 {
                     // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
-                    var nextRotation = existing.Select(e => e.NextRotationOn).Min();
-                    var expires = existing.Select(e => e.ExpiresOn).Min();
+                    DateTimeOffset nextRotation = existing.Select(e => e.NextRotationOn).Min();
+                    DateTimeOffset expires = existing.Select(e => e.ExpiresOn).Min();
                     if (nextRotation <= now)
                     {
                         _console.WriteLine($"Secret scheduled for rotation on {nextRotation}, will rotate.");
@@ -112,11 +113,11 @@ namespace Microsoft.DncEng.SecretManager.Commands
                 if (regenerate)
                 {
                     _console.Write($"Generating new value(s) for secret {name}...");
-                    var primary = existing.FirstOrDefault(p => p != null);
-                    var currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
+                    SecretProperties primary = existing.FirstOrDefault(p => p != null);
+                    IImmutableDictionary<string, string> currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
                     var context = new RotationContext(name, currentTags, storage);
-                    var newValues = await secretType.RotateValues(context, cancellationToken);
-                    var newTags = context.GetValues();
+                    List<SecretData> newValues = await secretType.RotateValues(context, cancellationToken);
+                    IImmutableDictionary<string, string> newTags = context.GetValues();
                     _console.WriteLine(" Done.");
                     _console.Write($"Storing new value(s) in storage for secret {name}...");
                     foreach (var (n, value) in names.Zip(newValues))
