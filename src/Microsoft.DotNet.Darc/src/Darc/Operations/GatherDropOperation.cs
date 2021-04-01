@@ -1606,7 +1606,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                                         _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                         FileAccess.Write))
                 {
-                    var response = await ExponentialRetry.Default.RetryAsync(
+                    await ExponentialRetry.Default.RetryAsync(
                         async () =>
                         {
                             if (authHeader != null)
@@ -1624,22 +1624,23 @@ namespace Microsoft.DotNet.Darc.Operations
                                 requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri);
                             }
 
-                            var response = await client.SendAsync(requestMessage);
-                            response.EnsureSuccessStatusCode();
-                            return response;
+                            using (var response = await client.SendAsync(requestMessage))
+                            {
+                                response.EnsureSuccessStatusCode();
+
+                                using (var inStream = await response.Content.ReadAsStreamAsync())
+                                {
+                                    downloadOutput.AppendLine($"    {sourceUri} =>");
+                                    foreach (string targetFile in targetFiles)
+                                    {
+                                        downloadOutput.AppendLine($"      {targetFile}");
+                                    }
+                                    await inStream.CopyToAsync(outStream, cancellationToken);
+                                }
+                           }
                         },
                         ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message}"),
                         ex => ex is HttpRequestException);
-
-                    using (var inStream = await response.Content.ReadAsStreamAsync())
-                    {
-                        downloadOutput.AppendLine($"    {sourceUri} =>");
-                        foreach (string targetFile in targetFiles)
-                        {
-                            downloadOutput.AppendLine($"      {targetFile}");
-                        }
-                        await inStream.CopyToAsync(outStream, cancellationToken);
-                    }
                 }
 
                 foreach (string targetFile in targetFiles)
