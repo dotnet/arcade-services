@@ -22,6 +22,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
             var cancellationToken = cts.Token;
 
             var services = new ServiceCollection();
+            services.AddSingleton(Mock.Of<IConsole>());
 
             var storageLocationTypeRegistry = new Mock<StorageLocationTypeRegistry>(MockBehavior.Strict);
             services.AddSingleton(p => storageLocationTypeRegistry.Object);
@@ -43,15 +44,15 @@ namespace Microsoft.DncEng.SecretManager.Tests
                 var storageLocationType = new Mock<StorageLocationType>(MockBehavior.Strict);
                 storageLocationType.Protected().Setup("Dispose", true);
                 storageLocationType
-                    .Setup(storage => storage.ListSecretsAsync())
+                    .Setup(storage => storage.ListSecretsAsync(It.IsAny<IReadOnlyDictionary<string, string>>()))
                     .ReturnsAsync(existingSecrets);
                 var actualSetNames = new List<string>();
                 var actualSetValues = new List<SecretValue>();
                 storageLocationType
-                    .Setup(storage => storage.SetSecretValueAsync(Capture.In(actualSetNames), Capture.In(actualSetValues)))
+                    .Setup(storage => storage.SetSecretValueAsync(It.IsAny<IReadOnlyDictionary<string, string>>(), Capture.In(actualSetNames), Capture.In(actualSetValues)))
                     .Returns(Task.CompletedTask);
                 storageLocationTypeRegistry
-                    .Setup(slt => slt.Create(locationTypeName, It.IsAny<IReadOnlyDictionary<string, string>>()))
+                    .Setup(slt => slt.Get(locationTypeName))
                     .Returns(storageLocationType.Object);
 
                 var secretType = new Mock<SecretType>(MockBehavior.Strict);
@@ -61,11 +62,11 @@ namespace Microsoft.DncEng.SecretManager.Tests
                     .Returns(suffixes);
                 var currentIndex = 0;
                 secretType
-                    .Setup(t => t.RotateValues(It.IsAny<RotationContext>(), cancellationToken))
+                    .Setup(t => t.RotateValues(It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<RotationContext>(), cancellationToken))
                     .ReturnsAsync(() => rotationResults[currentIndex++]);
 
                 secretTypeRegistry
-                    .Setup(registry => registry.Create(secretTypeName, It.IsAny<IReadOnlyDictionary<string, string>>()))
+                    .Setup(registry => registry.Get(secretTypeName))
                     .Returns(secretType.Object);
 
                 var command = provider.GetRequiredService<SynchronizeCommand>();

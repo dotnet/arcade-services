@@ -1,13 +1,15 @@
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.DncEng.SecretManager
 {
     public class StorageLocationTypeRegistry : NamedObjectRegistry<StorageLocationType>
     {
-        public StorageLocationTypeRegistry() : base(null)
+        public StorageLocationTypeRegistry() : base()
         {
         }
-        public StorageLocationTypeRegistry(IServiceProvider provider) : base(provider)
+
+        public StorageLocationTypeRegistry(IEnumerable<StorageLocationType> objects) : base(objects)
         {
         }
     }

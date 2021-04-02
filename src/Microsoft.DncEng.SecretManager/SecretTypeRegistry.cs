@@ -1,14 +1,15 @@
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.DncEng.SecretManager
 {
     public class SecretTypeRegistry : NamedObjectRegistry<SecretType>
     {
-        public SecretTypeRegistry() : base(null)
+        protected SecretTypeRegistry() : base()
         {
         }
 
-        public SecretTypeRegistry(IServiceProvider provider) : base(provider)
+        public SecretTypeRegistry(IEnumerable<SecretType> objects) : base(objects)
         {
         }
     }

@@ -37,6 +37,22 @@ namespace Microsoft.DncEng.CommandLineLib
         }
 
         /// <summary>
+        ///     Write a line to standard out, unless when --quiet mode is requested
+        /// </summary>
+        public static void WriteLine(this IConsole console, string message)
+        {
+            console.Write(VerbosityLevel.Normal, message + "\n", null);
+        }
+
+        /// <summary>
+        ///     Write a line to standard out in the given color, unless when --quiet mode is requested
+        /// </summary>
+        public static void WriteLine(this IConsole console, string message, ConsoleColor color)
+        {
+            console.Write(VerbosityLevel.Normal, message + "\n", color);
+        }
+
+        /// <summary>
         ///     Write to standard out only when --verbose mode is requested
         /// </summary>
         public static void WriteVerbose(this IConsole console, string message)

@@ -37,8 +37,10 @@
     <PackageReference Update="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
+    <PackageReference Update="Microsoft.Azure.Management.EventHub" Version="2.7.2" />
     <PackageReference Update="Microsoft.Azure.Management.Fluent" Version="1.31.0" />
     <PackageReference Update="Microsoft.Azure.Management.ResourceManager.Fluent" Version="1.37.1" />
+    <PackageReference Update="Microsoft.Azure.Management.ServiceBus" Version="2.1.0" />
     <PackageReference Update="Microsoft.Azure.Management.Storage" Version="19.0.0" />
     <PackageReference Update="Microsoft.Azure.Services.AppAuthentication" Version="1.4.0" />
     <PackageReference Update="Microsoft.Azure.WebJobs.Core" Version="3.0.2" />
