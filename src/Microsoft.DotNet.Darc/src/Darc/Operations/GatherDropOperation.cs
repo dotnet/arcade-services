@@ -1621,7 +1621,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                 return response;
                             }
                         },
-                        ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message}. Retrying."),
+                        ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message} {ex.InnerException?.Message} \n{ex.StackTrace}\nRetrying."),
                         ex => ex is HttpRequestException))
                     {
                         using (var inStream = await response.Content.ReadAsStreamAsync())
