@@ -1589,7 +1589,6 @@ namespace Microsoft.DotNet.Darc.Operations
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files. Use the first location as the
             string temporaryFileName = $"{targetFiles.First()}.inProgress";
-            HttpRequestMessage requestMessage = null;
 
             try
             {
@@ -1609,21 +1608,18 @@ namespace Microsoft.DotNet.Darc.Operations
                     using (var response = await ExponentialRetry.Default.RetryAsync(
                         async () =>
                         {
-                            requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri);
-                            if (authHeader != null)
+                            using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri))
                             {
-                                requestMessage.Headers.Authorization = authHeader;
+                                if (authHeader != null)
+                                {
+                                    requestMessage.Headers.Authorization = authHeader;
+                                }
+
+                                var response = await client.SendAsync(requestMessage);
+                                response.EnsureSuccessStatusCode();
+
+                                return response;
                             }
-
-                            var response = await client.SendAsync(requestMessage);
-                            response.EnsureSuccessStatusCode();
-
-                            if (requestMessage != null)
-                            {
-                                requestMessage.Dispose();
-                            }
-
-                            return response;
                         },
                         ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message}. Retrying."),
                         ex => ex is HttpRequestException))
@@ -1676,11 +1672,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 catch (Exception e)
                 {
                     errors.Add($"Failed to delete {temporaryFileName}: {e.Message}");
-                }
-
-                if (requestMessage != null)
-                {
-                    requestMessage.Dispose();
                 }
             }
             return false;
