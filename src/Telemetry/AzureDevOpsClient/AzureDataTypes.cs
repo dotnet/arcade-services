@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Newtonsoft.Json;
+using System;
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
@@ -192,7 +193,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public string Id { get; set; }
         public int ChangeId { get; set; }
         public string LastChangedBy { get; set; }
-        public string LastChangedOn { get; set; }
+        public DateTimeOffset LastChangedOn { get; set; }
         public TimelineRecord[] Records { get; set; }
         public string Url { get; set; }
     }

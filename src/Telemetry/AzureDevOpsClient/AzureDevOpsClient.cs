@@ -127,9 +127,22 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return (await GetJsonResult(builder.ToString(), cancellationToken)).Body;
         }
 
+        private async Task<string> GetTimelineRaw(string project, int buildId, string id, CancellationToken cancellationToken)
+        {
+            StringBuilder builder = GetProjectApiRootBuilder(project);
+            builder.Append($"/build/builds/{buildId}/timeline/{id}?api-version=5.0");
+            return (await GetJsonResult(builder.ToString(), cancellationToken)).Body;
+        }
+
         public async Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
         {
             string json = await GetTimelineRaw(project, buildId, cancellationToken);
+            return JsonConvert.DeserializeObject<Timeline>(json);
+        }
+
+        public async Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
+        {
+            string json = await GetTimelineRaw(project, buildId, timelineId, cancellationToken);
             return JsonConvert.DeserializeObject<Timeline>(json);
         }
 

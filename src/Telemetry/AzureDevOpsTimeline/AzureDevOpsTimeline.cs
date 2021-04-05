@@ -45,6 +45,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             TraceSourceManager.SetTraceVerbosityForAll(TraceVerbosity.Fatal);
 
+            Console.WriteLine($"Config BuildBatchSize: {_options.Value.BuildBatchSize}");
+            Console.WriteLine($"Config AzureDevOpsUrl: {_options.Value.AzureDevOpsUrl}");
+            Console.WriteLine($"Config AzureDevOpsAccessToken: {_options.Value.AzureDevOpsAccessToken}");
+
             await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
 
             while (!cancellationToken.IsCancellationRequested)
@@ -176,7 +180,38 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     build => azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
                 );
 
+            // for each timeline, look for previousAttempts.timelineId timelines
+            // For each timeline, look at timeline.lastChangedOn for ingestion cutoff
+            // timeline.lastChangedOn will be before build.finishTime
+
             await Task.WhenAll(tasks.Select(s => s.Value));
+
+            // Look for retried timelines
+            List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
+
+            foreach ((Build build, Task<Timeline> timelineTask) in tasks)
+            {
+                Timeline timeline = await timelineTask;
+
+                IEnumerable<string> additionalTimelineIds = timeline.Records
+                    .SelectMany(record => record.PreviousAttempts)
+                    .Where(attempt => !(attempt is null))
+                    .Select(attempt => attempt.TimelineId)
+                    .Distinct(StringComparer.OrdinalIgnoreCase);
+
+                retriedTimelineTasks.AddRange(
+                    additionalTimelineIds.Select(
+                        timelineId => (build, azureServer.GetTimelineAsync(project, build.Id, timelineId, cancellationToken))));
+            }
+
+            await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
+
+            // Only get timelines happening after the cutoff
+            List<(Build build, Task<Timeline> timeline)> allNewTimelines = new List<(Build build, Task<Timeline> timeline)>();
+            allNewTimelines.AddRange(tasks.Select(t => (t.Key, t.Value)));
+            allNewTimelines.AddRange(retriedTimelineTasks
+                .Where(t => t.timelineTask.Result.LastChangedOn > latest));
+
             _logger.LogTrace("... finished timeline");
 
             var records = new List<AugmentedTimelineRecord>();
@@ -184,7 +219,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             var augmentedBuilds = new List<AugmentedBuild>();
 
             _logger.LogTrace("Aggregating results...");
-            foreach ((Build build, Task<Timeline> timelineTask) in tasks)
+            foreach ((Build build, Task<Timeline> timelineTask) in allNewTimelines)
             {
                 string targetBranch = "";
 
@@ -213,7 +248,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 var issueCache = new List<AugmentedTimelineIssue>();
                 foreach (TimelineRecord record in timeline.Records)
                 {
-                    var augRecord = new AugmentedTimelineRecord(build.Id, record);
+                    var augRecord = new AugmentedTimelineRecord(build.Id, timeline.Id, record);
                     recordCache.Add(record.Id, augRecord);
                     records.Add(augRecord);
                     if (record.Issues == null)
@@ -224,7 +259,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     for (int iIssue = 0; iIssue < record.Issues.Length; iIssue++)
                     {
                         var augIssue =
-                            new AugmentedTimelineIssue(build.Id, record.Id, iIssue, record.Issues[iIssue]);
+                            new AugmentedTimelineIssue(build.Id, timeline.Id, record.Id, iIssue, record.Issues[iIssue]);
                         augIssue.Bucket = GetBucket(augIssue);
                         issueCache.Add(augIssue);
                         issues.Add(augIssue);
@@ -313,6 +348,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 {
                     new KustoValue("BuildId", b.BuildId, KustoDataType.Int),
                     new KustoValue("RecordId", b.Raw.Id, KustoDataType.String),
+                    new KustoValue("TimelineId", b.TimelineId, KustoDataType.String),
                     new KustoValue("Order", b.Raw.Order, KustoDataType.Int),
                     new KustoValue("Path", b.AugmentedOrder, KustoDataType.String),
                     new KustoValue("ParentId", b.Raw.ParentId, KustoDataType.String),
@@ -347,6 +383,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 {
                     new KustoValue("BuildId", b.BuildId, KustoDataType.Int),
                     new KustoValue("RecordId", b.RecordId, KustoDataType.String),
+                    new KustoValue("TimelineId", b.TimelineId, KustoDataType.String),
                     new KustoValue("Index", b.Index, KustoDataType.Int),
                     new KustoValue("Path", b.AugmentedIndex, KustoDataType.String),
                     new KustoValue("Type", b.Raw.Type, KustoDataType.String),
@@ -418,28 +455,32 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private class AugmentedTimelineRecord
         {
-            public AugmentedTimelineRecord(int buildId, TimelineRecord raw)
+            public AugmentedTimelineRecord(int buildId, string timelineId, TimelineRecord raw)
             {
                 BuildId = buildId;
+                TimelineId = timelineId;
                 Raw = raw;
             }
 
             public int BuildId { get; }
+            public string TimelineId { get; }
             public TimelineRecord Raw { get; }
             public string AugmentedOrder { get; set; }
         }
 
         private class AugmentedTimelineIssue
         {
-            public AugmentedTimelineIssue(int buildId, string recordId, int index, TimelineIssue raw)
+            public AugmentedTimelineIssue(int buildId, string timelineId, string recordId, int index, TimelineIssue raw)
             {
                 BuildId = buildId;
+                TimelineId = timelineId;
                 RecordId = recordId;
                 Index = index;
                 Raw = raw;
             }
 
             public int BuildId { get; }
+            public string TimelineId { get; }
             public string RecordId { get; }
             public int Index { get; }
             public TimelineIssue Raw { get; }
