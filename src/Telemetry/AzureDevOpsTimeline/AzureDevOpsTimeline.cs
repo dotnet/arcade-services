@@ -45,10 +45,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             TraceSourceManager.SetTraceVerbosityForAll(TraceVerbosity.Fatal);
 
-            Console.WriteLine($"Config BuildBatchSize: {_options.Value.BuildBatchSize}");
-            Console.WriteLine($"Config AzureDevOpsUrl: {_options.Value.AzureDevOpsUrl}");
-            Console.WriteLine($"Config AzureDevOpsAccessToken: {_options.Value.AzureDevOpsAccessToken}");
-
             await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
 
             while (!cancellationToken.IsCancellationRequested)
