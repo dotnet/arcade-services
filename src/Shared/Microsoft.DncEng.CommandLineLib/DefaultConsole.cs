@@ -34,9 +34,15 @@ namespace Microsoft.DncEng.CommandLineLib
             LogImpl(_console.Error, level, message, color);
         }
 
-        public Task<bool> ConfirmAsync(string message, string requiredWord)
+        public async Task<bool> ConfirmAsync(string message, string requiredWord)
         {
-            return _console.ConfirmAsync(message, requiredWord);
+            var line = await PromptAsync(message);
+            return string.Equals(line, requiredWord, StringComparison.CurrentCultureIgnoreCase);
+        }
+
+        public Task<string> PromptAsync(string message)
+        {
+            return _console.PromptAsync(message);
         }
 
         public bool IsInteractive => _console.IsInteractive;

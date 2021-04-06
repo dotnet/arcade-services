@@ -28,9 +28,9 @@ namespace Microsoft.DncEng.CommandLineLib
             return Console.In.ReadLineAsync();
         }
 
-        public async Task<bool> ConfirmAsync(string message, string requiredWord = "yes")
+        public async Task<string> PromptAsync(string message)
         {
-            // Purge the input buffer so any previous "YES" answers don't implicitly answer this confirmation question
+            // Purge the input buffer so piped in or previously typed text doesn't count
             while (Console.KeyAvailable)
             {
                 Console.ReadKey(true);
@@ -39,8 +39,7 @@ namespace Microsoft.DncEng.CommandLineLib
             await Console.Out.WriteAsync(message);
 
             string line = await Console.In.ReadLineAsync();
-
-            return string.Equals(line, requiredWord, StringComparison.CurrentCultureIgnoreCase);
+            return line;
         }
 
         public bool IsInteractive => !(Console.IsOutputRedirected || Console.IsInputRedirected || Console.IsErrorRedirected);

@@ -14,7 +14,7 @@ namespace Microsoft.DncEng.CommandLineLib
         TextWriter Error { get; }
         void SetColor(ConsoleColor color);
         void ResetColor();
-        Task<bool> ConfirmAsync(string message, string requiredWord = "yes");
+        Task<string> PromptAsync(string message);
         bool IsInteractive { get; }
     }
 }

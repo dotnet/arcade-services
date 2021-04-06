@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Microsoft.DncEng.SecretManager
 {
     public abstract class StorageLocationType : IDisposable
     {
         public abstract Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters);
+        [ItemCanBeNull]
         public abstract Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name);
         public abstract Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value);
 
@@ -41,6 +43,7 @@ namespace Microsoft.DncEng.SecretManager
                 return _that.ListSecretsAsync(_parameters);
             }
 
+            [ItemCanBeNull]
             public Task<SecretValue> GetSecretValueAsync(string name)
             {
                 return _that.GetSecretValueAsync(_parameters, name);
