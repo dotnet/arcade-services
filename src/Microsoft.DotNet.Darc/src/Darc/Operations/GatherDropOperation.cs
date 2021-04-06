@@ -1605,24 +1605,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                       _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                       FileAccess.Write))
                 {
-                    using (var response = await ExponentialRetry.Default.RetryAsync(
-                        async () =>
-                        {
-                            using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri))
-                            {
-                                if (authHeader != null)
-                                {
-                                    requestMessage.Headers.Authorization = authHeader;
-                                }
-
-                                var response = await client.SendAsync(requestMessage);
-                                response.EnsureSuccessStatusCode();
-
-                                return response;
-                            }
-                        },
-                        ex => Console.WriteLine($"    Failed to download {sourceUri}: {ex.Message} {ex.InnerException?.Message} \n{ex.StackTrace}\nRetrying."),
-                        ex => ex is HttpRequestException))
+                    HttpRequestManager manager = new HttpRequestManager(client, HttpMethod.Get, sourceUri, Logger, authHeader: authHeader);
+                    using (var response = await manager.ExecuteAsync())
                     {
                         using (var inStream = await response.Content.ReadAsStreamAsync())
                         {
