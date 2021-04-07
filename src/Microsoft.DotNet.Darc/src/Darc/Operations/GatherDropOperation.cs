@@ -1589,7 +1589,6 @@ namespace Microsoft.DotNet.Darc.Operations
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files. Use the first location as the
             string temporaryFileName = $"{targetFiles.First()}.inProgress";
-            HttpRequestMessage requestMessage = null;
 
             try
             {
@@ -1601,30 +1600,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     Directory.CreateDirectory(directory);
                 }
 
-                if (authHeader != null)
-                {
-                    requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri)
-                    {
-                        Headers =
-                        {
-                            { HttpRequestHeader.Authorization.ToString(), authHeader.ToString() }
-                        }
-                    };
-                }
-                else
-                {
-                    requestMessage = new HttpRequestMessage(HttpMethod.Get, sourceUri);
-                }
-
                 // Ensure the parent target directory has been created.
                 using (FileStream outStream = new FileStream(temporaryFileName,
                                                       _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                       FileAccess.Write))
                 {
-                    using (var response = await client.SendAsync(requestMessage))
+                    HttpRequestManager manager = new HttpRequestManager(client, HttpMethod.Get, sourceUri, Logger, authHeader: authHeader);
+                    using (var response = await manager.ExecuteAsync())
                     {
-                        response.EnsureSuccessStatusCode();
-
                         using (var inStream = await response.Content.ReadAsStreamAsync())
                         {
                             downloadOutput.AppendLine($"    {sourceUri} =>");
@@ -1673,11 +1656,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 catch (Exception e)
                 {
                     errors.Add($"Failed to delete {temporaryFileName}: {e.Message}");
-                }
-
-                if (requestMessage != null)
-                {
-                    requestMessage.Dispose();
                 }
             }
             return false;

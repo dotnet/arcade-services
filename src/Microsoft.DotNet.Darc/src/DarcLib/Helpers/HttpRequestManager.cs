@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ namespace Microsoft.DotNet.DarcLib
         private readonly bool _logFailure;
         private readonly string _body;
         private readonly string _requestUri;
+        private readonly AuthenticationHeaderValue _authHeader;
         private readonly HttpMethod _method;
 
         public HttpRequestManager(
@@ -28,7 +30,8 @@ namespace Microsoft.DotNet.DarcLib
             ILogger logger,
             string body = null,
             string versionOverride = null,
-            bool logFailure = true)
+            bool logFailure = true,
+            AuthenticationHeaderValue authHeader = null)
         {
             _client = client;
             _logger = logger;
@@ -36,6 +39,7 @@ namespace Microsoft.DotNet.DarcLib
             _body = body;
             _requestUri = requestUri;
             _method = method;
+            _authHeader = authHeader;
         }
 
         public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
@@ -53,6 +57,8 @@ namespace Microsoft.DotNet.DarcLib
 
             while (true)
             {
+                HttpResponseMessage response = null;
+
                 try
                 {
                     using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
@@ -62,7 +68,12 @@ namespace Microsoft.DotNet.DarcLib
                             message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
                         }
 
-                        HttpResponseMessage response = await _client.SendAsync(message);
+                        if (_authHeader != null)
+                        {
+                            message.Headers.Authorization = _authHeader;
+                        }
+
+                        response = await _client.SendAsync(message);
 
                         if (stopRetriesHttpStatusCodes.Contains(response.StatusCode))
                         {
@@ -88,6 +99,11 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
+                    if (response != null)
+                    {
+                        response.Dispose();
+                    }
+
                     // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
                     if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
                     {
