@@ -46,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
             catch (FileNotFoundException exc)
             {
                 Logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
-                    "included in https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
+                    "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
                 return Constants.ErrorCode;
             }
             catch (Exception exc)

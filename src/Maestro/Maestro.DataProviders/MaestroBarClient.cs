@@ -110,7 +110,7 @@ namespace Maestro.DataProviders
             }
 
             var defaultChannels = await query.ToListAsync();
-            
+
             return defaultChannels.Select(dc => ToClientModelDefaultChannel(dc));
         }
 
@@ -126,8 +126,8 @@ namespace Maestro.DataProviders
         private Channel ToClientModelChannel(Maestro.Data.Models.Channel other)
         {
             return new Channel(
-                other.Id, 
-                other.Name, 
+                other.Id,
+                other.Name,
                 other.Classification);
         }
 
@@ -153,7 +153,7 @@ namespace Maestro.DataProviders
                     defaultChannels.Add(
                         new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
                         {
-                            Branch = "master",
+                            Branch = "main",
                             Channel = engLatestChannel
                         }
                     );
@@ -176,7 +176,7 @@ namespace Maestro.DataProviders
             // Build, then prune out what we don't want to see if the user specified
             // channels.
             DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(
-                defaultChannels, 
+                defaultChannels,
                 subscriptions,
                 this,
                 days);
@@ -235,10 +235,10 @@ namespace Maestro.DataProviders
         private Subscription ToClientModelSubscription(Maestro.Data.Models.Subscription other)
         {
             return new Subscription(
-                other.Id, 
-                other.Enabled, 
-                other.SourceRepository, 
-                other.TargetRepository, 
+                other.Id,
+                other.Enabled,
+                other.SourceRepository,
+                other.TargetRepository,
                 other.TargetBranch)
                 {
                     Channel = ToClientModelChannel(other.Channel),
@@ -411,7 +411,7 @@ namespace Maestro.DataProviders
             {
                 return ToClientModelChannel(channel);
             }
-            
+
             return null;
         }
 
@@ -467,7 +467,7 @@ namespace Maestro.DataProviders
                 days,
                 defaultChannel.BuildDefinitionId);
 
-            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
+            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal),
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
             (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);
@@ -480,7 +480,7 @@ namespace Maestro.DataProviders
             if (officialBuildId != -1)
             {
                 officialTime = officialBuildTime.TotalMinutes;
-                
+
                 // Get goal time for definition id
                 Data.Models.GoalTime goal = await _context.GoalTime
                     .FirstOrDefaultAsync(g => g.DefinitionId == officialBuildId && g.ChannelId == defaultChannel.ChannelId);

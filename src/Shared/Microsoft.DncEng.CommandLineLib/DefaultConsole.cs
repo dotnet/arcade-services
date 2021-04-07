@@ -53,7 +53,7 @@ namespace Microsoft.DncEng.CommandLineLib
                 _console.SetColor(color.Value);
             }
 
-            writer.WriteLine(message);
+            writer.Write(message);
             if (color.HasValue)
             {
                 _console.ResetColor();

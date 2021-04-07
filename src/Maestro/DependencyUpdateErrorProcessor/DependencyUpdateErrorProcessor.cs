@@ -172,6 +172,7 @@ namespace DependencyUpdateErrorProcessor
                 parsedRepoUri.owner,
                 parsedRepoUri.repo);
             var issueNumber = new ConditionalValue<int>();
+            Issue issue = null;
 
             switch (updateHistoryError)
             {
@@ -193,8 +194,16 @@ namespace DependencyUpdateErrorProcessor
 
                         if (issueNumber.HasValue)
                         {
-                            // Found an existing issue, fall through to update.
-                            break;
+                            _logger.LogInformation($"Found a matching issue for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch}. Issue number: {issueNumber}");
+                            issue = await client.Issue.Get(repo.Id, issueNumber.Value);
+                            // check if the issue is open only then update it else create a new issue and update the dictionary.
+                            if (issue.State.Equals("Open"))
+                            {
+                                // Found an existing issue, fall through to update.
+                                break;
+                            }
+
+                            _logger.LogInformation($"Matching issue {issueNumber} for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch} was closed. Creating a new issue.");
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
                         _logger.LogInformation($@"Creating a new gitHub issue for dependency Update Error, for the error message : '{repoBranchUpdateHistoryError.ErrorMessage} for the repository : '{repoBranchUpdateHistoryError.Repository}'");
@@ -224,8 +233,16 @@ namespace DependencyUpdateErrorProcessor
                         }
                         if (issueNumber.HasValue)
                         {
-                            // Found an existing issue, fall through to update.
-                            break;
+                            _logger.LogInformation($"Found a matching issue for subscription {subscriptionUpdateHistoryError.SubscriptionId}. Issue number: {issueNumber}");
+                            issue = await client.Issue.Get(repo.Id, issueNumber.Value);
+                            // check if the issue is open only then update it else create a new issue and update the dictionary.
+                            if (issue.State.Equals("Open"))
+                            {
+                                // Found an existing issue, fall through to update.
+                                break;
+                            }
+
+                            _logger.LogInformation($"Matching issue {issueNumber} for subscription {subscriptionUpdateHistoryError.SubscriptionId} was closed. Creating a new issue.");
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
                         _logger.LogInformation($@"Creating a new gitHub issue for Subscription Update Error, for the error message : '{subscriptionUpdateHistoryError.ErrorMessage} for subscription : '{subscriptionUpdateHistoryError.SubscriptionId}'");
@@ -246,8 +263,7 @@ namespace DependencyUpdateErrorProcessor
             // Updating an existing issue; can use same codepath.
             if (issueNumber.HasValue)
             {
-                Issue issue = await client.Issue.Get(repo.Id, issueNumber.Value);
-                // check if the issue is open only then update it else create a new issue and update the dictionary.
+                // check if the issue is open only then update it. Otherwise, we already created the new issue, so do nothing.
                 if (issue.State.Equals("Open"))
                 {
                     _logger.LogInformation($@"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}' for {GetPrintableDescription(updateHistoryError)}");

@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Darc.Options
         public bool Pinned { get; set; }
 
         [Option("coherent-parent", HelpText = "Restrict updates to this dependency based on version of a dependency from another repo. " +
-            "See https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
+            "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
         public string CoherentParentDependencyName { get; set; }
 
         public override Operation GetOperation()

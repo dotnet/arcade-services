@@ -1,40 +1,40 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager.StorageTypes
 {
+    public class AzureKeyVaultParameters
+    {
+        public Guid Subscription { get; set; }
+        public string Name { get; set; }
+    }
+    
     [Name("azure-key-vault")]
-    public class AzureKeyVault : StorageLocationType
+    public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
     {
         private static readonly string _nextRotationOnTag = "next-rotation-on";
         private readonly TokenCredentialProvider _tokenCredentialProvider;
-        private readonly Guid _subscription;
-        private readonly string _vaultName;
 
-        public AzureKeyVault(IReadOnlyDictionary<string, string> parameters, TokenCredentialProvider tokenCredentialProvider) : base(parameters)
+        public AzureKeyVault(TokenCredentialProvider tokenCredentialProvider)
         {
             _tokenCredentialProvider = tokenCredentialProvider;
-            ReadRequiredParameter("subscription", ref _subscription);
-            ReadRequiredParameter("name", ref _vaultName);
         }
 
-        private async Task<SecretClient> CreateSecretClient()
+        private async Task<SecretClient> CreateSecretClient(AzureKeyVaultParameters parameters)
         {
             var creds = await _tokenCredentialProvider.GetCredentialAsync();
-            return new SecretClient(new Uri($"https://{_vaultName}.vault.azure.net/"), creds);
+            return new SecretClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
         }
 
-        public override async Task<List<SecretProperties>> ListSecretsAsync()
+        public override async Task<List<SecretProperties>> ListSecretsAsync(AzureKeyVaultParameters parameters)
         {
-            SecretClient client = await CreateSecretClient();
+            SecretClient client = await CreateSecretClient(parameters);
             var secrets = new List<SecretProperties>();
             await foreach (var secret in client.GetPropertiesOfSecretsAsync())
             {
@@ -57,9 +57,9 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return nextRotationOn;
         }
 
-        public override async Task<SecretValue> GetSecretValueAsync(string name)
+        public override async Task<SecretValue> GetSecretValueAsync(AzureKeyVaultParameters parameters, string name)
         {
-            SecretClient client = await CreateSecretClient();
+            SecretClient client = await CreateSecretClient(parameters);
             Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
             KeyVaultSecret secret = res.Value;
             DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
@@ -74,9 +74,9 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return tags;
         }
 
-        public override async Task SetSecretValueAsync(string name, SecretValue value)
+        public override async Task SetSecretValueAsync(AzureKeyVaultParameters parameters, string name, SecretValue value)
         {
-            SecretClient client = await CreateSecretClient();
+            SecretClient client = await CreateSecretClient(parameters);
             var createdSecret = await client.SetSecretAsync(name, value.Value);
             var properties = createdSecret.Value.Properties;
             foreach (var (k, v) in value.Tags)
@@ -84,6 +84,7 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
                 properties.Tags[k] = v;
             }
             properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
+            properties.Tags["ChangedBy"] = "secret-manager.exe";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
         }

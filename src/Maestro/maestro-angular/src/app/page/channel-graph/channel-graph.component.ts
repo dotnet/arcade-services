@@ -89,7 +89,7 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
       if (!flowRef.id) {
         continue;
       }
-      let nodeProperties:any = { 
+      let nodeProperties:any = {
         labelType: "html",
         label: getNodeLabel(flowRef),
         title: getNodeTitle(flowRef),
@@ -106,14 +106,14 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
       // Find the arcade nodes, if they exist
       var isArcade = flowRef.repository && flowRef.repository.endsWith("arcade");
 
-      if (isArcade && flowRef.branch == "master") {
+      if (isArcade && flowRef.branch == "main") {
         arcadeMasterNode = flowRef.id;
       }
       else if (isArcade && flowRef.branch == "release/3.x") {
         arcade3xNode = flowRef.id
       }
-      
-      // If this node is not an arcade node, or if we are including 
+
+      // If this node is not an arcade node, or if we are including
       // arcade in the graph, add the node to the graph
       if (!isArcade || includeArcade) {
         g.setNode(flowRef.id, nodeProperties);
@@ -134,7 +134,7 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
         edgeProperties.arrowheadClass = 'longestPath';
       }
 
-      // Remove nodes that have outgoing edges from the singletons list, as long as that edge 
+      // Remove nodes that have outgoing edges from the singletons list, as long as that edge
       // is not to the arcade master node
       var index = singletons.indexOf(edge.fromId);
       if (index > -1 && edge.toId != arcadeMasterNode ) {
@@ -225,7 +225,7 @@ export class ChannelGraphComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if(changes.includeArcade && (changes.includeArcade.previousValue != changes.includeArcade.currentValue))
     {
-      this.ai.trackEvent({name: "featureEnabled"}, 
+      this.ai.trackEvent({name: "featureEnabled"},
         {
           featureName: "includeArcade",
           featureState: changes.includeArcade.currentValue

@@ -7,43 +7,53 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DncEng.SecretManager
 {
+    public static class ServiceCollectionExtensions
+    {
+        public static IServiceCollection AddNamedFromAssembly<T>(this IServiceCollection services, Assembly assembly)
+        {
+            foreach (TypeInfo type in assembly.DefinedTypes)
+            {
+                if (!typeof(T).IsAssignableFrom(type))
+                {
+                    continue;
+                }
+
+                if (type.IsAbstract)
+                {
+                    continue;
+                }
+
+                var nameAttribute = type.GetCustomAttribute<NameAttribute>();
+                if (nameAttribute == null)
+                {
+                    continue;
+                }
+
+                services.AddSingleton(typeof(T), type);
+            }
+
+            return services;
+        }
+    }
+
     public class NamedObjectRegistry<T>
     {
-        private readonly IServiceProvider _provider;
-        private readonly IImmutableDictionary<string, Type> _types;
+        private readonly Dictionary<string, T> _objects;
 
-        public NamedObjectRegistry(IServiceProvider provider)
+        protected NamedObjectRegistry()
         {
-            _provider = provider;
-            var typeMap = ImmutableDictionary.CreateBuilder<string, Type>();
-            var types = Assembly.GetExecutingAssembly().DefinedTypes.Where(t => typeof(T).IsAssignableFrom(t)).Where(t => t != typeof(T));
-            foreach (var type in types)
-            {
-                var name = type.GetCustomAttribute<NameAttribute>()?.Name;
-                if (string.IsNullOrEmpty(name))
-                {
-                    throw new InvalidOperationException($"Type {type.Name} is missing a Name attribute.");
-                }
-
-                if (typeMap.ContainsKey(name))
-                {
-                    throw new InvalidOperationException($"Duplicate name for {type.Name} '{name}'");
-                }
-
-                typeMap.Add(name, type);
-            }
-
-            _types = typeMap.ToImmutable();
         }
 
-        public virtual T Create(string name, IReadOnlyDictionary<string, string> parameters)
+        public NamedObjectRegistry(IEnumerable<T> objects)
         {
-            if (!_types.TryGetValue(name, out Type type))
-            {
-                throw new InvalidOperationException($"{typeof(T).Name} with name '{name}' not found.");
-            }
+            _objects = objects.ToDictionary(o =>
+                o.GetType().GetCustomAttribute<NameAttribute>()?.Name ??
+                throw new InvalidOperationException($"Type {o.GetType()} has no NameAttribute"));
+        }
 
-            return (T)ActivatorUtilities.CreateInstance(_provider, type, parameters);
+        public virtual T Get(string name)
+        {
+            return _objects[name];
         }
     }
 }

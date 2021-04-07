@@ -21,7 +21,7 @@ namespace DotNet.Status.Web
 {
     public class TimelineIssueTriage : ITimelineIssueTriage
     {
-        private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
+        private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/main/docs/BuildFailuresIssueTriage.md)";
         private static readonly string _markingLabelName = "darcbot";
         private static readonly string[] _issueLabels = new[] { "Detected By - Ad-Hoc Testing", "First Responder", "Build Failed" };
 
@@ -117,7 +117,7 @@ namespace DotNet.Status.Web
 
         private bool ShallUpdateExistingIssue(IssuesHookData issuePayload, IList<TriageItem> triageItems, IReadOnlyList<Issue> existingTriageIssues, out Issue existingIssueToUpdate)
         {
-            existingIssueToUpdate = existingTriageIssues.FirstOrDefault(e => 
+            existingIssueToUpdate = existingTriageIssues.FirstOrDefault(e =>
                 issuePayload.Issue.Number != e.Number &&
                 ShallExistingIssueBeUpdated(triageItems, GetTriageItems(e.Body)));
 
@@ -398,7 +398,7 @@ namespace DotNet.Status.Web
                     // have not found it, maybe have been damaged by hand, lets past it at the end of body
                     indexOfDetails = existingIssueBody.Length;
                 }
-                string newReferences = string.Join("\n", 
+                string newReferences = string.Join("\n",
                     addMissing.Select(i => $"[BuildId={i.BuildId},RecordId={i.RecordId},Index={i.Index}]\n[Category={i.UpdatedCategory}]\n"));
                 existingIssueBody = existingIssueBody.Insert(indexOfDetails, newReferences + "\n");
 
