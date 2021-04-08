@@ -33,6 +33,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             string dataSource = parameters.DataSource;
 
             string adminConnectionString = await context.GetSecretValue(parameters.AdminConnectionName);
+            bool haveFullAdmin = false;
 
             if (string.IsNullOrEmpty(adminConnectionString))
             {
@@ -42,6 +43,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 }
 
                 adminConnectionString = await _console.PromptAsync($"No admin connection for server {dataSource} is available, please input one: ");
+                haveFullAdmin = true;
             }
 
             var masterDbConnectionString = new SqlConnectionStringBuilder(adminConnectionString)
@@ -79,6 +81,10 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             var newPassword = GenerateRandomPassword(40);
             await masterDbConnection.OpenAsync(cancellationToken);
+            if (haveFullAdmin && parameters.Permissions == "admin")
+            {
+                await UpdateMasterDbWithFullAdmin(context, masterDbConnection);
+            }
 
             var updateLoginCommand = masterDbConnection.CreateCommand();
             updateLoginCommand.CommandText = $@"
@@ -95,22 +101,6 @@ BEGIN
 END";
             await updateLoginCommand.ExecuteNonQueryAsync(cancellationToken);
 
-            if (parameters.Permissions == "admin")
-            {
-                var updateMasterUserCommand = masterDbConnection.CreateCommand();
-                updateMasterUserCommand.CommandText = $@"
-IF NOT EXISTS (
-    select name
-    from sys.database_principals
-    where name = '{nextUserId}')
-BEGIN
-    CREATE USER [{nextUserId}] FOR LOGIN [{nextUserId}];
-END
-ALTER ROLE loginmanager ADD MEMBER [{nextUserId}];
-ALTER ROLE dbmanager ADD MEMBER [{nextUserId}];
-";
-                await updateMasterUserCommand.ExecuteNonQueryAsync(cancellationToken);
-            }
 
             await dbConnection.OpenAsync(cancellationToken);
             var updateUserCommand = dbConnection.CreateCommand();
@@ -164,6 +154,43 @@ ALTER ROLE db_datawriter ADD MEMBER [{nextUserId}]
             };
             var result = connectionString.ToString();
             return new SecretData(result, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(1));
+        }
+
+        private async Task UpdateMasterDbWithFullAdmin(RotationContext context, SqlConnection masterDbConnection)
+        {
+            var loginNames = new[] {context.SecretName + "-1", context.SecretName + "-2"};
+            foreach (var name in loginNames)
+            {
+                var command = masterDbConnection.CreateCommand();
+                var password = GenerateRandomPassword(40);
+                command.CommandText = $@"
+IF NOT EXISTS (
+    select name
+    from sys.sql_logins
+    where name = '{name}')
+BEGIN
+    CREATE LOGIN [{name}] WITH PASSWORD = N'{password}';
+END
+ELSE
+BEGIN
+    ALTER LOGIN [{name}] WITH PASSWORD = N'{password}';
+END";;
+                await command.ExecuteNonQueryAsync();
+
+                var permissionsCommand = masterDbConnection.CreateCommand();
+                permissionsCommand.CommandText = $@"
+IF NOT EXISTS (
+    select name
+    from sys.database_principals
+    where name = '{name}')
+BEGIN
+    CREATE USER [{name}] FOR LOGIN [{name}];
+END
+ALTER ROLE loginmanager ADD MEMBER [{name}];
+ALTER ROLE dbmanager ADD MEMBER [{name}];
+";
+                await permissionsCommand.ExecuteNonQueryAsync();
+            }
         }
 
         private string GenerateRandomPassword(int length)
