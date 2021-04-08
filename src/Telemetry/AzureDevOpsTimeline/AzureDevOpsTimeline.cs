@@ -189,11 +189,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             {
                 Timeline timeline = await timelineTask;
 
+                if (timeline is null)
+                {
+                    _logger.LogDebug("No timeline found for buildid {buildid}", build.Id);
+                    continue;
+                }
+
                 IEnumerable<string> additionalTimelineIds = timeline.Records
                     .SelectMany(record => record.PreviousAttempts)
                     .Where(attempt => !(attempt is null))
                     .Select(attempt => attempt.TimelineId)
-                    .Distinct(StringComparer.OrdinalIgnoreCase);
+                    .Distinct();
 
                 retriedTimelineTasks.AddRange(
                     additionalTimelineIds.Select(
