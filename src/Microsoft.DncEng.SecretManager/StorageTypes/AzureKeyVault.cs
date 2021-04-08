@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
 using JetBrains.Annotations;
 using Microsoft.DncEng.CommandLineLib.Authentication;
@@ -31,6 +32,12 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
         {
             var creds = await _tokenCredentialProvider.GetCredentialAsync();
             return new SecretClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
+        }
+
+        private async Task<KeyClient> CreateKeyClient(AzureKeyVaultParameters parameters)
+        {
+            var creds = await _tokenCredentialProvider.GetCredentialAsync();
+            return new KeyClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
         }
 
         public override async Task<List<SecretProperties>> ListSecretsAsync(AzureKeyVaultParameters parameters)
@@ -97,6 +104,34 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             properties.Tags["ChangedBy"] = "secret-manager.exe";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
+        }
+
+        public override async Task EnsureKeyAsync(AzureKeyVaultParameters parameters, string name, SecretManifest.Key config)
+        {
+            var client = await CreateKeyClient(parameters);
+            KeyVaultKey key = null;
+            try
+            {
+                key = await client.GetKeyAsync(name);
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+            }
+
+            if (key == null)
+            {
+                switch (config.Type.ToLowerInvariant())
+                {
+                    case "rsa":
+                        await client.CreateKeyAsync(name, KeyType.Rsa, new CreateRsaKeyOptions(name)
+                        {
+                            KeySize = config.Size,
+                        });
+                        break;
+                    default:
+                        throw new NotImplementedException(config.Type);
+                }
+            }
         }
     }
 }
