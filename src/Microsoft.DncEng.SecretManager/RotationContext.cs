@@ -32,7 +32,7 @@ namespace Microsoft.DncEng.SecretManager
         public async Task<string> GetSecretValue(string name)
         {
             var value = await _storage.GetSecretValueAsync(name);
-            return value.Value;
+            return value?.Value;
         }
 
         public IImmutableDictionary<string, string> GetValues()

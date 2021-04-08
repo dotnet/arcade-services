@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
+using JetBrains.Annotations;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager.StorageTypes
@@ -57,14 +58,23 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return nextRotationOn;
         }
 
+        [ItemCanBeNull]
         public override async Task<SecretValue> GetSecretValueAsync(AzureKeyVaultParameters parameters, string name)
         {
-            SecretClient client = await CreateSecretClient(parameters);
-            Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
-            KeyVaultSecret secret = res.Value;
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
-            ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
-            return new SecretValue(secret.Value, tags, nextRotationOn, secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
+            try
+            {
+                SecretClient client = await CreateSecretClient(parameters);
+                Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
+                KeyVaultSecret secret = res.Value;
+                DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
+                ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
+                return new SecretValue(secret.Value, tags, nextRotationOn,
+                    secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
+            }
+            catch (RequestFailedException e) when (e.Status == 404)
+            {
+                return null;
+            }
         }
 
         private static ImmutableDictionary<string, string> GetTags(global::Azure.Security.KeyVault.Secrets.SecretProperties properties)
