@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
-    public sealed class AzureDevOpsClient
+    public sealed class AzureDevOpsClient : IAzureDevOpsClient
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;

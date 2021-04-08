@@ -4,10 +4,13 @@
 
 using System;
 using Microsoft.DncEng.Configuration.Extensions;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -41,7 +44,37 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.Interval = c["Interval"];
                                 o.BuildBatchSize = c["BuildBatchSize"];
                             });
+
+                            services.AddSingleton<IAzureDevOpsClient>(p =>
+                            {
+                                IConfiguration c = p.GetRequiredService<IConfiguration>();
+
+                                if (!int.TryParse(c["ParallelRequests"], out int parallelRequests) || parallelRequests < 1)
+                                {
+                                    parallelRequests = 5;
+                                }
+
+                                return new AzureDevOpsClient(
+                                    baseUrl: c["AzureDevOpsUrl"],
+                                    organization: c["AzureDevOpsOrganization"],
+                                    maxParallelRequests: parallelRequests,
+                                    accessToken: c["AzureDevOpsAccessToken"]
+                                );
+                            });
+
+                            services.AddSingleton<ITimelineTelemetryRepository>(p =>
+                            {
+                                IConfiguration c = p.GetRequiredService<IConfiguration>();
+
+                                return new KustoTimelineTelemetryRepository(
+                                    logger: p.GetService<ILogger<KustoTimelineTelemetryRepository>>(),
+                                    queryConnectionString: c["KustoQueryConnectionString"],
+                                    ingestConnectionString: c["KustoIngestConnectionString"],
+                                    database: c["KustoDatabase"]
+                                );
+                            });
                         });
+                    
                 });
         }
     }
