@@ -7,6 +7,7 @@
     <PackageReference Update="Azure.Core" Version="1.0.2" /> 
     <PackageReference Update="Azure.Data.AppConfiguration" Version="1.0.0" />
     <PackageReference Update="Azure.Identity" Version="1.1.1" /> 
+    <PackageReference Update="Azure.Security.KeyVault.Keys" Version="4.0.1" />
     <PackageReference Update="Azure.Security.KeyVault.Secrets" Version="4.0.1" />
     <PackageReference Update="Azure.Storage.Blobs" Version="12.3.0" />
     <PackageReference Update="Azure.Storage.Queues" Version="12.6.0" />

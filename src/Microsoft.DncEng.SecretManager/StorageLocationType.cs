@@ -11,6 +11,7 @@ namespace Microsoft.DncEng.SecretManager
         [ItemCanBeNull]
         public abstract Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name);
         public abstract Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value);
+        public abstract Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key config);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -54,6 +55,11 @@ namespace Microsoft.DncEng.SecretManager
                 return _that.SetSecretValueAsync(_parameters, name, value);
             }
 
+            public Task EnsureKeyAsync(string name, SecretManifest.Key config)
+            {
+                return _that.EnsureKeyAsync(_parameters, name, config);
+            }
+
             public void Dispose()
             {
                 _that.Dispose();
@@ -82,8 +88,15 @@ namespace Microsoft.DncEng.SecretManager
             return SetSecretValueAsync(p, name, value);
         }
 
+        public sealed override Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key key)
+        {
+            var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
+            return EnsureKeyAsync(p, name, key);
+        }
+
         public abstract Task<List<SecretProperties>> ListSecretsAsync(TParameters parameters);
         public abstract Task<SecretValue> GetSecretValueAsync(TParameters parameters, string name);
         public abstract Task SetSecretValueAsync(TParameters parameters, string name, SecretValue value);
+        public abstract Task EnsureKeyAsync(TParameters parameters, string name, SecretManifest.Key config);
     }
 }

@@ -112,20 +112,25 @@ namespace Microsoft.DncEng.SecretManager.Commands
 
                 if (regenerate)
                 {
-                    _console.Write($"Generating new value(s) for secret {name}...");
+                    _console.WriteLine($"Generating new value(s) for secret {name}...");
                     SecretProperties primary = existing.FirstOrDefault(p => p != null);
                     IImmutableDictionary<string, string> currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
                     var context = new RotationContext(name, currentTags, storage);
                     List<SecretData> newValues = await secretType.RotateValues(context, cancellationToken);
                     IImmutableDictionary<string, string> newTags = context.GetValues();
-                    _console.WriteLine(" Done.");
-                    _console.Write($"Storing new value(s) in storage for secret {name}...");
+                    _console.WriteLine("Done.");
+                    _console.WriteLine($"Storing new value(s) in storage for secret {name}...");
                     foreach (var (n, value) in names.Zip(newValues))
                     {
                         await storage.SetSecretValueAsync(n, new SecretValue(value.Value, newTags, value.NextRotationOn, value.ExpiresOn));
                     }
-                    _console.WriteLine(" Done.");
+                    _console.WriteLine("Done.");
                 }
+            }
+
+            foreach (var (name, key) in manifest.Keys)
+            {
+                await storage.EnsureKeyAsync(name, key);
             }
         }
     }
