@@ -109,28 +109,25 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
         public override async Task EnsureKeyAsync(AzureKeyVaultParameters parameters, string name, SecretManifest.Key config)
         {
             var client = await CreateKeyClient(parameters);
-            KeyVaultKey key = null;
             try
             {
-                key = await client.GetKeyAsync(name);
+                await client.GetKeyAsync(name);
+                return; // key exists, so we are done.
             }
             catch (RequestFailedException ex) when (ex.Status == 404)
             {
             }
 
-            if (key == null)
+            switch (config.Type.ToLowerInvariant())
             {
-                switch (config.Type.ToLowerInvariant())
-                {
-                    case "rsa":
-                        await client.CreateKeyAsync(name, KeyType.Rsa, new CreateRsaKeyOptions(name)
-                        {
-                            KeySize = config.Size,
-                        });
-                        break;
-                    default:
-                        throw new NotImplementedException(config.Type);
-                }
+                case "rsa":
+                    await client.CreateKeyAsync(name, KeyType.Rsa, new CreateRsaKeyOptions(name)
+                    {
+                        KeySize = config.Size,
+                    });
+                    break;
+                default:
+                    throw new NotImplementedException(config.Type);
             }
         }
     }
