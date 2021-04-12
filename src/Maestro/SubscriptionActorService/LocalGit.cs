@@ -52,7 +52,7 @@ namespace SubscriptionActorService
                     LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
                     return _gitExecutable;
                 }
-                catch (Exception ex)
+                catch
                 { 
                     _logger.LogWarning($"Something went wrong with validating git executable at {_gitExecutable}. Downloading new version.");
                 }
