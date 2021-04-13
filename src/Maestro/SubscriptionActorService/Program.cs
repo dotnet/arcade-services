@@ -53,6 +53,7 @@ namespace SubscriptionActorService
                 var config = provider.GetRequiredService<IConfiguration>();
                 options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
             });
+            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.Configure<GitHubClientOptions>(o =>
             {
                 o.ProductHeader = new ProductHeaderValue("Maestro",

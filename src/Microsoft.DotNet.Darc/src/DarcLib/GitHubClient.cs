@@ -69,6 +69,20 @@ namespace Microsoft.DotNet.DarcLib
 
         public bool AllowRetries { get; set; } = true;
 
+
+        /// <summary>
+        ///     Add a comment to the discussion of an existing pull request or issue (the APIs are the same)
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="issueNumber">Issue or PR id</param>
+        /// <param name="message">Contents of the message (ideally in markdown format)</param>
+        public async Task AddIssueComment(string repoUri, int issueNumber, string message)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            await Client.Issue.Comment.Create(owner, repo, issueNumber, message);
+        }
+
+
         /// <summary>
         ///     Retrieve the contents of a repository file as a string
         /// </summary>

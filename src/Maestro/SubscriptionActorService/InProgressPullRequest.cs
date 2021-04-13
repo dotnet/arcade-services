@@ -27,6 +27,9 @@ namespace SubscriptionActorService
 
         [DataMember]
         public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
+
+        [DataMember]
+        public bool? SourceRepoNotified { get; set; }
     }
 
     [DataContract]

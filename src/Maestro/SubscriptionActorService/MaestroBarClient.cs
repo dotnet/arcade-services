@@ -100,7 +100,18 @@ namespace SubscriptionActorService
 
         public Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
         {
-            throw new NotImplementedException();
+            var subscriptionObject = _context.Subscriptions.Where(s => s.Id.Equals(subscriptionId)).FirstOrDefault();
+            if (subscriptionObject != null)
+            {
+                return Task.FromResult(new Subscription(
+                    subscriptionObject.Id,
+                    subscriptionObject.Enabled,
+                    subscriptionObject.SourceRepository,
+                    subscriptionObject.TargetRepository,
+                    subscriptionObject.TargetBranch,
+                    subscriptionObject.PullRequestFailureNotificationTags));
+            }
+            return Task.FromResult<Subscription>(null);
         }
 
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)

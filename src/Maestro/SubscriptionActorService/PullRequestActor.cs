@@ -14,6 +14,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
@@ -64,6 +65,8 @@ namespace SubscriptionActorService
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+        private readonly IGitHubTokenProvider _gitHubTokenProvider;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         /// <summary>
         ///     Creates a new PullRequestActor
@@ -83,7 +86,9 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IGitHubTokenProvider gitHubTokenProvider,
+            IGitHubClientFactory gitHubClientFactory)
         {
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
@@ -91,6 +96,8 @@ namespace SubscriptionActorService
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
+            _gitHubTokenProvider = gitHubTokenProvider;
+            _gitHubClientFactory = gitHubClientFactory;
         }
 
         public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
@@ -111,7 +118,9 @@ namespace SubscriptionActorService
                         _darcFactory,
                         _loggerFactory,
                         _actionRunner,
-                        _subscriptionActorFactory);
+                        _subscriptionActorFactory,
+                        _gitHubTokenProvider,
+                        _gitHubClientFactory);
                 case ActorIdKind.String:
                     return new BatchedPullRequestActorImplementation(actorId,
                         reminderManager,
@@ -121,9 +130,11 @@ namespace SubscriptionActorService
                         _darcFactory,
                         _loggerFactory,
                         _actionRunner,
-                        _subscriptionActorFactory);
+                        _subscriptionActorFactory,
+                        _gitHubTokenProvider,
+                        _gitHubClientFactory);
                 default:
-                    throw new NotSupportedException("Only actorId's of type Guid and String are supported");
+                    throw new NotSupportedException("Only actorIds of type Guid and String are supported");
             }
         }
 
@@ -173,6 +184,8 @@ namespace SubscriptionActorService
         public const string PullRequest = "pullRequest";
         public const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
         public const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
+        private readonly IGitHubClientFactory _gitHubClientFactory;
+        private readonly IGitHubTokenProvider _gitHubTokenProvider;
 
         protected PullRequestActorImplementation(
             ActorId id,
@@ -183,7 +196,9 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IGitHubTokenProvider gitHubTokenProvider,
+            IGitHubClientFactory gitHubClientFactory)
         {
             Id = id;
             Reminders = reminders;
@@ -194,6 +209,8 @@ namespace SubscriptionActorService
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
             Logger = loggerFactory.CreateLogger(GetType());
+            _gitHubTokenProvider = gitHubTokenProvider;
+            _gitHubClientFactory = gitHubClientFactory;
         }
 
         public ILogger Logger { get; }
@@ -430,8 +447,27 @@ namespace SubscriptionActorService
                                 prUrl);
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
-                        case MergePolicyCheckResult.NoPolicies:
                         case MergePolicyCheckResult.FailedPolicies:
+                            if (GetType() == typeof(NonBatchedPullRequestActorImplementation))
+                            {
+                                // In the non-batched case, a dependency flow PR comes from a single repository.
+                                // We'll try to notify the source repo if the subscription provided a list of aliases to tag.
+                                // The API checks when creating / updating subscriptions that any resolve-able logins are in the
+                                // "Microsoft" Github org, so we can safely use them in any comment.
+                                if (pr.SourceRepoNotified != true)
+                                {
+                                    await TagSourceRepositoryGitHubContacts(pr);
+                                }
+                                else
+                                {
+                                    Logger.LogInformation($"Skipped notifying source repository for {pr.Url}'s failed policies, as it has already been tagged");
+                                }
+                            }
+
+                            // Fall through to the same place this went before
+                            goto case MergePolicyCheckResult.FailedToMerge;
+
+                        case MergePolicyCheckResult.NoPolicies:
                         case MergePolicyCheckResult.FailedToMerge:
                             return ActionResult.Create(SynchronizePullRequestResult.InProgressCanUpdate, checkPolicyResult.Message);
                         case MergePolicyCheckResult.PendingPolicies:
@@ -476,6 +512,50 @@ namespace SubscriptionActorService
             }
         }
 
+        private async Task TagSourceRepositoryGitHubContacts(InProgressPullRequest pr)
+        {
+            // This should only ever happen for non-batched subscriptions, so if there are multiple subscriptions going in here, we want to throw and fail.
+            var subscriptionFromPr = pr.ContainedSubscriptions.First();
+            var darcRemote = await DarcRemoteFactory.GetBarOnlyRemoteAsync(Logger);
+            var darcSubscriptionObject = await darcRemote.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId.ToString());
+
+            string sourceRepository = await GetSourceRepositoryAsync(subscriptionFromPr.SubscriptionId);
+
+            (string targetRepository, _) = await GetTargetAsync();
+            (string owner, string repo, int prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);
+
+            List<string> tagsToNotify = new List<string>();
+            if (!string.IsNullOrEmpty(darcSubscriptionObject.PullRequestFailureNotificationTags))
+            {
+                tagsToNotify.AddRange(darcSubscriptionObject.PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries));
+            }
+
+            if (tagsToNotify.Count == 0)
+            {
+                Logger.LogInformation("Found no matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", sourceRepository, targetRepository, darcSubscriptionObject.Channel);
+                return;
+            }
+            Logger.LogInformation("Found {count} matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", tagsToNotify.Count, sourceRepository, targetRepository, darcSubscriptionObject.Channel);
+
+            // At this point we definitely have notifications to make, so do it.
+            string githubToken = await _gitHubTokenProvider.GetTokenForRepository(targetRepository);
+            var gitHubClient = _gitHubClientFactory.CreateGitHubClient(githubToken);
+
+            string sourceRepoNotificationComment = @$"
+#### Notification for subscribed users from {sourceRepository}:
+
+{string.Join($", {Environment.NewLine}", tagsToNotify)}
+
+#### Action requested: Please take a look at this failing automated dependency-flow pull request's checks; failures may be related to changes which originated in your repo.
+
+- This pull request contains changes from your source repo ({sourceRepository}) and seems to have failed checks in this PR.  Please take a peek at the failures and comment if they seem relevant to your changes.
+- If you're being tagged in this comment it is due to an entry in the related Maestro Subscription of the Build Asset Registry.  If you feel this entry has added your GitHub login or your GitHub team in error, please update the subscription to reflect this.
+- For more details, please read [the Arcade Darc documentation](https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#update-subscription)
+";
+            await gitHubClient.Issue.Comment.Create(owner, repo, prIssueId, sourceRepoNotificationComment);
+            pr.SourceRepoNotified = true;
+        }
+
         /// <summary>
         ///     Check the merge policies for a PR and merge if they have succeeded.
         /// </summary>
@@ -491,12 +571,17 @@ namespace SubscriptionActorService
                 policyDefinitions);
 
             await UpdateMergeStatusAsync(darc, pr.Url, result.Results);
-            if (result.Failed || result.Pending)
+            // As soon as one policy is actively failed, we enter a failed state.
+            if (result.Failed)
             {
                 Logger.LogInformation($"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Message))}");
-                return ActionResult.Create(
-                    result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
-                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Message))}");
+                return ActionResult.Create(MergePolicyCheckResult.FailedPolicies,
+                    $"NOT Merged: PR '{pr.Url}' has failed policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Failure).Select(r => r.MergePolicyInfo.Name + r.Message))}");
+            }
+            else if (result.Pending)
+            {
+                return ActionResult.Create(MergePolicyCheckResult.PendingPolicies,
+                    $"NOT Merged: PR '{pr.Url}' has pending policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Message))}");
             }
             if (result.Succeeded)
             {
@@ -1029,7 +1114,7 @@ namespace SubscriptionActorService
                             {
                                 subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
                             }
-                            catch(ArgumentNullException e)
+                            catch (ArgumentNullException e)
                             {
                                 Logger.LogError(e, $"Failed to create SHA comparison link for dependency {to.Name} during asset update for subscription {update.SubscriptionId}");
                             }
@@ -1177,7 +1262,7 @@ namespace SubscriptionActorService
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> incomingUpdates)
         {
             // First project the new updates to the final list
-            List<DependencyUpdateSummary> mergedUpdates = 
+            List<DependencyUpdateSummary> mergedUpdates =
                 incomingUpdates.SelectMany(update => update.deps)
                     .Select(du => new DependencyUpdateSummary
                     {
@@ -1188,7 +1273,7 @@ namespace SubscriptionActorService
 
             // Project to a form that is easy to search
             var searchableUpdates =
-                mergedUpdates.Select( u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                mergedUpdates.Select(u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Add any existing assets that weren't modified by the incoming update
             if (existingUpdates != null)
@@ -1394,7 +1479,9 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IGitHubTokenProvider gitHubTokenProvider,
+            IGitHubClientFactory gitHubClientFactory) : base(
             id,
             reminders,
             stateManager,
@@ -1403,7 +1490,9 @@ namespace SubscriptionActorService
             darcFactory,
             loggerFactory,
             actionRunner,
-            subscriptionActorFactory)
+            subscriptionActorFactory,
+            gitHubTokenProvider,
+            gitHubClientFactory)
         {
             _lazySubscription = new Lazy<Task<Subscription>>(RetrieveSubscription);
         }
@@ -1439,7 +1528,7 @@ namespace SubscriptionActorService
         protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
         {
             Subscription subscription = await GetSubscription();
-            return (IReadOnlyList<MergePolicyDefinition>)subscription.PolicyObject.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
 
@@ -1470,7 +1559,11 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IGitHubTokenProvider gitHubTokenProvider,
+            IGitHubClientFactory gitHubClientFactory)
+            :
+            base(
             id,
             reminders,
             stateManager,
@@ -1479,7 +1572,9 @@ namespace SubscriptionActorService
             darcFactory,
             loggerFactory,
             actionRunner,
-            subscriptionActorFactory)
+            subscriptionActorFactory,
+            gitHubTokenProvider,
+            gitHubClientFactory)
         {
         }
 
@@ -1494,7 +1589,7 @@ namespace SubscriptionActorService
         {
             RepositoryBranch repositoryBranch =
                 await Context.RepositoryBranches.FindAsync(Target.repository, Target.branch);
-            return (IReadOnlyList<MergePolicyDefinition>)repositoryBranch?.PolicyObject?.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
     }

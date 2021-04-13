@@ -33,6 +33,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("policy")]
         public Models.SubscriptionPolicy Policy { get; set; }
 
+        [JsonProperty("pullRequestFailureNotificationTags")]
+        public string PullRequestFailureNotificationTags { get; set; }
+
         [JsonIgnore]
         public bool IsValid
         {

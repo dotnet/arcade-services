@@ -292,7 +292,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
         {
-            return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId);
+            return _barClient.Subscriptions.TriggerSubscriptionAsync(sourceBuildId, subscriptionId);
         }
 
         /// <summary>
