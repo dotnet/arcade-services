@@ -45,6 +45,7 @@ namespace SubscriptionActorService
             // Determine whether we need to do any downloading at all.
             if (!string.IsNullOrEmpty(_gitExecutable) && File.Exists(_gitExecutable))
             {
+                _logger.LogInformation($"Git executable found at {_gitExecutable}. Checking the installation.");
                 // We should also mke sure that the git executable that exists runs properly
                 try
                 {
@@ -78,6 +79,7 @@ namespace SubscriptionActorService
 
                         if (Directory.Exists(targetPath))
                         {
+                            _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
                             Directory.Delete(targetPath, true);
                         }
 
