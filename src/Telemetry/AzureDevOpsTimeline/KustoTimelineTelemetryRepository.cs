@@ -26,10 +26,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             _logger = logger;
 
-            Kusto.Cloud.Platform.Utils.TraceSourceManager.SetTraceVerbosityForAll(
-                Kusto.Cloud.Platform.Utils.TraceVerbosity.Fatal
-            );
-
             // removing the IngestConnectionString was a default setup in local debugging
             if (string.IsNullOrEmpty(ingestConnectionString))
             {

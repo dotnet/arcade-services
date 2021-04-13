@@ -185,9 +185,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Maestro.Ta
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.SecretManager", "src\Microsoft.DncEng.SecretManager\Microsoft.DncEng.SecretManager.csproj", "{56FC5D20-350C-4F52-B862-1FCDCA562DB0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DncEng.CommandLineLib", "src\Shared\Microsoft.DncEng.CommandLineLib\Microsoft.DncEng.CommandLineLib.csproj", "{CBDB7159-0B49-4E84-B988-FE51A4B0F36D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.CommandLineLib", "src\Shared\Microsoft.DncEng.CommandLineLib\Microsoft.DncEng.CommandLineLib.csproj", "{CBDB7159-0B49-4E84-B988-FE51A4B0F36D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DncEng.SecretManager.Tests", "src\Microsoft.DncEng.SecretManager.Tests\Microsoft.DncEng.SecretManager.Tests.csproj", "{BC8A5788-58AA-4D22-8123-9F9264878A1D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.SecretManager.Tests", "src\Microsoft.DncEng.SecretManager.Tests\Microsoft.DncEng.SecretManager.Tests.csproj", "{BC8A5788-58AA-4D22-8123-9F9264878A1D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.AzureDevOpsTimelineTests", "src\Telemetry\Microsoft.DotNet.AzureDevOpsTimelineTests\Microsoft.DotNet.AzureDevOpsTimelineTests.csproj", "{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1015,6 +1017,18 @@ Global
 		{BC8A5788-58AA-4D22-8123-9F9264878A1D}.Release|x64.Build.0 = Release|Any CPU
 		{BC8A5788-58AA-4D22-8123-9F9264878A1D}.Release|x86.ActiveCfg = Release|Any CPU
 		{BC8A5788-58AA-4D22-8123-9F9264878A1D}.Release|x86.Build.0 = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|x64.Build.0 = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1074,6 +1088,7 @@ Global
 		{024A6AFE-FC96-4527-AA77-15BC7CDCD809} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{C817E57B-319A-42A0-B5B8-C65E4A777861} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{CBDB7159-0B49-4E84-B988-FE51A4B0F36D} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
+		{A8FF438E-59EF-4A93-9DBF-1970FE1368D7} = {0D9FE592-7EB7-4CEE-95E8-3379B98041C6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

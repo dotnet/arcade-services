@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -21,23 +22,26 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     /// <summary>
     ///     An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class AzureDevOpsTimeline : IServiceImplementation
+    public sealed class AzureDevOpsTimeline : IServiceImplementation
     {
-        private readonly Extensions.Logging.ILogger<AzureDevOpsTimeline> _logger;
+        private readonly ILogger<AzureDevOpsTimeline> _logger;
         private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
         private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
         private readonly IAzureDevOpsClient azureServer;
+        private readonly ISystemClock _systemClock;
 
         public AzureDevOpsTimeline(
-            Extensions.Logging.ILogger<AzureDevOpsTimeline> logger,
+            ILogger<AzureDevOpsTimeline> logger,
             IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
             ITimelineTelemetryRepository timelineTelemetryRepository,
-            IAzureDevOpsClient azureDevopsClient)
+            IAzureDevOpsClient azureDevopsClient,
+            ISystemClock systemClock)
         {
             _logger = logger;
             _options = options;
             _timelineTelemetryRepository = timelineTelemetryRepository;
             azureServer = azureDevopsClient;
+            _systemClock = systemClock;
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -52,6 +56,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
                 catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
                 {
+                    break;
                 }
                 catch (Exception e)
                 {
@@ -87,12 +92,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             foreach (string project in options.AzureDevOpsProjects.Split(';'))
             {
-                await RunProject(azureServer, project, buildBatchSize, cancellationToken);
+                await RunProject(project, buildBatchSize, cancellationToken);
             }
         }
 
-        private async Task RunProject(
-            IAzureDevOpsClient azureServer,
+        public async Task RunProject(
             string project,
             int buildBatchSize,
             CancellationToken cancellationToken)
@@ -102,7 +106,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             if (latestCandidate == null)
             {
-                latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
             else
@@ -153,6 +157,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
 
                 IEnumerable<string> additionalTimelineIds = timeline.Records
+                    .Where(record => record.PreviousAttempts != null)
                     .SelectMany(record => record.PreviousAttempts)
                     .Where(attempt => attempt != null)
                     .Select(attempt => attempt.TimelineId)
@@ -180,21 +185,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger.LogTrace("Aggregating results...");
             foreach ((Build build, Task<Timeline> timelineTask) in allNewTimelines)
             {
-                string targetBranch = "";
-
-                try
-                {
-                    if (build.Reason == "pullRequest")
-                    {
-                        targetBranch = (string) JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
-                    }
-                }
-                catch (JsonReaderException e)
-                {
-                    _logger.LogError(e.ToString());
-                }
-
-                augmentedBuilds.Add(new AugmentedBuild(build, targetBranch));
+                augmentedBuilds.Add(CreateAugmentedBuild(build));
 
                 Timeline timeline = await timelineTask;
                 if (timeline?.Records == null)
@@ -241,7 +232,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         issue.AugmentedIndex = "999." + issue.Index.ToString("D3");
                     }
                 }
-            }       
+            }
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
@@ -254,6 +245,25 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             _logger.LogInformation("Saving TimelineIssues...");
             await _timelineTelemetryRepository.WriteTimelineIssues(issues);
+        }
+
+        public AugmentedBuild CreateAugmentedBuild(Build build)
+        {
+            string targetBranch = "";
+
+            try
+            {
+                if (build.Reason == "pullRequest")
+                {
+                    targetBranch = (string)JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
+                }
+            }
+            catch (JsonReaderException e)
+            {
+                _logger.LogError(e, "Unable to extract targetBranch from Build");
+            }
+
+            return new AugmentedBuild(build, targetBranch);
         }
 
         private static string GetBucket(AugmentedTimelineIssue augIssue)
