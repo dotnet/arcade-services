@@ -37,6 +37,24 @@ namespace Microsoft.DncEng.CommandLineLib
         /// <param name="requiredWord">Expected answer to prompt that will yield a "true" value (case insensitive)</param>
         /// <returns>True if the confirmation was accepted, false otherwise</returns>
         Task<bool> ConfirmAsync(string message, string requiredWord = "yes");
+
+        /// <summary>
+        ///    Give a prompt to the user and return their answer.
+        /// </summary>
+        /// <remarks>
+        ///     All pending, buffered input is consumed when this method is called, so
+        ///     only keys entered after the prompt is produced are respected.
+        ///     This means the input cannot be redirected in to answer this prompt (since it would
+        ///     be consumed immediately)
+        /// </remarks>
+        /// <param name="message">Message to display to the user.</param>
+        /// <returns>The entered text</returns>
+        Task<string> PromptAsync(string message);
+
+        /// <summary>
+        ///   Gets a value indicating whether the current console session is an interactive session. 
+        /// </summary>
+        /// <returns><c>true</c> if the console is an interactive session; <c>false</c> otherwise.</returns>
         bool IsInteractive { get; }
     }
 }

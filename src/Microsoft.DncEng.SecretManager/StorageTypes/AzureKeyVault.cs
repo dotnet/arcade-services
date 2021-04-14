@@ -4,7 +4,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
+using JetBrains.Annotations;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager.StorageTypes
@@ -32,6 +34,12 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return new SecretClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
         }
 
+        private async Task<KeyClient> CreateKeyClient(AzureKeyVaultParameters parameters)
+        {
+            var creds = await _tokenCredentialProvider.GetCredentialAsync();
+            return new KeyClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
+        }
+
         public override async Task<List<SecretProperties>> ListSecretsAsync(AzureKeyVaultParameters parameters)
         {
             SecretClient client = await CreateSecretClient(parameters);
@@ -57,14 +65,23 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return nextRotationOn;
         }
 
+        [ItemCanBeNull]
         public override async Task<SecretValue> GetSecretValueAsync(AzureKeyVaultParameters parameters, string name)
         {
-            SecretClient client = await CreateSecretClient(parameters);
-            Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
-            KeyVaultSecret secret = res.Value;
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
-            ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
-            return new SecretValue(secret.Value, tags, nextRotationOn, secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
+            try
+            {
+                SecretClient client = await CreateSecretClient(parameters);
+                Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
+                KeyVaultSecret secret = res.Value;
+                DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
+                ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
+                return new SecretValue(secret.Value, tags, nextRotationOn,
+                    secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
+            }
+            catch (RequestFailedException e) when (e.Status == 404)
+            {
+                return null;
+            }
         }
 
         private static ImmutableDictionary<string, string> GetTags(global::Azure.Security.KeyVault.Secrets.SecretProperties properties)
@@ -87,6 +104,31 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             properties.Tags["ChangedBy"] = "secret-manager.exe";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
+        }
+
+        public override async Task EnsureKeyAsync(AzureKeyVaultParameters parameters, string name, SecretManifest.Key config)
+        {
+            var client = await CreateKeyClient(parameters);
+            try
+            {
+                await client.GetKeyAsync(name);
+                return; // key exists, so we are done.
+            }
+            catch (RequestFailedException ex) when (ex.Status == 404)
+            {
+            }
+
+            switch (config.Type.ToLowerInvariant())
+            {
+                case "rsa":
+                    await client.CreateKeyAsync(name, KeyType.Rsa, new CreateRsaKeyOptions(name)
+                    {
+                        KeySize = config.Size,
+                    });
+                    break;
+                default:
+                    throw new NotImplementedException(config.Type);
+            }
         }
     }
 }

@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Microsoft.DncEng.SecretManager
 {
     public abstract class StorageLocationType : IDisposable
     {
         public abstract Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters);
+        [ItemCanBeNull]
         public abstract Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name);
         public abstract Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value);
+        public abstract Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key config);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -41,6 +44,7 @@ namespace Microsoft.DncEng.SecretManager
                 return _that.ListSecretsAsync(_parameters);
             }
 
+            [ItemCanBeNull]
             public Task<SecretValue> GetSecretValueAsync(string name)
             {
                 return _that.GetSecretValueAsync(_parameters, name);
@@ -49,6 +53,11 @@ namespace Microsoft.DncEng.SecretManager
             public Task SetSecretValueAsync(string name, SecretValue value)
             {
                 return _that.SetSecretValueAsync(_parameters, name, value);
+            }
+
+            public Task EnsureKeyAsync(string name, SecretManifest.Key config)
+            {
+                return _that.EnsureKeyAsync(_parameters, name, config);
             }
 
             public void Dispose()
@@ -79,8 +88,15 @@ namespace Microsoft.DncEng.SecretManager
             return SetSecretValueAsync(p, name, value);
         }
 
+        public sealed override Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key key)
+        {
+            var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
+            return EnsureKeyAsync(p, name, key);
+        }
+
         public abstract Task<List<SecretProperties>> ListSecretsAsync(TParameters parameters);
         public abstract Task<SecretValue> GetSecretValueAsync(TParameters parameters, string name);
         public abstract Task SetSecretValueAsync(TParameters parameters, string name, SecretValue value);
+        public abstract Task EnsureKeyAsync(TParameters parameters, string name, SecretManifest.Key config);
     }
 }

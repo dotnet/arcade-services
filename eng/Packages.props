@@ -7,6 +7,7 @@
     <PackageReference Update="Azure.Core" Version="1.0.2" /> 
     <PackageReference Update="Azure.Data.AppConfiguration" Version="1.0.0" />
     <PackageReference Update="Azure.Identity" Version="1.1.1" /> 
+    <PackageReference Update="Azure.Security.KeyVault.Keys" Version="4.0.1" />
     <PackageReference Update="Azure.Security.KeyVault.Secrets" Version="4.0.1" />
     <PackageReference Update="Azure.Storage.Blobs" Version="12.3.0" />
     <PackageReference Update="Azure.Storage.Queues" Version="12.6.0" />
@@ -55,6 +56,7 @@
     <PackageReference Update="Microsoft.CodeAnalysis.CSharp" Version="3.5.0 " />
     <PackageReference Update="Microsoft.CodeCoverage" Version="16.5.0" />
     <PackageReference Update="Microsoft.CSharp" Version="4.5.0" />
+    <PackageReference Update="Microsoft.Data.SqlClient" Version="2.1.2" />
     <PackageReference Update="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
