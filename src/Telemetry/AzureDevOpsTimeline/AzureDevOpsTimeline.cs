@@ -56,7 +56,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
                 catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
                 {
-                    break;
+                    throw;
                 }
                 catch (Exception e)
                 {
