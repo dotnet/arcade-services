@@ -17,10 +17,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     public class KustoTimelineTelemetryRepository : ITimelineTelemetryRepository
     {
         private readonly ILogger<KustoTimelineTelemetryRepository> _logger;
-        private readonly IKustoIngestClient ingest;
-        private readonly ICslQueryProvider query;
+        private readonly IKustoIngestClient _ingest;
+        private readonly ICslQueryProvider _query;
         private readonly string _database;
-        private bool disposedValue;
+        private bool _disposedValue;
 
         public KustoTimelineTelemetryRepository(ILogger<KustoTimelineTelemetryRepository> logger, string queryConnectionString, string ingestConnectionString, string database)
         {
@@ -30,13 +30,13 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             if (string.IsNullOrEmpty(ingestConnectionString))
             {
                 _logger.LogDebug("No ingest connection string provided; will ignore ingest operations");
-                ingest = new NullKustoIngestClient();
+                _ingest = new NullKustoIngestClient();
             }
             else
             {
-                ingest = KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString);
+                _ingest = KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString);
             }
-            query = KustoClientFactory.CreateCslQueryProvider(queryConnectionString);
+            _query = KustoClientFactory.CreateCslQueryProvider(queryConnectionString);
             _database = database;
         }
 
@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             try
             {
-                using IDataReader result = await query.ExecuteQueryAsync(
+                using IDataReader result = await _query.ExecuteQueryAsync(
                     _database,
                     // This isn't use controlled, so I'm not worried about the Kusto injection
                     $"TimelineBuilds | where Project == '{project}' | summarize max(FinishTime)",
@@ -70,7 +70,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public async Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds)
         {
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                ingest,
+                _ingest,
                 _database,
                 "TimelineBuilds",
                 _logger,
@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public async Task WriteTimelineIssues(IEnumerable<AugmentedTimelineIssue> issues)
         {
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                ingest,
+                _ingest,
                 _database,
                 "TimelineIssues",
                 _logger,
@@ -119,7 +119,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public async Task WriteTimelineRecords(IEnumerable<AugmentedTimelineRecord> records)
         {
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                ingest,
+                _ingest,
                 _database,
                 "TimelineRecords",
                 _logger,
@@ -156,7 +156,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public async Task WriteTimelineValidationMessages(IEnumerable<(int buildId, BuildRequestValidationResult validationResult)> validationResults)
         {
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                ingest,
+                _ingest,
                 _database,
                 "TimelineIssues",
                 _logger,
@@ -176,14 +176,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
-                    ingest.Dispose();
-                    query.Dispose();
+                    _ingest.Dispose();
+                    _query.Dispose();
                 }
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
