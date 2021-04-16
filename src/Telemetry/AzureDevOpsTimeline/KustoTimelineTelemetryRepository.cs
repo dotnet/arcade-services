@@ -14,13 +14,12 @@ using System.Threading.Tasks;
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
 
-    public class KustoTimelineTelemetryRepository : ITimelineTelemetryRepository
+    public sealed class KustoTimelineTelemetryRepository : ITimelineTelemetryRepository
     {
         private readonly ILogger<KustoTimelineTelemetryRepository> _logger;
         private readonly IKustoIngestClient _ingest;
         private readonly ICslQueryProvider _query;
         private readonly string _database;
-        private bool _disposedValue;
 
         public KustoTimelineTelemetryRepository(ILogger<KustoTimelineTelemetryRepository> logger, string queryConnectionString, string ingestConnectionString, string database)
         {
@@ -174,24 +173,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 });
         }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_disposedValue)
-            {
-                if (disposing)
-                {
-                    _ingest.Dispose();
-                    _query.Dispose();
-                }
-                _disposedValue = true;
-            }
-        }
-
         public void Dispose()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            _ingest.Dispose();
+            _query.Dispose();
         }
     }
 }
