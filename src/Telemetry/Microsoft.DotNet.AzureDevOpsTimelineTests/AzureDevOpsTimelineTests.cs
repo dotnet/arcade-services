@@ -45,11 +45,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 l.AddProvider(new NUnitLogger());
             });
 
-            collection.Configure<AzureDevOpsTimeline>(options =>
-            {
-
-            });
-
             collection.AddSingleton(systemClock);
             collection.AddSingleton(timelineTelemetryRepository);
             collection.AddSingleton(azureDevOpsClient);
