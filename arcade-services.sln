@@ -189,7 +189,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.CommandLin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.SecretManager.Tests", "src\Microsoft.DncEng.SecretManager.Tests\Microsoft.DncEng.SecretManager.Tests.csproj", "{BC8A5788-58AA-4D22-8123-9F9264878A1D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.AzureDevOpsTimelineTests", "src\Telemetry\Microsoft.DotNet.AzureDevOpsTimelineTests\Microsoft.DotNet.AzureDevOpsTimelineTests.csproj", "{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.AzureDevOpsTimeline.Tests", "src\Telemetry\Microsoft.DotNet.AzureDevOpsTimelineTests\Microsoft.DotNet.AzureDevOpsTimeline.Tests.csproj", "{A8FF438E-59EF-4A93-9DBF-1970FE1368D7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
