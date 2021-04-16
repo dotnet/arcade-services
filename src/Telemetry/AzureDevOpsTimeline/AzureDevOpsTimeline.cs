@@ -104,14 +104,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             DateTimeOffset latest;
             DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(project);
 
-            if (latestCandidate == null)
+            if (latestCandidate.HasValue)
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
-                _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
+                latest = latestCandidate.Value;
             }
             else
             {
-                latest = (DateTimeOffset)latestCandidate;
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
+                _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
             _logger.LogInformation("Reading project {project}", project);
