@@ -6,6 +6,7 @@ using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -21,22 +22,22 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         private readonly ICslQueryProvider _query;
         private readonly string _database;
 
-        public KustoTimelineTelemetryRepository(ILogger<KustoTimelineTelemetryRepository> logger, string queryConnectionString, string ingestConnectionString, string database)
+        public KustoTimelineTelemetryRepository(ILogger<KustoTimelineTelemetryRepository> logger, IOptionsSnapshot<KustoTimelineTelemetryOptions> options)
         {
             _logger = logger;
 
             // removing the IngestConnectionString was a default setup in local debugging
-            if (string.IsNullOrEmpty(ingestConnectionString))
+            if (string.IsNullOrEmpty(options.Value.IngestConnectionString))
             {
                 _logger.LogDebug("No ingest connection string provided; will ignore ingest operations");
                 _ingest = new NullKustoIngestClient();
             }
             else
             {
-                _ingest = KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString);
+                _ingest = KustoIngestFactory.CreateQueuedIngestClient(options.Value.IngestConnectionString);
             }
-            _query = KustoClientFactory.CreateCslQueryProvider(queryConnectionString);
-            _database = database;
+            _query = KustoClientFactory.CreateCslQueryProvider(options.Value.QueryConnectionString);
+            _database = options.Value.Database;
         }
 
         public async Task<DateTimeOffset?> GetLatestTimelineBuild(string project)

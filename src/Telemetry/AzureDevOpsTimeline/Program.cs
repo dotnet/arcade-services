@@ -36,13 +36,16 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.AzureDevOpsProjects = c["AzureDevOpsProjects"];
                                 o.AzureDevOpsOrganization = c["AzureDevOpsOrganization"];
                                 o.AzureDevOpsUrl = c["AzureDevOpsUrl"];
-                                o.KustoQueryConnectionString = c["KustoQueryConnectionString"];
-                                o.KustoIngestConnectionString = c["KustoIngestConnectionString"];
-                                o.KustoDatabase = c["KustoDatabase"];
                                 o.ParallelRequests = c["ParallelRequests"];
                                 o.InitialDelay = c["InitialDelay"];
                                 o.Interval = c["Interval"];
                                 o.BuildBatchSize = c["BuildBatchSize"];
+                            });
+
+                            services.Configure<KustoTimelineTelemetryOptions>((o, p) =>
+                            {
+                                IConfiguration config = p.GetRequiredService<IConfiguration>();
+                                config.GetSection("KustoTimelineTelemetry").Bind(o);
                             });
 
                             services.AddSingleton<IAzureDevOpsClient>(p =>
@@ -62,17 +65,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 );
                             });
 
-                            services.AddSingleton<ITimelineTelemetryRepository>(p =>
-                            {
-                                IConfiguration c = p.GetRequiredService<IConfiguration>();
-
-                                return new KustoTimelineTelemetryRepository(
-                                    logger: p.GetService<ILogger<KustoTimelineTelemetryRepository>>(),
-                                    queryConnectionString: c["KustoQueryConnectionString"],
-                                    ingestConnectionString: c["KustoIngestConnectionString"],
-                                    database: c["KustoDatabase"]
-                                );
-                            });
+                            services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
                         });
                     
                 });
