@@ -137,13 +137,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     build => azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
                 );
 
-            // for each timeline, look for previousAttempts.timelineId timelines
-            // For each timeline, look at timeline.lastChangedOn for ingestion cutoff
-            // timeline.lastChangedOn will be before build.finishTime
-
             await Task.WhenAll(tasks.Select(s => s.Value));
 
-            // Look for retried timelines
+            // Identify additional timelines by inspecting each record for a "PreviousAttempt"
+            // object, then fetching the "timelineId" field.
             List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
 
             foreach ((Build build, Task<Timeline> timelineTask) in tasks)
@@ -170,7 +167,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
 
-            // Only get timelines happening after the cutoff
+            // Only record timelines where their "lastChangedOn" field is after the last 
+            // recorded date. Anything before has already been recorded.
             List<(Build build, Task<Timeline> timeline)> allNewTimelines = new List<(Build build, Task<Timeline> timeline)>();
             allNewTimelines.AddRange(tasks.Select(t => (t.Key, t.Value)));
             allNewTimelines.AddRange(retriedTimelineTasks
