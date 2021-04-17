@@ -247,7 +247,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             await _timelineTelemetryRepository.WriteTimelineIssues(issues);
         }
 
-        public AugmentedBuild CreateAugmentedBuild(Build build)
+        private AugmentedBuild CreateAugmentedBuild(Build build)
         {
             string targetBranch = "";
 
