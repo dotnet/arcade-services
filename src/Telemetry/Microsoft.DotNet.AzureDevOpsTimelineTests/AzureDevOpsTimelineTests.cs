@@ -105,9 +105,13 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             await testData.Controller.RunProject("public", 1000, CancellationToken.None);
 
             // Test results
-            telemetryRepository.TimelineBuilds.Should().HaveCount(1);
-            telemetryRepository.TimelineBuilds[0].Build.Should().BeSameAs(builds.Single().Key);
-            telemetryRepository.TimelineBuilds[0].TargetBranch.Should().Be("theTargetBranch");
+            telemetryRepository.TimelineBuilds.Should().SatisfyRespectively(
+                first =>
+                {
+                    first.Build.Should().BeSameAs(builds.Single().Key);
+                    first.TargetBranch.Should().Be("theTargetBranch");
+                });
+
 
             telemetryRepository.TimelineIssues.Should().BeEmpty();
 
@@ -195,12 +199,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test results
             telemetryRepository.TimelineRecords
-                .Should().HaveCount(builds.Values
-                    .SelectMany(b => b
-                        .SelectMany(b => b.Records)).Count());
-            telemetryRepository.TimelineRecords
                 .Select(r => r.Raw)
-                .Should().Contain(builds.Values
+                .Should()
+                .BeEquivalentTo(builds.Values
                     .SelectMany(list => list
                         .SelectMany(timeline => timeline.Records)));
 
@@ -294,10 +295,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                     .SelectMany(b => b.Records));
 
             telemetryRepository.TimelineRecords
-                .Should().HaveCount(expectedRecords.Count());
-            telemetryRepository.TimelineRecords
                 .Select(r => r.Raw)
-                .Should().Contain(expectedRecords);
+                .Should().BeEquivalentTo(expectedRecords);
         }
     }
 }
