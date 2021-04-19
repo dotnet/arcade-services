@@ -79,7 +79,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                     throw new InvalidOperationException($"Unexpected 'currentUserIndex' value '{currentUserIndex}'.");
             }
 
-            var newPassword = GenerateRandomPassword(40);
+            var newPassword = PasswordGenerator.GenerateRandomPassword(40);
             await masterDbConnection.OpenAsync(cancellationToken);
             if (haveFullAdmin && parameters.Permissions == "admin")
             {
@@ -162,7 +162,7 @@ ALTER ROLE db_datawriter ADD MEMBER [{nextUserId}]
             foreach (var name in loginNames)
             {
                 var command = masterDbConnection.CreateCommand();
-                var password = GenerateRandomPassword(40);
+                var password = PasswordGenerator.GenerateRandomPassword(40);
                 command.CommandText = $@"
 IF NOT EXISTS (
     select name
@@ -191,35 +191,6 @@ ALTER ROLE dbmanager ADD MEMBER [{name}];
 ";
                 await permissionsCommand.ExecuteNonQueryAsync();
             }
-        }
-
-        private string GenerateRandomPassword(int length)
-        {
-            using var rng = RandomNumberGenerator.Create();
-            var bytes = new byte[length];
-            rng.GetNonZeroBytes(bytes);
-            var result = new StringBuilder(length);
-            foreach (byte b in bytes)
-            {
-                int value = b % 62;
-                char c;
-                if (value < 26)
-                {
-                    c = (char) ('A' + value);
-                }
-                else if (value < 52)
-                {
-                    c = (char) ('a' + value - 26);
-                }
-                else
-                {
-                    c = (char) ('0' + value - 52);
-                }
-
-                result.Append(c);
-            }
-
-            return result.ToString();
         }
     }
 }
