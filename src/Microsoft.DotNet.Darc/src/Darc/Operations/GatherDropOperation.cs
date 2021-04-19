@@ -1168,7 +1168,14 @@ namespace Microsoft.DotNet.Darc.Operations
             string releaseFullTargetPath = Path.Combine(releaseFullSubPath, targetFileName);
             string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, targetFileName);
 
-            List<string> targetFilePaths = new List<string> { releaseFullTargetPath, unifiedFullTargetPath };
+            List<string> targetFilePaths = new List<string>();
+
+            if (_options.Separated)
+            {
+                targetFilePaths.Add(releaseFullTargetPath);
+            }
+
+            targetFilePaths.Add(unifiedFullTargetPath);
 
             DownloadedAsset downloadedAsset = new DownloadedAsset()
             {
@@ -1374,7 +1381,14 @@ namespace Microsoft.DotNet.Darc.Operations
             string releaseFullTargetPath = Path.Combine(releaseFullSubPath, normalizedAssetName);
             string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
 
-            List<string> targetFilePaths = new List<string> { releaseFullTargetPath, unifiedFullTargetPath };
+            List<string> targetFilePaths = new List<string>();
+            
+            if (_options.Separated)
+            {
+                targetFilePaths.Add(releaseFullTargetPath);
+            }
+            
+            targetFilePaths.Add(unifiedFullTargetPath);
 
             DownloadedAsset downloadedAsset = new DownloadedAsset()
             {
