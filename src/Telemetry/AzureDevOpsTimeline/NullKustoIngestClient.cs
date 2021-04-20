@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public class NullKustoIngestClient : IKustoIngestClient
     {
-        private static IKustoIngestionResult SuccessfulResultInstance { get; } = new AlwaysSuccessIngestionResult();
+        private static Task<IKustoIngestionResult> _successfulResultInstance = Task.FromResult<IKustoIngestionResult>(new AlwaysSuccessIngestionResult());
 
         private class AlwaysSuccessIngestionResult : IKustoIngestionResult
         {
@@ -31,17 +31,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         public Task<IKustoIngestionResult> IngestFromDataReaderAsync(IDataReader dataReader, KustoIngestionProperties ingestionProperties, DataReaderSourceOptions sourceOptions = null)
         {
-            return Task.FromResult(SuccessfulResultInstance);
+            return _successfulResultInstance;
         }
 
         public Task<IKustoIngestionResult> IngestFromStorageAsync(string uri, KustoIngestionProperties ingestionProperties, StorageSourceOptions sourceOptions = null)
         {
-            return Task.FromResult(SuccessfulResultInstance);
+            return _successfulResultInstance;
         }
 
         public Task<IKustoIngestionResult> IngestFromStreamAsync(Stream stream, KustoIngestionProperties ingestionProperties, StreamSourceOptions sourceOptions = null)
         {
-            return Task.FromResult(SuccessfulResultInstance);
+            return _successfulResultInstance;
         }
     }
 }
