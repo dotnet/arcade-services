@@ -18,6 +18,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
         private readonly List<(string project, DateTimeOffset latestTime)> _latestTimes;
 
+        public InMemoryTimelineTelemetryRepository()
+        {
+            _latestTimes = new List<(string project, DateTimeOffset latestTime)>();
+        }
+
         public InMemoryTimelineTelemetryRepository(List<(string project, DateTimeOffset latestTime)> latestTimes)
         {
             _latestTimes = latestTimes;
