@@ -798,7 +798,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Might contain invalid path chars, this is currently unhandled.
                 releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
             }
-            Directory.CreateDirectory(releaseOutputDirectory);
+
+            if (_options.Separated)
+            {
+                Directory.CreateDirectory(releaseOutputDirectory);
+            }
 
             ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
             ConcurrentBag<DownloadedAsset> extraDownloadedAssets = new ConcurrentBag<DownloadedAsset>();
@@ -854,7 +858,10 @@ namespace Microsoft.DotNet.Darc.Operations
                 AnyShippingAssets = anyShipping
             };
 
-            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
+            if (_options.Separated)
+            {
+                await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
+            }
 
             return newBuild;
         }
