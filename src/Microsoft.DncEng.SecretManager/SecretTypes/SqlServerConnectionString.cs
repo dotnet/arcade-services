@@ -79,7 +79,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                     throw new InvalidOperationException($"Unexpected 'currentUserIndex' value '{currentUserIndex}'.");
             }
 
-            var newPassword = PasswordGenerator.GenerateRandomPassword(40);
+            var newPassword = PasswordGenerator.GenerateRandomPassword(40, false);
             await masterDbConnection.OpenAsync(cancellationToken);
             if (haveFullAdmin && parameters.Permissions == "admin")
             {
@@ -162,7 +162,7 @@ ALTER ROLE db_datawriter ADD MEMBER [{nextUserId}]
             foreach (var name in loginNames)
             {
                 var command = masterDbConnection.CreateCommand();
-                var password = PasswordGenerator.GenerateRandomPassword(40);
+                var password = PasswordGenerator.GenerateRandomPassword(40, false);
                 command.CommandText = $@"
 IF NOT EXISTS (
     select name

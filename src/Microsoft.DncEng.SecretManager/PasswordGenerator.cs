@@ -3,7 +3,7 @@ using System.Text;
 
 public static class PasswordGenerator
 {
-    public static string GenerateRandomPassword(int length)
+    public static string GenerateRandomPassword(int length, bool useSpecialCharacters)
     {
         using var rng = RandomNumberGenerator.Create();
         var bytes = new byte[length];
@@ -11,19 +11,27 @@ public static class PasswordGenerator
         var result = new StringBuilder(length);
         foreach (byte b in bytes)
         {
-            int value = b % 62;
             char c;
-            if (value < 26)
+            if (useSpecialCharacters)
             {
-                c = (char)('A' + value);
-            }
-            else if (value < 52)
-            {
-                c = (char)('a' + value - 26);
+                int value = b % 94;
+                c = (char)('!' + value);
             }
             else
             {
-                c = (char)('0' + value - 52);
+                int value = b % 62;
+                if (value < 26)
+                {
+                    c = (char)('A' + value);
+                }
+                else if (value < 52)
+                {
+                    c = (char)('a' + value - 26);
+                }
+                else
+                {
+                    c = (char)('0' + value - 52);
+                }
             }
 
             result.Append(c);

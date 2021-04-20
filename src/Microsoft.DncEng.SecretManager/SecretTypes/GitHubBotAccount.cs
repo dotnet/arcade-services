@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
@@ -56,7 +54,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         private async Task<List<SecretData>> UpdateAccount(string password, Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            _console.WriteLine($"Please login to GitHub account {parameters.Name} using password {password}");
+            _console.WriteLine($"Please login to GitHub account {parameters.Name} using password: {password}");
             var secrets = new List<SecretData>(3);
             var secret = await context.GetSecretValue(context.SecretName + SecretSuffix);
             var seed = ConvertFromBase32(secret);
@@ -66,8 +64,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             var rollPassword = await _console.ConfirmAsync("Do you want to roll bot's password (yes/no): ");
             if (rollPassword)
             {
-                var newPassword = PasswordGenerator.GenerateRandomPassword(15);
-                var customPassword = await _console.PromptAsync($"Press enter to use generated password {password} or enter a new one: ");
+                var newPassword = PasswordGenerator.GenerateRandomPassword(15, true);
+                var customPassword = await _console.PromptAsync($"Enter a new password or press enter to use a generated password: {newPassword}");
                 if (!string.IsNullOrWhiteSpace(customPassword))
                     newPassword = customPassword.Trim();
 
@@ -96,7 +94,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             if (rollSecret)
             {
-                var newSecret = await _console.PromptAsync("Enter the new sescret: ");
+                var newSecret = await _console.PromptAsync("Enter the new secret: ");
                 seed = ConvertFromBase32(newSecret);
                 await ShowOneTimePassword(seed);
                 secrets.Add(new SecretData(newSecret, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue));
@@ -113,8 +111,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             _console.WriteLine($"Please sign up for a new GitHub account {parameters.Name}.");
 
-            var password = PasswordGenerator.GenerateRandomPassword(15);
-            var customPassword = await _console.PromptAsync($"Press enter to use generated password {password} or enter a new one: ");
+            var password = PasswordGenerator.GenerateRandomPassword(15, true);
+            var customPassword = await _console.PromptAsync($"Enter a new password or press enter to use a generated password: {password}");
             if (!string.IsNullOrWhiteSpace(customPassword))
                 password = customPassword.Trim();
 
@@ -143,14 +141,12 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         }
 
         private static string GenerateOneTimePassword(DateTimeOffset timestamp, byte[] seed)
-        {
-            DateTimeOffset dateTimeOffset = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-            TimeSpan timeSpan = TimeSpan.FromSeconds(30.0);
-            byte[] bytes = BitConverter.GetBytes((long)((timestamp - dateTimeOffset).TotalMilliseconds / timeSpan.TotalMilliseconds));
-            Array.Reverse((Array)bytes);
+        {   
+            byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeMilliseconds() / 30000);
+            Array.Reverse((Array)timestampBy30sBytes);
             byte[] hash;
-            using (HMACSHA1 hmacshA1 = new HMACSHA1(seed))
-                hash = hmacshA1.ComputeHash(bytes);
+            using (HMACSHA1 hmacsha1 = new HMACSHA1(seed))
+                hash = hmacsha1.ComputeHash(timestampBy30sBytes);
             Array.Reverse((Array)hash);
             int num = (int)hash[0] & 15;
             return ((BitConverter.ToUInt32(hash, hash.Length - num - 4) & (uint)int.MaxValue) % 1000000U).ToString("D6");
@@ -199,7 +195,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             c = char.ToUpperInvariant(c);
             if (c >= 'A' && c <= 'Z')
                 return (byte)((uint)c - 65U);
-            return c >= '2' && c <= '9' ? (byte)((int)c - 50 + 26) : (byte)0;
+            return c >= '2' && c <= '7' ? (byte)((int)c - 50 + 26) : (byte)0;
         }
     }
 }
