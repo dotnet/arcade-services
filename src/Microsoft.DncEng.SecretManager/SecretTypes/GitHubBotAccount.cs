@@ -142,7 +142,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         private static string GenerateOneTimePassword(DateTimeOffset timestamp, byte[] seed)
         {   
-            byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeMilliseconds() / 30000);
+            byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeSeconds() / 30);
             Array.Reverse((Array)timestampBy30sBytes);
             byte[] hash;
             using (HMACSHA1 hmacsha1 = new HMACSHA1(seed))
