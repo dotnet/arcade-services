@@ -12,28 +12,33 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
     /// </summary>
     public class MockAzureClient : IAzureDevOpsClient
     {
-        private readonly Dictionary<Build, List<Timeline>> _builds;
+        public IDictionary<Build, List<Timeline>> Builds { get; }
+
+        public MockAzureClient()
+        {
+            Builds = new Dictionary<Build, List<Timeline>>();
+        }
 
         public MockAzureClient(Dictionary<Build, List<Timeline>> builds)
         {
-            _builds = builds;
+            Builds = builds;
         }
 
         public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, int? limit = null)
         {
-            return Task.FromResult(_builds.Keys.ToArray());
+            return Task.FromResult(Builds.Keys.ToArray());
         }
 
         public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_builds
+            return Task.FromResult(Builds
                 .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
                 .Value.OrderByDescending(timeline => timeline.LastChangedOn).First());
         }
 
         public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_builds
+            return Task.FromResult(Builds
                 .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
                 .Value.Single(timeline => timeline.Id == timelineId));
         }
