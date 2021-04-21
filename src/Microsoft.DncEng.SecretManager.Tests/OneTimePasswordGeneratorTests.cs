@@ -16,12 +16,12 @@ namespace Microsoft.DncEng.SecretManager.Tests
         {
             var passwordGenerator = new OneTimePasswordGenerator("MFRGGZDFMZTWQ2LK");
 
-            var initialTimestamp = new DateTime(2021, 3, 1, 13, 15, 0);
+            var initialTimestamp = new DateTime(2021, 3, 1, 13, 15, 0, DateTimeKind.Utc);
             var intialPassword = passwordGenerator.Generate(initialTimestamp);
             var passwordAfter29s = passwordGenerator.Generate(initialTimestamp.AddSeconds(29));
 
-            Assert.AreEqual("993519", intialPassword);
-            Assert.AreEqual("993519", passwordAfter29s);
+            Assert.AreEqual("650100", intialPassword);
+            Assert.AreEqual("650100", passwordAfter29s);
         }
 
         [Test]
@@ -29,12 +29,12 @@ namespace Microsoft.DncEng.SecretManager.Tests
         {
             var passwordGenerator = new OneTimePasswordGenerator("MFRGGZDFMZTWQ2LK");
 
-            var initialTimestamp = new DateTime(2021, 3, 1, 13, 15, 0);
+            var initialTimestamp = new DateTime(2021, 3, 1, 13, 15, 0, DateTimeKind.Utc);
             var intialPassword = passwordGenerator.Generate(initialTimestamp);
             var passwordAfter30s = passwordGenerator.Generate(initialTimestamp.AddSeconds(30));
 
-            Assert.AreEqual("993519", intialPassword);
-            Assert.AreEqual("235081", passwordAfter30s);
+            Assert.AreEqual("650100", intialPassword);
+            Assert.AreEqual("019584", passwordAfter30s);
         }
     }
 }
