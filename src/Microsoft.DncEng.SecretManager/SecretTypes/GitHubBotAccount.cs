@@ -61,9 +61,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             _console.WriteLine($"Please login to GitHub account {parameters.Name} using password: {password}");
             var secrets = new List<SecretData>(3);
             var secret = await context.GetSecretValue(context.SecretName + SecretSuffix);
-            var seed = ConvertFromBase32(secret);
 
-            await ShowOneTimePassword(seed);
+            await ShowOneTimePassword(secret);
 
             var rollPassword = await _console.ConfirmAsync("Do you want to roll bot's password (yes/no): ");
             if (rollPassword)
@@ -149,8 +148,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 secret = secret.Trim();
                 if (IsSecretValid(secret))
                 {
-                    var seed = ConvertFromBase32(secret);
-                    await ShowOneTimePassword(seed);
+                    await ShowOneTimePassword(secret);
                     return secret;
                 }
 
@@ -170,6 +168,16 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             return customPassword.Trim();
         }
+        private async Task ShowOneTimePassword(string secret)
+        {
+            var passwordGenerator = new OneTimePasswordGenerator(secret);
+            var generateTotp = true;
+            while (generateTotp)
+            {
+                var oneTimePassword = passwordGenerator.Generate(_clock.UtcNow);
+                generateTotp = await _console.ConfirmAsync($"Your one time password: {oneTimePassword}. Enter yes to generate another one: ");
+            }
+        }
 
         private bool IsSecretValid(string secret)
         {
@@ -185,74 +193,6 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 return false;
 
             return _recoveryCodesRegex.IsMatch(codes);
-        }
-
-        private async Task ShowOneTimePassword(byte[] seed)
-        {
-            var generateTotp = true;
-            while (generateTotp)
-            {
-                var oneTimePassword = GenerateOneTimePassword(_clock.UtcNow, seed);
-                generateTotp = await _console.ConfirmAsync($"Your one time password: {oneTimePassword}. Enter yes to generate another one: ");
-            }
-        }
-
-        private static string GenerateOneTimePassword(DateTimeOffset timestamp, byte[] seed)
-        {
-            byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeSeconds() / 30);
-            Array.Reverse((Array)timestampBy30sBytes);
-            byte[] hash;
-            using (HMACSHA1 hmacsha1 = new HMACSHA1(seed))
-                hash = hmacsha1.ComputeHash(timestampBy30sBytes);
-            Array.Reverse((Array)hash);
-            int num = (int)hash[0] & 15;
-            return ((BitConverter.ToUInt32(hash, hash.Length - num - 4) & (uint)int.MaxValue) % 1000000U).ToString("D6");
-        }
-
-        private static byte[] ConvertFromBase32(string seed)
-        {
-            List<byte> byteList = new List<byte>(200);
-            byte num1 = 0;
-            byte num2 = 0;
-            for (int index = 0; index < seed.Length; ++index)
-            {
-                byte num3 = (byte)(8U - (uint)num1);
-                char c = seed[index];
-                if (c != '=')
-                {
-                    byte num4 = DecodeBase32Char(c);
-                    if (num3 > (byte)5)
-                    {
-                        num2 = (byte)((uint)num2 << 5 | (uint)num4);
-                        num1 += (byte)5;
-                    }
-                    else
-                    {
-                        num1 = (byte)(5U - (uint)num3);
-                        byte num5 = (byte)((uint)num4 >> (int)num1);
-                        byte num6 = (byte)((uint)(byte)((uint)num2 << (int)num3) | (uint)num5);
-                        num2 = (byte)((uint)num4 & (uint)((int)byte.MaxValue >> 8 - (int)num1));
-                        byteList.Add(num6);
-                    }
-                }
-                else
-                    break;
-            }
-            if (num1 != (byte)0)
-            {
-                byte num3 = (byte)(8U - (uint)num1);
-                byte num4 = (byte)((uint)num2 << (int)num3);
-                byteList.Add(num4);
-            }
-            return byteList.ToArray();
-        }
-
-        private static byte DecodeBase32Char(char c)
-        {
-            c = char.ToUpperInvariant(c);
-            if (c >= 'A' && c <= 'Z')
-                return (byte)((uint)c - 65U);
-            return c >= '2' && c <= '7' ? (byte)((int)c - 50 + 26) : (byte)0;
         }
     }
 }
