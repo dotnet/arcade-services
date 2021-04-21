@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
@@ -13,10 +15,12 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         const string PasswordSuffix = "-password";
         const string SecretSuffix = "-secret";
         const string RecoveryCodesSuffix = "-recovery-codes";
+        const int InputRetries = 3;
 
         private readonly List<string> _suffixes = new List<string> { PasswordSuffix, RecoveryCodesSuffix, SecretSuffix };
         private readonly ISystemClock _clock;
         private readonly IConsole _console;
+        private readonly Regex _recoveryCodesRegex = new Regex(@"^([a-fA-F0-9]{5}-?[a-fA-F0-9]{5}\s+)*[a-fA-F0-9]{5}-?[a-fA-F0-9]{5}$");
 
         public class Parameters
         {
@@ -64,11 +68,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             var rollPassword = await _console.ConfirmAsync("Do you want to roll bot's password (yes/no): ");
             if (rollPassword)
             {
-                var newPassword = PasswordGenerator.GenerateRandomPassword(15, true);
-                var customPassword = await _console.PromptAsync($"Enter a new password or press enter to use a generated password: {newPassword}");
-                if (!string.IsNullOrWhiteSpace(customPassword))
-                    newPassword = customPassword.Trim();
-
+                var newPassword = await AskUserForPassword();
                 secrets.Add(new SecretData(newPassword, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue));
             }
             else
@@ -77,13 +77,16 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
 
             bool rollSecret = await _console.ConfirmAsync("Do you want to roll bot's secret (yes/no): "); ;
+
             bool rollRecoveryCodes = true;
             if (!rollSecret)
                 rollRecoveryCodes = await _console.ConfirmAsync("Do you want to roll recovery codes (yes/no): ");
+            else
+                _console.WriteLine("Be aware that roll of the secret also rolls recovery codes.");
 
             if (rollRecoveryCodes)
             {
-                var newRecoveryCodes = await _console.PromptAsync("Enter new recovery codes: ");
+                var newRecoveryCodes = await AskUserForRecoveryCodes();
                 secrets.Add(new SecretData(newRecoveryCodes, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue));
             }
             else
@@ -94,9 +97,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             if (rollSecret)
             {
-                var newSecret = await _console.PromptAsync("Enter the new secret: ");
-                seed = ConvertFromBase32(newSecret);
-                await ShowOneTimePassword(seed);
+                var newSecret = await AskUserForSecretAndShowConfirmationCode();
                 secrets.Add(new SecretData(newSecret, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue));
             }
             else
@@ -111,23 +112,79 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             _console.WriteLine($"Please sign up for a new GitHub account {parameters.Name}.");
 
-            var password = PasswordGenerator.GenerateRandomPassword(15, true);
-            var customPassword = await _console.PromptAsync($"Enter a new password or press enter to use a generated password: {password}");
-            if (!string.IsNullOrWhiteSpace(customPassword))
-                password = customPassword.Trim();
+            var password = await AskUserForPassword();
 
             _console.WriteLine("Enable two factor authentification using Authenticator app.");
 
-            var recoveryCodes = await _console.PromptAsync("Enter recovery codes: ");
-            var secret = await _console.PromptAsync("Enter secret: ");
-            var seed = ConvertFromBase32(secret);
-
-            await ShowOneTimePassword(seed);
+            var recoveryCodes = await AskUserForRecoveryCodes();
+            var secret = await AskUserForSecretAndShowConfirmationCode();
 
             return new List<SecretData> {
                 new SecretData(password, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),
                 new SecretData(recoveryCodes, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),
                 new SecretData(secret, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue)};
+        }
+
+        private async Task<string> AskUserForRecoveryCodes()
+        {
+            int retries = InputRetries;
+            while (retries-- > 0)
+            {
+                string recoveryCodes = await _console.PromptAsync("Enter recovery codes: ");
+                if (AreRecoveryCodesValid(recoveryCodes))
+                    return recoveryCodes;
+
+                _console.WriteLine("Recovery codes weren't entered in the expected format. It should be a list of 10 hexadecimal digits with optional dash in the middle, separated by space.");
+            }
+
+            throw new InvalidOperationException($"Recovery codes weren't entered correctly in {InputRetries} attempts.");
+        }
+
+        private async Task<string> AskUserForSecretAndShowConfirmationCode()
+        {
+            int retries = InputRetries;
+            while (retries-- > 0)
+            {
+                string secret = await _console.PromptAsync("Enter secret: ");
+                secret = secret.Trim();
+                if (IsSecretValid(secret))
+                {
+                    var seed = ConvertFromBase32(secret);
+                    await ShowOneTimePassword(seed);
+                    return secret;
+                }
+
+                _console.WriteLine("Secret wasn't entered in the expected format. Allowed chars are A-Z and digits 2-7.");
+            }
+
+            throw new InvalidOperationException($"Secret wasn't entered correctly in {InputRetries} attempts.");
+        }
+
+
+        private async Task<string> AskUserForPassword()
+        {
+            var password = PasswordGenerator.GenerateRandomPassword(15, true);
+            var customPassword = await _console.PromptAsync($"Enter a new password or press enter to use a generated password {password} : ");
+            if (string.IsNullOrWhiteSpace(customPassword))
+                return password;
+
+            return customPassword.Trim();
+        }
+
+        private bool IsSecretValid(string secret)
+        {
+            if (string.IsNullOrWhiteSpace(secret))
+                return false;
+
+            return secret.All(l => (l >= 'A' && l <= 'Z') || (l >= '2' && l <= '7'));
+        }
+
+        private bool AreRecoveryCodesValid(string codes)
+        {
+            if (codes == null)
+                return false;
+
+            return _recoveryCodesRegex.IsMatch(codes);
         }
 
         private async Task ShowOneTimePassword(byte[] seed)
@@ -141,7 +198,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         }
 
         private static string GenerateOneTimePassword(DateTimeOffset timestamp, byte[] seed)
-        {   
+        {
             byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeSeconds() / 30);
             Array.Reverse((Array)timestampBy30sBytes);
             byte[] hash;
