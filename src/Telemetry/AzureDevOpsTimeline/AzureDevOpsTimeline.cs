@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         private readonly ILogger<AzureDevOpsTimeline> _logger;
         private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
         private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
-        private readonly IAzureDevOpsClient azureServer;
+        private readonly IAzureDevOpsClient _azureServer;
         private readonly ISystemClock _systemClock;
 
         public AzureDevOpsTimeline(
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger = logger;
             _options = options;
             _timelineTelemetryRepository = timelineTelemetryRepository;
-            azureServer = azureDevopsClient;
+            _azureServer = azureDevopsClient;
             _systemClock = systemClock;
         }
 
@@ -115,7 +115,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
 
             _logger.LogInformation("Reading project {project}", project);
-            Build[] builds = await GetBuildsAsync(azureServer, project, latest, buildBatchSize, cancellationToken);
+            Build[] builds = await GetBuildsAsync(_azureServer, project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {builds} builds...", builds.Length);
 
             if (builds.Length == 0)
@@ -134,7 +134,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             Dictionary<Build, Task<Timeline>> tasks = builds
                 .ToDictionary(
                     build => build,
-                    build => azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
+                    build => _azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
                 );
 
             await Task.WhenAll(tasks.Select(s => s.Value));
@@ -162,7 +162,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 retriedTimelineTasks.AddRange(
                     additionalTimelineIds.Select(
-                        timelineId => (build, azureServer.GetTimelineAsync(project, build.Id, timelineId, cancellationToken))));
+                        timelineId => (build, _azureServer.GetTimelineAsync(project, build.Id, timelineId, cancellationToken))));
             }
 
             await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
