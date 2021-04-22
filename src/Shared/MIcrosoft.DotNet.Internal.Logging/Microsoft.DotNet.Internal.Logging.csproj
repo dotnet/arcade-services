@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
     <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Text.Encodings.Web" />
   </ItemGroup>
 
 </Project>

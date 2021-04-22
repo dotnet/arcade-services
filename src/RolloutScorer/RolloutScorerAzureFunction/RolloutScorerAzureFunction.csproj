@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" />
+    <PackageReference Include="System.Text.Encodings.Web" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />

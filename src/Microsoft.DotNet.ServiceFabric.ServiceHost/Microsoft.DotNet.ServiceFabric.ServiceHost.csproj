@@ -25,6 +25,7 @@
     <PackageReference Include="Microsoft.ServiceFabric.Data" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" />
     <PackageReference Include="Quartz" />
+    <PackageReference Include="System.Text.Encodings.Web" />
   </ItemGroup>
 
   <ItemGroup>
