@@ -156,7 +156,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 IEnumerable<string> additionalTimelineIds = timeline.Records
                     .Where(record => record.PreviousAttempts != null)
                     .SelectMany(record => record.PreviousAttempts)
-                    .Where(attempt => attempt != null)
                     .Select(attempt => attempt.TimelineId)
                     .Distinct();
 
