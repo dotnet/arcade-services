@@ -128,7 +128,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 });
         #endregion
 
-        #region IndividualAssets
+        #region Individual Assets
         private static readonly Package package1 = new Package()
         {
             Id = "Microsoft.Cci.Extensions",
@@ -193,6 +193,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                         {
                             CertificateName = "ThisIsACert",
                              Include = "ALibrary.dll"
+                        },
+                        new FileSignInfo()
+                        {
+                            CertificateName = "ThisIsACertWithPKTAndTFM",
+                            Include = "ASecondLibrary.dll",
+                            PublicKeyToken = "4258675309abcdef",
+                            TargetFramework = ".NETFramework,Version=v2.0"
                         }
                     },
 
@@ -234,7 +241,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new FileSignInfo()
                     {
                         CertificateName = "AnotherCert",
-                            Include = "AnotherLibrary.dll"
+                        Include = "AnotherLibrary.dll"
+                    },
+                    new FileSignInfo()
+                    {
+                        CertificateName = "AnotherCertWithPKTAndTFM",
+                        Include = "YetAnotherLibrary.dll",
+                        PublicKeyToken = "4258675309abcdef",
+                        TargetFramework = ".NETFramework,Version=v1.3"
                     }
                 },
 

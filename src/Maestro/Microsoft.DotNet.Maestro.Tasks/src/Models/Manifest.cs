@@ -150,6 +150,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "CertificateName")]
         public string CertificateName { get; set; }
+
+        [XmlAttribute(AttributeName = "PublicKeyToken")]
+        public string PublicKeyToken { get; set; }
+
+        [XmlAttribute(AttributeName = "TargetFramework")]
+        public string TargetFramework { get; set; }
     }
 
     [XmlRoot(ElementName = "CertificatesSignInfo")]

@@ -299,7 +299,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
                 using FileStream stream = new FileStream(manifestPath, FileMode.Open);
-                Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
+                Manifest manifest = (Manifest) xmlSerializer.Deserialize(stream);
                 parsedManifests.Add(manifest);
             }
 
@@ -600,12 +600,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         /// <summary>
-        /// Get repo name from the AzdoRepo url
+        /// Get repo name from the Azure DevOps repo url
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <returns></returns>
         public string GetGithubRepoName(string repoUrl)
         {
+            // In case the URL comes in ending with a '/', prevent an indexing exception
+            repoUrl = repoUrl.TrimEnd('/');
+
             string[] segments = repoUrl.Split('/');
             string repoName = segments[segments.Length - 1].ToLower();
 
@@ -623,16 +626,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         /// <summary>
-        /// Creates an AssetData object for the merged manifest so it can be injected
-        /// in itself
+        /// Creates an AssetData object for the merged manifest so it can be injected into itself
         /// </summary>
         /// <param name="assets">List of assets extracted from the merged manifest</param>
         /// <param name="location">Initial location for the merged manifest entry</param>
         /// <param name="manifestFileName">Merged manifest file name</param>
-        /// <returns>An AssetData with data about the merge manifest</returns>
+        /// <returns>An AssetData with data about the merged manifest</returns>
         internal AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
         {
-            string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/','-'); 
+            string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
 
             if (string.IsNullOrEmpty(AssetVersion))
             {
@@ -671,7 +673,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild,
-                            PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
+                            PublishingVersion = (PublishingInfraVersion) manifestBuildData.PublishingVersion,
                             IsReleaseOnlyPackageVersion = bool.Parse(manifestBuildData.IsReleaseOnlyPackageVersion)
 
                         });
@@ -716,75 +718,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             if (finalSigningInfo != null)
             {
-                buildModelXml.Add(SigningInfoToXml(finalSigningInfo));
+                buildModelXml.Add(XmlSerializationHelper.SigningInfoToXml(finalSigningInfo));
             }
 
             File.WriteAllText(mergedManifestPath, buildModelXml.ToString());
 
             Log.LogMessage(MessageImportance.High,
                         $"##vso[artifact.upload containerfolder=BlobArtifacts;artifactname=BlobArtifacts]{mergedManifestPath}");
-        }
-
-        private XElement SigningInfoToXml(SigningInformation signingInformation)
-        {
-            List<XElement> signingMetadata = new List<XElement>();
-
-            foreach (FileExtensionSignInfo fileExtensionSignInfo in signingInformation.FileExtensionSignInfos)
-            {
-                signingMetadata.Add(new XElement(
-                    nameof(FileExtensionSignInfo),
-                    new XAttribute[]
-                    {
-                        new XAttribute(nameof(fileExtensionSignInfo.Include), fileExtensionSignInfo.Include),
-                        new XAttribute(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
-                    }));
-            }
-
-            foreach (FileSignInfo fileSignInfo in signingInformation.FileSignInfos)
-            {
-                signingMetadata.Add(new XElement(
-                    nameof(FileSignInfo),
-                    new XAttribute[]
-                    {
-                        new XAttribute(nameof(fileSignInfo.Include), fileSignInfo.Include),
-                        new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
-                    }));
-            }
-
-            foreach (CertificatesSignInfo certificatesSignInfo in signingInformation.CertificatesSignInfo)
-            {
-                signingMetadata.Add(new XElement(
-                    nameof(CertificatesSignInfo),
-                    new XAttribute[]
-                    {
-                        new XAttribute(nameof(certificatesSignInfo.Include), certificatesSignInfo.Include),
-                        new XAttribute(nameof(certificatesSignInfo.DualSigningAllowed), certificatesSignInfo.DualSigningAllowed)
-                    }));
-            }
-
-            foreach (ItemsToSign itemsToSign in signingInformation.ItemsToSign)
-            {
-                signingMetadata.Add(new XElement(
-                    nameof(ItemsToSign),
-                    new XAttribute[]
-                    {
-                        new XAttribute(nameof(itemsToSign.Include), itemsToSign.Include)
-                    }));
-            }
-
-            foreach (StrongNameSignInfo strongNameSignInfo in signingInformation.StrongNameSignInfos)
-            {
-                signingMetadata.Add(new XElement(
-                    nameof(StrongNameSignInfo),
-                    new XAttribute[]
-                    {
-                        new XAttribute(nameof(strongNameSignInfo.Include), strongNameSignInfo.Include),
-                        new XAttribute(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
-                        new XAttribute(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
-                    }));
-            }
-
-            return new XElement(nameof(SigningInformation), signingMetadata);
         }
     }
 }
