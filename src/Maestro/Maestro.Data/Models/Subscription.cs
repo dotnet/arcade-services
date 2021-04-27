@@ -76,7 +76,10 @@ namespace Maestro.Data.Models
         }
 
         public int? LastAppliedBuildId { get; set; }
+
         public Build LastAppliedBuild { get; set; }
+
+        public string PullRequestFailureNotificationTags { get; set; }
     }
 
     public class SubscriptionUpdate

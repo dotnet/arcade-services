@@ -2,20 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Data;
+using Maestro.Web.Api.v2020_02_20.Models;
+using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Maestro.Data;
-using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.ServiceFabric.Actors;
-using Maestro.Web.Api.v2020_02_20.Models;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers
 {
@@ -26,14 +25,19 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     [ApiVersion("2020-02-20")]
     public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsController
     {
+        public const string RequiredOrgForSubscriptionNotification = "microsoft";
+
         private readonly BuildAssetRegistryContext _context;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
-            IBackgroundQueue queue)
+            IBackgroundQueue queue,
+            IGitHubClientFactory gitHubClientFactory)
             : base(context, queue)
         {
             _context = context;
+            _gitHubClientFactory = gitHubClientFactory;
         }
 
         /// <summary>
@@ -115,6 +119,12 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return await TriggerSubscriptionCore(id, buildId);
         }
 
+        [ApiRemoved]
+        public override sealed Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         ///   Edit an existing <see cref="Subscription"/>
         /// </summary>
@@ -123,9 +133,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [HttpPatch("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully updated")]
         [ValidateModelState]
-        public override async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+        public async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
         {
-            Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
+            Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id).Include(sub => sub.Channel)
                 .FirstOrDefaultAsync();
 
             if (subscription == null)
@@ -144,6 +154,17 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             if (update.Policy != null)
             {
                 subscription.PolicyObject = update.Policy.ToDb();
+                doUpdate = true;
+            }
+
+            if (update.PullRequestFailureNotificationTags != null)
+            {
+                if (!await AllNotificationTagsValid(update.PullRequestFailureNotificationTags))
+                {
+                    return BadRequest(new ApiError("Invalid value(s) provided in Pull Request Failure Notification Tags; is everyone listed publicly a member of the Microsoft github org?"));
+                }
+
+                subscription.PullRequestFailureNotificationTags = update.PullRequestFailureNotificationTags;
                 doUpdate = true;
             }
 
@@ -192,6 +213,40 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         }
 
         /// <summary>
+        ///  Subscriptions support notifying GitHub tags when non-batched dependency flow PRs fail checks.
+        ///  Before inserting them into the database, we'll make sure they're either not a user's login or
+        ///  that user is publicly a member of the Microsoft organization so we can store their login.
+        /// </summary>
+        /// <param name="pullRequestFailureNotificationTags"></param>
+        /// <returns></returns>
+        private async Task<bool> AllNotificationTagsValid(string pullRequestFailureNotificationTags)
+        {
+            string[] allTags = pullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+            // We'll only be checking public membership in the Microsoft org, so no token needed
+            var client = _gitHubClientFactory.CreateGitHubClient(string.Empty);
+            bool success = true;
+
+            foreach (string tagToNotify in allTags)
+            {
+                // remove @ if it's there
+                string tag = tagToNotify.TrimStart('@');
+
+                try
+                {
+                    IReadOnlyList<Octokit.Organization> orgList = await client.Organization.GetAllForUser(tag);
+                    success &= orgList.Any(o => o.Login?.Equals(RequiredOrgForSubscriptionNotification, StringComparison.InvariantCultureIgnoreCase) == true);
+                }
+                catch (Octokit.NotFoundException)
+                {
+                    // Non-existent user: Either a typo, or a group (we don't have the admin privilege to find out, so just allow it)
+                }
+            }
+
+            return success;
+        }
+
+        /// <summary>
         ///   Delete an existing <see cref="Subscription"/>
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to delete</param>
@@ -222,6 +277,12 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return Ok(new Subscription(subscription));
         }
 
+        [ApiRemoved]
+        public override Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         ///   Creates a new <see cref="Subscription"/>
         /// </summary>
@@ -229,7 +290,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
         [ValidateModelState]
-        public override async Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
+        public async Task<IActionResult> Create([FromBody, Required] SubscriptionData subscription)
         {
             Data.Models.Channel channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
                 .FirstOrDefaultAsync();
@@ -292,6 +353,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                             {
                                 $"The subscription '{equivalentSubscription.Id}' already performs the same update."
                             }));
+            }
+
+            if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags ))
+            {
+                if (!await AllNotificationTagsValid(subscriptionModel.PullRequestFailureNotificationTags))
+                {
+                    return BadRequest(new ApiError("Invalid value(s) provided in Pull Request Failure Notification Tags; is everyone listed publicly a member of the Microsoft github org?"));
+                }
             }
 
             await _context.Subscriptions.AddAsync(subscriptionModel);

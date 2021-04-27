@@ -16,10 +16,14 @@ namespace Microsoft.DotNet.GitHub.Authentication
 
         public IGitHubClient CreateGitHubClient(string token)
         {
-            return new GitHubClient(Options.ProductHeader)
+            var client = new GitHubClient(Options.ProductHeader);
+
+            if (!string.IsNullOrEmpty(token))
             {
-                Credentials = new Credentials(token),
-            };
+                client.Credentials = new Credentials(token);
+            }
+
+            return client;
         }
     }
 }
