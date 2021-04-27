@@ -15,7 +15,6 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         const string PasswordSuffix = "-password";
         const string SecretSuffix = "-secret";
         const string RecoveryCodesSuffix = "-recovery-codes";
-        const int InputRetries = 3;
 
         private readonly List<string> _suffixes = new List<string> { PasswordSuffix, RecoveryCodesSuffix, SecretSuffix };
         private readonly ISystemClock _clock;
@@ -56,13 +55,26 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
         }
 
+        public static async Task ShowLoginInformation(RotationContext context, IConsole console, ISystemClock clock, string secretName, string accountName)
+        {
+            var password = await context.GetSecretValue(secretName + PasswordSuffix);
+            var secret = await context.GetSecretValue(secretName + SecretSuffix);
+
+            await ShowLoginInformation(console, clock, accountName, password, secret);
+        }
+
+        private static async Task ShowLoginInformation(IConsole console, ISystemClock clock, string accountName, string password, string secret)
+        {
+            console.WriteLine($"Please login to GitHub account {accountName} using password: {password}");
+            await ShowOneTimePassword(console, clock, secret);
+        }
+
         private async Task<List<SecretData>> UpdateAccount(string password, Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            _console.WriteLine($"Please login to GitHub account {parameters.Name} using password: {password}");
             var secrets = new List<SecretData>(3);
             var secret = await context.GetSecretValue(context.SecretName + SecretSuffix);
 
-            await ShowOneTimePassword(secret);
+            await ShowLoginInformation(_console, _clock, parameters.Name, secret, password);
 
             var rollPassword = await _console.ConfirmAsync("Do you want to roll bot's password (yes/no): ");
             if (rollPassword)
@@ -126,38 +138,20 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         private async Task<string> AskUserForRecoveryCodes()
         {
-            int retries = InputRetries;
-            while (retries-- > 0)
-            {
-                string recoveryCodes = await _console.PromptAsync("Enter recovery codes: ");
-                if (AreRecoveryCodesValid(recoveryCodes))
-                    return recoveryCodes;
-
-                _console.WriteLine("Recovery codes weren't entered in the expected format. It should be a list of 10 hexadecimal digits with optional dash in the middle, separated by space.");
-            }
-
-            throw new InvalidOperationException($"Recovery codes weren't entered correctly in {InputRetries} attempts.");
+            return await _console.AskUser("recovery codes",
+                "It should be a list of 10 hexadecimal digits with optional dash in the middle, separated by space.",
+                l => l != null && _recoveryCodesRegex.IsMatch(l));
         }
 
         private async Task<string> AskUserForSecretAndShowConfirmationCode()
         {
-            int retries = InputRetries;
-            while (retries-- > 0)
-            {
-                string secret = await _console.PromptAsync("Enter secret: ");
-                secret = secret.Trim();
-                if (IsSecretValid(secret))
-                {
-                    await ShowOneTimePassword(secret);
-                    return secret;
-                }
+            string secret = await _console.AskUser("secret",
+                "Allowed chars are A-Z and digits 2-7.",
+                l => !string.IsNullOrWhiteSpace(l) && l.All(l => (l >= 'A' && l <= 'Z') || (l >= '2' && l <= '7')));
 
-                _console.WriteLine("Secret wasn't entered in the expected format. Allowed chars are A-Z and digits 2-7.");
-            }
-
-            throw new InvalidOperationException($"Secret wasn't entered correctly in {InputRetries} attempts.");
+            await ShowOneTimePassword(_console, _clock, secret);
+            return secret;
         }
-
 
         private async Task<string> AskUserForPassword()
         {
@@ -168,31 +162,16 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             return customPassword.Trim();
         }
-        private async Task ShowOneTimePassword(string secret)
+
+        private static async Task ShowOneTimePassword(IConsole console, ISystemClock clock, string secret)
         {
             var passwordGenerator = new OneTimePasswordGenerator(secret);
             var generateTotp = true;
             while (generateTotp)
             {
-                var oneTimePassword = passwordGenerator.Generate(_clock.UtcNow);
-                generateTotp = await _console.ConfirmAsync($"Your one time password: {oneTimePassword}. Enter yes to generate another one: ");
+                var oneTimePassword = passwordGenerator.Generate(clock.UtcNow);
+                generateTotp = await console.ConfirmAsync($"Your one time password: {oneTimePassword}. Enter yes to generate another one: ");
             }
-        }
-
-        private bool IsSecretValid(string secret)
-        {
-            if (string.IsNullOrWhiteSpace(secret))
-                return false;
-
-            return secret.All(l => (l >= 'A' && l <= 'Z') || (l >= '2' && l <= '7'));
-        }
-
-        private bool AreRecoveryCodesValid(string codes)
-        {
-            if (codes == null)
-                return false;
-
-            return _recoveryCodesRegex.IsMatch(codes);
         }
     }
 }
