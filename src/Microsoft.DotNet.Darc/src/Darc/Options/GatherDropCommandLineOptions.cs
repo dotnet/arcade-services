@@ -68,6 +68,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-released", HelpText = "Include builds that are marked as released")]
         public bool IncludeReleased { get; set; }
 
+        [Option("separated", HelpText = "Also download files to their repo separated locations")]
+        public bool Separated { get; set; }
+
         [Option("latest-location", HelpText = "Download assets from their latest known location.")]
         public bool LatestLocation { get; set; }
 

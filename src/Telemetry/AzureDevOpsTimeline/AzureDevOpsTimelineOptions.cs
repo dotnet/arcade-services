@@ -6,10 +6,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public class AzureDevOpsTimelineOptions
     {
-        public string KustoQueryConnectionString { get; set; }
-        public string KustoIngestConnectionString { get; set; }
-        public string KustoDatabase { get; set; }
-
         public string AzureDevOpsAccessToken { get; set; }
         public string AzureDevOpsProjects { get; set; }
         public string AzureDevOpsOrganization { get; set; }
