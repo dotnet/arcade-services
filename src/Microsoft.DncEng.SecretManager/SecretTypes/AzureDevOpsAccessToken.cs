@@ -8,10 +8,8 @@ using Microsoft.DncEng.CommandLineLib;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-devops-access-token")]
-    public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Parameters>
+    public class AzureDevOpsAccessToken : GitHubAccountInteractiveSecretType<AzureDevOpsAccessToken.Parameters>
     {
-        private readonly ISystemClock _clock;
-        private readonly IConsole _console;
         private readonly TimeSpan _rotateBeforeExpiration = new TimeSpan(-15, 0, 0, 0);
         private readonly Regex _patExpirationRegex = new Regex(@"^\s+\d{1,2}/\d{1,2}/\d{4}\s+$");
 
@@ -23,27 +21,25 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             public string GitHubBotAccountName { get; set; }
         }
 
-        public AzureDevOpsAccessToken(ISystemClock clock, IConsole console)
+        public AzureDevOpsAccessToken(ISystemClock clock, IConsole console) : base(clock, console)
         {
-            _clock = clock;
-            _console = console;
         }
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            if (!_console.IsInteractive)
+            if (!Console.IsInteractive)
             {
                 throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub bot account.");
             }
 
-            await GitHubBotAccount.ShowLoginInformation(context, _console, _clock, parameters.GitHubBotAccountSecret, parameters.GitHubBotAccountName);
+            await ShowGitHubLoginInformation(context, parameters.GitHubBotAccountSecret, parameters.GitHubBotAccountName);
 
-            var expiration = await _console.PromptAndValidateAsync("PAT expiration (M/d/yyyy)",
+            var expiration = await Console.PromptAndValidateAsync("PAT expiration (M/d/yyyy)",
                 "PAT expiration format must be M/d/yyyy.",
                 l => DateTime.TryParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
                 l => DateTime.ParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture));
 
-            var pat = await _console.PromptAndValidateAsync("PAT",
+            var pat = await Console.PromptAndValidateAsync("PAT",
                 "PAT must have at least 52 characters.",
                 l => l != null && l.Length >= 52);
 
