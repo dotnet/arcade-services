@@ -38,12 +38,12 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             await GitHubBotAccount.ShowLoginInformation(context, _console, _clock, parameters.GitHubBotAccountSecret, parameters.GitHubBotAccountName);
 
-            var expiration = await _console.AskUser("PAT expiration (M/d/yyyy)",
+            var expiration = await _console.PromptAndValidateAsync("PAT expiration (M/d/yyyy)",
                 "PAT expiration format must be M/d/yyyy.",
                 l => DateTime.TryParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
                 l => DateTime.ParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture));
 
-            var pat = await _console.AskUser("PAT",
+            var pat = await _console.PromptAndValidateAsync("PAT",
                 "PAT must have at least 52 characters.",
                 l => l != null && l.Length >= 52);
 

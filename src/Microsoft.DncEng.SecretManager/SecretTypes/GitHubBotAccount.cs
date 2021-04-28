@@ -138,14 +138,14 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         private async Task<string> AskUserForRecoveryCodes()
         {
-            return await _console.AskUser("recovery codes",
+            return await _console.PromptAndValidateAsync("recovery codes",
                 "It should be a list of 10 hexadecimal digits with optional dash in the middle, separated by space.",
                 l => l != null && _recoveryCodesRegex.IsMatch(l));
         }
 
         private async Task<string> AskUserForSecretAndShowConfirmationCode()
         {
-            string secret = await _console.AskUser("secret",
+            string secret = await _console.PromptAndValidateAsync("secret",
                 "Allowed chars are A-Z and digits 2-7.",
                 l => !string.IsNullOrWhiteSpace(l) && l.All(l => (l >= 'A' && l <= 'Z') || (l >= '2' && l <= '7')));
 
