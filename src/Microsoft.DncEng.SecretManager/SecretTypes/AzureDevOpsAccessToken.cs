@@ -10,8 +10,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     [Name("azure-devops-access-token")]
     public class AzureDevOpsAccessToken : GitHubAccountInteractiveSecretType<AzureDevOpsAccessToken.Parameters>
     {
-        private readonly TimeSpan _rotateBeforeExpiration = new TimeSpan(-15, 0, 0, 0);
-        private readonly Regex _patExpirationRegex = new Regex(@"^\s+\d{1,2}/\d{1,2}/\d{4}\s+$");
+        private readonly TimeSpan _rotateBeforeExpiration = TimeSpan.FromDays(-15);
 
         public class Parameters
         {
@@ -29,19 +28,18 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!Console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub bot account.");
+                throw new InvalidOperationException($"User intervention required for creation or rotation of an Azure DevOps access token.");
             }
 
             await ShowGitHubLoginInformation(context, parameters.GitHubBotAccountSecret, parameters.GitHubBotAccountName);
 
             var expiration = await Console.PromptAndValidateAsync("PAT expiration (M/d/yyyy)",
                 "PAT expiration format must be M/d/yyyy.",
-                l => DateTime.TryParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _),
-                l => DateTime.ParseExact(l, "M/d/yyyy", CultureInfo.InvariantCulture));
+                (string value, out DateTime parsedValue) => DateTime.TryParseExact(value, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedValue));
 
             var pat = await Console.PromptAndValidateAsync("PAT",
                 "PAT must have at least 52 characters.",
-                l => l != null && l.Length >= 52);
+                value => value != null && value.Length >= 52);
 
             return new SecretData(pat, expiration, expiration.Add(_rotateBeforeExpiration));
         }

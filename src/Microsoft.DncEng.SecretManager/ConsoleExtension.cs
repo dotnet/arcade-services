@@ -8,12 +8,15 @@ namespace Microsoft.DncEng.SecretManager
     {
         const int DefaultRetries = 3;
 
-        public static Task<string> PromptAndValidateAsync(this IConsole console, string fieldName, string help, Func<string, bool> validation)
+        public delegate bool TryParse<TParsed>(string value, out TParsed parsedValue);
+
+        public static Task<string> PromptAndValidateAsync(this IConsole console, string fieldName, string help, Func<string, bool> validate)
         {
-            return PromptAndValidateAsync(console, fieldName, help, validation, l => l);
+            return PromptAndValidateAsync(console, fieldName, help,
+                (string value, out string parsedValue) => { parsedValue = value; return validate(value); });
         }
 
-        public static async Task<T> PromptAndValidateAsync<T>(this IConsole console, string fieldName, string help, Func<string, bool> validate, Func<string, T> parse)
+        public static async Task<TParsed> PromptAndValidateAsync<TParsed>(this IConsole console, string fieldName, string help, TryParse<TParsed> tryParse)
         {
             int retries = DefaultRetries;
 
@@ -21,8 +24,8 @@ namespace Microsoft.DncEng.SecretManager
             {
                 var field = await console.PromptAsync($"Enter {fieldName}: ");
                 field = field?.Trim();
-                if (validate(field))
-                    return parse(field);
+                if (tryParse(field, out TParsed parsedField))
+                    return parsedField;
 
                 console.WriteLine($"{fieldName} wasn't entered in the expected format. {help}");
             }
