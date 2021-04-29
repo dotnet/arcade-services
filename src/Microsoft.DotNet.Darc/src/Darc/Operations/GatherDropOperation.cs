@@ -468,10 +468,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         // Create the target directory
                         string targetFile = Path.Combine(nupkgDirectory, shortName,
-                            packagesSubDir, Path.GetFileName(asset.ReleaseLayoutTargetLocation));
+                            packagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                        File.Copy(asset.ReleaseLayoutTargetLocation, targetFile, true);
+                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
 
                         // Add the relative path to the various spots. Choose paths are relative to the root output dir
                         string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
@@ -491,17 +491,17 @@ namespace Microsoft.DotNet.Darc.Operations
                     else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
                     {
                         if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix =>
-                            Path.GetFileName(asset.ReleaseLayoutTargetLocation).StartsWith(doNotListPrefix)))
+                            Path.GetFileName(asset.UnifiedLayoutTargetLocation).StartsWith(doNotListPrefix)))
                         {
                             continue;
                         }
 
                         // Create the target directory
                         string targetFile = Path.Combine(sympkgsDirectory, shortName,
-                            symPackagesSubDir, Path.GetFileName(asset.ReleaseLayoutTargetLocation));
+                            symPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                        File.Copy(asset.ReleaseLayoutTargetLocation, targetFile, true);
+                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
 
                         // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
                         string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
