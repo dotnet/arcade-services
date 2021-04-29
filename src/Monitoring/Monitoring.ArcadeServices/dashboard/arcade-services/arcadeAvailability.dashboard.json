@@ -21,12 +21,19 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1619738874375,
   "links": [],
   "panels": [
     {
       "dashboardFilter": "",
       "dashboardTags": [],
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "folderId": null,
       "gridPos": {
         "h": 8,
@@ -38,7 +45,6 @@
       "limit": 10,
       "nameFilter": "",
       "onlyAlertsOnDashboard": true,
-      "options": {},
       "show": "current",
       "sortOrder": 3,
       "stateFilter": [],
@@ -54,6 +60,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-pool-provider-public",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -77,9 +90,10 @@
       "linewidth": 4,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -236,6 +250,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-pool-provider-public",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -260,9 +281,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -408,7 +430,7 @@
           "line": true,
           "op": "gt",
           "value": 30000,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -458,6 +480,13 @@
       "dashes": false,
       "datasource": "AI-pool-provider-public",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -485,9 +514,10 @@
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -649,6 +679,13 @@
       "dashes": false,
       "datasource": "AI-dnc-eng",
       "description": "Availability tests for the site source.dot.net.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -684,9 +721,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -827,7 +865,7 @@
           "line": true,
           "op": "lt",
           "value": 99,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -879,6 +917,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-pool-provider-internal",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -902,9 +947,10 @@
       "linewidth": 4,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1062,6 +1108,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-pool-provider-internal",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1086,9 +1139,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1234,7 +1288,7 @@
           "line": true,
           "op": "gt",
           "value": 30000,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -1284,6 +1338,13 @@
       "dashes": false,
       "datasource": "AI-pool-provider-internal",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1311,9 +1372,10 @@
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1433,6 +1495,13 @@
       "dashes": false,
       "datasource": "AI-grafana",
       "description": "Monitoring and alerting for the Grafana infrastructure is managed by Azure.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1462,9 +1531,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1625,6 +1695,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AzureMonitor-helix",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -1660,9 +1737,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1758,7 +1836,8 @@
           "fill": true,
           "line": true,
           "op": "lt",
-          "value": 99
+          "value": 99,
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -1849,6 +1928,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-dnc-eng",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1879,9 +1965,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2025,7 +2112,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 5000
+          "value": 5000,
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -2075,6 +2163,13 @@
       "dashes": false,
       "datasource": "AzureMonitor-helix",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2102,9 +2197,10 @@
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2265,6 +2361,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AzureMonitor-helix",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -2300,9 +2403,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2398,7 +2502,7 @@
           "line": true,
           "op": "lt",
           "value": 100,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -2448,6 +2552,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-maestro",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -2478,9 +2589,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2661,6 +2773,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-maestro",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2691,9 +2810,10 @@
       ],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2921,6 +3041,13 @@
       "dashes": false,
       "datasource": "AI-maestro",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2948,9 +3075,10 @@
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -3023,20 +3151,12 @@
       ],
       "thresholds": [
         {
-          "colorMode": "warning",
-          "fill": true,
-          "line": true,
-          "op": "gt",
-          "value": 5,
-          "yaxis": "left"
-        },
-        {
           "colorMode": "critical",
           "fill": true,
           "line": true,
           "op": "gt",
           "value": 10,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -3129,6 +3249,13 @@
       "dashes": false,
       "datasource": "AI-pool-provider-internal",
       "description": "Sends an alert when the service tries to use an expired certificate ",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -3152,9 +3279,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -3240,7 +3368,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 10
+          "value": 10,
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -3331,6 +3460,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-pool-provider-public",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -3354,9 +3490,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -3456,7 +3593,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 10
+          "value": 10,
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -3551,6 +3689,13 @@
       "dashes": false,
       "datasource": "AI-dotneteng-status",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -3574,9 +3719,10 @@
       "linewidth": 1,
       "nullPointMode": "null as zero",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -3621,7 +3767,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 20
+          "value": 20,
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -3713,6 +3860,13 @@
       "dashes": false,
       "datasource": "AI-dnc-eng",
       "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -3736,9 +3890,10 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.4.3",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -4041,7 +4196,7 @@
           "line": true,
           "op": "lt",
           "value": 1,
-          "yaxis": "left"
+          "visible": true
         }
       ],
       "timeFrom": null,
@@ -4083,14 +4238,211 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "4fbfa4899e504a419af2c2f7f63bd327"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                0
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "24h",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "max"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "0m",
+        "frequency": "1h",
+        "handler": 1,
+        "message": "${ServicingJobs} servicing jobs were executed in R&D queues and need investigation\n\nFor details on how servicing jobs are redirected, go to https://github.com/dotnet/core-eng/blob/main/Documentation/Project-Docs/ServicingJobRedirection/DesignDocs.md",
+        "name": "Servicing jobs in R&D queues alert",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Kusto-engsrv",
+      "description": "Shows the number of servicing jobs executed in R&D queues",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 0,
+        "y": 40
+      },
+      "hiddenSeries": false,
+      "id": 62,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.4.3",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "database": "engineeringdata",
+          "expression": {
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "hide": false,
+          "pluginVersion": "3.3.2",
+          "query": "Jobs\n| where  $__timeFilter(Queued)\n| where tolower(QueueName) !in ($UntrackedQueues)\n| extend targetBranch=parse_json(Properties)[\"System.PullRequest.TargetBranch\"]\n| make-series ServicingJobs=countif((Branch contains \"release/\" or targetBranch contains \"release/\") and QueueName !endswith \".svc\") default=0 on Queued from $__timeFrom  to $__timeTo step $__interval\n| mv-expand Queued, ServicingJobs\n| project toint(ServicingJobs), todatetime(Queued)\n| order by Queued",
+          "querySource": "raw",
+          "queryType": "randomWalk",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 0,
+          "visible": true
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Servicing jobs in R&D queues",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:404",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:405",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 21,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": "Kusto-engsrv",
+        "definition": "Jobs \n| project QueueName = tolower(QueueName)\n| where QueueName contains \"osx\" or QueueName contains \"perf\" or QueueName contains 'arm' or QueueName contains \"arcade\" or QueueName contains \"xaml\" or QueueName contains \"appcompat\" or QueueName contains \"iot\"\n| distinct QueueName",
+        "description": null,
+        "error": null,
+        "hide": 2,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "UntrackedQueues",
+        "options": [],
+        "query": "Jobs \n| project QueueName = tolower(QueueName)\n| where QueueName contains \"osx\" or QueueName contains \"perf\" or QueueName contains 'arm' or QueueName contains \"arcade\" or QueueName contains \"xaml\" or QueueName contains \"appcompat\" or QueueName contains \"iot\"\n| distinct QueueName",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
