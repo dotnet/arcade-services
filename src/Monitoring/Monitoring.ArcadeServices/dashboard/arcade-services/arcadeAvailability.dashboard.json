@@ -21,7 +21,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1619738874375,
+  "iteration": 1619742950569,
   "links": [],
   "panels": [
     {
@@ -4242,7 +4242,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "4fbfa4899e504a419af2c2f7f63bd327"
+          "NotificationId": "e188bf69420a4b0291e97f5d95596052"
         },
         "conditions": [
           {
@@ -4287,6 +4287,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "Kusto-engsrv",
+      "decimals": 0,
       "description": "Shows the number of servicing jobs executed in R&D queues",
       "fieldConfig": {
         "defaults": {
@@ -4347,7 +4348,7 @@
           },
           "hide": false,
           "pluginVersion": "3.3.2",
-          "query": "Jobs\n| where  $__timeFilter(Queued)\n| where tolower(QueueName) !in ($UntrackedQueues)\n| extend targetBranch=parse_json(Properties)[\"System.PullRequest.TargetBranch\"]\n| make-series ServicingJobs=countif((Branch contains \"release/\" or targetBranch contains \"release/\") and QueueName !endswith \".svc\") default=0 on Queued from $__timeFrom  to $__timeTo step $__interval\n| mv-expand Queued, ServicingJobs\n| project toint(ServicingJobs), todatetime(Queued)\n| order by Queued",
+          "query": "let UntrackedQueues = Jobs \n| project QueueName = tolower(QueueName)\n| where QueueName contains \"osx\" or QueueName contains \"perf\" or QueueName contains 'arm' or QueueName contains \"arcade\" or QueueName contains \"xaml\" or QueueName contains \"appcompat\" or QueueName contains \"iot\"\n| distinct QueueName;\nJobs\n| where  $__timeFilter(Queued)\n| where tolower(QueueName) !in (UntrackedQueues)\n| extend targetBranch=parse_json(Properties)[\"System.PullRequest.TargetBranch\"]\n| make-series ServicingJobs=countif((Branch contains \"release/\" or targetBranch contains \"release/\") and QueueName !endswith \".svc\") default=0 on Queued from $__timeFrom  to $__timeTo step 1h\n| mv-expand Queued, ServicingJobs\n| project toint(ServicingJobs), todatetime(Queued)\n| order by Queued",
           "querySource": "raw",
           "queryType": "randomWalk",
           "rawMode": true,
@@ -4385,8 +4386,9 @@
       "yaxes": [
         {
           "$$hashKey": "object:404",
+          "decimals": 0,
           "format": "short",
-          "label": null,
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
