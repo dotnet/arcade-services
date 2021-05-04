@@ -14,6 +14,7 @@ using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,16 +46,19 @@ namespace Maestro.Web.Tests
             string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
             string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
             string defaultBranchName = "main";
+            string aValidDependencyFlowNotificationList = "@someMicrosoftUser;@some-github-team";
+
 
             // Create two subscriptions
-            Api.v2018_07_16.Models.SubscriptionData subscription1 = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscription1 = new SubscriptionData()
             {
                 ChannelName = testChannelName,
                 Enabled = true,
                 SourceRepository = defaultGitHubSourceRepo,
                 TargetRepository = defaultGitHubTargetRepo,
                 Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
-                TargetBranch = defaultBranchName
+                TargetBranch = defaultBranchName,
+                PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
             };
 
             Subscription createdSubscription1;
@@ -71,9 +75,10 @@ namespace Maestro.Web.Tests
                 createdSubscription1.TargetBranch.Should().Be(defaultBranchName);
                 createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
                 createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
+                createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
             }
 
-            Api.v2018_07_16.Models.SubscriptionData subscription2 = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscription2 = new SubscriptionData()
             {
                 ChannelName = testChannelName,
                 Enabled = false,
@@ -97,6 +102,7 @@ namespace Maestro.Web.Tests
                 createdSubscription2.TargetBranch.Should().Be(defaultBranchName);
                 createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
                 createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
+                createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
             }
 
             // List all (both) subscriptions, spot check that we got both
@@ -109,8 +115,10 @@ namespace Maestro.Web.Tests
                 listedSubs.Count.Should().Be(2);
                 listedSubs[0].Enabled.Should().Be(true);
                 listedSubs[0].TargetRepository.Should().Be(defaultGitHubTargetRepo);
+                listedSubs[0].PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
                 listedSubs[1].Enabled.Should().Be(false);
                 listedSubs[1].TargetRepository.Should().Be(defaultAzdoTargetRepo);
+                listedSubs[1].PullRequestFailureNotificationTags.Should().BeNull();
             }
             // Use ListSubscriptions() params at least superficially to go down those codepaths
             {
@@ -122,6 +130,7 @@ namespace Maestro.Web.Tests
                 listedSubs.Count.Should().Be(1);
                 listedSubs[0].Enabled.Should().Be(false);
                 listedSubs[0].TargetRepository.Should().Be(defaultAzdoTargetRepo);
+                listedSubs[0].PullRequestFailureNotificationTags.Should().BeNull(); // This is sub2
             }
             // Directly get one of the subscriptions
             {
@@ -132,6 +141,7 @@ namespace Maestro.Web.Tests
                 Subscription theSubscription = (Subscription) objResult.Value;
                 theSubscription.Enabled.Should().Be(true);
                 theSubscription.TargetRepository.Should().Be(defaultGitHubTargetRepo);
+                theSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
             }
         }
 
@@ -163,6 +173,31 @@ namespace Maestro.Web.Tests
         }
 
         [Test]
+        public async Task CreateSubscriptionForNonMicrosoftUserFails()
+        {
+            string testChannelName = "test-channel-sub-controller20200220";
+            string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+            string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+            string defaultBranchName = "main";
+            string anInvalidDependencyFlowNotificationList = "@someexternaluser;@somemicrosoftuser;@some-team";
+
+            // @someexternaluser will resolve as not in the microsoft org and should fail
+            SubscriptionData subscription = new SubscriptionData()
+            {
+                ChannelName = testChannelName,
+                Enabled = true,
+                SourceRepository = defaultGitHubSourceRepo,
+                TargetRepository = defaultGitHubTargetRepo,
+                Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryWeek },
+                TargetBranch = defaultBranchName,
+                PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
+            };
+
+            IActionResult result = await data.SubscriptionsController.Create(subscription);
+            result.Should().BeAssignableTo<BadRequestObjectResult>();
+        }
+
+        [Test]
         public async Task CreateSubscriptionForNonExistentChannelFails()
         {
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
@@ -170,7 +205,7 @@ namespace Maestro.Web.Tests
             string defaultBranchName = "main";
 
             // Create two subscriptions
-            Api.v2018_07_16.Models.SubscriptionData subscription = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscription = new SubscriptionData()
             {
                 ChannelName = "this-channel-does-not-exist",
                 Enabled = true,
@@ -182,8 +217,6 @@ namespace Maestro.Web.Tests
 
             IActionResult result = await data.SubscriptionsController.Create(subscription);
             result.Should().BeAssignableTo<BadRequestObjectResult>();
-            var objResult = (BadRequestObjectResult) result;
-            objResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
         }
 
         [Test]
@@ -195,7 +228,7 @@ namespace Maestro.Web.Tests
             string defaultBranchName = "main";
 
             // Create two subscriptions
-            Api.v2018_07_16.Models.SubscriptionData subscriptionToDelete = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscriptionToDelete = new SubscriptionData()
             {
                 ChannelName = testChannelName,
                 Enabled = true,
@@ -229,7 +262,7 @@ namespace Maestro.Web.Tests
             string defaultBranchName = "main";
 
             // Create two subscriptions
-            Api.v2018_07_16.Models.SubscriptionData subscriptionToTrigger = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscriptionToTrigger = new SubscriptionData()
             {
                 ChannelName = testChannelName,
                 Enabled = true,
@@ -325,9 +358,11 @@ namespace Maestro.Web.Tests
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
             string defaultBranchName = "main";
+            string aValidDependencyFlowNotificationList = "@someMicrosoftUser;@some-github-team";
+            string anInvalidDependencyFlowNotificationList = "@someExternalUser;@someMicrosoftUser;@some-team";
 
             // Create two subscriptions
-            Api.v2018_07_16.Models.SubscriptionData subscription1 = new Api.v2018_07_16.Models.SubscriptionData()
+            SubscriptionData subscription1 = new SubscriptionData()
             {
                 ChannelName = testChannelName,
                 Enabled = true,
@@ -353,11 +388,12 @@ namespace Maestro.Web.Tests
                 createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             }
 
-            Api.v2018_07_16.Models.SubscriptionUpdate update = new Api.v2018_07_16.Models.SubscriptionUpdate()
+            SubscriptionUpdate update = new SubscriptionUpdate()
             {
                 Enabled = !subscription1.Enabled,
                 Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
-                SourceRepository = $"{subscription1.SourceRepository}-updated"
+                SourceRepository = $"{subscription1.SourceRepository}-updated",
+                PullRequestFailureNotificationTags = aValidDependencyFlowNotificationList
             };
 
             {
@@ -372,6 +408,21 @@ namespace Maestro.Web.Tests
                 updatedSubscription.Enabled.Should().IsSameOrEqualTo(!subscription1.Enabled);
                 updatedSubscription.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.EveryDay);
                 updatedSubscription.SourceRepository.Should().Be($"{subscription1.SourceRepository}-updated");
+                updatedSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
+            }
+
+            // Update with an invalid list, make sure it fails
+            SubscriptionUpdate badUpdate = new SubscriptionUpdate()
+            {
+                Enabled = !subscription1.Enabled,
+                Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
+                SourceRepository = $"{subscription1.SourceRepository}-updated",
+                PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
+            };
+
+            {
+                IActionResult result = await data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, badUpdate);
+                result.Should().BeAssignableTo<BadRequestObjectResult>();
             }
         }
 
@@ -427,6 +478,21 @@ namespace Maestro.Web.Tests
                 collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
                 collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
+
+                Mock<Octokit.IGitHubClient> gitHubClient = new Mock<Octokit.IGitHubClient>(MockBehavior.Strict);
+
+                gitHubClient.Setup(ghc => ghc.Organization.GetAllForUser(It.IsAny<string>()))
+                            .Returns((string userLogin) => CallFakeGetAllForUser(userLogin));
+
+                var clientFactoryMock = new Mock<IGitHubClientFactory>();
+                clientFactoryMock.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
+                    .Returns((string token) => gitHubClient.Object);
+                collection.AddSingleton(clientFactoryMock.Object);
+                collection.Configure<GitHubClientOptions>(o =>
+                {
+                    o.ProductHeader = new Octokit.ProductHeaderValue("TEST", "1.0");
+                });
+
                 ServiceProvider provider = collection.BuildServiceProvider();
 
                 // Setup common data context stuff for the background
@@ -485,6 +551,68 @@ namespace Maestro.Web.Tests
                 var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
 
                 return new TestData(provider, clock);
+            }
+
+            private async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
+            {
+                await Task.Delay(0); // Added just to suppress green squiggles
+                List<Octokit.Organization> returnValue = new List<Octokit.Organization>();
+
+                switch (userLogin.ToLower())
+                {
+                    case "somemicrosoftuser": // valid user, in MS org
+                        returnValue.Add(MockOrganization(123, "microsoft"));
+                        break;
+                    case "someexternaluser":  // "real" user, but not in MS org
+                        returnValue.Add(MockOrganization(456, "definitely-not-microsoft"));
+                        break;
+                    default: // Any other user; GitHub "teams" will fall through here.
+                        throw new Octokit.NotFoundException("Unknown user", HttpStatusCode.NotFound);
+                }
+
+                return returnValue.AsReadOnly();
+            }
+
+            // Copied from GitHubClaimsResolverTests; could refactor if needed in another place
+            private Octokit.Organization MockOrganization(int id, string login)
+            {
+                return new Octokit.Organization(
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    id,
+                    default,
+                    default,
+                    login,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default);
             }
         }
 
