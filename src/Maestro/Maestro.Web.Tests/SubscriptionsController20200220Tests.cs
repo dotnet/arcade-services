@@ -195,8 +195,6 @@ namespace Maestro.Web.Tests
 
             IActionResult result = await data.SubscriptionsController.Create(subscription);
             result.Should().BeAssignableTo<BadRequestObjectResult>();
-            var objResult = (BadRequestObjectResult) result;
-            objResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
         }
 
         [Test]
@@ -219,8 +217,6 @@ namespace Maestro.Web.Tests
 
             IActionResult result = await data.SubscriptionsController.Create(subscription);
             result.Should().BeAssignableTo<BadRequestObjectResult>();
-            var objResult = (BadRequestObjectResult) result;
-            objResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
         }
 
         [Test]
@@ -427,8 +423,6 @@ namespace Maestro.Web.Tests
             {
                 IActionResult result = await data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, badUpdate);
                 result.Should().BeAssignableTo<BadRequestObjectResult>();
-                var objResult = (BadRequestObjectResult) result;
-                objResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
             }
         }
 
