@@ -181,7 +181,7 @@ namespace Maestro.Web.Tests
             string defaultBranchName = "main";
             string anInvalidDependencyFlowNotificationList = "@someexternaluser;@somemicrosoftuser;@some-team";
 
-            // Create two subscriptions
+            // @someexternaluser will resolve as not in the microsoft org and should fail
             SubscriptionData subscription = new SubscriptionData()
             {
                 ChannelName = testChannelName,
