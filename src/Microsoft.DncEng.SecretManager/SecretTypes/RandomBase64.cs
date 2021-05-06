@@ -10,6 +10,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     [Name("random-base64")]
     public class RandomBase64 : SecretType<RandomBase64.Parameters>
     {
+        private const string PrimarySuffix = "-primary";
         private readonly ISystemClock _clock;
 
         public class Parameters
@@ -26,14 +27,14 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             return new List<string>
             {
-                "-primary",
+                PrimarySuffix,
                 "-secondary",
             };
         }
 
         public override async Task<List<SecretData>> RotateValues(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            string currentPrimary = await context.GetSecretValue(context.SecretName + "-primary");
+            string currentPrimary = await context.GetSecretValue(context.SecretName + PrimarySuffix);
             if (currentPrimary == null)
             {
                 currentPrimary = "";
