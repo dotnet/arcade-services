@@ -162,6 +162,12 @@ namespace DotNet.Status.Web.Controllers
                     continue;
                 }
 
+                if (monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
+                {
+                    // We should only continue if tags were specified in the monitor, and none of those tags were found in the build
+                    continue;
+                }
+
                 string prettyBranch = build.SourceBranch;
                 if (prettyBranch.StartsWith(fullBranchPrefix))
                 {
@@ -181,68 +187,76 @@ namespace DotNet.Status.Web.Controllers
                 _logger.LogInformation("Fetching changes messages...");
                 string changesMessage = await BuildChangesMessage(build);
 
-                BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues;
-                IGitHubClient github = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
-                
-                DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
-                DateTimeOffset? startTime = DateTimeOffset.TryParse(build.StartTime, out var parsedStartTime) ? parsedStartTime:(DateTimeOffset?) null;
+                BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
 
-                string timeString = "";
-                string durationString = "";
-                if (finishTime.HasValue)
+                if (repo != null)
                 {
-                    timeString = finishTime.Value.ToString("R");
-                    if (startTime.HasValue)
+                    IGitHubClient github = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
+                    
+                    DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
+                    DateTimeOffset? startTime = DateTimeOffset.TryParse(build.StartTime, out var parsedStartTime) ? parsedStartTime:(DateTimeOffset?) null;
+
+                    string timeString = "";
+                    string durationString = "";
+                    if (finishTime.HasValue)
                     {
-                        durationString = ((int) (finishTime.Value - startTime.Value).TotalMinutes) + " minutes";
+                        timeString = finishTime.Value.ToString("R");
+                        if (startTime.HasValue)
+                        {
+                            durationString = ((int) (finishTime.Value - startTime.Value).TotalMinutes) + " minutes";
+                        }
                     }
-                }
 
-                string icon = build.Result == "failed" ? ":x:" : ":warning:";
+                    string icon = build.Result == "failed" ? ":x:" : ":warning:";
 
-                string body = @$"Build [#{build.BuildNumber}]({build.Links.Web.Href}) {build.Result}
+                    string body = @$"Build [#{build.BuildNumber}]({build.Links.Web.Href}) {build.Result}
 
-## {icon} : {build.Project.Name} / {build.Definition.Name} {build.Result}
+    ## {icon} : {build.Project.Name} / {build.Definition.Name} {build.Result}
 
-### Summary
-**Finished** - {timeString}
-**Duration** - {durationString}
-**Requested for** - {build.RequestedFor.DisplayName}
-**Reason** - {build.Reason}
+    ### Summary
+    **Finished** - {timeString}
+    **Duration** - {durationString}
+    **Requested for** - {build.RequestedFor.DisplayName}
+    **Reason** - {build.Reason}
 
-### Details
+    ### Details
 
-{timelineMessage}
+    {timelineMessage}
 
-### Changes
+    ### Changes
 
-{changesMessage}
-";
+    {changesMessage}
+    ";
 
-                var newIssue =
-                    new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
+                    var newIssue =
+                        new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
+                        {
+                            Body = body,
+                        };
+
+                    if (!string.IsNullOrEmpty(monitor.Assignee))
                     {
-                        Body = body,
-                    };
+                        newIssue.Assignees.Add(monitor.Assignee);
+                    }
+                    
+                    foreach (string label in repo.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
 
-                if (!string.IsNullOrEmpty(monitor.Assignee))
-                {
-                    newIssue.Assignees.Add(monitor.Assignee);
+                    foreach (string label in monitor.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
+
+                    Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
+
+                    _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
                 }
-                
-                foreach (string label in repo.Labels.OrEmpty())
+                else
                 {
-                    newIssue.Labels.Add(label);
+                    _logger.LogWarning("Could not find a matching repo for {issuesId}", monitor.IssuesId);
                 }
-
-                foreach (string label in monitor.Labels.OrEmpty())
-                {
-                    newIssue.Labels.Add(label);
-                }
-
-                Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
-
-                _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
             }
         }
 
