@@ -375,7 +375,8 @@ namespace SubscriptionActorService
                         Logger.LogError($"Unknown pull request synchronization result {result}");
                         break;
                 }
-            }
+            } 
+            
             await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
             return (null, false);
         }
