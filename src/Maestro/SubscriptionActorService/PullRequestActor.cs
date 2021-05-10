@@ -376,7 +376,7 @@ namespace SubscriptionActorService
                         break;
                 }
             } 
-            
+
             await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
             return (null, false);
         }
@@ -417,7 +417,7 @@ namespace SubscriptionActorService
                     Logger.LogInformation($"Status open for: {prUrl}");
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
-                    
+
                     switch (checkPolicyResult.Result)
                     {
                         case MergePolicyCheckResult.Merged:
