@@ -376,7 +376,6 @@ namespace SubscriptionActorService
                         break;
                 }
             }
-            
             await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
             return (null, false);
         }
@@ -392,7 +391,6 @@ namespace SubscriptionActorService
         private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
             Logger.LogInformation($"Synchronizing Pull Request {prUrl}");
-
             ConditionalValue<InProgressPullRequest> maybePr =
                 await StateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
             if (!maybePr.HasValue || maybePr.Value.Url != prUrl)
@@ -418,6 +416,7 @@ namespace SubscriptionActorService
                     Logger.LogInformation($"Status open for: {prUrl}");
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
+                    
                     switch (checkPolicyResult.Result)
                     {
                         case MergePolicyCheckResult.Merged:
@@ -518,11 +517,9 @@ namespace SubscriptionActorService
                         MergePolicyCheckResult.Merged,
                         $"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
                 }
-
                 Logger.LogInformation($"NOT Merged: PR '{pr.Url}' has merge conflicts.");
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
-
             Logger.LogInformation($"NOT Merged: PR '{pr.Url}' There are no merge policies");
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
