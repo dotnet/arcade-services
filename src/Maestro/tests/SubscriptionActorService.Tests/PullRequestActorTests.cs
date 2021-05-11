@@ -70,6 +70,7 @@ namespace SubscriptionActorService.Tests
             services.AddSingleton(MergePolicyEvaluator.Object);
             services.AddGitHubTokenProvider();
             services.AddSingleton<ExponentialRetry>();
+            services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
 
             RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
