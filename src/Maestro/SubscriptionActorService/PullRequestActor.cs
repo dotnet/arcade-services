@@ -1278,7 +1278,7 @@ namespace SubscriptionActorService
             bool strictCheckFailed = false;
             try
             {
-                Logger.LogInformation($"Run a coherency check on the existing dependencies for branch {branch}");
+                Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch}");
                 coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Strict);
             }
             catch (DarcCoherencyException)
