@@ -513,10 +513,11 @@ namespace SubscriptionActorService
                 }
                 if (merged)
                 {
-                    Logger.LogInformation($"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
+                    string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+                    Logger.LogInformation($"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
                     return ActionResult.Create(
                         MergePolicyCheckResult.Merged,
-                        $"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
+                        $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
                 }
                 Logger.LogInformation($"NOT Merged: PR '{pr.Url}' has merge conflicts.");
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
@@ -1278,7 +1279,7 @@ namespace SubscriptionActorService
             bool strictCheckFailed = false;
             try
             {
-                Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch}");
+                Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
                 coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Strict);
             }
             catch (DarcCoherencyException)
