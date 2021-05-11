@@ -1224,7 +1224,7 @@ namespace SubscriptionActorService
             string targetRepository,
             string branch)
         {
-            Logger.LogInformation($"Get Required Updates from {branch} to {targetRepository}");
+            Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
