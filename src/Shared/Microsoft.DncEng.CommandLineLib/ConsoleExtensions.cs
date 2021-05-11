@@ -77,6 +77,21 @@ namespace Microsoft.DncEng.CommandLineLib
         }
 
         /// <summary>
+        ///   Writes an error, using the VSTS logging commands if running inside VSTS. Forwards to <see cref="WriteError"/> if outside of VSTS.
+        /// </summary>
+        public static void LogError(this IConsole console, string message, string file, int line, int column)
+        {
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ID")))
+            {
+                console.Write(VerbosityLevel.Quiet, $"##vso[task.logissue type=error;sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
+            }
+            else
+            {
+                console.WriteError($"{file}({line},{column}): error : {message}");
+            }
+        }
+
+        /// <summary>
         ///     Write to standard error, but with non color setting, regardless of verbosity level
         /// </summary>
         public static void WriteErrorNoColor(this IConsole console, string message)

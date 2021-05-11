@@ -16,6 +16,7 @@ namespace Microsoft.DncEng.SecretManager
         {
             services.AddSingleton<SecretTypeRegistry>();
             services.AddSingleton<StorageLocationTypeRegistry>();
+            services.AddSingleton<SettingsFileValidator>();
             services.AddNamedFromAssembly<SecretType>(Assembly.GetExecutingAssembly());
             services.AddNamedFromAssembly<StorageLocationType>(Assembly.GetExecutingAssembly());
         }

@@ -10,7 +10,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
 {
     public static class KeyVaultConfigMapper
     {
-        private static readonly Regex VaultReferenceRegex = new Regex(@"\[vault\((?<key>[^])]+)\)\]");
+        public static readonly Regex VaultReferenceRegex = new Regex(@"\[vault\((?<key>[^])]+)\)\]");
 
         public static Func<string, string> Create(IConfiguration bootstrapConfiguration)
         {
