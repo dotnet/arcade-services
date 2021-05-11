@@ -1307,7 +1307,7 @@ namespace SubscriptionActorService
                 requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
             }
 
-            Logger.LogInformation("Finished get Required Updates from {branch} to {targetRepository}");
+            Logger.LogInformation("Finished getting Required Updates from {branch} to {targetRepository}");
             return requiredUpdates;
         }
 
