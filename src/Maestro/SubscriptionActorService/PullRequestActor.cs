@@ -296,7 +296,7 @@ namespace SubscriptionActorService
 
             if (pr != null && !canUpdate)
             {
-                Logger.LogInformation("PR cannot be updated.");
+                Logger.LogInformation($"PR {pr?.Url} cannot be updated.");
                 return ActionResult.Create(false, "PR cannot be updated.");
             }
 
