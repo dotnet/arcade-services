@@ -164,7 +164,7 @@ namespace DotNet.Status.Web.Controllers
 
                 if (monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
                 {
-                    // We should only continue if tags were specified in the monitor, and none of those tags were found in the build
+                    // We should only skip processing if tags were specified in the monitor, and none of those tags were found in the build
                     continue;
                 }
 
@@ -174,8 +174,10 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
+                string prettyTags = monitor.Tags.Any() ? $"tags '{string.Join(", ", build.Tags)}'" : "";
+
                 _logger.LogInformation(
-                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}' and branch '{branch}' matches monitoring criteria, sending notification",
+                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}' {prettyTags} and branch '{branch}' matches monitoring criteria, sending notification",
                     build.BuildNumber,
                     build.Project.Name,
                     build.Definition.Path,
