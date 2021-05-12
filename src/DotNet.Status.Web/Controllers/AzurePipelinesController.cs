@@ -25,29 +25,32 @@ namespace DotNet.Status.Web.Controllers
     public class AzurePipelinesController : ControllerBase
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
-        private readonly Lazy<AzureDevOpsClient> _clientLazy;
+        private readonly Lazy<IAzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptions<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _options = options;
             _logger = logger;
-            _clientLazy = new Lazy<AzureDevOpsClient>(BuildAzureDevOpsClient);
+            _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
-        private AzureDevOpsClient Client => _clientLazy.Value;
+        private IAzureDevOpsClient Client => _clientLazy.Value;
 
-        private AzureDevOpsClient BuildAzureDevOpsClient()
+        private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
-            return new AzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
+            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
@@ -162,7 +165,7 @@ namespace DotNet.Status.Web.Controllers
                     continue;
                 }
 
-                if (monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
+                if (monitor.Tags != null && monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
                 {
                     // We should only skip processing if tags were specified in the monitor, and none of those tags were found in the build
                     continue;
