@@ -12,7 +12,9 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
@@ -65,8 +67,11 @@ namespace SubscriptionActorService.Tests
                 });
 
             services.AddSingleton(proxyFactory.Object);
-
             services.AddSingleton(MergePolicyEvaluator.Object);
+            services.AddGitHubTokenProvider();
+            services.AddSingleton<ExponentialRetry>();
+            services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
+            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
 
             RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(

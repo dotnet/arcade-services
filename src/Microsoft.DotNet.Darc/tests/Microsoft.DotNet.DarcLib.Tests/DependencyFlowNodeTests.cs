@@ -77,7 +77,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 WorstCasePathTime = worstCasePathTime,
             };
 
-            var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test");
+            var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test", string.Empty);
             subscription.LastAppliedBuild = new Build(
                 id: 1,
                 dateProduced: DateTimeOffset.Now,

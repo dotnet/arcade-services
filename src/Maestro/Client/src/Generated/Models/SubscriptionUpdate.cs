@@ -21,5 +21,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("enabled")]
         public bool? Enabled { get; set; }
+
+        [JsonProperty("pullRequestFailureNotificationTags")]
+        public string PullRequestFailureNotificationTags { get; set; }
     }
 }

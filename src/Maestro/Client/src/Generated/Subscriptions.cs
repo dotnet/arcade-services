@@ -44,13 +44,8 @@ namespace Microsoft.DotNet.Maestro.Client
         );
 
         Task<Models.Subscription> TriggerSubscriptionAsync(
-            Guid id,
-            CancellationToken cancellationToken = default
-        );
-
-        Task<Models.Subscription> TriggerSubscriptionAsync(
-            Guid id,
             int barBuildId,
+            Guid id,
             CancellationToken cancellationToken = default
         );
 
@@ -484,16 +479,8 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedTriggerSubscriptionRequest(RestApiException ex);
 
         public async Task<Models.Subscription> TriggerSubscriptionAsync(
-            Guid id,
-            CancellationToken cancellationToken = default
-        )
-        {
-            return await TriggerSubscriptionAsync(id, 0, cancellationToken);
-        }
-
-        public async Task<Models.Subscription> TriggerSubscriptionAsync(
-            Guid id,
             int barBuildId,
+            Guid id,
             CancellationToken cancellationToken = default
         )
         {
@@ -507,13 +494,12 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
-
-            // If the user specifies a particular build id to trigger subscriptions for, we'll provide that as a query parameter.
-            if (barBuildId != 0)
+            if (barBuildId != default(int))
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
 
             using (var _req = Client.Pipeline.CreateRequest())
             {

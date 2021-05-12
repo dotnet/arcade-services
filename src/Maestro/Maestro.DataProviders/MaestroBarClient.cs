@@ -239,7 +239,8 @@ namespace Maestro.DataProviders
                 other.Enabled,
                 other.SourceRepository,
                 other.TargetRepository,
-                other.TargetBranch)
+                other.TargetBranch,
+                other.PullRequestFailureNotificationTags)
                 {
                     Channel = ToClientModelChannel(other.Channel),
                     Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
