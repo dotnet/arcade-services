@@ -7,7 +7,6 @@ namespace Microsoft.DncEng.SecretManager.Tests
     public class TemporaryFile : IDisposable
     {
         public string FilePath { get; }
-        private readonly Stream _file;
 
         public TemporaryFile()
         {
