@@ -1,6 +1,5 @@
 parameters:
   AzureSubscription: ''
-  DeploymentEnvironment: ''
   PublishProfile: ''
   stageName: 'Pre_Deploy_Tests'
 
@@ -28,13 +27,4 @@ stages:
         azureSubscription: ${{ parameters.AzureSubscription }}
         scriptType: ps
         scriptPath: $(Pipeline.Workspace)/ValidationScripts/Pre-DeployCheckServiceFabric.ps1
-        arguments: '-PublishProfile $env:PublishProfile'
-      env:
-        PublishProfile: $(Pipeline.Workspace)/ServiceFabricPublishProfiles/${{ parameters.PublishProfile }}.xml
-    # - task: AzureCLI@2
-    #   displayName: Validate Resource Groups and Storage Accounts
-    #   inputs:
-    #     azureSubscription: ${{ parameters.AzureSubscription }}
-    #     scriptType: ps
-    #     scriptPath: $(Pipeline.Workspace)/ValidationScripts/Pre-DeployCheckResources.ps1
-    #     arguments: '-environment ${{ parameters.DeploymentEnvironment }}'
+        arguments: '-PublishProfile "$(Pipeline.Workspace)/ServiceFabricPublishProfiles/${{ parameters.PublishProfile }}.xml"'

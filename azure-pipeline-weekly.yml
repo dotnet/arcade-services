@@ -12,15 +12,6 @@ resources:
   - pipeline: arcadeServicesInternalCI
     source: arcade-services-internal-ci
     branch: main
-variables:
-  - name: BuildConfiguration
-    value: Debug
-  - name: Build.Repository.Clean
-    value: true
-  - name: BuildPlatform
-    value: x64
-  - name: system.debug
-    value: false
 
 stages:
   - stage: Build
@@ -50,13 +41,11 @@ stages:
   - template: eng/pre-deploy-tests.yaml
     parameters:
       AzureSubscription: NetHelixStaging
-      DeploymentEnvironment: Staging
       PublishProfile: Int
       stageName: Pre_Deploy_tests_Int
 
   - template: eng/pre-deploy-tests.yaml
     parameters:
       AzureSubscription: NetHelix
-      DeploymentEnvironment: Production
       PublishProfile: Prod
       stageName: Pre_Deploy_tests_Prod
