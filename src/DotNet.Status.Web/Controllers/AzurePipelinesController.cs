@@ -177,13 +177,14 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
-                string prettyTags = monitor.Tags.Any() ? $"tags '{string.Join(", ", build.Tags)}'" : "";
+                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"tags '{string.Join(", ", build.Tags)}'" : "";
 
                 _logger.LogInformation(
-                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}' {prettyTags} and branch '{branch}' matches monitoring criteria, sending notification",
+                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}', tags '{prettyTags}', and branch '{branch}' matches monitoring criteria, sending notification",
                     build.BuildNumber,
                     build.Project.Name,
                     build.Definition.Path,
+                    prettyTags,
                     build.SourceBranch);
                 
                 _logger.LogInformation("Fetching timeline messages...");
