@@ -165,7 +165,7 @@ namespace DotNet.Status.Web.Controllers
                     continue;
                 }
 
-                if (monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
+                if (monitor.Tags != null && monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
                 {
                     // We should only continue if tags were specified in the monitor, and none of those tags were found in the build
                     continue;

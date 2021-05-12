@@ -89,7 +89,7 @@ namespace DotNet.Status.Web.Tests
                     ["displayName"] = "requested-for"
                 },
                 ["result"] = "failed",
-                ["sourceBranch"] = "sourceBranch",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
                 ["startTime"] = "05/01/2008 5:00:00",
             };
 
@@ -106,12 +106,158 @@ namespace DotNet.Status.Web.Tests
             testData.VerifyAll(expectedOwners, expectedNames);
         }
 
+        [Test]
+        public async Task BuildCompleteBuildHasMatchingTags()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>()
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource()
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers()
+                {
+                    Collection = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path2",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+                ["tags"] = new JArray
+                {
+                    "tag1"
+                }
+            };
+
+            var expectedOwners = new List<string>() {
+                "dotnet"
+            };
+
+            var expectedNames = new List<string>() {
+                "repo"
+            };
+
+            using TestData testData = SetupTestData(build, false);
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            testData.VerifyAll(expectedOwners, expectedNames);
+        }
+
+        [Test]
+        public async Task BuildCompleteBuildHasNoMatchingTags()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>()
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource()
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers()
+                {
+                    Collection = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId()
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path2",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+                ["tags"] = new JArray
+                {
+                    "non-matching-tag"
+                }
+            };
+
+            var expectedOwners = new List<string>();
+
+            var expectedNames = new List<string>();
+
+            using TestData testData = SetupTestData(build, false);
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            testData.VerifyAll(expectedOwners, expectedNames);
+        }
+
         public TestData SetupTestData(JObject buildData, bool expectNotification)
         {
             var owners = new List<string>();
             var names = new List<string>();
             var mockGithubIssues = new Mock<IIssuesClient>();
-            mockGithubIssues.Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>()));
+            mockGithubIssues.Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>())).Returns(Task.FromResult(new Octokit.Issue()));
 
             var mockGithubClient = new Mock<IGitHubClient>();
             mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
@@ -149,14 +295,14 @@ namespace DotNet.Status.Web.Tests
                     AccessToken = "fake",
                     Builds = new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription[] {
                         new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription() {
-                            Project = "internal",
+                            Project = "test-project-name",
                             DefinitionPath = "\\test\\definition\\path",
                             Branches = new string[] { "sourceBranch" },
                             Assignee = "assignee",
                             IssuesId = "first-issues"
                         },
                         new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription() {
-                            Project = "internal",
+                            Project = "test-project-name",
                             DefinitionPath = "\\test\\definition\\path2",
                             Branches = new string[] { "sourceBranch" },
                             Assignee = "assignee",
@@ -174,6 +320,8 @@ namespace DotNet.Status.Web.Tests
                     }
                 };
             });
+
+            collection.AddScoped<AzurePipelinesController>();
 
             collection.AddSingleton<IGitHubApplicationClientFactory>(mockGithubClientFactory.Object);
             collection.AddSingleton<IAzureDevOpsClientFactory>(mockAzureClientFactory.Object);
@@ -204,8 +352,8 @@ namespace DotNet.Status.Web.Tests
 
             public void VerifyAll(List<string> expectedOwners, List<string> expectedNames)
             {
-                Owners.Should().ContainEquivalentOf(expectedOwners);
-                Names.Should().ContainEquivalentOf(expectedNames);
+                Owners.Should().BeEquivalentTo(expectedOwners);
+                Names.Should().BeEquivalentTo(expectedNames);
             }
 
             public void Dispose()
