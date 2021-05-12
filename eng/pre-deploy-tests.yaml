@@ -1,0 +1,40 @@
+parameters:
+  AzureSubscription: ''
+  DeploymentEnvironment: ''
+  PublishProfile: ''
+  stageName: 'Pre_Deploy_Tests'
+
+stages:
+- stage: ${{ parameters.stageName }}
+  displayName: Pre-Deployment Validation
+  pool:
+    name: Hosted VS2017
+  dependsOn:
+  - Build
+  jobs:
+  - job: Validate_Existing_Services
+    pool:
+      name: Hosted VS2017
+    steps:
+    - download: current
+      artifact: ValidationScripts
+    - download: current
+      artifact: ServiceFabricPublishProfiles
+    - download: current
+      artifact: ReleaseUtilities # for Publish profile parsing helper code
+    - task: AzureCLI@2
+      displayName: Validate Service Fabric Applications
+      inputs:
+        azureSubscription: ${{ parameters.AzureSubscription }}
+        scriptType: ps
+        scriptPath: $(Pipeline.Workspace)/ValidationScripts/Pre-DeployCheckServiceFabric.ps1
+        arguments: '-PublishProfile $env:PublishProfile'
+      env:
+        PublishProfile: $(Pipeline.Workspace)/ServiceFabricPublishProfiles/${{ parameters.PublishProfile }}.xml
+    # - task: AzureCLI@2
+    #   displayName: Validate Resource Groups and Storage Accounts
+    #   inputs:
+    #     azureSubscription: ${{ parameters.AzureSubscription }}
+    #     scriptType: ps
+    #     scriptPath: $(Pipeline.Workspace)/ValidationScripts/Pre-DeployCheckResources.ps1
+    #     arguments: '-environment ${{ parameters.DeploymentEnvironment }}'
