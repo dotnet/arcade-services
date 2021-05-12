@@ -213,22 +213,22 @@ namespace DotNet.Status.Web.Controllers
 
                     string body = @$"Build [#{build.BuildNumber}]({build.Links.Web.Href}) {build.Result}
 
-    ## {icon} : {build.Project.Name} / {build.Definition.Name} {build.Result}
+## {icon} : {build.Project.Name} / {build.Definition.Name} {build.Result}
 
-    ### Summary
-    **Finished** - {timeString}
-    **Duration** - {durationString}
-    **Requested for** - {build.RequestedFor.DisplayName}
-    **Reason** - {build.Reason}
+### Summary
+**Finished** - {timeString}
+**Duration** - {durationString}
+**Requested for** - {build.RequestedFor.DisplayName}
+**Reason** - {build.Reason}
 
-    ### Details
+### Details
 
-    {timelineMessage}
+{timelineMessage}
 
-    ### Changes
+### Changes
 
-    {changesMessage}
-    ";
+{changesMessage}
+";
 
                     var newIssue =
                         new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
