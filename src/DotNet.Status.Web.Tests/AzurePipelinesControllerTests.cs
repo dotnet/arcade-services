@@ -22,26 +22,28 @@ namespace DotNet.Status.Web.Tests
     [TestFixture]
     public class AzurePipelinesControllerTests
     {
-        public static string TestTeamsWebHookUri = "https://example.teams/webhook/sha";
-        public static string WatchedTeam = "test-user/watched-team";
-        public static string IgnoredRepo = "test-user/ignored";
-
         [Test]
         public async Task BuildCompleteBuildHasNoTags()
         {
-            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>(){
-                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource() {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
                     Id = 123456,
                     Url = "test-build-url"
                 },
-                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers(){
-                    Collection = new AzurePipelinesController.HasId() {
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
                         Id = "test-collection-id"
                     },
-                    Account = new AzurePipelinesController.HasId() {
+                    Account = new AzurePipelinesController.HasId
+                    {
                         Id = "test-account-id"
                     },
-                    Project = new AzurePipelinesController.HasId() {
+                    Project = new AzurePipelinesController.HasId
+                    {
                         Id = "test-project-id"
                     }
                 }
@@ -78,11 +80,13 @@ namespace DotNet.Status.Web.Tests
                 ["startTime"] = "05/01/2008 5:00:00",
             };
 
-            var expectedOwners = new List<string>() {
+            var expectedOwners = new List<string>
+            {
                 "dotnet"
             };
 
-            var expectedNames = new List<string>() {
+            var expectedNames = new List<string>
+            {
                 "repo"
             };
 
@@ -94,24 +98,24 @@ namespace DotNet.Status.Web.Tests
         [Test]
         public async Task BuildCompleteBuildHasMatchingTags()
         {
-            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>()
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
             {
-                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource()
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
                 {
                     Id = 123456,
                     Url = "test-build-url"
                 },
-                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers()
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
                 {
-                    Collection = new AzurePipelinesController.HasId()
+                    Collection = new AzurePipelinesController.HasId
                     {
                         Id = "test-collection-id"
                     },
-                    Account = new AzurePipelinesController.HasId()
+                    Account = new AzurePipelinesController.HasId
                     {
                         Id = "test-account-id"
                     },
-                    Project = new AzurePipelinesController.HasId()
+                    Project = new AzurePipelinesController.HasId
                     {
                         Id = "test-project-id"
                     }
@@ -153,11 +157,13 @@ namespace DotNet.Status.Web.Tests
                 }
             };
 
-            var expectedOwners = new List<string>() {
+            var expectedOwners = new List<string>
+            {
                 "dotnet"
             };
 
-            var expectedNames = new List<string>() {
+            var expectedNames = new List<string>
+            {
                 "repo"
             };
 
@@ -169,24 +175,24 @@ namespace DotNet.Status.Web.Tests
         [Test]
         public async Task BuildCompleteBuildHasNoMatchingTags()
         {
-            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>()
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
             {
-                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource()
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
                 {
                     Id = 123456,
                     Url = "test-build-url"
                 },
-                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers()
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
                 {
-                    Collection = new AzurePipelinesController.HasId()
+                    Collection = new AzurePipelinesController.HasId
                     {
                         Id = "test-collection-id"
                     },
-                    Account = new AzurePipelinesController.HasId()
+                    Account = new AzurePipelinesController.HasId
                     {
                         Id = "test-account-id"
                     },
-                    Project = new AzurePipelinesController.HasId()
+                    Project = new AzurePipelinesController.HasId
                     {
                         Id = "test-project-id"
                     }
@@ -272,21 +278,26 @@ namespace DotNet.Status.Web.Tests
                 l.AddProvider(new NUnitLogger());
             });
 
-            collection.Configure<BuildMonitorOptions>(options => {
-                options.Monitor = new BuildMonitorOptions.AzurePipelinesOptions() {
+            collection.Configure<BuildMonitorOptions>(options =>
+            {
+                options.Monitor = new BuildMonitorOptions.AzurePipelinesOptions
+                {
                     BaseUrl = "https://example.test",
                     Organization = "dnceng",
                     MaxParallelRequests = 10,
                     AccessToken = "fake",
-                    Builds = new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription[] {
-                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription() {
+                    Builds = new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription[]
+                    {
+                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                        {
                             Project = "test-project-name",
                             DefinitionPath = "\\test\\definition\\path",
                             Branches = new string[] { "sourceBranch" },
                             Assignee = "assignee",
                             IssuesId = "first-issues"
                         },
-                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription() {
+                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                        {
                             Project = "test-project-name",
                             DefinitionPath = "\\test\\definition\\path2",
                             Branches = new string[] { "sourceBranch" },
@@ -296,8 +307,10 @@ namespace DotNet.Status.Web.Tests
                         }
                     }
                 };
-                options.Issues = new BuildMonitorOptions.IssuesOptions[] {
-                    new BuildMonitorOptions.IssuesOptions() {
+                options.Issues = new BuildMonitorOptions.IssuesOptions[]
+                {
+                    new BuildMonitorOptions.IssuesOptions
+                    {
                         Id = "first-issues",
                         Owner = "dotnet",
                         Name = "repo",
