@@ -24,6 +24,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
             TargetBranch = other.TargetBranch;
             Enabled = other.Enabled;
             Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
+            PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
         }
 
         public Guid Id { get; }
@@ -41,5 +42,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
         public Build LastAppliedBuild { get; }
 
         public bool Enabled { get; }
+
+        public string PullRequestFailureNotificationTags { get; }
     }
 }
