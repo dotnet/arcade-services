@@ -34,6 +34,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Octokit;
 
 namespace DotNet.Status.Web
@@ -261,6 +262,7 @@ namespace DotNet.Status.Web
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
+            services.AddSingleton<IAzureDevOpsClientFactory, AzureDevOpsClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();

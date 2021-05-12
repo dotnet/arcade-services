@@ -7,7 +7,7 @@ namespace DotNet.Status.Web.Options
     public class BuildMonitorOptions
     {
         public AzurePipelinesOptions Monitor { get; set; }
-        public IssuesOptions Issues { get; set; }
+        public IssuesOptions[] Issues { get; set; }
 
         public class AzurePipelinesOptions
         {
@@ -24,11 +24,14 @@ namespace DotNet.Status.Web.Options
                 public string[] Branches { get; set; }
                 public string Assignee { get; set; }
                 public string[] Labels { get; set; }
+                public string[] Tags { get; set; }
+                public string IssuesId { get; set; }
             }
         }
 
         public class IssuesOptions
         {
+            public string Id { get; set; }
             public string Owner { get; set; }
             public string Name { get; set; }
             public string[] Labels { get; set; }
