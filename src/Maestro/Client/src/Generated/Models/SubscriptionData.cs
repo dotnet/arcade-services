@@ -6,13 +6,14 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class SubscriptionData
     {
-        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, Models.SubscriptionPolicy policy)
+        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, Models.SubscriptionPolicy policy, string failureNotificationTags)
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
             Policy = policy;
+            PullRequestFailureNotificationTags = failureNotificationTags;
         }
 
         [JsonProperty("channelName")]

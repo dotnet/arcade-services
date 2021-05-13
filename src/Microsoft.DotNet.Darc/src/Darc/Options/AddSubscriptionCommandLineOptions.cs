@@ -29,12 +29,12 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("batchable", HelpText = "Make subscription batchable.")]
         public bool Batchable { get; set; }
 
-        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP, license/cla and auto-merge.config.enforce checks," +
+        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP, license/cla and auto-merge.config.enforce checks, " +
             "Azure DevOps ignores comment, reviewer and work item linking. Both will not auto-merge if changes are requested.")]
         public bool StandardAutoMergePolicies { get; set; }
 
-        [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one checks and all are passed. " +
-            "Optionally provide a comma separated list of ignored check with --ignore-checks.")]
+        [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one check, and all checks have passed. " +
+            "Optionally provide a comma-separated list of ignored check with --ignore-checks.")]
         public bool AllChecksSuccessfulMergePolicy { get; set; }
 
         [Option("ignore-checks", Separator = ',', HelpText = "For use with --all-checks-passed. A set of checks that are ignored.")]
@@ -57,6 +57,9 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on creation.")]
         public bool NoTriggerOnCreate { get; set; }
+
+        [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags (GitHub login or GitHub team) to notify in the case of non-batched subscription pull-request policy failure.  Users must be publicly a member of the Microsoft org.", Default = "")]
+        public string PullRequestFailureNotificationTags { get; set; }
 
         public override Operation GetOperation()
         {

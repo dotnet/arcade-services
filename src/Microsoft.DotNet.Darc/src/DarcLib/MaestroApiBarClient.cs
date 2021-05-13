@@ -235,7 +235,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </param>
         /// <returns>Newly created subscription, if successful</returns>
         public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo,
-            string targetBranch, string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
+            string targetBranch, string updateFrequency, bool batchable, List<MergePolicy> mergePolicies, string failureNotificationTags)
         {
             var subscriptionData = new SubscriptionData(
                 channelName: channelName,
@@ -250,7 +250,8 @@ namespace Microsoft.DotNet.DarcLib
                         ignoreCase: true))
                 {
                     MergePolicies = mergePolicies.ToImmutableList(),
-                });
+                }, 
+                failureNotificationTags);
             return _barClient.Subscriptions.CreateAsync(subscriptionData);
         }
 

@@ -99,6 +99,7 @@ namespace Microsoft.DotNet.Darc.Operations
             string targetBranch = GitHelpers.NormalizeBranchName(_options.TargetBranch);
             string updateFrequency = _options.UpdateFrequency;
             bool batchable = _options.Batchable;
+            string failureNotificationTags = _options.PullRequestFailureNotificationTags;
 
             // If in quiet (non-interactive mode), ensure that all options were passed, then
             // just call the remote API
@@ -117,6 +118,11 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else
             {
+                if (!string.IsNullOrEmpty(failureNotificationTags) && batchable)
+                {
+                    Logger.LogWarning("Failure Notification Tags may be set, but will not be used while in batched mode.");
+                }
+
                 // Grab existing subscriptions to get suggested values.
                 // TODO: When this becomes paged, set a max number of results to avoid
                 // pulling too much.
@@ -138,7 +144,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                              (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                                              (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                                              Constants.AvailableFrequencies,
-                                             Constants.AvailableMergePolicyYamlHelp);
+                                             Constants.AvailableMergePolicyYamlHelp, 
+                                             failureNotificationTags);
 
                 UxManager uxManager = new UxManager(_options.GitLocation, Logger);
                 int exitCode = _options.ReadStandardIn ? uxManager.ReadFromStdIn(addSubscriptionPopup) : uxManager.PopUp(addSubscriptionPopup);
@@ -153,6 +160,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 updateFrequency = addSubscriptionPopup.UpdateFrequency;
                 mergePolicies = addSubscriptionPopup.MergePolicies;
                 batchable = addSubscriptionPopup.Batchable;
+                failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
             }
 
             try
@@ -168,6 +176,11 @@ namespace Microsoft.DotNet.Darc.Operations
                             "PRs will not be auto-merged.");
                         Console.WriteLine($"Please use 'darc set-repository-policies --repo {targetRepository} --branch {targetBranch}' " +
                             $"to set policies.{Environment.NewLine}");
+                    }
+
+                    if (!string.IsNullOrEmpty(failureNotificationTags))
+                    {
+                        Console.WriteLine("Warning: Failure notification tags may be set, but are ignored on batched subscriptions.");
                     }
                 }
 
@@ -193,7 +206,9 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                            targetBranch,
                                                                            updateFrequency,
                                                                            batchable,
-                                                                           mergePolicies);
+                                                                           mergePolicies, 
+                                                                           failureNotificationTags);
+
                 Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
 
                 // Prompt the user to trigger the subscription unless they have explicitly disallowed it

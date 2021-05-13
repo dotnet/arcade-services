@@ -24,6 +24,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         public string UpdateFrequency => _yamlData.UpdateFrequency;
         public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
         public bool Batchable => bool.Parse(_yamlData.Batchable);
+        public string FailureNotificationTags => _yamlData.FailureNotificationTags;
 
         public AddSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -37,7 +38,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     IEnumerable<string> suggestedChannels,
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
-                                    IEnumerable<string> availableMergePolicyHelp)
+                                    IEnumerable<string> availableMergePolicyHelp,
+                                    string failureNotificationTags)
             : base(path)
         {
             _logger = logger;
@@ -49,7 +51,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
                 Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
-                MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies)
+                MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
+                FailureNotificationTags = failureNotificationTags
             };
 
             ISerializer serializer = new SerializerBuilder().Build();
@@ -63,7 +66,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
                 new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
                 new Line("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-                new Line("set-repository-policies command should be used instead to set policies on the repository + branch level. ", true),
+                new Line("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
+                new Line("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
+                new Line("logins when monitoring the pull requests, once one or more policy checks fail.", true),
                 new Line("For additional information about subscriptions, please see", true),
                 new Line("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
                 new Line("", true),
@@ -151,6 +156,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             _yamlData.Batchable = outputYamlData.Batchable;
 
+            _yamlData.FailureNotificationTags = outputYamlData.FailureNotificationTags;
+
             _yamlData.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _yamlData.UpdateFrequency, false);
             if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) ||
                 !Constants.AvailableFrequencies.Contains(_yamlData.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
@@ -176,6 +183,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
             public const string batchableElement = "Batchable";
+            public const string failureNotificationTagsElement = "Pull Request Failure Notification Tags";
 
             [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
             public string Channel { get; set; }
@@ -197,6 +205,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicyData> MergePolicies { get; set; }
+
+            [YamlMember(Alias = failureNotificationTagsElement, ApplyNamingConventions = false)]
+            public string FailureNotificationTags { get; set; }
         }
     }
 }
