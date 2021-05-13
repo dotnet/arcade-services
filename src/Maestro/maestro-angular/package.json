@@ -55,6 +55,8 @@
     "@types/node": "~8.9.4",
     "codelyzer": "~4.5.0",
     "concurrently": "^5.0.2",
+    "handlebars": ">=4.7.7",
+    "hosted-git-info": ">=2.8.9",
     "jasmine-core": "~2.99.1",
     "jasmine-reporters": "^2.3.2",
     "jasmine-spec-reporter": "~4.2.1",
@@ -64,12 +66,18 @@
     "karma-jasmine": "~1.1.2",
     "karma-jasmine-html-reporter": "^0.2.2",
     "karma-junit-reporter": "^2.0.1",
+    "lodash": ">=4.17.21",
     "patch-package": "^6.2.0",
     "protractor": "^5.4.2",
+    "postcss": ">=8.2.10",
     "puppeteer": "^2.0.0",
+    "ssri": ">=6.0.2",
+    "sockjs": ">=0.3.20",
     "ts-node": "~7.0.0",
     "tslint": "~5.11.0",
     "typescript": "~3.2.2",
-    "webpack-bundle-analyzer": "^3.6.0"
+    "url-parse": ">=1.5.0",
+    "webpack-bundle-analyzer": "^3.6.0",
+    "xmlhttprequest-ssl": ">=1.6.2"
   }
 }
