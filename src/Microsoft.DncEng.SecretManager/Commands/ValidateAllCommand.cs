@@ -40,7 +40,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
 
         public override bool AreRequiredOptionsSet()
         {
-            return !string.IsNullOrEmpty(_basePath) || _manifestFiles.Any();
+            return !string.IsNullOrEmpty(_basePath) && _manifestFiles.Any();
         }
 
         public override async Task RunAsync(CancellationToken cancellationToken)
@@ -95,7 +95,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     continue;
                 }
 
-                haveErrors |= await _settingsFileValidator.ValidateFileAsync(envFile.FullName, baseFile.FullName, manifestFile, cancellationToken);
+                haveErrors |= !await _settingsFileValidator.ValidateFileAsync(envFile.FullName, baseFile.FullName, manifestFile, cancellationToken);
             }
 
             if (haveErrors)

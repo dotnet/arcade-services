@@ -89,7 +89,7 @@ secrets:
             (await data.Validator.Invoking(v => v.ValidateFileAsync(envSettings.FilePath, baseSettings.FilePath, manifest.FilePath, CancellationToken.None))
                     .Should()
                     .CompleteWithinAsync(new TimeSpan(0, 0, 5)))
-                .Subject.Should().BeTrue();
+                .Subject.Should().BeFalse();
             data.Console.Errors.Should().HaveCount(1).And.Subject.First().message.Should().Contain("(4,21): error : Secret 'two' does not exist in manifest file.");
         }
 
@@ -135,7 +135,7 @@ secrets:
             (await data.Validator.Invoking(v => v.ValidateFileAsync(envSettings.FilePath, baseSettings.FilePath, manifest.FilePath, CancellationToken.None))
                     .Should()
                     .CompleteWithinAsync(new TimeSpan(0, 0, 5)))
-                .Subject.Should().BeFalse();
+                .Subject.Should().BeTrue();
             data.Console.Errors.Should().BeEmpty();
         }
 
@@ -184,7 +184,7 @@ secrets:
             (await data.Validator.Invoking(v => v.ValidateFileAsync(envSettings.FilePath, baseSettings.FilePath, manifest.FilePath, CancellationToken.None))
                     .Should()
                     .CompleteWithinAsync(new TimeSpan(0, 0, 5)))
-                .Subject.Should().BeFalse();
+                .Subject.Should().BeTrue();
             data.Console.Errors.Should().BeEmpty();
         }
     }

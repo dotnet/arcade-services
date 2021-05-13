@@ -60,7 +60,7 @@ namespace Microsoft.DncEng.SecretManager
                 }
             }
 
-            return foundError;
+            return !foundError;
         }
 
         private async Task<Dictionary<string, JToken>> ReadSettingsPair(string envSettingsFile, string baseSettingsFile)

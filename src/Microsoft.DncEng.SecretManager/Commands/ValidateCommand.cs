@@ -38,7 +38,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
 
         public override async Task RunAsync(CancellationToken cancellationToken)
         {
-            bool foundError = await _settingsFileValidator.ValidateFileAsync(_envSettingsFile, _baseSettingsFile, _manifestFile, cancellationToken);
+            bool foundError = !await _settingsFileValidator.ValidateFileAsync(_envSettingsFile, _baseSettingsFile, _manifestFile, cancellationToken);
 
             if (foundError)
             {
