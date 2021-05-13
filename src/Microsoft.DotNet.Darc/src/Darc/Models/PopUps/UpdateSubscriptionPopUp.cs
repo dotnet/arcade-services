@@ -31,6 +31,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
         public bool Enabled => bool.Parse(_yamlData.Enabled);
 
+        public string FailureNotificationTags => _yamlData.FailureNotificationTags;
+
         public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
 
         public UpdateSubscriptionPopUp(string path,
@@ -39,7 +41,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     IEnumerable<string> suggestedChannels,
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
-                                    IEnumerable<string> availableMergePolicyHelp)
+                                    IEnumerable<string> availableMergePolicyHelp,
+                                    string failureNotificationTags)
             : base(path)
         {
             _logger = logger;
@@ -52,6 +55,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
                 UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
                 Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
+                FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false)
             };
 
             _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies);
@@ -157,6 +161,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
+            _yamlData.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _yamlData.FailureNotificationTags, false);
+
             return Constants.SuccessCode;
         }
 
@@ -172,6 +178,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
             public const string enabled = "Enabled";
+            public const string failureNotificationTagsElement = "Pull Request Failure Notification Tags";
 
             [YamlMember(ApplyNamingConventions = false)]
             public string Id { get; set; }
@@ -193,6 +200,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicyData> MergePolicies { get; set; }
+
+            [YamlMember(Alias = failureNotificationTagsElement, ApplyNamingConventions = false)]
+            public string FailureNotificationTags { get; set; }
         }
     }
 }

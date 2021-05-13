@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Models
         /// </summary>
         /// <param name="currentValue">Current value of the setting</param>
         /// <param name="defaultValue">Default value if the current setting value is empty</param>
-        /// <param name="isSecret">If secret and current value is empty, should display ***</param>
+        /// <param name="isSecret">If secret and current value is not empty, should display ***</param>
         /// <returns>String to display</returns>
         protected static string GetCurrentSettingForDisplay(string currentValue, string defaultValue, bool isSecret)
         {
