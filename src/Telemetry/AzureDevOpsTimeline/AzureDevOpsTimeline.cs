@@ -182,6 +182,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger.LogTrace("Aggregating results...");
             foreach ((Build build, Task<Timeline> timelineTask) in allNewTimelines)
             {
+                using IDisposable buildScope = _logger.BeginScope(KeyValuePair.Create("buildId", build.Id));
+
                 augmentedBuilds.Add(CreateAugmentedBuild(build));
 
                 Timeline timeline = await timelineTask;
@@ -252,12 +254,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             {
                 if (build.Reason == "pullRequest")
                 {
-                    targetBranch = (string)JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
+                    if (build.Parameters != null)
+                    {
+                        targetBranch = (string)JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Build parameters null, unable to extract target branch");
+                    }
                 }
             }
-            catch (JsonReaderException e)
+            catch (JsonException e)
             {
-                _logger.LogError(e, "Unable to extract targetBranch from Build");
+                _logger.LogInformation(e, "Unable to extract targetBranch from Build");
             }
 
             return new AugmentedBuild(build, targetBranch);
