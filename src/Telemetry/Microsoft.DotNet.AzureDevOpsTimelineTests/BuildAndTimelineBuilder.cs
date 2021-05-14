@@ -35,9 +35,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 Id = id,
                 Project = new TeamProjectReference() { Name = projectName },
                 ValidationResults = Array.Empty<BuildRequestValidationResult>(),
-                Reason = "pullRequest",
-                Parameters = $"{{\"system.pullRequest.targetBranch\": \"{branchName}\"}}"
+                Reason = "pullRequest"
             };
+
+            if (branchName == null)
+            {
+                build.Parameters = null;
+            }
+            else
+            {
+                build.Parameters = $"{{\"system.pullRequest.targetBranch\": \"{branchName}\"}}";
+            }
 
             return new BuildAndTimelineBuilder(build);
         }
