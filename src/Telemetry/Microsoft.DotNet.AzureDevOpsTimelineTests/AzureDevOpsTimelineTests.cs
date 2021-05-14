@@ -146,7 +146,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         }
 
         [Test]
-        public async Task PullRequestWithNoProperties()
+        public async Task PullRequestWithNoParameters()
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
