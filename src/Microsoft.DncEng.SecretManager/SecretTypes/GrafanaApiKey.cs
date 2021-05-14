@@ -30,6 +30,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new InvalidOperationException($"User intervention required for creation or rotation of a Grafana API key.");
             }
 
+            _console.WriteLine("Please login to https://dotnet-eng-grafana.westus2.cloudapp.azure.com/org/apikeys using your GitHub account and create a new API key.");
+
             var pat = await _console.PromptAndValidateAsync("API key",
                 "API key must be base64 encoded json.",
                 ValidateAPIKey);
