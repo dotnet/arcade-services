@@ -3,55 +3,49 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("grafana-api-key")]
-    public class GrafanaApiKey : SecretType
+    public class GrafanaApiKey : GenericAccessToken
     {
-        private readonly TimeSpan _rotateBeforeExpiration = TimeSpan.FromDays(-15);
         private readonly string[] _expirationDateFormats = new[] { "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss" };
-        private readonly ISystemClock _clock;
-        private readonly IConsole _console;
 
-        public GrafanaApiKey(ISystemClock clock, IConsole console)
+        protected override string HelpMessage => "Please login to https://{0}/org/apikeys using your GitHub account and create a new API key.";
+        protected override string TokenName => "Grafana API key";
+        protected override string TokenFormatDescription => "base64 encoded json";
+        protected override string ExpirationFormatDescription => "format yyyy-MM-dd followed by optional time part hh:mm:ss or empty for no expiration";
+        protected override bool HasExpiration => true;
+
+        protected override IEnumerable<KeyValuePair<string, string>> EnvironmentToHost => new[]
         {
-            _clock = clock;
-            _console = console;
+            new KeyValuePair<string, string>( "production", "dotnet-eng-grafana.westus2.cloudapp.azure.com" ),
+            new KeyValuePair<string, string>( "staging", "dotnet-eng-grafana-staging.westus2.cloudapp.azure.com" )
+        };
+
+        public GrafanaApiKey(ISystemClock clock, IConsole console) : base(clock, console)
+        {
         }
 
-        public override async Task<List<SecretData>> RotateValues(IReadOnlyDictionary<string, string> parameters, RotationContext context, CancellationToken cancellationToken)
+        protected override bool TryParseExpirationDate(string value, out DateTime parsedValue)
         {
-            if (!_console.IsInteractive)
+            if (string.IsNullOrWhiteSpace(value))
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of a Grafana API key.");
+                parsedValue = DateTime.MaxValue;
+                return true;
             }
-
-            _console.WriteLine("Please login to https://dotnet-eng-grafana.westus2.cloudapp.azure.com/org/apikeys using your GitHub account and create a new API key.");
-
-            var pat = await _console.PromptAndValidateAsync("API key",
-                "API key must be base64 encoded json.",
-                ValidateAPIKey);
-
-            var expiration = await _console.PromptAndValidateAsync("API key expiration (yyyy-MM-dd)",
-                "API key expiration must be in the format yyyy-MM-dd followed by optional time part hh:mm:ss.",
-                (string value, out DateTime parsedValue) =>
-                    DateTime.TryParseExact(value, _expirationDateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedValue));
-
-            return new List<SecretData>() { new SecretData(pat, expiration, expiration.Add(_rotateBeforeExpiration)) };
+            return DateTime.TryParseExact(value, _expirationDateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedValue);
         }
 
-        private bool ValidateAPIKey(string value)
+        protected override bool ValidateToken(string token)
         {
             try
             {
-                string jsonString = Encoding.UTF8.GetString(Convert.FromBase64String(value));
+                string jsonString = Encoding.UTF8.GetString(Convert.FromBase64String(token));
                 JsonDocument json = JsonDocument.Parse(jsonString, new JsonDocumentOptions());
-                if(json.RootElement.TryGetProperty("n", out JsonElement keyName))
-                    _console.WriteLine($"API key was entered with name {keyName}.");
+                if (json.RootElement.TryGetProperty("n", out JsonElement keyName))
+                    Console.WriteLine($"API key was entered with name {keyName}.");
 
                 return true;
             }
