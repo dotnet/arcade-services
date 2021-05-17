@@ -15,9 +15,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
 
         public async Task WriteAllTextAsync(string text)
         {
-            using var file = new FileStream(FilePath, FileMode.Create, FileAccess.Write);
-            using var writer = new StreamWriter(file);
-            await writer.WriteAsync(text);
+            await File.WriteAllTextAsync(FilePath, text);
         }
 
         public void Dispose()

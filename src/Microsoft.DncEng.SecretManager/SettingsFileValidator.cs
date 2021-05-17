@@ -92,23 +92,28 @@ namespace Microsoft.DncEng.SecretManager
 
             var obj = await JObject.LoadAsync(jr);
 
+            void VisitToken(string prefix, JToken value)
+            {
+                if (value is JObject subObj)
+                {
+                    VisitObj($"{prefix}|", subObj);
+                }
+                else if (value is JArray arr)
+                {
+                    VisitArray($"{prefix}|", arr);
+                }
+                else
+                {
+                    SourceFile.Add(value, settingsFile);
+                    result.Add(prefix, value);
+                }
+            }
+
             void VisitObj(string prefix, JObject obj)
             {
                 foreach (var (key, value) in obj)
                 {
-                    if (value is JObject subObj)
-                    {
-                        VisitObj($"{prefix}{key}|", subObj);
-                    }
-                    else if (value is JArray arr)
-                    {
-                        VisitArray($"{prefix}{key}|", arr);
-                    }
-                    else
-                    {
-                        SourceFile.Add(value, settingsFile);
-                        result.Add($"{prefix}{key}", value);
-                    }
+                    VisitToken($"{prefix}{key}", value);
                 }
             }
 
@@ -117,19 +122,7 @@ namespace Microsoft.DncEng.SecretManager
                 for (int i = 0; i < arr.Count; i++)
                 {
                     var value = arr[i];
-                    if (value is JObject obj)
-                    {
-                        VisitObj($"{prefix}{i}|", obj);
-                    }
-                    else if (value is JArray subArr)
-                    {
-                        VisitArray($"{prefix}{i}|", subArr);
-                    }
-                    else
-                    {
-                        SourceFile.Add(value, settingsFile);
-                        result.Add($"{prefix}{i}", value);
-                    }
+                    VisitToken($"{prefix}{i}", value);
                 }
             }
 
