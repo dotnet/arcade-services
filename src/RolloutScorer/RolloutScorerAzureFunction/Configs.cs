@@ -15,7 +15,7 @@ namespace RolloutScorerAzureFunction
                     BuildDefinitionIds = new List<string> { "620", "697" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Helix",
-                    ExpectedTime = 30,
+                    ExpectedTime = 90,
                     ExcludeStages = new List<string>() { "Post_Deployment_Tests" },
                 },
                 new RepoConfig
@@ -24,7 +24,7 @@ namespace RolloutScorerAzureFunction
                     BuildDefinitionIds = new List<string> { "596" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout OSOB",
-                    ExpectedTime = 60,
+                    ExpectedTime = 150,
                     ExcludeStages = new List<string> { "Validate", "Cleanup", "Validate_OnPrem" },
                 },
                 new RepoConfig
@@ -33,7 +33,7 @@ namespace RolloutScorerAzureFunction
                     BuildDefinitionIds = new List<string> { "252", "728" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Arcade-Services",
-                    ExpectedTime = 30,
+                    ExpectedTime = 90,
                     ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
                 },
             },

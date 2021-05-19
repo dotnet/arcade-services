@@ -5,7 +5,7 @@
       "BuildDefinitionIds": [ "620", "697" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Helix",
-      "ExpectedTime": 30,
+      "ExpectedTime": 90,
       "ExcludeStages": []
     },
     {
@@ -13,7 +13,7 @@
       "BuildDefinitionIds": [ "596" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout OSOB",
-      "ExpectedTime": 60,
+      "ExpectedTime": 150,
       "ExcludeStages": [ "Validate", "Cleanup", "Validate_OnPrem" ]
     },
     {
@@ -21,7 +21,7 @@
       "BuildDefinitionIds": [ "252", "728" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Arcade-Services",
-      "ExpectedTime": 30,
+      "ExpectedTime": 90,
       "ExcludeStages": [ "Post-Deployment", "Validate deployment" ]
     }
   ],
