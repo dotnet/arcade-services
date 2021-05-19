@@ -49,7 +49,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                 (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
-                Constants.AvailableMergePolicyYamlHelp);
+                Constants.AvailableMergePolicyYamlHelp,
+                subscription.PullRequestFailureNotificationTags);
 
             UxManager uxManager = new UxManager(_options.GitLocation, Logger);
 
@@ -65,6 +66,7 @@ namespace Microsoft.DotNet.Darc.Operations
             string updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
             bool batchable = updateSubscriptionPopUp.Batchable;
             bool enabled = updateSubscriptionPopUp.Enabled;
+            string failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
             List<MergePolicy> mergePolicies = updateSubscriptionPopUp.MergePolicies;
 
             try
@@ -75,6 +77,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     SourceRepository = sourceRepository ?? subscription.SourceRepository,
                     Enabled = enabled,
                     Policy = subscription.Policy,
+                    PullRequestFailureNotificationTags = failureNotificationTags
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
                 subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency);

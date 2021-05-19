@@ -14,6 +14,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
@@ -64,6 +65,7 @@ namespace SubscriptionActorService
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+        private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
         /// <summary>
         ///     Creates a new PullRequestActor
@@ -83,7 +85,8 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier)
         {
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
@@ -91,6 +94,7 @@ namespace SubscriptionActorService
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
+            _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
         }
 
         public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
@@ -111,7 +115,8 @@ namespace SubscriptionActorService
                         _darcFactory,
                         _loggerFactory,
                         _actionRunner,
-                        _subscriptionActorFactory);
+                        _subscriptionActorFactory,
+                        _pullRequestPolicyFailureNotifier);
                 case ActorIdKind.String:
                     return new BatchedPullRequestActorImplementation(actorId,
                         reminderManager,
@@ -123,7 +128,7 @@ namespace SubscriptionActorService
                         _actionRunner,
                         _subscriptionActorFactory);
                 default:
-                    throw new NotSupportedException("Only actorId's of type Guid and String are supported");
+                    throw new NotSupportedException("Only actorIds of type Guid and String are supported");
             }
         }
 
@@ -281,11 +286,13 @@ namespace SubscriptionActorService
         [ActionMethod("Processing pending updates")]
         public async Task<ActionResult<bool>> ProcessPendingUpdatesAsync()
         {
+            Logger.LogInformation("Processing pending updates");
             ConditionalValue<List<UpdateAssetsParameters>> maybeUpdates =
                 await StateManager.TryGetStateAsync<List<UpdateAssetsParameters>>(PullRequestUpdate);
             List<UpdateAssetsParameters> updates = maybeUpdates.HasValue ? maybeUpdates.Value : null;
             if (updates == null || updates.Count < 1)
             {
+                Logger.LogInformation("No Pending Updates");
                 await Reminders.TryUnregisterReminderAsync(PullRequestUpdate);
                 return ActionResult.Create(false, "No Pending Updates");
             }
@@ -294,6 +301,7 @@ namespace SubscriptionActorService
 
             if (pr != null && !canUpdate)
             {
+                Logger.LogInformation($"PR {pr?.Url} cannot be updated.");
                 return ActionResult.Create(false, "PR cannot be updated.");
             }
 
@@ -302,6 +310,7 @@ namespace SubscriptionActorService
             {
                 await UpdatePullRequestAsync(pr, updates);
                 result = $"Pull Request '{pr.Url}' updated.";
+                Logger.LogInformation($"Pull Request '{pr.Url}' updated.");
             }
             else
             {
@@ -314,12 +323,19 @@ namespace SubscriptionActorService
                 {
                     result = $"Pull Request '{prUrl}' created.";
                 }
+                Logger.LogInformation(result);
             }
 
             await StateManager.RemoveStateAsync(PullRequestUpdate);
             await Reminders.TryUnregisterReminderAsync(PullRequestUpdate);
 
             return ActionResult.Create(true, "Pending updates applied. " + result);
+        }
+
+        protected virtual Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
+        {
+            // Only do actual stuff in the non-batched implementation
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -386,10 +402,12 @@ namespace SubscriptionActorService
         [ActionMethod("Synchronizing Pull Request: '{url}'")]
         private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
+            Logger.LogInformation($"Synchronizing Pull Request {prUrl}");
             ConditionalValue<InProgressPullRequest> maybePr =
                 await StateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
             if (!maybePr.HasValue || maybePr.Value.Url != prUrl)
             {
+                Logger.LogInformation($"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
                 return ActionResult.Create(
                     SynchronizePullRequestResult.UnknownPR,
                     $"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
@@ -400,12 +418,14 @@ namespace SubscriptionActorService
 
             InProgressPullRequest pr = maybePr.Value;
 
+            Logger.LogInformation($"Get status for PullRequest: {prUrl}");
             PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
             switch (status)
             {
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
-                // merge the PR if they are successul.
+                // merge the PR if they are successful.
                 case PrStatus.Open:
+                    Logger.LogInformation($"Status open for: {prUrl}");
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
 
@@ -421,8 +441,10 @@ namespace SubscriptionActorService
                                 prUrl);
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
-                        case MergePolicyCheckResult.NoPolicies:
                         case MergePolicyCheckResult.FailedPolicies:
+                            await TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
+                            goto case MergePolicyCheckResult.FailedToMerge;
+                        case MergePolicyCheckResult.NoPolicies:
                         case MergePolicyCheckResult.FailedToMerge:
                             return ActionResult.Create(SynchronizePullRequestResult.InProgressCanUpdate, checkPolicyResult.Message);
                         case MergePolicyCheckResult.PendingPolicies:
@@ -433,6 +455,7 @@ namespace SubscriptionActorService
                 case PrStatus.Merged:
                 case PrStatus.Closed:
                     // If the PR has been merged, update the subscription information
+                    Logger.LogInformation($"Status closed for: {prUrl}");
                     if (status == PrStatus.Merged)
                     {
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
@@ -453,6 +476,7 @@ namespace SubscriptionActorService
                     // Also try to clean up the PR branch.
                     try
                     {
+                        Logger.LogInformation($"Try to clean up the PR branch {prUrl}");
                         await darc.DeletePullRequestBranchAsync(prUrl);
                     }
                     catch (DarcException e)
@@ -480,11 +504,17 @@ namespace SubscriptionActorService
                 policyDefinitions);
 
             await UpdateMergeStatusAsync(darc, pr.Url, result.Results);
-            if (result.Failed || result.Pending)
+            // As soon as one policy is actively failed, we enter a failed state.
+            if (result.Failed)
             {
-                return ActionResult.Create(
-                    result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
-                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Message))}");
+                Logger.LogInformation($"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Message))}");
+                return ActionResult.Create(MergePolicyCheckResult.FailedPolicies,
+                    $"NOT Merged: PR '{pr.Url}' has failed policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Failure).Select(r => r.MergePolicyInfo.Name + r.Message))}");
+            }
+            else if (result.Pending)
+            {
+                return ActionResult.Create(MergePolicyCheckResult.PendingPolicies,
+                    $"NOT Merged: PR '{pr.Url}' has pending policies {string.Join(", ", result.Results.Where(r => r.Status == MergePolicyEvaluationStatus.Pending).Select(r => r.MergePolicyInfo.Name + r.Message))}");
             }
             if (result.Succeeded)
             {
@@ -496,16 +526,21 @@ namespace SubscriptionActorService
                 }
                 catch
                 {
+                    Logger.LogInformation($"NOT Merged: PR '{pr.Url}' Failed to merge");
                     // Failure to merge is not exceptional, report on it.
                 }
                 if (merged)
                 {
+                    string passedPolicies = string.Join(", ", policyDefinitions.Select(p => p.Name));
+                    Logger.LogInformation($"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
                     return ActionResult.Create(
                         MergePolicyCheckResult.Merged,
-                        $"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
+                        $"Merged: PR '{pr.Url}' passed policies {passedPolicies}");
                 }
+                Logger.LogInformation($"NOT Merged: PR '{pr.Url}' has merge conflicts.");
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
+            Logger.LogInformation($"NOT Merged: PR '{pr.Url}' There are no merge policies");
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
 
@@ -524,6 +559,7 @@ namespace SubscriptionActorService
         private async Task UpdateSubscriptionsForMergedPRAsync(
             IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
         {
+            Logger.LogInformation("Updating subscriptions for merged PR");
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
@@ -1011,7 +1047,7 @@ namespace SubscriptionActorService
                             {
                                 subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
                             }
-                            catch(ArgumentNullException e)
+                            catch (ArgumentNullException e)
                             {
                                 Logger.LogError(e, $"Failed to create SHA comparison link for dependency {to.Name} during asset update for subscription {update.SubscriptionId}");
                             }
@@ -1159,7 +1195,7 @@ namespace SubscriptionActorService
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> incomingUpdates)
         {
             // First project the new updates to the final list
-            List<DependencyUpdateSummary> mergedUpdates = 
+            List<DependencyUpdateSummary> mergedUpdates =
                 incomingUpdates.SelectMany(update => update.deps)
                     .Select(du => new DependencyUpdateSummary
                     {
@@ -1170,7 +1206,7 @@ namespace SubscriptionActorService
 
             // Project to a form that is easy to search
             var searchableUpdates =
-                mergedUpdates.Select( u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                mergedUpdates.Select(u => u.DependencyName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Add any existing assets that weren't modified by the incoming update
             if (existingUpdates != null)
@@ -1207,6 +1243,7 @@ namespace SubscriptionActorService
             string targetRepository,
             string branch)
         {
+            Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
@@ -1260,6 +1297,7 @@ namespace SubscriptionActorService
             bool strictCheckFailed = false;
             try
             {
+                Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
                 coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Strict);
             }
             catch (DarcCoherencyException)
@@ -1288,6 +1326,7 @@ namespace SubscriptionActorService
                 requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
             }
 
+            Logger.LogInformation("Finished getting Required Updates from {branch} to {targetRepository}");
             return requiredUpdates;
         }
 
@@ -1363,6 +1402,7 @@ namespace SubscriptionActorService
     public class NonBatchedPullRequestActorImplementation : PullRequestActorImplementation
     {
         private readonly Lazy<Task<Subscription>> _lazySubscription;
+        private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
 
         public NonBatchedPullRequestActorImplementation(
             ActorId id,
@@ -1373,7 +1413,8 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
+            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier) : base(
             id,
             reminders,
             stateManager,
@@ -1385,6 +1426,7 @@ namespace SubscriptionActorService
             subscriptionActorFactory)
         {
             _lazySubscription = new Lazy<Task<Subscription>>(RetrieveSubscription);
+            _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
         }
 
         public Guid SubscriptionId => Id.GetGuidId();
@@ -1408,6 +1450,10 @@ namespace SubscriptionActorService
         {
             return _lazySubscription.Value;
         }
+        protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
+        {
+            await _pullRequestPolicyFailureNotifier.TagSourceRepositoryGitHubContactsAsync(pr);
+        }
 
         protected override async Task<(string repository, string branch)> GetTargetAsync()
         {
@@ -1418,7 +1464,7 @@ namespace SubscriptionActorService
         protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
         {
             Subscription subscription = await GetSubscription();
-            return (IReadOnlyList<MergePolicyDefinition>)subscription.PolicyObject.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) subscription.PolicyObject.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
 
@@ -1449,7 +1495,9 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            :
+            base(
             id,
             reminders,
             stateManager,
@@ -1473,7 +1521,7 @@ namespace SubscriptionActorService
         {
             RepositoryBranch repositoryBranch =
                 await Context.RepositoryBranches.FindAsync(Target.repository, Target.branch);
-            return (IReadOnlyList<MergePolicyDefinition>)repositoryBranch?.PolicyObject?.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
     }

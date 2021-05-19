@@ -43,6 +43,7 @@ namespace SubscriptionActorService
             services.AddSingleton<TemporaryFiles>();
             services.AddGitHubTokenProvider();
             services.AddAzureDevOpsTokenProvider();
+            services.AddScoped<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
             // We do not use AddMemoryCache here. We use our own cache because we wish to
             // use a sized cache and some components, such as EFCore, do not implement their caching
             // in such a way that will work with sizing.
@@ -53,6 +54,7 @@ namespace SubscriptionActorService
                 var config = provider.GetRequiredService<IConfiguration>();
                 options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
             });
+            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.Configure<GitHubClientOptions>(o =>
             {
                 o.ProductHeader = new ProductHeaderValue("Maestro",

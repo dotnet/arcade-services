@@ -47,7 +47,8 @@ namespace Microsoft.DotNet.DarcLib
             string targetBranch,
             string updateFrequency,
             bool batchable,
-            List<MergePolicy> mergePolicies);
+            List<MergePolicy> mergePolicies,
+            string failureNotificationTags);
 
         /// <summary>
         ///     Update an existing subscription

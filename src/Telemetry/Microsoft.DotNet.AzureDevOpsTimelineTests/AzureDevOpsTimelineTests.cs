@@ -144,5 +144,38 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .Select(r => r.Raw)
                 .Should().BeEquivalentTo(expectedRecords);
         }
+
+        [Test]
+        public async Task PullRequestWithNoParameters()
+        {
+            DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
+            string azdoProjectName = "public";
+            string targetBranchName = null;
+
+            BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
+                .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
+                    .AddRecord()
+                    .AddRecord()
+                ).Build();
+
+            // Test setup
+            using TestData testData = new TestDataBuilder()
+                .AddTelemetryRepository()
+                .AddStaticClock(timeDatum)
+                .AddBuildsWithTimelines(new List<BuildAndTimeline>() {
+                    build
+                }).Build();
+
+            /// Test execution
+            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+
+            // Test results
+            testData.Repository.TimelineBuilds.Should().SatisfyRespectively(
+                first =>
+                {
+                    first.Build.Should().BeSameAs(build.Build);
+                    first.TargetBranch.Should().Be(string.Empty);
+                });
+        }
     }
 }

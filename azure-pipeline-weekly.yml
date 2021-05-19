@@ -1,0 +1,53 @@
+trigger: none
+
+schedules:
+- cron: 0 12 * * 1
+  displayName: Weekly Monday build
+  branches:
+    include:
+    - main
+  always: true
+
+name: $(Date:yyyMMdd)$(Rev:rr)
+resources:
+  pipelines:
+  - pipeline: arcadeServicesInternalCI
+    source: arcade-services-internal-ci
+    branch: main
+
+stages:
+  - stage: Build
+    jobs:
+    - job: Build
+      pool:
+        vmImage: windows-2019
+      steps:
+      - download: arcadeServicesInternalCI
+        artifact: MaestroApplication
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathToPublish: $(Build.SourcesDirectory)\Scripts\Validation\
+          ArtifactName: ValidationScripts
+          ArtifactType: Container
+        displayName: Publish Validation Scripts
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathToPublish: $(Pipeline.Workspace)\arcadeServicesInternalCI\MaestroApplication\projectartifacts\PublishProfiles\
+          ArtifactName: ServiceFabricPublishProfiles
+          ArtifactType: Container
+        displayName: Publish Service Fabric Publish Profiles
+      - publish: $(Build.SourcesDirectory)\eng
+        artifact: ReleaseUtilities
+        displayName: Publish Release Utilities
+
+  - template: eng/pre-deploy-tests.yaml
+    parameters:
+      AzureSubscription: NetHelixStaging
+      PublishProfile: Int
+      stageName: Pre_Deploy_tests_Int
+
+  - template: eng/pre-deploy-tests.yaml
+    parameters:
+      AzureSubscription: NetHelix
+      PublishProfile: Prod
+      stageName: Pre_Deploy_tests_Prod

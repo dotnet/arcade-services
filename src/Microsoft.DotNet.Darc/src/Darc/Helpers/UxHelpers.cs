@@ -206,6 +206,7 @@ namespace Microsoft.DotNet.Darc
             subInfo.AppendLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
             subInfo.AppendLine($"  - Enabled: {subscription.Enabled}");
             subInfo.AppendLine($"  - Batchable: {subscription.Policy.Batchable}");
+            subInfo.AppendLine($"  - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}");
 
             IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
             subInfo.Append(UxHelpers.GetMergePoliciesDescription(policies, "  "));

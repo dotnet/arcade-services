@@ -25,29 +25,32 @@ namespace DotNet.Status.Web.Controllers
     public class AzurePipelinesController : ControllerBase
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
-        private readonly Lazy<AzureDevOpsClient> _clientLazy;
+        private readonly Lazy<IAzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptions<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _options = options;
             _logger = logger;
-            _clientLazy = new Lazy<AzureDevOpsClient>(BuildAzureDevOpsClient);
+            _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
-        private AzureDevOpsClient Client => _clientLazy.Value;
+        private IAzureDevOpsClient Client => _clientLazy.Value;
 
-        private AzureDevOpsClient BuildAzureDevOpsClient()
+        private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
-            return new AzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
+            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
@@ -162,17 +165,26 @@ namespace DotNet.Status.Web.Controllers
                     continue;
                 }
 
+                if (monitor.Tags != null && monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
+                {
+                    // We should only skip processing if tags were specified in the monitor, and none of those tags were found in the build
+                    continue;
+                }
+
                 string prettyBranch = build.SourceBranch;
                 if (prettyBranch.StartsWith(fullBranchPrefix))
                 {
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
+                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"tags '{string.Join(", ", build.Tags)}'" : "";
+
                 _logger.LogInformation(
-                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}' and branch '{branch}' matches monitoring criteria, sending notification",
+                    "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}', tags '{prettyTags}', and branch '{branch}' matches monitoring criteria, sending notification",
                     build.BuildNumber,
                     build.Project.Name,
                     build.Definition.Path,
+                    prettyTags,
                     build.SourceBranch);
                 
                 _logger.LogInformation("Fetching timeline messages...");
@@ -181,26 +193,29 @@ namespace DotNet.Status.Web.Controllers
                 _logger.LogInformation("Fetching changes messages...");
                 string changesMessage = await BuildChangesMessage(build);
 
-                BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues;
-                IGitHubClient github = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
-                
-                DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
-                DateTimeOffset? startTime = DateTimeOffset.TryParse(build.StartTime, out var parsedStartTime) ? parsedStartTime:(DateTimeOffset?) null;
+                BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
 
-                string timeString = "";
-                string durationString = "";
-                if (finishTime.HasValue)
+                if (repo != null)
                 {
-                    timeString = finishTime.Value.ToString("R");
-                    if (startTime.HasValue)
+                    IGitHubClient github = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
+                    
+                    DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
+                    DateTimeOffset? startTime = DateTimeOffset.TryParse(build.StartTime, out var parsedStartTime) ? parsedStartTime:(DateTimeOffset?) null;
+
+                    string timeString = "";
+                    string durationString = "";
+                    if (finishTime.HasValue)
                     {
-                        durationString = ((int) (finishTime.Value - startTime.Value).TotalMinutes) + " minutes";
+                        timeString = finishTime.Value.ToString("R");
+                        if (startTime.HasValue)
+                        {
+                            durationString = ((int) (finishTime.Value - startTime.Value).TotalMinutes) + " minutes";
+                        }
                     }
-                }
 
-                string icon = build.Result == "failed" ? ":x:" : ":warning:";
+                    string icon = build.Result == "failed" ? ":x:" : ":warning:";
 
-                string body = @$"Build [#{build.BuildNumber}]({build.Links.Web.Href}) {build.Result}
+                    string body = @$"Build [#{build.BuildNumber}]({build.Links.Web.Href}) {build.Result}
 
 ## {icon} : {build.Project.Name} / {build.Definition.Name} {build.Result}
 
@@ -219,30 +234,35 @@ namespace DotNet.Status.Web.Controllers
 {changesMessage}
 ";
 
-                var newIssue =
-                    new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
+                    var newIssue =
+                        new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
+                        {
+                            Body = body,
+                        };
+
+                    if (!string.IsNullOrEmpty(monitor.Assignee))
                     {
-                        Body = body,
-                    };
+                        newIssue.Assignees.Add(monitor.Assignee);
+                    }
+                    
+                    foreach (string label in repo.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
 
-                if (!string.IsNullOrEmpty(monitor.Assignee))
-                {
-                    newIssue.Assignees.Add(monitor.Assignee);
+                    foreach (string label in monitor.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
+
+                    Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
+
+                    _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
                 }
-                
-                foreach (string label in repo.Labels.OrEmpty())
+                else
                 {
-                    newIssue.Labels.Add(label);
+                    _logger.LogWarning("Could not find a matching repo for {issuesId}", monitor.IssuesId);
                 }
-
-                foreach (string label in monitor.Labels.OrEmpty())
-                {
-                    newIssue.Labels.Add(label);
-                }
-
-                Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
-
-                _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
             }
         }
 

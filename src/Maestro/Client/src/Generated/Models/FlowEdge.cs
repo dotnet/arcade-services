@@ -25,6 +25,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("subscriptionId")]
         public Guid SubscriptionId { get; set; }
 
+        [JsonProperty("channelName")]
+        public string ChannelName { get; set; }
+
         [JsonProperty("onLongestBuildPath")]
         public bool OnLongestBuildPath { get; set; }
 

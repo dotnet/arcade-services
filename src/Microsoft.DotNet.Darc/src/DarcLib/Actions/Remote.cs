@@ -237,7 +237,8 @@ namespace Microsoft.DotNet.DarcLib
             string targetBranch,
             string updateFrequency,
             bool batchable,
-            List<MergePolicy> mergePolicies)
+            List<MergePolicy> mergePolicies,
+            string failureNotificationTags)
         {
             CheckForValidBarClient();
             return _barClient.CreateSubscriptionAsync(
@@ -247,7 +248,8 @@ namespace Microsoft.DotNet.DarcLib
                 targetBranch,
                 updateFrequency,
                 batchable,
-                mergePolicies);
+                mergePolicies,
+                failureNotificationTags);
         }
 
         /// <summary>

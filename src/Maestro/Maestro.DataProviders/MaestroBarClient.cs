@@ -52,7 +52,7 @@ namespace Maestro.DataProviders
         }
 
         public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch,
-            string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
+            string updateFrequency, bool batchable, List<MergePolicy> mergePolicies, string failureNotificationTags)
         {
             throw new NotImplementedException();
         }
@@ -239,7 +239,8 @@ namespace Maestro.DataProviders
                 other.Enabled,
                 other.SourceRepository,
                 other.TargetRepository,
-                other.TargetBranch)
+                other.TargetBranch,
+                other.PullRequestFailureNotificationTags)
                 {
                     Channel = ToClientModelChannel(other.Channel),
                     Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
