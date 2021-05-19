@@ -49,21 +49,6 @@ namespace RolloutScorer
             return isIssueLabel;
         }
 
-        public static Config ParseConfig()
-        {
-            Config config;
-            string configFile = $"{AppContext.BaseDirectory}/config.json";
-            if (!File.Exists(configFile))
-            {
-                WriteError($"ERROR: Config file not found; expected it to be at '{configFile}'");
-                return null;
-            }
-            using (JsonTextReader reader = new JsonTextReader(new StreamReader(configFile)))
-            {
-                config = JsonSerializer.Create().Deserialize<Config>(reader);
-            }
-            return config;
-        }
         public static string HandleApiRedirect(HttpResponseMessage redirect, Uri apiRequest, ILogger log = null)
         {
             // Since the API will sometimes 302 us, we're going to do a quick check to see

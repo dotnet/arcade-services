@@ -74,16 +74,16 @@ namespace RolloutScorerAzureFunction
                         {
                             Repo = deploymentGroup.Key,
                             RolloutStartDate = deploymentGroup.First().Started.GetValueOrDefault().Date,
-                            RolloutWeightConfig = Configs.DefaultConfig.RolloutWeightConfig,
-                            GithubConfig = Configs.DefaultConfig.GithubConfig,
+                            RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig,
+                            GithubConfig = StandardConfig.DefaultConfig.GithubConfig,
                             Log = log,
                         };
                         log.LogInformation($"INFO: Finding repo config for {rolloutScorer.Repo}...");
-                        rolloutScorer.RepoConfig = Configs.DefaultConfig.RepoConfigs
+                        rolloutScorer.RepoConfig = StandardConfig.DefaultConfig.RepoConfigs
                             .Find(r => r.Repo == rolloutScorer.Repo);
                         log.LogInformation($"INFO: Repo config: {rolloutScorer.RepoConfig.Repo}");
                         log.LogInformation($"INFO: Finding AzDO config for {rolloutScorer.RepoConfig.AzdoInstance}...");
-                        rolloutScorer.AzdoConfig = Configs.DefaultConfig.AzdoInstanceConfigs
+                        rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs
                             .Find(a => a.Name == rolloutScorer.RepoConfig.AzdoInstance);
 
                         log.LogInformation($"INFO: Fetching AzDO PAT from KeyVault...");
@@ -113,7 +113,7 @@ namespace RolloutScorerAzureFunction
 
                     log.LogInformation($"INFO: Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");
                     await RolloutUploader.UploadResultsAsync(scorecards, Utilities.GetGithubClient(githubPat.Value),
-                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, skipPr: deploymentEnvironment != "Production");
+                        scorecardsStorageAccountKey.Value, StandardConfig.DefaultConfig.GithubConfig, skipPr: deploymentEnvironment != "Production");
                 }
                 else
                 {
