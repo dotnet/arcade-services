@@ -39,10 +39,9 @@ namespace RolloutScorer.Tests
         public void RolloutScorerTests_SetUp()
         {
             _rolloutScorer = new RolloutScorer();
-            Config config = Utilities.ParseConfig();
-            _rolloutScorer.RolloutWeightConfig = config.RolloutWeightConfig;
-            _rolloutScorer.RepoConfig = config.RepoConfigs.First();
-            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
+            _rolloutScorer.RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig;
+            _rolloutScorer.RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.First();
+            _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             _rolloutScorer.Repo = _rolloutScorer.RepoConfig.Repo;
             _rolloutScorer.RolloutStartDate = DateTimeOffset.Now.AddDays(-1);
 

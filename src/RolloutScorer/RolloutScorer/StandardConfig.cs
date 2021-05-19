@@ -1,9 +1,8 @@
-using RolloutScorer;
 using System.Collections.Generic;
 
-namespace RolloutScorerAzureFunction
+namespace RolloutScorer
 {
-    public static class Configs
+    public static class StandardConfig
     {
         public static readonly Config DefaultConfig = new Config
         {

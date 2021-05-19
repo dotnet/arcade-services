@@ -65,13 +65,8 @@ namespace RolloutScorer
                     $"{_rolloutScorer.Repo}-{_rolloutScorer.RolloutStartDate.Date.ToShortDateString().Replace("/","-")}-scorecard.csv");
             }
 
-            Config config = Utilities.ParseConfig();
-            if (config == null)
-            {
-                return 1;
-            }
-            _rolloutScorer.RolloutWeightConfig = config.RolloutWeightConfig;
-            _rolloutScorer.GithubConfig = config.GithubConfig;
+            _rolloutScorer.RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig;
+            _rolloutScorer.GithubConfig = StandardConfig.DefaultConfig.GithubConfig;
 
             // If they haven't told us to upload but they also haven't specified a repo & rollout start date, we need to throw
             if (string.IsNullOrEmpty(_rolloutScorer.Repo) || (_rolloutScorer.RolloutStartDate == null))
@@ -80,14 +75,14 @@ namespace RolloutScorer
                 return 1;
             }
 
-            _rolloutScorer.RepoConfig = config.RepoConfigs.Find(r => r.Repo == _rolloutScorer.Repo);
+            _rolloutScorer.RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.Find(r => r.Repo == _rolloutScorer.Repo);
             if (_rolloutScorer.RepoConfig == null)
             {
                 Utilities.WriteError($"ERROR: Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
                 return 1;
             }
 
-            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
+            _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             if (_rolloutScorer.AzdoConfig == null)
             {
                 Utilities.WriteError($"ERROR: Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +
@@ -129,7 +124,7 @@ namespace RolloutScorer
             Console.WriteLine($"| Hotfixes                         |     {scorecard.Hotfixes}    |    0     |     {scorecard.HotfixScore}     |");
             Console.WriteLine($"| Rollbacks                        |     {scorecard.Rollbacks}    |    0     |     {scorecard.RollbackScore}     |");
             Console.WriteLine($"| Service downtime                 | {scorecard.Downtime} | 00:00:00 |     {scorecard.DowntimeScore}     |");
-            Console.WriteLine($"| Failed to rollout                |   {scorecard.Failure.ToString().ToUpperInvariant()}  |   FALSE  |     {(scorecard.Failure ? config.RolloutWeightConfig.FailurePoints : 0)}     |");
+            Console.WriteLine($"| Failed to rollout                |   {scorecard.Failure.ToString().ToUpperInvariant()}  |   FALSE  |     {(scorecard.Failure ? StandardConfig.DefaultConfig.RolloutWeightConfig.FailurePoints : 0)}     |");
             Console.WriteLine($"| Total                            |          |          |   **{scorecard.TotalScore}**   |");
 
             if (_rolloutScorer.Upload)
@@ -189,7 +184,7 @@ namespace RolloutScorer
                 storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             }
 
-            return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.ParseConfig(), Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value);
+            return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value);
         }
     }
 }
