@@ -6,22 +6,24 @@
     <title>@ViewData["Title"]</title>
 </head>
 
+<html>
+
 <body>
+<div>
+    @RenderBody()
+</div>
+<footer>
+    <hr/>
     <div>
-        @RenderBody()
+        <a href="mailto:dnceng@microsoft.com">Contact Us</a>
+        &nbsp;|&nbsp;
+        <a href="https://go.microsoft.com/fwlink/?LinkId=521839">Privacy &amp; Cookies</a>
+        &nbsp;|&nbsp;
+        <a href="https://go.microsoft.com/fwlink/?LinkID=206977">Terms of Use</a>
+        &nbsp;|
+        &copy; 2020 Microsoft
     </div>
-    <footer>
-        <hr/>
-        <div>
-            <a href="mailto:dnceng@microsoft.com">Contact Us</a>
-            &nbsp;|&nbsp;
-            <a href="https://go.microsoft.com/fwlink/?LinkId=521839">Privacy &amp; Cookies</a>
-            &nbsp;|&nbsp;
-            <a href="https://go.microsoft.com/fwlink/?LinkID=206977">Terms of Use</a>
-            &nbsp;|
-            &copy; 2020 Microsoft
-        </div>
-    </footer>
+</footer>
 </body>
 
 </html>
