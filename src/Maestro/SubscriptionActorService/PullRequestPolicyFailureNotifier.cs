@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace SubscriptionActorService
@@ -42,14 +43,38 @@ namespace SubscriptionActorService
                 return;
             }
 
-            // This should only ever happen for non-batched subscriptions, so if there are multiple or no subscriptions going in here, we want to throw and fail.
-            var subscriptionFromPr = pr.ContainedSubscriptions.Single();
+            var subscriptionFromPr = pr.ContainedSubscriptions.FirstOrDefault();
+            if (subscriptionFromPr == null)
+            {
+                Logger.LogWarning("Unable to get any contained subscriptions from this PR for notification; skipping attempts to notify.");
+                pr.SourceRepoNotified = true;
+                return;
+            }
+            // Previous comments were wrong, there absolutely can be more than one contained sub in non-batched PR. Context: https://github.com/dotnet/arcade/issues/7445
+            // Since we don't want to fail, we'll just take the first and keep going.  (Worst case scenario this will result in having to update more subscriptions for notifications).
+            // Once the issue is understood we can consider modifying or removing this part.
+            if (pr.ContainedSubscriptions.Count > 1)
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (var subscription in pr.ContainedSubscriptions)
+                {
+                    sb.Append($"{subscription.SubscriptionId} ({subscription.BuildId}), ");
+                }
+                Logger.LogInformation($"Unexpectedly saw a non-batched dependency flow PR with {pr.ContainedSubscriptions.Count} 'contained subscriptions'.  Full list: {sb} should be investigated.");
+            }
+
             var darcRemote = await DarcRemoteFactory.GetBarOnlyRemoteAsync(Logger);
             var darcSubscriptionObject = await darcRemote.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId.ToString());
             string sourceRepository = darcSubscriptionObject.SourceRepository;
             string targetRepository = darcSubscriptionObject.TargetRepository;
 
             (string owner, string repo, int prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);
+            if (owner == null || repo == null || prIssueId == 0)
+            {
+                Logger.LogInformation($"Unable to parse pull request URI '{pr.Url}' (typically due to Azure DevOps pull requests), will not notify on this PR.");
+                pr.SourceRepoNotified = true;
+                return;
+            }
 
             List<string> tagsToNotify = new List<string>();
             if (!string.IsNullOrEmpty(darcSubscriptionObject.PullRequestFailureNotificationTags))
