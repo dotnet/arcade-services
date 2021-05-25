@@ -110,9 +110,9 @@ namespace SubscriptionActorService.Tests
         [TestCase()]
         public async Task MultipleSubscriptionsIncluded()
         {
-            // Failure Path: Somehow got called with a batch of subscriptions.  Expect failure.
-            // This shouldn't be possible (this object only gets used in the "NonBatched" implementation) 
-            // But baking that assumption into a test helps future readers know the intent.
+            // Somehow got called with a batch of subscriptions. In practice, this actually happens but we don't fully understand why yet.
+            // Seems like this shouldn't be possible but since it is, this test bakes in the behavior (use the first's tags)
+            // The class also has new logging so we can understand what's going on.
             var testObject = GetInstance();
             InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345", 2);
 
