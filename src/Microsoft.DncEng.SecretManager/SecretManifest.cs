@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Dynamic;
 using System.IO;
 using System.Text;
 using YamlDotNet.Core;
@@ -29,13 +30,14 @@ namespace Microsoft.DncEng.SecretManager
         private class Format
         {
             public Storage storageLocation { get; set; }
+            public Dictionary<string, Storage> references { get; set; }
             public Dictionary<string, Key> keys { get; set; }
             public Dictionary<string, Secret> secrets { get; set; }
 
             public class Storage
             {
                 public string type { get; set; }
-                public Dictionary<string, string> parameters { get; set; }
+                public ExpandoObject parameters { get; set; }
             }
 
             public class Key
@@ -49,7 +51,7 @@ namespace Microsoft.DncEng.SecretManager
                 public string type { get; set; }
                 public string owner { get; set; }
                 public string description { get; set; }
-                public Dictionary<string, string> parameters { get; set; }
+                public ExpandoObject parameters { get; set; }
             }
         }
         #pragma warning restore IDE1006
@@ -58,10 +60,13 @@ namespace Microsoft.DncEng.SecretManager
         private SecretManifest(Format data)
         {
             StorageLocation = CreateStorage(data.storageLocation);
+            References = data.references?.ToImmutableDictionary(p => p.Key, p => CreateStorage(p.Value)) ?? ImmutableDictionary<string, Storage>.Empty;
             Keys = data.keys?.ToImmutableDictionary(p => p.Key, p => CreateKey(p.Value)) ?? ImmutableDictionary<string, Key>.Empty;
             Secrets = data.secrets?.ToImmutableDictionary(p => p.Key, p => CreateSecret(p.Value)) ?? ImmutableDictionary<string, Secret>.Empty;
         }
+
         public Storage StorageLocation { get; }
+        public IImmutableDictionary<string, Storage> References { get; }
         public IImmutableDictionary<string, Key> Keys { get; }
         public IImmutableDictionary<string, Secret> Secrets { get; }
 
@@ -72,14 +77,14 @@ namespace Microsoft.DncEng.SecretManager
 
         public class Storage
         {
-            public Storage(string type, Dictionary<string, string> parameters)
+            public Storage(string type, IDictionary<string, object> parameters)
             {
                 Type = type;
-                Parameters = parameters?.ToImmutableDictionary(p => p.Key, p => p.Value) ?? ImmutableDictionary<string, string>.Empty;
+                Parameters = parameters;
             }
 
             public string Type { get; }
-            public IImmutableDictionary<string, string> Parameters { get; }
+            public IDictionary<string, object> Parameters { get; }
         }
 
         private static Key CreateKey(Format.Key data)
@@ -106,18 +111,18 @@ namespace Microsoft.DncEng.SecretManager
 
         public class Secret
         {
-            public Secret(string type, Dictionary<string, string> parameters, string owner, string description)
+            public Secret(string type, IDictionary<string, object> parameters, string owner, string description)
             {
                 Type = type;
                 Owner = owner;
                 Description = description;
-                Parameters = parameters?.ToImmutableDictionary(p => p.Key, p => p.Value) ?? ImmutableDictionary<string, string>.Empty;
+                Parameters = parameters;
             }
 
             public string Type { get; }
             public string Owner { get; }
             public string Description { get; }
-            public IImmutableDictionary<string, string> Parameters { get; }
+            public IDictionary<string, object> Parameters { get; }
         }
 
     }
