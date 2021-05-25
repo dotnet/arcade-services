@@ -108,7 +108,7 @@ namespace SubscriptionActorService.Tests
         }
 
         [TestCase()]
-        public void MultipleSubscriptionsIncluded()
+        public async Task MultipleSubscriptionsIncluded()
         {
             // Failure Path: Somehow got called with a batch of subscriptions.  Expect failure.
             // This shouldn't be possible (this object only gets used in the "NonBatched" implementation) 
@@ -116,9 +116,25 @@ namespace SubscriptionActorService.Tests
             var testObject = GetInstance();
             InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345", 2);
 
-            Func<Task> execution = async () => await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-            execution.Should().Throw<InvalidOperationException> ()
-                              .WithMessage("Sequence contains more than one element");
+            await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
+
+            prToTag.SourceRepoNotified.Should().BeTrue();
+
+            // Second time; no second comment should be made. (If it were made, it'd throw)
+            await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
+            PrCommentsMade.Count.Should().Be(1);
+            // Spot check some values
+            PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
+                $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
+            foreach (string individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                // Make sure normalization happens; test includes a user without @.
+                string valueToCheck = individual;
+                if (!individual.StartsWith('@'))
+                    valueToCheck = $"@{valueToCheck}";
+
+                PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
+            }
         }
 
         [TestCase()]
