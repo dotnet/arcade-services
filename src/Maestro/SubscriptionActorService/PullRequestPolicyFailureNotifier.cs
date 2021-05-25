@@ -58,7 +58,7 @@ namespace SubscriptionActorService
                 StringBuilder sb = new StringBuilder();
                 foreach (var subscription in pr.ContainedSubscriptions)
                 {
-                    sb.Append($"{subscription.SubscriptionId}, ");
+                    sb.Append($"{subscription.SubscriptionId} ({subscription.BuildId}), ");
                 }
                 Logger.LogInformation($"Unexpectedly saw a non-batched dependency flow PR with {pr.ContainedSubscriptions.Count} 'contained subscriptions'.  Full list: {sb} should be investigated.");
             }
@@ -69,6 +69,12 @@ namespace SubscriptionActorService
             string targetRepository = darcSubscriptionObject.TargetRepository;
 
             (string owner, string repo, int prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);
+            if (owner == null || repo == null || prIssueId == 0)
+            {
+                Logger.LogInformation($"Unable to parse pull request URI '{pr.Url}' (typically due to Azure DevOps pull requests), will not notify on this PR.");
+                pr.SourceRepoNotified = true;
+                return;
+            }
 
             List<string> tagsToNotify = new List<string>();
             if (!string.IsNullOrEmpty(darcSubscriptionObject.PullRequestFailureNotificationTags))
