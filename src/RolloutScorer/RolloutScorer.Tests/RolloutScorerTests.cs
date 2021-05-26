@@ -38,13 +38,14 @@ namespace RolloutScorer.Tests
         [SetUp]
         public void RolloutScorerTests_SetUp()
         {
-            _rolloutScorer = new RolloutScorer();
-            Config config = Utilities.ParseConfig();
-            _rolloutScorer.RolloutWeightConfig = config.RolloutWeightConfig;
-            _rolloutScorer.RepoConfig = config.RepoConfigs.First();
-            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
+            _rolloutScorer = new RolloutScorer
+            {
+                RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig,
+                RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.First(),
+                RolloutStartDate = DateTimeOffset.Now.AddDays(-1),
+            };
+            _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             _rolloutScorer.Repo = _rolloutScorer.RepoConfig.Repo;
-            _rolloutScorer.RolloutStartDate = DateTimeOffset.Now.AddDays(-1);
 
             _rolloutScorer.SetupHttpClient("fakePat");
         }

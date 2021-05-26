@@ -35,14 +35,14 @@ namespace RolloutScorer
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKey">A secret bundle containing the key to the rollout scorecards storage account</param>
         /// <returns>Exit code (0 = success, 1 = failure)</returns>
-        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, Config config, GitHubClient githubClient, string storageAccountKey, ILogger log = null, bool skipPr = false)
+        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, GitHubClient githubClient, string storageAccountKey, ILogger log = null, bool skipPr = false)
         {
             try
             {
                 await UploadResultsAsync(new List<Scorecard>(
                     await Task.WhenAll(scorecardFiles.Select(
-                    file => Scorecard.ParseScorecardFromCsvAsync(file, config)
-                    ))), githubClient, storageAccountKey, config.GithubConfig, skipPr);
+                    file => Scorecard.ParseScorecardFromCsvAsync(file, StandardConfig.DefaultConfig)
+                    ))), githubClient, storageAccountKey, StandardConfig.DefaultConfig.GithubConfig, skipPr);
             }
             catch (IOException e)
             {

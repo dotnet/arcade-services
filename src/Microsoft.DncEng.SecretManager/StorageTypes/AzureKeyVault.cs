@@ -40,6 +40,11 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             return new KeyClient(new Uri($"https://{parameters.Name}.vault.azure.net/"), creds);
         }
 
+        public string GetAzureKeyVaultUri(AzureKeyVaultParameters parameters)
+        {
+            return $"https://{parameters.Name}.vault.azure.net/";
+        }
+
         public override async Task<List<SecretProperties>> ListSecretsAsync(AzureKeyVaultParameters parameters)
         {
             SecretClient client = await CreateSecretClient(parameters);

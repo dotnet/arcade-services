@@ -3,7 +3,7 @@
 ## Getting started
 1. Install Visual Studio 2019 with the '.NET Core', 'Desktop Development with C++'. and 'Azure Development' workloads.
 1. Install Azure Service Fabric SDK: https://www.microsoft.com/web/handlers/webpi.ashx?command=getinstallerredirect&appid=MicrosoftAzure-ServiceFabric-CoreSDK
-1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-editions-express
+1. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-downloads
 1. Install Node.js LTS. When asked, at the end of installation, also opt-in for all necessary tools.
 1. Acquire the required secrets from Azure key vault. This can be done by running [/src/Maestro/bootstrap.ps1](../src/Maestro/bootstrap.ps1) from an admin powershell window (note: the Powershell ISE may have problems running this script). This script will do three things:
     - Download a secret required for using the `Microsoft.Azure.Services.AppAuthentication` package from the service fabric local dev cluster
