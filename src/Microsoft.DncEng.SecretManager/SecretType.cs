@@ -1,40 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Dynamic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DncEng.SecretManager
 {
-    public static class ParameterConverter
-    {
-        public static TParameters ConvertParameters<TParameters>(IReadOnlyDictionary<string, string> parameters)
-            where TParameters : new()
-        {
-            var ciParams = new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
-            var result = new TParameters();
-            foreach (PropertyInfo property in typeof(TParameters).GetProperties())
-            {
-                if (ciParams.TryGetValue(property.Name, out string value))
-                {
-                    property.SetValue(result, ConvertPropertyValue(value, property.PropertyType));
-                }
-            }
-
-            return result;
-        }
-
-        private static object ConvertPropertyValue(string value, Type type)
-        {
-            if (type == typeof(Guid))
-            {
-                return Guid.Parse(value);
-            }
-            return Convert.ChangeType(value, type);
-        }
-
-    }
-
     public abstract class SecretType : IDisposable
     {
         private readonly List<string> _defaultSuffixes = new List<string>{""};
@@ -43,7 +14,7 @@ namespace Microsoft.DncEng.SecretManager
             return _defaultSuffixes;
         }
 
-        public abstract Task<List<SecretData>> RotateValues(IReadOnlyDictionary<string, string> parameters, RotationContext context, CancellationToken cancellationToken);
+        public abstract Task<List<SecretData>> RotateValues(IDictionary<string, object> parameters, RotationContext context, CancellationToken cancellationToken);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -55,7 +26,7 @@ namespace Microsoft.DncEng.SecretManager
             GC.SuppressFinalize(this);
         }
 
-        public Bound BindParameters(IReadOnlyDictionary<string, string> parameters)
+        public Bound BindParameters(IDictionary<string, object> parameters)
         {
             return new Bound(this, parameters);
         }
@@ -64,9 +35,9 @@ namespace Microsoft.DncEng.SecretManager
         public class Bound : IDisposable
         {
             private readonly SecretType _that;
-            private readonly IReadOnlyDictionary<string, string> _parameters;
+            private readonly IDictionary<string, object> _parameters;
 
-            public Bound(SecretType that, IReadOnlyDictionary<string, string> parameters)
+            public Bound(SecretType that, IDictionary<string, object> parameters)
             {
                 _that = that;
                 _parameters = parameters;
@@ -92,7 +63,7 @@ namespace Microsoft.DncEng.SecretManager
     public abstract class SecretType<TParameters> : SecretType
         where TParameters : new()
     {
-        public sealed override Task<List<SecretData>> RotateValues(IReadOnlyDictionary<string, string> parameters, RotationContext context, CancellationToken cancellationToken)
+        public sealed override Task<List<SecretData>> RotateValues(IDictionary<string, object> parameters, RotationContext context, CancellationToken cancellationToken)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
             return RotateValues(p, context, cancellationToken);

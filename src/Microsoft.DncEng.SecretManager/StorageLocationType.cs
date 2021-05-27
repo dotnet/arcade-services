@@ -7,11 +7,11 @@ namespace Microsoft.DncEng.SecretManager
 {
     public abstract class StorageLocationType : IDisposable
     {
-        public abstract Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters);
+        public abstract Task<List<SecretProperties>> ListSecretsAsync(IDictionary<string, object> parameters);
         [ItemCanBeNull]
-        public abstract Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name);
-        public abstract Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value);
-        public abstract Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key config);
+        public abstract Task<SecretValue> GetSecretValueAsync(IDictionary<string, object> parameters, string name);
+        public abstract Task SetSecretValueAsync(IDictionary<string, object> parameters, string name, SecretValue value);
+        public abstract Task EnsureKeyAsync(IDictionary<string, object> parameters, string name, SecretManifest.Key config);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -23,7 +23,7 @@ namespace Microsoft.DncEng.SecretManager
             GC.SuppressFinalize(this);
         }
 
-        public Bound BindParameters(IReadOnlyDictionary<string, string> parameters)
+        public Bound BindParameters(IDictionary<string, object> parameters)
         {
             return new Bound(this, parameters);
         }
@@ -31,9 +31,9 @@ namespace Microsoft.DncEng.SecretManager
         public class Bound : IDisposable
         {
             private readonly StorageLocationType _that;
-            private readonly IReadOnlyDictionary<string, string> _parameters;
+            private readonly IDictionary<string, object> _parameters;
 
-            public Bound(StorageLocationType that, IReadOnlyDictionary<string, string> parameters)
+            public Bound(StorageLocationType that, IDictionary<string, object> parameters)
             {
                 _that = that;
                 _parameters = parameters;
@@ -70,25 +70,25 @@ namespace Microsoft.DncEng.SecretManager
     public abstract class StorageLocationType<TParameters> : StorageLocationType
         where TParameters : new()
     {
-        public sealed override Task<List<SecretProperties>> ListSecretsAsync(IReadOnlyDictionary<string, string> parameters)
+        public sealed override Task<List<SecretProperties>> ListSecretsAsync(IDictionary<string, object> parameters)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
             return ListSecretsAsync(p);
         }
 
-        public sealed override Task<SecretValue> GetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name)
+        public sealed override Task<SecretValue> GetSecretValueAsync(IDictionary<string, object> parameters, string name)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
             return GetSecretValueAsync(p, name);
         }
 
-        public sealed override Task SetSecretValueAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretValue value)
+        public sealed override Task SetSecretValueAsync(IDictionary<string, object> parameters, string name, SecretValue value)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
             return SetSecretValueAsync(p, name, value);
         }
 
-        public sealed override Task EnsureKeyAsync(IReadOnlyDictionary<string, string> parameters, string name, SecretManifest.Key key)
+        public sealed override Task EnsureKeyAsync(IDictionary<string, object> parameters, string name, SecretManifest.Key key)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
             return EnsureKeyAsync(p, name, key);

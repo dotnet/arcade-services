@@ -19,10 +19,12 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             Console = console;
         }
 
-        protected async Task ShowGitHubLoginInformation(RotationContext context, string gitHubSecretName, string gitHubAccountName)
+        protected async Task ShowGitHubLoginInformation(RotationContext context, SecretReference gitHubSecret, string gitHubAccountName)
         {
-            var password = await context.GetSecretValue(gitHubSecretName + GitHubPasswordSuffix);
-            var secret = await context.GetSecretValue(gitHubSecretName + GitHubSecretSuffix);
+            var passwordReference = new SecretReference{Name = gitHubSecret.Name + GitHubPasswordSuffix, Location = gitHubSecret.Location};
+            var secretReference = new SecretReference{Name = gitHubSecret.Name + GitHubSecretSuffix, Location = gitHubSecret.Location};
+            var password = await context.GetSecretValue(passwordReference);
+            var secret = await context.GetSecretValue(secretReference);
 
             await ShowGitHubLoginInformation(gitHubAccountName, password, secret);
         }

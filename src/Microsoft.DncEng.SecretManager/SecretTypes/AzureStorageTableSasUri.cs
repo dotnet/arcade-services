@@ -13,7 +13,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     {
         public class Parameters
         {
-            public string ConnectionStringName { get; set; }
+            public SecretReference ConnectionString { get; set; }
             public string Table { get; set; }
             public string Permissions { get; set; }
         }
@@ -28,7 +28,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             DateTimeOffset now = _clock.UtcNow;
-            CloudStorageAccount account = CloudStorageAccount.Parse(await context.GetSecretValue(parameters.ConnectionStringName));
+            CloudStorageAccount account = CloudStorageAccount.Parse(await context.GetSecretValue(parameters.ConnectionString));
             CloudTableClient tableClient = account.CreateCloudTableClient();
             CloudTable table = tableClient.GetTableReference(parameters.Table);
             string sas = table.GetSharedAccessSignature(new SharedAccessTablePolicy
