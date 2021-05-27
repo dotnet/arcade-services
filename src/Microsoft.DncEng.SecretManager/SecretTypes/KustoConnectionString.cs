@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
+using System.Linq;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
@@ -19,31 +20,25 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         }
 
         private readonly IConsole _console;
+        private const string ApplicationClientId = "Application Client Id=";
 
-        private const string AppId = "-app-id";
-        private const string AppSecret = "-app-secret";
-
-        private readonly List<string> _suffixes = new List<string> { AppId, AppSecret };
 
         public KustoConnectionString(IConsole console)
         {
             _console = console;
         }
 
-        public override List<string> GetCompositeSecretSuffixes()
-        {
-            return _suffixes;
-        }
-
-        public override async Task<List<SecretData>> RotateValues(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             if (!_console.IsInteractive)
             {
                 throw new InvalidOperationException($"User intervention required for creation or rotation of a Kusto Connection String.");
             }
 
-            string appId = await context.GetSecretValue(context.SecretName + AppId);
-            if (string.IsNullOrEmpty(appId))
+            string connectionString = await context.GetSecretValue(context.SecretName);
+            string appId;
+
+            if (string.IsNullOrEmpty(connectionString))
             {
                 _console.WriteLine($@"Steps:
 1. Open https://ms.portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType//isMSAApp/ under your account.
@@ -56,6 +51,9 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
             else
             {
+                string appClientIdPart = connectionString.Split(';').Single(l => l.StartsWith(ApplicationClientId));
+                appId = appClientIdPart.Split('=')[1].Trim();
+
                 _console.WriteLine($@"Steps:
 1. Open https://ms.portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview/quickStartType//sourceType/Microsoft_AAD_IAM/appId/{appId} under your account.
 2. Navigate to Certificates & secrets.
@@ -63,20 +61,18 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 4. Delete old secret once it's saved.");
             }
 
-            string newSecret = await _console.PromptAndValidateAsync("Client Secret",
+            string newSecret = await _console.PromptAndValidateAsync("Application Client Secret",
                                 "Expecting at least 30 character.",
                                 l => l != null && l.Length >= 30);
 
-            string connectionString = $"Data Source={parameters.DataSource};Initial Catalog={parameters.InitialCatalog};Application Client Id={appId};Application Key={newSecret};{parameters.AdditionalParameters}";
+            connectionString = $"Data Source={parameters.DataSource};Initial Catalog={parameters.InitialCatalog};{ApplicationClientId}{appId};Application Key={newSecret};{parameters.AdditionalParameters}";
             _console.WriteLine($"Generated connection string: {connectionString}");
 
             DateTime expiresOn = await _console.PromptAndValidateAsync($"Secret expiration (M/d/yyyy)",
                 "Secret expiration format must be M/d/yyyy.",
                 (string value, out DateTime parsedValue) => DateTime.TryParseExact(value, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedValue));
 
-            return new List<SecretData> {
-                    new SecretData(appId, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),
-                    new SecretData(connectionString, expiresOn, expiresOn.AddDays(-15))};
+            return new SecretData(connectionString, expiresOn, expiresOn.AddDays(-15));
         }
     }
 }
