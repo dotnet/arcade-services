@@ -32,7 +32,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
 
             string generatedPassword = PasswordGenerator.GenerateRandomPassword(15, false);
-            string password = await context.GetSecretValue(context.SecretName);
+            string password = await context.GetSecretValue(new SecretReference(context.SecretName));
             if (!string.IsNullOrEmpty(password))
                 _console.WriteLine($"Current password for account {parameters.Domain}\\{parameters.User}: {password}");
 
