@@ -8,51 +8,94 @@ The synchronize command can be used to rotate secrets that need rotation. It wil
 New secrets can be created by adding new entries to the manifest file, then running synchronize. The tool will then create the new secret and add it to the secret store.
 
 ## Manifest Files
-A manifest file describes the expected state of a single secret store (currently only azure key vault, but support for other stores can be added easily). The manifest contains an inventory of all secrets and the information required to generate/rotate them. The format is as follows.
+A manifest file describes the expected state of a single secret store (currently only Azure Key Vault, but support for other stores can be added easily). The manifest contains an inventory of all secrets and the information required to generate/rotate them. The format is as follows.
 ```yaml
 # The destination secret store. All the secrets described in this document will be placed in here.
 storageLocation:
   type: azure-key-vault
   parameters:
-    name: <a string>
+    name: helixservice
     subscription: <a guid>
 
 # A collection of named references to other secret stores, secrets in this document can reference values from these stores if they are required
 references:
-  reference1:
+  helix-admin:
     type: azure-key-vault
     parameters:
-      name: <a string>
+      name: helixadmin
       subscription: <a guid>
 
 
 # encryption keys that are needed in the vault, these keys will be created if they don't exist.
 keys:
-  encryption-key-one:
+  data-protection-encryption-key:
     type: RSA
     size: 2048
 
 # each entry below is a separate secret that will be maintained in the secret store
 # the type identifies what kind of secret it is, and the parameters drive the creation of the secret
 secrets:
-  secret1:
-    type: pizza-recipe
+  # this secret is a blob sas uri created for an account using a connection string
+  # in the 'helix-admin' vault
+  secret-key-blob-uri:
+    type: azure-storage-blob-sas-uri
     parameters:
       # This is a 'SecretReference' parameter. Some secrets require other secrets to work.
-      # These parameters can be specified as a raw string, or with explicit name and location
-      # If a raw string is used, the referenced secret is assumed to be in the same vault as the current secret
+      # These parameters can be specified as a single string, or with explicit name and location
+      # If a string is used, the referenced secret is assumed to be in the same vault as the current secret
       # location can be any of the entries in the 'references' collection
-      doughToken:
-        name: dough-provider-token
-        location: reference1
-      # other parameters are just strings, and their interpretation depends on the type of the secret
-      cheese: cheddar
-      sauce: marinara
-      topping: pepperoni
+      # this specific entry references a secret in the reference named 'helix-admin'
+      connectionString:
+        name: execution-storage-connection-string
+        location: helix-admin
+      blob: keys.xml
+      container: dp
+      permissions: racwd
+  
+  execution-storage-connection:
+    type: azure-storage-connection-string
+    parameters:
+      subscription: <a guid>
+      account: helixexecution
+  
+  execution-storage-container-sas:
+    type: azure-storage-container-sas-uri
+    parameters:
+      # This is also a 'SecretReference' but it has no location, this references the 'execution-storage-connection' secret contained in this document.
+      connectionString: execution-storage-connection
+      container: logs
+      permissions: racwd
+```
+
+## Settings Files
+Each service has at least one settings file. These are expected to be named `settings.json` with additional "environment" files alongside it named `settings.<environment>.json`. These are a simple json file with settings defined inside it. The values in this file should contain references to secrets using the `[vault(secret-name)]` syntax. An example is below.
+```json
+{
+  "BuildAssetRegistry": {
+    "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]",
+    "CacheSize": 40
+  },
+  "Storage": {
+    "str": "[vault(storage-connection)]",
+    "blobSas": "[vault(blob-sas)]",
+    "containerSas": "[vault(container-sas)]",
+    "tableSas": "[vault(table-sas)]",
+    "UseOldAlgorithm": false
+  },
+  "EventHub": "[vault(event-hub-connection)]",
+  "ServiceBus": "[vault(service-bus-connection)]",
+  "Sql":{
+    "admin": "[vault(sql-a-connection)]",
+    "read": "[vault(sql-r-connection)]",
+    "write": "[vault(sql-w-connection)]",
+    "rw": "[vault(sql-rw-connection)]"
+  },
+  "EnableSuperSecretFeature": true
+}
 ```
 
 ## Secret Types
-Each secret in the manifest has a specified type, and these types determine what parameters are required, and what ends up in the secret store. Some secret types require human interaction to generate and/or rotate. Some secret types also produce multiple values. These values are all stored with additional suffixes in the secret store. Each type is documented below.
+Each secret in the manifest has a specified type, and these types determine what parameters are required, and what ends up in the secret store. Some secret types require human interaction to generate and/or rotate. For such secrets the tool will prompt the user or fail if in a build context. Some secret types also produce multiple values. These values are all stored with additional suffixes in the secret store. Each type is documented below.
 
 ### Azure Storage
 
@@ -60,7 +103,7 @@ Each secret in the manifest has a specified type, and these types determine what
 ```yaml
 type: azure-storage-connection-string
 parameters:
-  subscription: azure subscription id
+  subscription: Azure subscription id
   account: storage account name
 ```
 
@@ -96,10 +139,10 @@ parameters:
 ```yaml
 type: event-hub-connection-string
 parameters:
-  subscription: azure subscription id
-  resourceGroup: azure resource group
-  namespace: event hub namespace
-  name: event hub name
+  subscription: Azure subscription id
+  resourceGroup: Azure resource group
+  namespace: Event Hub namespace
+  name: Event Hub name
   permissions: required permissions
 ```
 
@@ -115,9 +158,9 @@ parameters:
 ```yaml
 type: service-bus-connection-string
 parameters:
-  subscription: azure subscription id
-  resourceGroup: azure resource group
-  namespace: service bus namespace
+  subscription: Azure subscription id
+  resourceGroup: Azure resource group
+  namespace: Service Bus namespace
   permissions: required permissions
 ```
 
@@ -135,8 +178,8 @@ parameters:
 ```yaml
 type: github-access-token
 parameters:
-  gitHubBotAccountSecret: secret reference to the github account this token is for
-  gitHubBotAccountName: username of the github account
+  gitHubBotAccountSecret: secret reference to the GitHub account this token is for
+  gitHubBotAccountName: username of the GitHub account
 ```
 
 ### GitHub Application Secret
@@ -193,4 +236,13 @@ This type should be used sparingly, and only for things that aren't actually sec
 type: text
 parameters:
   description: what the text is
+```
+
+### Domain Account
+```yaml
+type: domain-account
+parameters:
+  domain: domain name
+  user: user account name
+  description: additional description for rotation of the password
 ```
