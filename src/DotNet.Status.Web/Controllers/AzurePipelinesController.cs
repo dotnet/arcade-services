@@ -233,31 +233,74 @@ namespace DotNet.Status.Web.Controllers
 
 {changesMessage}
 ";
+                    string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
+                    bool createNew = repo.CreateNew;
 
-                    var newIssue =
-                        new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
-                        {
-                            Body = body,
+                    if (!createNew)
+                    {
+                        RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
+                            Creator = "dotnet-eng-status[bot]",
+                            State = ItemStateFilter.Open
                         };
 
-                    if (!string.IsNullOrEmpty(monitor.Assignee))
-                    {
-                        newIssue.Assignees.Add(monitor.Assignee);
-                    }
-                    
-                    foreach (string label in repo.Labels.OrEmpty())
-                    {
-                        newIssue.Labels.Add(label);
+                        if (!string.IsNullOrEmpty(monitor.Assignee))
+                        {
+                            issueRequest.Assignee = monitor.Assignee;
+                        }
+
+                        foreach (string label in repo.Labels.OrEmpty())
+                        {
+                            issueRequest.Labels.Add(label);
+                        }
+
+                        foreach (string label in monitor.Labels.OrEmpty())
+                        {
+                            issueRequest.Labels.Add(label);
+                        }
+
+                        List<Issue> matchingIssues = (await github.Issue.GetAllForRepository(repo.Owner, repo.Name, issueRequest)).ToList();
+                        Issue matchingIssue = matchingIssues.FirstOrDefault(i => i.Title.StartsWith(issueTitlePrefix));
+
+                        if (matchingIssue != null)
+                        {
+                            // Add a new comment to the issue with the body
+                            IssueComment newComment = await github.Issue.Comment.Create(repo.Owner, repo.Name, matchingIssue.Id, body);
+                            _logger.LogInformation("Logged comment in {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, matchingIssue.Number);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Matching issues for {issueTitlePrefix} not found. Creating a new issue.", issueTitlePrefix);
+                            createNew = true;
+                        }
                     }
 
-                    foreach (string label in monitor.Labels.OrEmpty())
+                    if (createNew)
                     {
-                        newIssue.Labels.Add(label);
+                        var newIssue =
+                            new NewIssue($"{issueTitlePrefix} #{build.BuildNumber}")
+                            {
+                                Body = body,
+                            };
+
+                        if (!string.IsNullOrEmpty(monitor.Assignee))
+                        {
+                            newIssue.Assignees.Add(monitor.Assignee);
+                        }
+                        
+                        foreach (string label in repo.Labels.OrEmpty())
+                        {
+                            newIssue.Labels.Add(label);
+                        }
+
+                        foreach (string label in monitor.Labels.OrEmpty())
+                        {
+                            newIssue.Labels.Add(label);
+                        }
+
+                        Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
+
+                        _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
                     }
-
-                    Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
-
-                    _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
                 }
                 else
                 {

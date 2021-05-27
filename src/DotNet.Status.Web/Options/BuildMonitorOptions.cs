@@ -35,6 +35,7 @@ namespace DotNet.Status.Web.Options
             public string Owner { get; set; }
             public string Name { get; set; }
             public string[] Labels { get; set; }
+            public bool CreateNew { get; set; }
         }
     }
 }
