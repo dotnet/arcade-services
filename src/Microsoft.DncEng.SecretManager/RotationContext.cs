@@ -52,6 +52,11 @@ namespace Microsoft.DncEng.SecretManager
             return value?.Value;
         }
 
+        public async Task SetSecretValue(string name, SecretValue value)
+        {
+            await _storage.SetSecretValueAsync(name, value);
+        }
+
         public IImmutableDictionary<string, string> GetValues()
         {
             return _values.ToImmutableDictionary();
