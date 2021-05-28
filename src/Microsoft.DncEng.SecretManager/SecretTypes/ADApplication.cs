@@ -42,7 +42,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new InvalidOperationException($"User intervention required for creation or rotation of an AD Application.");
             }
 
-            string appId = await context.GetSecretValue(context.SecretName + AppIdSuffix);
+            string appId = await context.GetSecretValue(new SecretReference(context.SecretName + AppIdSuffix));
 
             if (string.IsNullOrEmpty(appId))
             {
@@ -88,7 +88,7 @@ Steps:
 
         private async Task RollKustoConnectionString(RotationContext context, string secretName, string appId, string appSecret, DateTime expiresOn, DateTime rotateOn)
         {
-            string connectionString = await context.GetSecretValue(secretName);
+            string connectionString = await context.GetSecretValue(new SecretReference(secretName));
 
             if (string.IsNullOrEmpty(connectionString))
             {
