@@ -7,7 +7,7 @@ using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
-    [Name("kusto-connection-string")]
+    [Name("ad-application")]
     public class ADApplication : SecretType<ADApplication.Parameters>
     {
         public class Parameters
