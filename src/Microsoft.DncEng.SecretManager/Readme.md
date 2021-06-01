@@ -242,7 +242,6 @@ parameters:
 ```yaml
 type: domain-account
 parameters:
-  domain: domain name
-  user: user account name
+  accountName: full account name including domain
   description: additional description for rotation of the password
 ```
