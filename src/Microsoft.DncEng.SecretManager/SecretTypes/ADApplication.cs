@@ -94,7 +94,7 @@ Steps:
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                _console.WriteLine($"Configure a new Kusto connection string {secretName}")
+                _console.WriteLine($"Configure a new Kusto connection string {secretName}");
                 string dataSource = await _console.PromptAndValidateAsync("Data source",
                                                 "Expecting URI",
                                                 l => Uri.TryCreate(l, UriKind.Absolute, out _));
