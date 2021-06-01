@@ -16,7 +16,6 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             public string KustoConnectionStrings { get; set; }
         }
 
-        private const string ApplicationClientId = "Application Client Id=";
         private const string ApplicationKey = "Application Key=";
         private const string AppIdSuffix = "-app-id";
         private const string AppSecretSuffix = "-app-secret";
@@ -60,13 +59,13 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 _console.WriteLine($@"Be aware that all dependent Kusto connection strings {parameters.KustoConnectionStrings} will be regenerated.
 Steps:
 1. Open https://ms.portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview/quickStartType//sourceType/Microsoft_AAD_IAM/appId/{appId} under your account.
-2. Navigate to Certificates & secrets.
+2. Navigate to Certificates & Secrets.
 3. Create a new secret.
 4. Delete old secret once it's saved.");
             }
 
             string appSecret = await _console.PromptAndValidateAsync("Application Client Secret",
-                                "Expecting at least 30 character.",
+                                "Expecting at least 30 characters.",
                                 l => l != null && l.Length >= 30);
 
             DateTime expiresOn = await _console.PromptAndValidateAsync($"Secret expiration (M/d/yyyy)",
@@ -75,10 +74,13 @@ Steps:
 
             DateTime rotateOn = expiresOn.AddDays(-15);
 
-            var kustoConnectionStringsSecrets = parameters.KustoConnectionStrings.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var kustoConnectionStringSecret in kustoConnectionStringsSecrets)
+            if (parameters.KustoConnectionStrings != null)
             {
-                await RollKustoConnectionString(context, kustoConnectionStringSecret.Trim(), appId, appSecret, expiresOn, rotateOn);
+                var kustoConnectionStringsSecrets = parameters.KustoConnectionStrings.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var kustoConnectionStringSecret in kustoConnectionStringsSecrets)
+                {
+                    await RollKustoConnectionString(context, kustoConnectionStringSecret.Trim(), appId, appSecret, expiresOn, rotateOn);
+                }
             }
 
             return new List<SecretData> {
@@ -92,21 +94,19 @@ Steps:
 
             if (string.IsNullOrEmpty(connectionString))
             {
-                string dataSource = await _console.PromptAndValidateAsync($"Data source for Kusto connection string {secretName}",
+                _console.WriteLine($"Configure a new Kusto connection string {secretName}")
+                string dataSource = await _console.PromptAndValidateAsync("Data source",
                                                 "Expecting URI",
                                                 l => Uri.TryCreate(l, UriKind.Absolute, out _));
-                string initialCatalog = await _console.PromptAndValidateAsync($"Initial catalog for Kusto connection string {secretName}",
+                string initialCatalog = await _console.PromptAndValidateAsync("Initial catalog",
                                                 "Expecting non empty string",
                                                 l => !string.IsNullOrWhiteSpace(l));
-                string aadFederatedSecurity = await _console.PromptAndValidateAsync($"AAD Federated Security for Kusto connection string {secretName}",
-                                                "Expecting boolean",
-                                                l => bool.TryParse(l, out _));
-                string additionalParameters = await _console.PromptAsync($"Enter additional parameters for Kusto connection string {secretName}: ");
+                string additionalParameters = await _console.PromptAsync("Enter additional parameters: ");
 
                 if (!string.IsNullOrWhiteSpace(additionalParameters))
                     additionalParameters = ";" + additionalParameters;
 
-                connectionString = $"Data Source={dataSource};Initial Catalog={initialCatalog};AAD Federated Security={aadFederatedSecurity};{ApplicationClientId}{appId};{ApplicationKey}{appSecret}{additionalParameters}";
+                connectionString = $"Data Source={dataSource};Initial Catalog={initialCatalog};AAD Federated Security=True;Application Client Id={appId};{ApplicationKey}{appSecret}{additionalParameters}";
             }
             else
             {
@@ -119,9 +119,9 @@ Steps:
                 connectionString = string.Join(';', parts);
             }
 
-            _console.WriteLine($"Storing new value in storage for secret Kusto connection string {secretName}: {connectionString}");
+            _console.WriteLine($"Storing the Kusto connection string {secretName} with value {connectionString}");
 
-            await context.SetSecretValue(secretName, new SecretValue(connectionString, context.GetValues(), expiresOn, rotateOn));
+            await context.SetSecretValue(secretName, new SecretValue(connectionString, context.GetValues(), rotateOn, expiresOn));
         }
     }
 }
