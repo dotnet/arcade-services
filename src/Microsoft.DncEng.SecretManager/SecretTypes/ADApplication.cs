@@ -13,16 +13,14 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         public class Parameters
         {
             public string ApplicationName { get; set; }
-            public string KustoConnectionStrings { get; set; }
         }
 
-        private const string ApplicationKey = "Application Key=";
-        private const string AppIdSuffix = "-app-id";
-        private const string AppSecretSuffix = "-app-secret";
+
+        public const string AppIdSuffix = "-app-id";
+        public const string AppSecretSuffix = "-app-secret";
 
         private readonly IConsole _console;
         private readonly List<string> _suffixes = new List<string> { AppIdSuffix, AppSecretSuffix };
-
 
         public ADApplication(IConsole console)
         {
@@ -56,8 +54,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
             else
             {
-                _console.WriteLine($@"Be aware that all dependent Kusto connection strings {parameters.KustoConnectionStrings} will be regenerated.
-Steps:
+                _console.WriteLine($@"Steps:
 1. Open https://ms.portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/Overview/quickStartType//sourceType/Microsoft_AAD_IAM/appId/{appId} under your account.
 2. Navigate to Certificates & Secrets.
 3. Create a new secret.
@@ -72,56 +69,9 @@ Steps:
                 "Secret expiration format must be M/d/yyyy.",
                 (string value, out DateTime parsedValue) => DateTime.TryParseExact(value, "M/d/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedValue));
 
-            DateTime rotateOn = expiresOn.AddDays(-15);
-
-            if (parameters.KustoConnectionStrings != null)
-            {
-                var kustoConnectionStringsSecrets = parameters.KustoConnectionStrings.Split(',', StringSplitOptions.RemoveEmptyEntries);
-                foreach (var kustoConnectionStringSecret in kustoConnectionStringsSecrets)
-                {
-                    await RollKustoConnectionString(context, kustoConnectionStringSecret.Trim(), appId, appSecret, expiresOn, rotateOn);
-                }
-            }
-
             return new List<SecretData> {
                     new SecretData(appId, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),
-                    new SecretData(appSecret, expiresOn, rotateOn) };
-        }
-
-        private async Task RollKustoConnectionString(RotationContext context, string secretName, string appId, string appSecret, DateTime expiresOn, DateTime rotateOn)
-        {
-            string connectionString = await context.GetSecretValue(new SecretReference(secretName));
-
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                _console.WriteLine($"Configure a new Kusto connection string {secretName}");
-                string dataSource = await _console.PromptAndValidateAsync("Data source",
-                                                "Expecting URI",
-                                                l => Uri.TryCreate(l, UriKind.Absolute, out _));
-                string initialCatalog = await _console.PromptAndValidateAsync("Initial catalog",
-                                                "Expecting non empty string",
-                                                l => !string.IsNullOrWhiteSpace(l));
-                string additionalParameters = await _console.PromptAsync("Enter additional parameters: ");
-
-                if (!string.IsNullOrWhiteSpace(additionalParameters))
-                    additionalParameters = ";" + additionalParameters;
-
-                connectionString = $"Data Source={dataSource};Initial Catalog={initialCatalog};AAD Federated Security=True;Application Client Id={appId};{ApplicationKey}{appSecret}{additionalParameters}";
-            }
-            else
-            {
-                string[] parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < parts.Length; i++)
-                {
-                    if (parts[i].StartsWith(ApplicationKey, true, CultureInfo.InvariantCulture))
-                        parts[i] = ApplicationKey + appSecret;
-                }
-                connectionString = string.Join(';', parts);
-            }
-
-            _console.WriteLine($"Storing the Kusto connection string {secretName} with value {connectionString}");
-
-            await context.SetSecretValue(secretName, new SecretValue(connectionString, context.GetValues(), rotateOn, expiresOn));
+                    new SecretData(appSecret, expiresOn, expiresOn.AddDays(-15)) };
         }
     }
 }

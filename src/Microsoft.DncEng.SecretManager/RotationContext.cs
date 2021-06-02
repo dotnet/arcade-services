@@ -32,7 +32,7 @@ namespace Microsoft.DncEng.SecretManager
             _values[key] = value;
         }
 
-        public async Task<string> GetSecretValue(SecretReference reference)
+        public async Task<SecretValue> GetSecret(SecretReference reference)
         {
             SecretValue value;
             if (string.IsNullOrEmpty(reference.Location))
@@ -49,13 +49,15 @@ namespace Microsoft.DncEng.SecretManager
 
                 value = await storage.GetSecretValueAsync(reference.Name);
             }
+            return value;
+        }
+
+        public async Task<string> GetSecretValue(SecretReference reference)
+        {
+            SecretValue value = await GetSecret(reference);
             return value?.Value;
         }
 
-        public async Task SetSecretValue(string name, SecretValue value)
-        {
-            await _storage.SetSecretValueAsync(name, value);
-        }
 
         public IImmutableDictionary<string, string> GetValues()
         {

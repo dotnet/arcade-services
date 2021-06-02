@@ -68,10 +68,12 @@ namespace Microsoft.DncEng.SecretManager.Commands
                 references.Add(name, bound);
             }
             Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
-            foreach (var (name, secret) in manifest.Secrets)
+
+            List<(string name, SecretManifest.Secret secret, SecretType.Bound bound)> orderedSecretTypes = GetTopologicallyOrderedSecrets(manifest.Secrets);
+
+            foreach (var (name, secret, secretType) in orderedSecretTypes)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
-                using SecretType.Bound secretType = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
@@ -140,6 +142,45 @@ namespace Microsoft.DncEng.SecretManager.Commands
             {
                 await storage.EnsureKeyAsync(name, key);
             }
+        }
+
+        private List<(string name, SecretManifest.Secret secret, SecretType.Bound bound)> GetTopologicallyOrderedSecrets(IImmutableDictionary<string, SecretManifest.Secret> secrets)
+        {
+            var boundedSecrets = new List<(string name, SecretManifest.Secret secret, List<string> references, SecretType.Bound bound)>();
+            foreach (var (name, secret) in secrets)
+            {
+                SecretType.Bound bound = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
+                List<string> secretReferences = bound.GetSecretReferences();
+                boundedSecrets.Add((name, secret, secretReferences, bound));
+            }
+
+            var orderedBoundedSecrets = new List<(string name, SecretManifest.Secret secret, SecretType.Bound bound)>();
+            var processedSecrets = new HashSet<string>();
+            bool hasChanged;
+            do
+            {
+                hasChanged = false;
+                foreach (var boundedSecret in boundedSecrets)
+                {
+                    if (processedSecrets.Contains(boundedSecret.name))
+                        continue;
+
+                    if (boundedSecret.references.All(l => processedSecrets.Contains(l)))
+                    {
+                        hasChanged = true;
+                        orderedBoundedSecrets.Add((boundedSecret.name, boundedSecret.secret, boundedSecret.bound));
+                        processedSecrets.Add(boundedSecret.name);
+                    }
+                }
+            } while (hasChanged);
+
+            if (orderedBoundedSecrets.Count < boundedSecrets.Count)
+            {
+                var unprocessedSecrets = boundedSecrets.Where(l => !processedSecrets.Contains(l.name)).Select(l => l.name);
+                throw new InvalidOperationException($"Secrets {string.Join(',', unprocessedSecrets)} have unresolved references.");
+            }
+
+            return orderedBoundedSecrets;
         }
     }
 }

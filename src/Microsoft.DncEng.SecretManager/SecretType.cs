@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,10 +8,17 @@ namespace Microsoft.DncEng.SecretManager
 {
     public abstract class SecretType : IDisposable
     {
-        private readonly List<string> _defaultSuffixes = new List<string>{""};
+        private readonly List<string> _defaultSuffixes = new List<string> { "" };
+        private readonly List<string> _noReferences = new List<string>();
+
         public virtual List<string> GetCompositeSecretSuffixes()
         {
             return _defaultSuffixes;
+        }
+
+        public virtual List<string> GetSecretReferences(IDictionary<string, object> parameters)
+        {
+            return _noReferences;
         }
 
         public abstract Task<List<SecretData>> RotateValues(IDictionary<string, object> parameters, RotationContext context, CancellationToken cancellationToken);
@@ -48,6 +55,11 @@ namespace Microsoft.DncEng.SecretManager
                 return _that.GetCompositeSecretSuffixes();
             }
 
+            public List<string> GetSecretReferences()
+            {
+                return _that.GetSecretReferences(_parameters);
+            }
+
             public Task<List<SecretData>> RotateValues(RotationContext context, CancellationToken cancellationToken)
             {
                 return _that.RotateValues(_parameters, context, cancellationToken);
@@ -63,6 +75,21 @@ namespace Microsoft.DncEng.SecretManager
     public abstract class SecretType<TParameters> : SecretType
         where TParameters : new()
     {
+        public sealed override List<string> GetSecretReferences(IDictionary<string, object> parameters)
+        {
+            var ciParameters = new Dictionary<string, object>(parameters, StringComparer.OrdinalIgnoreCase);
+            var secretReferences = new List<string>();
+            foreach (PropertyInfo property in typeof(TParameters).GetProperties())
+            {
+                if (property.PropertyType == typeof(SecretReference))
+                {
+                    if (ciParameters.TryGetValue(property.Name, out object propertyValue))
+                        secretReferences.Add(propertyValue?.ToString());
+                }
+            }
+            return secretReferences;
+        }
+
         public sealed override Task<List<SecretData>> RotateValues(IDictionary<string, object> parameters, RotationContext context, CancellationToken cancellationToken)
         {
             var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
@@ -71,7 +98,7 @@ namespace Microsoft.DncEng.SecretManager
 
         public virtual async Task<List<SecretData>> RotateValues(TParameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            return new List<SecretData> {await RotateValue(parameters, context, cancellationToken)};
+            return new List<SecretData> { await RotateValue(parameters, context, cancellationToken) };
         }
 
         protected virtual Task<SecretData> RotateValue(TParameters parameters, RotationContext context, CancellationToken cancellationToken)
