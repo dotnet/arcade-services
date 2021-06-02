@@ -245,7 +245,7 @@ namespace Microsoft.DotNet.Darc
                         defaultValueCache.Add(prop.PropertyType, defaultValue = Activator.CreateInstance(prop.PropertyType));
                     }
 
-                    if (defaultValue.Equals(value))
+                    if (defaultValue != null && defaultValue.Equals(value))
                     {
                         continue;
                     }
