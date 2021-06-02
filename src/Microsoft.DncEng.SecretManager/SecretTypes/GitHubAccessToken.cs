@@ -11,7 +11,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         public class Parameters
         {
             public string Name { get; set; }
-            public string GitHubBotAccountSecret { get; set; }
+            public SecretReference GitHubBotAccountSecret { get; set; }
             public string GitHubBotAccountName { get; set; }
         }
 

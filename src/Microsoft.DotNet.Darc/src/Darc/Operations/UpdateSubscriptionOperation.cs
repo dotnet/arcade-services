@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
                 Constants.AvailableMergePolicyYamlHelp,
-                subscription.PullRequestFailureNotificationTags);
+                subscription.PullRequestFailureNotificationTags ?? string.Empty);
 
             UxManager uxManager = new UxManager(_options.GitLocation, Logger);
 

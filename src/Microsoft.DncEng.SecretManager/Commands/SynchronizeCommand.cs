@@ -59,6 +59,14 @@ namespace Microsoft.DncEng.SecretManager.Commands
             DateTimeOffset now = _clock.UtcNow;
             SecretManifest manifest = SecretManifest.Read(_manifestFile);
             using StorageLocationType.Bound storage = _storageLocationTypeRegistry.Get(manifest.StorageLocation.Type).BindParameters(manifest.StorageLocation.Parameters);
+            using var disposables = new DisposableList();
+            var references = new Dictionary<string, StorageLocationType.Bound>();
+            foreach (var (name, storageReference) in manifest.References)
+            {
+                var bound = _storageLocationTypeRegistry.Get(storageReference.Type).BindParameters(storageReference.Parameters);
+                disposables.Add(bound);
+                references.Add(name, bound);
+            }
             Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
             foreach (var (name, secret) in manifest.Secrets)
             {
@@ -115,7 +123,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     _console.WriteLine($"Generating new value(s) for secret {name}...");
                     SecretProperties primary = existing.FirstOrDefault(p => p != null);
                     IImmutableDictionary<string, string> currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
-                    var context = new RotationContext(name, currentTags, storage);
+                    var context = new RotationContext(name, currentTags, storage, references);
                     List<SecretData> newValues = await secretType.RotateValues(context, cancellationToken);
                     IImmutableDictionary<string, string> newTags = context.GetValues();
                     _console.WriteLine("Done.");

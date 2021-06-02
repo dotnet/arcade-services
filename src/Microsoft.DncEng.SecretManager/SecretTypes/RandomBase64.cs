@@ -34,7 +34,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         public override async Task<List<SecretData>> RotateValues(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            string currentPrimary = await context.GetSecretValue(context.SecretName + PrimarySuffix);
+            string currentPrimary = await context.GetSecretValue(new SecretReference(context.SecretName + PrimarySuffix));
             if (currentPrimary == null)
             {
                 currentPrimary = "";

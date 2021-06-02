@@ -36,7 +36,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub bot account.");
             }
 
-            string password = await context.GetSecretValue(context.SecretName + GitHubPasswordSuffix);
+            string password = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubPasswordSuffix));
             if (string.IsNullOrEmpty(password))
             {
                 return await NewAccount(parameters, context, cancellationToken);
@@ -50,7 +50,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         private async Task<List<SecretData>> UpdateAccount(string password, Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             var secrets = new List<SecretData>(3);
-            var secret = await context.GetSecretValue(context.SecretName + GitHubSecretSuffix);
+            var secret = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubSecretSuffix));
 
             await ShowGitHubLoginInformation(parameters.Name, secret, password);
 
@@ -80,7 +80,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
             else
             {
-                string recoveryCodes = await context.GetSecretValue(context.SecretName + GitHubRecoveryCodesSuffix);
+                string recoveryCodes = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubRecoveryCodesSuffix));
                 secrets.Add(new SecretData(recoveryCodes, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue));
             }
 

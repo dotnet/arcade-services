@@ -48,10 +48,10 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub App Secret.");
             }
 
-            string appId = await context.GetSecretValue(context.SecretName + AppId);
-            string privateKey = await context.GetSecretValue(context.SecretName + AppPrivateKey);
-            string clientSecret = await context.GetSecretValue(context.SecretName + AppSecret);
-            string webhookSecret = await context.GetSecretValue(context.SecretName + AppHook);
+            string appId = await context.GetSecretValue(new SecretReference(context.SecretName + AppId));
+            string privateKey = await context.GetSecretValue(new SecretReference(context.SecretName + AppPrivateKey));
+            string clientSecret = await context.GetSecretValue(new SecretReference(context.SecretName + AppSecret));
+            string webhookSecret = await context.GetSecretValue(new SecretReference(context.SecretName + AppHook));
             bool isNew = string.IsNullOrEmpty(appId);
 
             if (isNew)

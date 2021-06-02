@@ -16,7 +16,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         public class Parameters
         {
-            public string AdminConnectionName { get; set; }
+            public SecretReference AdminConnection { get; set; }
             public string DataSource { get; set; }
             public string Database { get; set; }
             public string Permissions { get; set; }
@@ -32,7 +32,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             string dataSource = parameters.DataSource;
 
-            string adminConnectionString = await context.GetSecretValue(parameters.AdminConnectionName);
+            string adminConnectionString = await context.GetSecretValue(parameters.AdminConnection);
             bool haveFullAdmin = false;
 
             if (string.IsNullOrEmpty(adminConnectionString))
