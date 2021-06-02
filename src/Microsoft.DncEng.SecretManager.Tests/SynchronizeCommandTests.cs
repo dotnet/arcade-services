@@ -64,6 +64,8 @@ namespace Microsoft.DncEng.SecretManager.Tests
                 secretType
                     .Setup(t => t.RotateValues(It.IsAny<IDictionary<string, object>>(), It.IsAny<RotationContext>(), cancellationToken))
                     .ReturnsAsync(() => rotationResults[currentIndex++]);
+                secretType.Setup(t => t.GetSecretReferences(It.IsAny<IDictionary<string, object>>()))
+                    .Returns(new List<string>());
 
                 secretTypeRegistry
                     .Setup(registry => registry.Get(secretTypeName))
