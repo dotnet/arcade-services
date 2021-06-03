@@ -16,7 +16,8 @@ namespace Microsoft.DncEng.SecretManager.Tests
 {
     public class SynchronizeCommandTests
     {
-        private async Task TestCommand(DateTimeOffset now, string manifestText, string locationTypeName, List<SecretProperties> existingSecrets, string secretTypeName, List<string> suffixes, List<List<SecretData>> rotationResults, List<(string name, SecretValue value)> expectedSets)
+        private async Task TestCommand(DateTimeOffset now, string manifestText, string locationTypeName, List<SecretProperties> existingSecrets, string secretTypeName, List<string> suffixes,
+            Func<IDictionary<string, object>, List<string>> referencesGenerator, List<List<SecretData>> rotationResults, List<(string name, SecretValue value)> expectedSets)
         {
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -65,7 +66,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
                     .Setup(t => t.RotateValues(It.IsAny<IDictionary<string, object>>(), It.IsAny<RotationContext>(), cancellationToken))
                     .ReturnsAsync(() => rotationResults[currentIndex++]);
                 secretType.Setup(t => t.GetSecretReferences(It.IsAny<IDictionary<string, object>>()))
-                    .Returns(new List<string>());
+                    .Returns(referencesGenerator);
 
                 secretTypeRegistry
                     .Setup(registry => registry.Get(secretTypeName))
@@ -111,6 +112,7 @@ secrets:
                 },
                 "test-secret",
                 new List<string>{""},
+                parameters => new List<string>(),
                 new List<List<SecretData>>
                 {
                     new List<SecretData>
@@ -141,6 +143,7 @@ secrets:
                 },
                 "test-secret",
                 new List<string>{""},
+                parameters => new List<string>(),
                 new List<List<SecretData>>
                 {
                     new List<SecretData>
@@ -171,6 +174,7 @@ secrets:
                 },
                 "test-secret",
                 new List<string>{""},
+                parameters => new List<string>(),
                 new List<List<SecretData>>
                 {
                 }, new List<(string name, SecretValue value)>
@@ -198,6 +202,7 @@ secrets:
                 },
                 "test-secret",
                 new List<string>{"", "-2"},
+                parameters => new List<string>(),
                 new List<List<SecretData>>
                 {
                     new List<SecretData>
@@ -210,6 +215,141 @@ secrets:
                     ("normal", new SecretValue("test-value-1", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
                     ("normal-2", new SecretValue("test-value-2", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
                 });
+        }
+
+        [Test]
+        public async Task SecretsAreRotatedInCorrectOrderAndAllTriggeredByExpiredMainSecret()
+        {
+            var now = DateTimeOffset.Parse("3/25/2021 1:30");
+            await TestCommand(now, @"
+storageLocation:
+  type: test
+secrets:
+  grand-child:
+    type: test-secret
+    parameters:
+        dependsOnSecret: child
+  child:
+    type: test-secret
+    parameters:
+        dependsOnSecret: expired-main
+  expired-main:
+    type: test-secret
+", "test",
+                new List<SecretProperties>
+                {
+                    new SecretProperties("expired-main", now.AddDays(-5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                    new SecretProperties("child", now.AddDays(5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                    new SecretProperties("grand-child", now.AddDays(5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                },
+                "test-secret",
+                new List<string> { "" },
+                parameters => parameters == null ? new List<string>() : new List<string> { parameters["dependsOnSecret"].ToString() },
+                new List<List<SecretData>>
+                {
+                    new List<SecretData>
+                    {
+                        new SecretData("test-value-1", now.AddDays(5), now.AddDays(2)),
+                    },
+                    new List<SecretData>
+                    {
+                        new SecretData("test-value-2", now.AddDays(5), now.AddDays(2)),
+                    },
+                    new List<SecretData>
+                    {
+                        new SecretData("test-value-3", now.AddDays(5), now.AddDays(2)),
+                    }
+                }, new List<(string name, SecretValue value)>
+                {
+                    ("expired-main", new SecretValue("test-value-1", ImmutableDictionary.Create<string, string>(), now.AddDays(2), now.AddDays(5))),
+                    ("child", new SecretValue("test-value-2", ImmutableDictionary.Create<string, string>(), now.AddDays(2), now.AddDays(5))),
+                    ("grand-child", new SecretValue("test-value-3", ImmutableDictionary.Create<string, string>(), now.AddDays(2), now.AddDays(5)))
+                });
+        }
+
+        [Test]
+        public async Task SecretsAreRotatedInCorrectOrderAndGrandChildTriggeredByExpiredChildSecret()
+        {
+            var now = DateTimeOffset.Parse("3/25/2021 1:30");
+            await TestCommand(now, @"
+storageLocation:
+  type: test
+secrets:
+  grand-child:
+    type: test-secret
+    parameters:
+        dependsOnSecret: expired-child
+  expired-child:
+    type: test-secret
+    parameters:
+        dependsOnSecret: main
+  main:
+    type: test-secret
+", "test",
+                new List<SecretProperties>
+                {
+                    new SecretProperties("main", now.AddDays(5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                    new SecretProperties("expired-child", now.AddDays(-5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                    new SecretProperties("grand-child", now.AddDays(5), now.AddDays(10),
+                        ImmutableDictionary.Create<string, string>()),
+                },
+                "test-secret",
+                new List<string> { "" },
+                parameters => parameters == null ? new List<string>() : new List<string> { parameters["dependsOnSecret"].ToString() },
+                new List<List<SecretData>>
+                {
+                    new List<SecretData>
+                    {
+                        new SecretData("test-value-1", now.AddDays(5), now.AddDays(2)),
+                    },
+                    new List<SecretData>
+                    {
+                        new SecretData("test-value-2", now.AddDays(5), now.AddDays(2)),
+                    }
+
+                }, new List<(string name, SecretValue value)>
+                {
+                    ("expired-child", new SecretValue("test-value-1", ImmutableDictionary.Create<string, string>(), now.AddDays(2), now.AddDays(5))),
+                    ("grand-child", new SecretValue("test-value-2", ImmutableDictionary.Create<string, string>(), now.AddDays(2), now.AddDays(5)))
+                });
+        }
+
+        [Test]
+        public void InvalidSecretReferenceThrowsException()
+        {
+            var now = DateTimeOffset.Parse("3/25/2021 1:30");
+            Assert.ThrowsAsync<InvalidOperationException>(() =>
+                TestCommand(now, @"
+    storageLocation:
+      type: test
+    secrets:
+      main:
+        type: test-secret
+      expired-child:
+        type: test-secret
+        parameters:
+            dependsOnSecret: X
+    ", "test",
+                    new List<SecretProperties>
+                    {
+                        new SecretProperties("main", now.AddDays(5), now.AddDays(10),
+                            ImmutableDictionary.Create<string, string>()),
+                        new SecretProperties("expired-child", now.AddDays(-5), now.AddDays(10),
+                            ImmutableDictionary.Create<string, string>()),
+                    },
+                    "test-secret",
+                    new List<string> { "" },
+                    parameters => parameters == null ? new List<string>() : new List<string> { parameters["dependsOnSecret"].ToString() },
+                    new List<List<SecretData>>
+                    {
+                    }, new List<(string name, SecretValue value)>
+                    {
+                    }));
         }
     }
 }

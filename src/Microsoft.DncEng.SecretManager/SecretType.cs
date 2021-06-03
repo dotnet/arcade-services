@@ -83,8 +83,8 @@ namespace Microsoft.DncEng.SecretManager
             {
                 if (property.PropertyType == typeof(SecretReference))
                 {
-                    if (ciParameters.TryGetValue(property.Name, out object propertyValue))
-                        secretReferences.Add(propertyValue?.ToString());
+                    if (ciParameters.TryGetValue(property.Name, out object propertyValue) && propertyValue != null)
+                        secretReferences.Add(propertyValue.ToString());
                 }
             }
             return secretReferences;
