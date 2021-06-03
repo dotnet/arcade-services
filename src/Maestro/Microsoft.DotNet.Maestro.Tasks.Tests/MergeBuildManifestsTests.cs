@@ -309,7 +309,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
-        [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
+        [TestCase("https://devdiv.visualstudio.com/DevDiv/_git/MSTest", "mstest")]
+        [TestCase("https://github.com/microsoft/vstest", "vstest")]
         [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-trusted-packages", "dotnet/trusted-packages")]
         [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/dotnet-trusted-packages-trusted", "dotnet/trusted-packages")]
         [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-images-trusted", "dotnet/images-trusted")]
