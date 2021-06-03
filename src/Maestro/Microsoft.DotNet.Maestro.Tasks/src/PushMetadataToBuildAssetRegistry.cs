@@ -619,10 +619,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             StringBuilder builder = new StringBuilder(repoName);
+            int index = repoName.IndexOf('-');
 
-            if (repoName.Contains("-"))
+            if (index > -1)
             {
-                int index = repoName.IndexOf('-');
                 builder[index] = '/';
             }
 
