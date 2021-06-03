@@ -617,10 +617,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 repoName = repoName.Remove(repoName.LastIndexOf("-trusted"));
             }
-            int index = repoName.IndexOf('-');
 
             StringBuilder builder = new StringBuilder(repoName);
-            builder[index] = '/';
+            int index = repoName.IndexOf('-');
+
+            if (index > -1)
+            {
+                builder[index] = '/';
+            }
 
             return builder.ToString();
         }
