@@ -10,6 +10,7 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -243,6 +244,12 @@ namespace DotNet.Status.Web.Tests
             testData.VerifyAll(expectedOwners, expectedNames);
         }
 
+        [TestDependencyInjectionSetup]
+        public static class TestDataConfiguration
+        {
+
+        }
+
         public TestData SetupTestData(JObject buildData, bool expectNotification)
         {
             var owners = new List<string>();
@@ -257,7 +264,7 @@ namespace DotNet.Status.Web.Tests
             mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.FromResult(mockGithubClient.Object));
 
             var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
-            var project = new AzureDevOpsProject[]
+            var project = new[]
             {
                 new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
             };
@@ -286,7 +293,7 @@ namespace DotNet.Status.Web.Tests
                     Organization = "dnceng",
                     MaxParallelRequests = 10,
                     AccessToken = "fake",
-                    Builds = new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription[]
+                    Builds = new[]
                     {
                         new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
                         {
@@ -307,7 +314,7 @@ namespace DotNet.Status.Web.Tests
                         }
                     }
                 };
-                options.Issues = new BuildMonitorOptions.IssuesOptions[]
+                options.Issues = new[]
                 {
                     new BuildMonitorOptions.IssuesOptions
                     {
@@ -321,8 +328,8 @@ namespace DotNet.Status.Web.Tests
 
             collection.AddScoped<AzurePipelinesController>();
 
-            collection.AddSingleton<IGitHubApplicationClientFactory>(mockGithubClientFactory.Object);
-            collection.AddSingleton<IAzureDevOpsClientFactory>(mockAzureClientFactory.Object);
+            collection.AddSingleton(mockGithubClientFactory.Object);
+            collection.AddSingleton(mockAzureClientFactory.Object);
 
             var services = collection.BuildServiceProvider();
 
