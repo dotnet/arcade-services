@@ -13,7 +13,7 @@ namespace Microsoft.DncEng.SecretManager
             return (TParameters)ConvertValue(parameters, typeof(TParameters));
         }
 
-        private static object ConvertValue(object value, Type type)
+        public static object ConvertValue(object value, Type type)
         {
             if (IsDictionary(value))
             {
@@ -25,6 +25,11 @@ namespace Microsoft.DncEng.SecretManager
 
         private static bool IsDictionary(object value)
         {
+            if (value == null)
+            {
+                return false;
+            }
+
             var type = value.GetType();
             if (type.GetInterfaces().Any(iface => iface.Name.Contains("Dictionary")))
             {

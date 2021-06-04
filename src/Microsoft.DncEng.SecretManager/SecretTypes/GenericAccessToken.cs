@@ -38,9 +38,14 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
 
             var mapHelpEnvironmentToHost = new Dictionary<string, string>(EnvironmentToHost, StringComparer.OrdinalIgnoreCase);
-            if (!mapHelpEnvironmentToHost.TryGetValue(parameters.Environment, out string helpUrl))
+            string helpUrl;
+            if (parameters == null)
             {
-                helpUrl = $"<host for {parameters.Environment} environment>";
+                helpUrl = "";
+            }
+            else if (!mapHelpEnvironmentToHost.TryGetValue(parameters.Environment, out helpUrl))
+            {
+                helpUrl = parameters.Environment;
             }
             Console.WriteLine(string.Format(HelpMessage, helpUrl));
 

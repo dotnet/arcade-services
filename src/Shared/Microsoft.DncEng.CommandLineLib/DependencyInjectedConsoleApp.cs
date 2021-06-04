@@ -30,6 +30,7 @@ namespace Microsoft.DncEng.CommandLineLib
                 .Build();
 
             services.AddSingleton(config);
+            services.AddSingleton((IConfiguration)config);
         }
 
         private void ConfigureDefaultServices(IServiceCollection services)

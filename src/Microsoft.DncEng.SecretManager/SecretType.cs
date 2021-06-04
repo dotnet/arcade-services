@@ -77,6 +77,10 @@ namespace Microsoft.DncEng.SecretManager
     {
         public sealed override List<string> GetSecretReferences(IDictionary<string, object> parameters)
         {
+            if (parameters == null)
+            {
+                return new List<string>();
+            }
             var ciParameters = new Dictionary<string, object>(parameters, StringComparer.OrdinalIgnoreCase);
             var secretReferences = new List<string>();
             foreach (PropertyInfo property in typeof(TParameters).GetProperties())
@@ -84,7 +88,13 @@ namespace Microsoft.DncEng.SecretManager
                 if (property.PropertyType == typeof(SecretReference))
                 {
                     if (ciParameters.TryGetValue(property.Name, out object propertyValue) && propertyValue != null)
-                        secretReferences.Add(propertyValue.ToString());
+                    {
+                        var reference = (SecretReference)ParameterConverter.ConvertValue(propertyValue, typeof(SecretReference));
+                        if (string.IsNullOrEmpty(reference.Location))
+                        {
+                            secretReferences.Add(propertyValue.ToString());
+                        }
+                    }
                 }
             }
             return secretReferences;

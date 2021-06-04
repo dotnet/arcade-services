@@ -7,6 +7,5 @@ namespace DotNet.Status.Web.Options
     public class AzureTableTokenStoreOptions
     {
         public string TableUri { get; set; }
-        public string TableSasToken { get; set; }
     }
 }
