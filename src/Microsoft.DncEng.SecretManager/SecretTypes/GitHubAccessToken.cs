@@ -26,7 +26,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new InvalidOperationException($"User intervention required for creation or rotation of a GitHub access token.");
             }
 
-            await ShowGitHubLoginInformation(context, parameters.GitHubBotAccountSecret, parameters.GitHubBotAccountName);
+            const string helpUrl = "https://github.com/settings/tokens";
+            await ShowGitHubLoginInformation(context, parameters.GitHubBotAccountSecret, helpUrl, parameters.GitHubBotAccountName);
 
             var pat = await Console.PromptAndValidateAsync("PAT",
                 "PAT must have at least 40 characters.",

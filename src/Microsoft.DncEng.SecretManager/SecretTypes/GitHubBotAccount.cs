@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,20 +38,21 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             string password = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubPasswordSuffix));
             if (string.IsNullOrEmpty(password))
             {
-                return await NewAccount(parameters, context, cancellationToken);
+                return await NewAccount(parameters);
             }
             else
             {
-                return await UpdateAccount(password, parameters, context, cancellationToken);
+                return await UpdateAccount(password, parameters, context);
             }
         }
 
-        private async Task<List<SecretData>> UpdateAccount(string password, Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+        private async Task<List<SecretData>> UpdateAccount(string password, Parameters parameters, RotationContext context)
         {
             var secrets = new List<SecretData>(3);
             var secret = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubSecretSuffix));
 
-            await ShowGitHubLoginInformation(parameters.Name, secret, password);
+            const string helpUrl = "https://github.com/settings/security";
+            await ShowGitHubLoginInformation(helpUrl, parameters.Name, secret, password);
 
             var rollPassword = await Console.ConfirmAsync("Do you want to roll bot's password (yes/no): ");
             if (rollPassword)
@@ -97,7 +97,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             return secrets;
         }
 
-        private async Task<List<SecretData>> NewAccount(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+        private async Task<List<SecretData>> NewAccount(Parameters parameters)
         {
             Console.WriteLine($"Please sign up for a new GitHub account {parameters.Name}.");
 
