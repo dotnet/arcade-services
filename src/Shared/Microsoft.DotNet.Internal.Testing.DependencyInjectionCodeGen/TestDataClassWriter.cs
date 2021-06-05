@@ -73,7 +73,9 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
 ";
             }
 
-            return $@"namespace {decl.NamespaceName}
+            return $@"#pragma warning disable
+
+namespace {decl.NamespaceName}
 {{
     public partial class {decl.ParentName}
     {{
