@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IsPackable>false</IsPackable>
     <SignAssembly>false</SignAssembly>
     <PreserveCompilationContext>true</PreserveCompilationContext>
