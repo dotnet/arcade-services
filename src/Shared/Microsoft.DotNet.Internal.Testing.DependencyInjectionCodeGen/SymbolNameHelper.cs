@@ -29,8 +29,9 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                 return type.Name;
             }
 
-            if (type is INamedTypeSymbol {IsTupleType: true} tuple)
+            if (type is INamedTypeSymbol {IsTupleType: true} tuple && tuple.TupleElements.All(t => !t.IsImplicitlyDeclared))
             {
+                return "(" + string.Join(", ", tuple.TupleElements.Select(t => FullName(t.Type) + " " + t.Name)) + ")";
             }
 
             string name = type.Name;

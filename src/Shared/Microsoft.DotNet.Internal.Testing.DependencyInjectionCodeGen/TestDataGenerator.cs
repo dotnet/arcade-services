@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
 
         public void Execute(GeneratorExecutionContext context)
         {
-            TestDataReceiver rec = (TestDataReceiver) context.SyntaxContextReceiver;
+            var rec = (TestDataReceiver) context.SyntaxContextReceiver;
             
             foreach (Diagnostic diagnostic in rec.Diagnostics)
             {

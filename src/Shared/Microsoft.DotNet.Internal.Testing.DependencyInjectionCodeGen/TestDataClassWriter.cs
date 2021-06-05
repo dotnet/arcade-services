@@ -302,6 +302,11 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                         builder.Append(" = ");
                     }
 
+                    if (method.IsAsync)
+                    {
+                        builder.Append("await ");
+                    }
+
                     builder.Append(decl.ConfigClassName);
                     builder.Append('.');
                     builder.Append(method.Name);
