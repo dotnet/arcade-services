@@ -32,6 +32,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
                 testData.Injectable.IsSyncDisposeCalled.Should().BeFalse();
                 testData.Injectable.IsAsyncDisposeCalled.Should().BeFalse();
             }
+
             testData.Injectable.IsSyncDisposeCalled.Should().BeTrue();
             testData.Injectable.IsAsyncDisposeCalled.Should().BeFalse();
         }
@@ -45,6 +46,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
                 testData.Injectable.IsSyncDisposeCalled.Should().BeFalse();
                 testData.Injectable.IsAsyncDisposeCalled.Should().BeFalse();
             }
+
             testData.Injectable.IsSyncDisposeCalled.Should().BeFalse();
             testData.Injectable.IsAsyncDisposeCalled.Should().BeTrue();
         }

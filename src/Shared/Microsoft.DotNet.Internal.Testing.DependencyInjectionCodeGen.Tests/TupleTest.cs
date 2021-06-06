@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void Defaults()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Values.StringValue.Should().BeNull();
             testData.Values.IntValue.Should().Be(0);
         }
@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void ConfigureAll()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithStringValue("FIRST-VALUE")
                 .WithIntValue(98765)
                 .Build();
@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void Defaults()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Values.StringValue.Should().BeNull();
             testData.Values.IntValue.Should().Be(0);
         }
@@ -70,7 +70,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void ConfigureAll()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithStringValue("FIRST-VALUE")
                 .WithIntValue(98765)
                 .Build();
@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void Defaults()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Values.StringValue.Should().BeNull();
             testData.Values.IntValue.Should().Be(0);
         }
@@ -104,7 +104,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void ConfigureAll()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithStringValue("FIRST-VALUE")
                 .WithIntValue(98765)
                 .Build();
@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void Defaults()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Values.StringValue.Should().BeNull();
             testData.Values.IntValue.Should().Be(0);
         }
@@ -138,7 +138,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void ConfigureAll()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithStringValue("FIRST-VALUE")
                 .WithIntValue(98765)
                 .Build();

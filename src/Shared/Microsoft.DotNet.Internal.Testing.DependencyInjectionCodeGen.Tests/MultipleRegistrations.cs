@@ -15,7 +15,9 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [TestDependencyInjectionSetup]
         public static class TestDataConfiguration
         {
-            public static Func<IServiceProvider, Injectable> Injectable(IServiceCollection collection, string injectableValue)
+            public static Func<IServiceProvider, Injectable> Injectable(
+                IServiceCollection collection,
+                string injectableValue)
             {
                 collection.AddSingleton(s => new Injectable(injectableValue));
                 return s => s.GetRequiredService<Injectable>();
@@ -35,7 +37,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public static void Defaults()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Injectable.Value.Should().BeNull();
             testData.ThreeValues.Value1.Should().BeNull();
             testData.ThreeValues.Value2.Should().BeNull();
@@ -45,7 +47,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public static void SetValues()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithInjectableValue("INJECTABLE-TEST")
                 .WithThreeValues("SECOND", "THIRD")
                 .Build();
@@ -58,7 +60,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public static void AnyOrder()
         {
-            using var testData = TestData.Default
+            using TestData testData = TestData.Default
                 .WithThreeValues("SECOND", "THIRD")
                 .WithInjectableValue("INJECTABLE-TEST")
                 .Build();

@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
         [Test]
         public void Validate()
         {
-            using var testData = TestData.Default.Build();
+            using TestData testData = TestData.Default.Build();
             testData.Injectable.Value.Should().Be(TestValue);
         }
     }
