@@ -14,6 +14,7 @@ using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,12 +29,12 @@ using static Maestro.Web.Api.v2020_02_20.Models.DefaultChannel;
 namespace Maestro.Web.Tests
 {
     [TestFixture]
-    public class DefaultChannelsController20200220Tests
+    public partial class DefaultChannelsController20200220Tests
     {
         [Test]
         public async Task CreateAndGetDefaultChannel()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
             string classification = "TEST-CLASSIFICATION";
             string repository = "FAKE-REPOSITORY";
@@ -88,7 +89,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task UpdateDefaultChannel()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             string channelName = "TEST-CHANNEL-TO-UPDATE";
             string classification = "TEST-CLASSIFICATION";
             string repository = "FAKE-REPOSITORY";
@@ -145,7 +146,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task DefaultChannelRegularExpressionMatching()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             string channelName = "TEST-CHANNEL-REGEX-FOR-DEFAULT";
             string classification = "TEST-CLASSIFICATION";
             string repository = "FAKE-REPOSITORY";
@@ -206,7 +207,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task TryToAddNonExistentChannel()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             string repository = "FAKE-REPOSITORY";
             string branch = "FAKE-BRANCH";
 
@@ -229,7 +230,7 @@ namespace Maestro.Web.Tests
             string repository = "FAKE-NON-EXISTENT-REPOSITORY-MISSING-CHANNEL-UPDATE";
             string branch = "FAKE-BRANCH-MISSING-CHANNEL-UPDATE";
 
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             DefaultChannelUpdateData defaultChannelThatDoesntExistUpdateData = new DefaultChannelUpdateData()
             {
                 Branch = branch,
@@ -278,7 +279,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task AddDuplicateDefaultChannels()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             string channelName = "TEST-CHANNEL-DUPLICATE-ENTRY-SCENARIO";
             string classification = "TEST-CLASSIFICATION";
             string repository = "FAKE-REPOSITORY";
@@ -316,26 +317,13 @@ namespace Maestro.Web.Tests
             defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
         }
 
-        private Task<TestData> BuildDefaultAsync()
+        [TestDependencyInjectionSetup]
+        private static class TestDataConfiguration
         {
-            return new TestDataBuilder().BuildAsync();
-        }
-
-        private sealed class TestDataBuilder
-        {
-            private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
-
-            public TestDataBuilder WithImmediateBackgroundQueue()
-            {
-                _backgroundQueueType = typeof(ImmediateBackgroundQueue);
-                return this;
-            }
-
-            public async Task<TestData> BuildAsync()
+            public static async Task Dependencies(IServiceCollection collection)
             {
                 string connectionString = await SharedData.Database.GetConnectionString();
-
-                var collection = new ServiceCollection();
+                
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
@@ -348,36 +336,27 @@ namespace Maestro.Web.Tests
                 });
                 collection.AddSingleton<DefaultChannelsController>();
                 collection.AddSingleton<ChannelsController>();
-                collection.AddSingleton<BuildsController>();
-                collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
-                collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
-                ServiceProvider provider = collection.BuildServiceProvider();
-
-                var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
-
-                return new TestData(provider, clock);
+                collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
             }
-        }
-
-        private sealed class TestData : IDisposable
-        {
-            private readonly ServiceProvider _provider;
-            public TestClock Clock { get; }
-
-            public TestData(ServiceProvider provider, TestClock clock)
+            
+            public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
             {
-                _provider = provider;
-                Clock = clock;
+                collection.AddSingleton<ISystemClock, TestClock>();
+                return s => (TestClock) s.GetRequiredService<ISystemClock>();
             }
 
-            public DefaultChannelsController DefaultChannelsController => _provider.GetRequiredService<DefaultChannelsController>();
-            public ChannelsController ChannelsController => _provider.GetRequiredService<ChannelsController>();
-            public BuildsController BuildsController => _provider.GetRequiredService<BuildsController>();
-
-            public void Dispose()
+            public static Func<IServiceProvider, ChannelsController> ChannelsController(IServiceCollection collection)
             {
-                _provider.Dispose();
+                collection.AddSingleton<ChannelsController>();
+                return s => s.GetRequiredService<ChannelsController>();
+            }
+
+            public static Func<IServiceProvider, DefaultChannelsController> DefaultChannelsController(
+                IServiceCollection collection)
+            {
+                collection.AddSingleton<DefaultChannelsController>();
+                return s => s.GetRequiredService<DefaultChannelsController>();
             }
         }
     }

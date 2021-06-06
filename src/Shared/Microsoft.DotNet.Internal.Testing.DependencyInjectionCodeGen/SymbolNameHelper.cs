@@ -1,12 +1,11 @@
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 
 namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
 {
-    static internal class SymbolNameHelper
+    internal static class SymbolNameHelper
     {
-        public static string FullName(INamespaceSymbol ns)
+        public static string FullName(this INamespaceSymbol ns)
         {
             if (ns.ContainingNamespace == null)
             {
@@ -22,9 +21,9 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
             return parent + '.' + ns.Name;
         }
 
-        public static string FullName(ITypeSymbol type)
+        public static string FullName(this ITypeSymbol type)
         {
-            if (type is ITypeParameterSymbol typeParam)
+            if (type is ITypeParameterSymbol)
             {
                 return type.Name;
             }

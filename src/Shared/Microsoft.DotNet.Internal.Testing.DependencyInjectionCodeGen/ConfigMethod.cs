@@ -13,20 +13,26 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
             List<ConfigParameters> parameters,
             string returnTypeSymbol,
             bool configureAllParameters,
-            bool isAsync)
+            bool isConfigurationAsync,
+            bool isFetchAsync,
+            bool hasFetch)
         {
             Name = name;
             Parameters = parameters;
             ReturnTypeSymbol = returnTypeSymbol;
             ConfigureAllParameters = configureAllParameters;
-            IsAsync = isAsync;
+            IsConfigurationAsync = isConfigurationAsync;
+            IsFetchAsync = isFetchAsync;
+            HasFetch = hasFetch;
         }
 
         public string Name { get; }
         public List<ConfigParameters> Parameters { get; }
         public string ReturnTypeSymbol { get; }
+        public bool HasFetch { get; }
         public bool ConfigureAllParameters { get; }
-        public bool IsAsync { get; }
+        public bool IsConfigurationAsync { get; }
+        public bool IsFetchAsync { get; }
 
         public string GetItemName(TestDataClassWriter.NameFormat format)
         {

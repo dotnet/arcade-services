@@ -7,7 +7,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using CSharpExtensions = Microsoft.CodeAnalysis.CSharp.CSharpExtensions;
 
 namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
 {
@@ -16,7 +15,8 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
         NestedClassRequired,
         PartialClassRequired,
         NamespaceRequired,
-        StaticClassRequired
+        StaticClassRequired,
+        DependencyInjectionRequired
     }
 
     internal class TestDataReceiver : ISyntaxContextReceiver
@@ -48,6 +48,18 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                         error = true;
                     }
 
+                    if (!HasDependencyInjectionReference(context))
+                    {
+                        Diagnostics.Add(
+                            Error(
+                                DiagnosticIds.DependencyInjectionRequired,
+                                "Missing reference to Microsoft.Extensions.DependencyInjection to use [TestDependencyInjectionSetupAttribute]",
+                                cls
+                            )
+                        );
+                        error = true;
+                    }
+
                     if (error)
                         return;
 
@@ -69,7 +81,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                     ISymbol parentType = ModelExtensions.GetDeclaredSymbol(context.SemanticModel, nested);
                     Declarations.Add(
                         new TestConfigDeclaration(
-                            SymbolNameHelper.FullName(parentType.ContainingNamespace),
+                            parentType.ContainingNamespace.FullName(),
                             nested.Identifier.Text,
                             currentType,
                             cls
@@ -95,44 +107,111 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                     return;
                 }
 
-                if (SymbolNameHelper.FullName(sMethod.Parameters[0].Type) !=
+                if (sMethod.Parameters[0].Type.FullName() !=
                     "Microsoft.Extensions.DependencyInjection.IServiceCollection")
                 {
                     return;
                 }
 
                 string configType;
-                bool isAsync;
+                bool isConfigurationAsync;
+                bool hasFetch;
+                bool isFetchAsync;
                 if (sMethod.ReturnsVoid)
                 {
                     configType = null;
-                    isAsync = false;
+                    isConfigurationAsync = false;
+                    isFetchAsync = false;
+                    hasFetch = false;
                 }
                 else if (!(sMethod.ReturnType is INamedTypeSymbol returnType))
                 {
                     return;
                 }
+                else if (returnType.FullName() == "System.Threading.Tasks.Task")
+                {
+                    configType = null;
+                    isConfigurationAsync = true;
+                    isFetchAsync = false;
+                    hasFetch = false;
+                }
                 else if (returnType.IsGenericType)
                 {
-                    if (SymbolNameHelper.FullName(returnType.ConstructedFrom) == "System.Func<T,TResult>")
+                    if (returnType.ConstructedFrom.FullName() == "System.Action<T>" && returnType.TypeArguments[0].FullName() == "System.IServiceProvider")
                     {
-                        if (SymbolNameHelper.FullName(returnType.TypeArguments[0]) != "System.IServiceProvider")
+                        configType = null;
+                        hasFetch = true;
+                        isFetchAsync = false;
+                        isConfigurationAsync = false;
+                    }
+                    else if (returnType.ConstructedFrom.FullName() == "System.Func<T,TResult>")
+                    {
+                        isConfigurationAsync = false;
+                        hasFetch = true;
+
+                        if (returnType.TypeArguments[0].FullName() != "System.IServiceProvider")
                         {
                             return;
                         }
 
-                        configType = SymbolNameHelper.FullName(returnType.TypeArguments[1]);
-                        isAsync = false;
-                    }
-                    else if (SymbolNameHelper.FullName(returnType.ConstructedFrom) == "System.Threading.Tasks.Task<TResult>")
-                    {
-                        if (returnType.TypeArguments[0] is INamedTypeSymbol asyncReturn &&
-                            asyncReturn.IsGenericType &&
-                            SymbolNameHelper.FullName(asyncReturn.ConstructedFrom) == "System.Func<T,TResult>" &&
-                            SymbolNameHelper.FullName(asyncReturn.TypeArguments[0]) != "System.IServiceProvider")
+
+                        ITypeSymbol funcReturn = returnType.TypeArguments[1];
+                        if (funcReturn.FullName() == "System.Threading.Tasks.Task")
                         {
-                            configType = SymbolNameHelper.FullName(asyncReturn.TypeArguments[1]);
-                            isAsync = true;
+                            configType = null;
+                            isFetchAsync = true;
+
+                        }
+                        else if (funcReturn is INamedTypeSymbol {IsGenericType: true} namedFuncReturn &&
+                            namedFuncReturn.ConstructedFrom.FullName() == "System.Threading.Tasks.Task<TResult>")
+                        {
+                            configType = namedFuncReturn.TypeArguments[0].FullName();
+                            isFetchAsync = true;
+                        }
+                        else
+                        {
+                            configType = funcReturn.FullName();
+                            isFetchAsync = false;
+                        }
+                    }
+                    else if (returnType.ConstructedFrom.FullName() == "System.Threading.Tasks.Task<TResult>")
+                    {
+                        isConfigurationAsync = true;
+
+                        if (returnType.TypeArguments[0] is INamedTypeSymbol {IsGenericType: true} asyncReturn)
+                        {
+                            if (asyncReturn.ConstructedFrom.FullName() == "System.Action<T>" && asyncReturn.TypeArguments[0].FullName() == "System.IServiceProvider")
+                            {
+                                configType = null;
+                                hasFetch = true;
+                                isFetchAsync = false;
+                            }
+                            else if (asyncReturn.ConstructedFrom.FullName() == "System.Func<T,TResult>" && asyncReturn.TypeArguments[0].FullName() == "System.IServiceProvider")
+                            {
+                                hasFetch = true;
+                                ITypeSymbol funcReturn = asyncReturn.TypeArguments[1];
+                                if (funcReturn.FullName() == "System.Threading.Tasks.Task")
+                                {
+                                    configType = null;
+                                    isFetchAsync = true;
+
+                                }
+                                else if (funcReturn is INamedTypeSymbol {IsGenericType: true} namedFuncReturn &&
+                                    namedFuncReturn.ConstructedFrom.FullName() == "System.Threading.Tasks.Task<TResult>")
+                                {
+                                    configType = namedFuncReturn.TypeArguments[0].FullName();
+                                    isFetchAsync = true;
+                                }
+                                else
+                                {
+                                    configType = funcReturn.FullName();
+                                    isFetchAsync = false;
+                                }
+                            }
+                            else
+                            {
+                                return;
+                            }
                         }
                         else
                         {
@@ -143,11 +222,6 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                     {
                         return;
                     }
-                }
-                else if (SymbolNameHelper.FullName(returnType) == "System.Threading.Tasks.Task")
-                {
-                    isAsync = true;
-                    configType = null;
                 }
                 else
                 {
@@ -161,17 +235,47 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                             .Select(
                                 p => new ConfigParameters(
                                     p.Name,
-                                    SymbolNameHelper.FullName(p.Type),
+                                    p.Type.FullName(),
                                     IsNullable(p.Type)
                                 )
                             )
                             .ToList(),
                         configType,
                         HasNamedAttribute(sMethod, "Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions.ConfigureAllParametersAttribute"),
-                        isAsync
+                        isConfigurationAsync,
+                        isFetchAsync,
+                        hasFetch
                     )
                 );
             }
+        }
+
+        private static bool HasDependencyInjectionReference(GeneratorSyntaxContext context)
+        {
+            INamedTypeSymbol serviceProviderExtensions = context.SemanticModel.Compilation.GetTypeByMetadataName(
+                "Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions"
+            );
+            if (serviceProviderExtensions == null)
+                return false;
+
+            var buildMethod = serviceProviderExtensions.GetMembers("BuildServiceProvider");
+            if (buildMethod.IsDefaultOrEmpty)
+                return false;
+            
+            INamedTypeSymbol serviceCollection = context.SemanticModel.Compilation.GetTypeByMetadataName(
+                "Microsoft.Extensions.DependencyInjection.IServiceCollection"
+            );
+
+            return buildMethod.Any(
+                b => b.IsStatic &&
+                    b.Kind == SymbolKind.Method &&
+                    b is IMethodSymbol {Parameters: {Length: 1}} bMethod &&
+                    bMethod.Parameters[0].Type
+                        .Equals(
+                            serviceCollection,
+                            SymbolEqualityComparer.Default
+                        )
+            );
         }
 
         private Diagnostic Error(DiagnosticIds id, LocalizableString message, CSharpSyntaxNode locationNode)
@@ -190,7 +294,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
 
         private static bool HasNamedAttribute(ISymbol currentType, string attributeName)
         {
-            return currentType.GetAttributes().Any(a => SymbolNameHelper.FullName(a.AttributeClass) == attributeName);
+            return currentType.GetAttributes().Any(a => a.AttributeClass.FullName() == attributeName);
         }
 
         private static bool IsNullable(ITypeSymbol type)
@@ -199,7 +303,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                 type is INamedTypeSymbol namedPType &&
                 namedPType.IsGenericType &&
                 !namedPType.IsUnboundGenericType &&
-                SymbolNameHelper.FullName(namedPType.ConstructedFrom) == "System.Nullable";
+                namedPType.ConstructedFrom.FullName() == "System.Nullable";
         }
     }
 }

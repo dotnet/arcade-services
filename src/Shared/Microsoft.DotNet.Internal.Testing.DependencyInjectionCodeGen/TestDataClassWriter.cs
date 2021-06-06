@@ -109,6 +109,7 @@ namespace {decl.NamespaceName}
                     
 {ConfigurationCallbacks()}
                     var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(collection);
+{FetchCallbacks()}
 
                     return new TestData(
                         provider{TestDataArgumentsFromProvider()}
@@ -297,14 +298,14 @@ namespace {decl.NamespaceName}
                 foreach (ConfigMethod method in decl.Methods)
                 {
                     builder.Append("                    ");
-                    if (!string.IsNullOrEmpty(method.ReturnTypeSymbol))
+                    if (method.HasFetch)
                     {
-                        builder.Append("var ");
+                        builder.Append("var callback_");
                         builder.Append(method.GetItemName(NameFormat.Local));
                         builder.Append(" = ");
                     }
 
-                    if (method.IsAsync)
+                    if (method.IsConfigurationAsync)
                     {
                         builder.Append("await ");
                     }
@@ -326,11 +327,44 @@ namespace {decl.NamespaceName}
                 return builder.ToString();
             }
 
+            string FetchCallbacks()
+            {
+                var builder = new StringBuilder();
+
+                foreach (ConfigMethod method in decl.Methods)
+                {
+                    if (!method.HasFetch)
+                    {
+                        continue;
+                    }
+
+                    builder.Append("                    ");
+                    if (!string.IsNullOrEmpty(method.ReturnTypeSymbol))
+                    {
+                        builder.Append("var value_");
+                        builder.Append(method.GetItemName(NameFormat.Local));
+                        builder.Append(" = ");
+                    }
+
+                    if (method.IsFetchAsync)
+                    {
+                        builder.Append("await ");
+                    }
+                    
+                    builder.Append("callback_");
+                    builder.Append(method.GetItemName(NameFormat.Local));
+                    builder.Append("(provider);");
+                    builder.AppendLine();
+                }
+
+                return builder.ToString();
+            }
+
             string TestDataArgumentsFromProvider()
             {
                 return BuildMethodList(
                     (b, m) => b.AppendFormat(
-                        ",\n                        {0}(provider)",
+                        ",\n                        value_{0}",
                         m.GetItemName(NameFormat.Local)
                     )
                 );
