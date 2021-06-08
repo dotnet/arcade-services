@@ -233,7 +233,7 @@ namespace DotNet.Status.Web.Controllers
 
 {changesMessage}
 ";
-                    string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
+                    string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch}";
                     bool updateExisting = repo.UpdateExisting;
 
                     if (updateExisting)
