@@ -9,55 +9,21 @@ keys:
     type: RSA
     size: 2048
 
-secrets:
-  github:
-    type: github-app-secret
-    parameters:
-      hasPrivateKey: true
-      hasWebhookSecret: true
-      hasOAuthSecret: true
+importSecretsFrom: dotneteng-status-secrets.yaml
 
-  dotnetengstatusprod-storage-account:
+secrets:
+
+  storage-account:
     type: azure-storage-connection-string
     parameters:
       subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
       account: dotnetengstatusprod
-
-  token-table-sas-uri:
-    type: azure-storage-table-sas-uri
-    parameters:
-      connectionString: dotnetengstatusprod-storage-account
-      permissions: rau
-      table: tokens
-
-  deployment-table-sas-uri:
-    type: azure-storage-table-sas-uri
-    parameters:
-      connectionString: dotnetengstatusprod-storage-account
-      permissions: rau
-      table: deployments
-
-  data-protection-key-file-uri:
-    type: azure-storage-blob-sas-uri
-    parameters:
-      connectionString: dotnetengstatusprod-storage-account
-      permissions: racwdx
-      container: site
-      blob: keys.xml
 
   grafana-api-token:
     type: grafana-api-key
     parameters:
       environment: dotnet-eng-grafana.westus2.cloudapp.azure.com
   
-  fr-teams-channel-webhook-url:
-    type: text
-    parameters:
-      description: The teams "incomming webhook" connector url for the FR issue notification channel
-
-  zen-hub-api-token:
-    type: zenhub-access-token
-
   nethelix-engsrv-kusto-connection-string-ingest:
     type: kusto-connection-string
     parameters:
@@ -66,9 +32,3 @@ secrets:
         name: nethelix-kusto-ad-application
       dataSource: https://ingest-engdata.kusto.windows.net:443
       additionalParameters: Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
-
-  app-insights-instrumentation-key:
-    type: text
-  
-  dn-bot-dnceng-build-rw-code-rw-release-rw:
-    type: text

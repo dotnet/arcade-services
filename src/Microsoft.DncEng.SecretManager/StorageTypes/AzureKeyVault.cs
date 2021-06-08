@@ -109,6 +109,9 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             }
             properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
             properties.Tags["ChangedBy"] = "secret-manager.exe";
+            // Tags to appease the old secret management system
+            properties.Tags["Owner"] = "secret-manager.exe";
+            properties.Tags["SecretType"] = "MANAGED";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
         }
