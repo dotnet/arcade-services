@@ -500,8 +500,7 @@ namespace DotNet.Status.Web.Tests
                         Id = "first-issues",
                         Owner = "dotnet",
                         Name = "repo",
-                        Labels = new string[] { "label" },
-                        UpdateExisting = false
+                        Labels = new string[] { "label" }
                     },
                     new BuildMonitorOptions.IssuesOptions
                     {
