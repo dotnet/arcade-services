@@ -9,6 +9,8 @@ using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
+#pragma warning disable 1998
+
 namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
 {
     public partial class SyncTupleTest
