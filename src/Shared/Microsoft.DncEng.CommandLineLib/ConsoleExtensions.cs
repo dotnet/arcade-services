@@ -90,7 +90,7 @@ namespace Microsoft.DncEng.CommandLineLib
             };
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AGENT_ID")))
             {
-                console.Write(VerbosityLevel.Quiet, $"##vso[task.logissue type={type};sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
+                console.Error(VerbosityLevel.Quiet, $"##vso[task.logissue type={type};sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
             }
             else
             {
