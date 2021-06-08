@@ -89,10 +89,12 @@ namespace DotNet.Status.Web.Tests
             {
                 "repo"
             };
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
             using TestData testData = SetupTestData(build, false);
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            testData.VerifyAll(expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
         }
 
         [Test]
@@ -166,10 +168,12 @@ namespace DotNet.Status.Web.Tests
             {
                 "repo"
             };
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
             using TestData testData = SetupTestData(build, false);
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            testData.VerifyAll(expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
         }
 
         [Test]
@@ -235,20 +239,113 @@ namespace DotNet.Status.Web.Tests
             };
 
             var expectedOwners = new List<string>();
-
             var expectedNames = new List<string>();
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
             using TestData testData = SetupTestData(build, false);
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            testData.VerifyAll(expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
+        }
+
+        [Test]
+        public async Task BuildCompleteUpdateExistingIssue()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path3",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+            };
+
+            var expectedIssueOwners = new List<string>();
+            var expectedIssueNames = new List<string>();
+
+            var expectedCommentOwners = new List<string>
+            {
+                "dotnet"
+            };
+            var expectedCommentNames = new List<string>
+            {
+                "repo"
+            };
+
+            using TestData testData = SetupTestData(build, false);
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            testData.VerifyAll(expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
         }
 
         public TestData SetupTestData(JObject buildData, bool expectNotification)
         {
-            var owners = new List<string>();
-            var names = new List<string>();
+            var commentOwners = new List<string>();
+            var commentNames = new List<string>();
+            var mockGithubComments = new Mock<IIssueCommentsClient>();
+            mockGithubComments.Setup(
+                m => 
+                    m.Create(Capture.In(commentOwners), 
+                    Capture.In(commentNames), 
+                    It.IsAny<int>(), 
+                    It.IsAny<string>()))
+                .Returns(Task.FromResult(new Octokit.IssueComment()));
+
+            var mockIssue = new Mock<Octokit.Issue>();
+            mockIssue.SetupGet(m => m.Id).Returns(123456);
+            mockIssue.SetupGet(m => m.Title).Returns($"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString()}");
+
+            var issueOwners = new List<string>();
+            var issueNames = new List<string>();
             var mockGithubIssues = new Mock<IIssuesClient>();
-            mockGithubIssues.Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>())).Returns(Task.FromResult(new Octokit.Issue()));
+            mockGithubIssues.SetupGet(m => m.Comment).Returns(mockGithubComments.Object);
+            mockGithubIssues.Setup(m => m.Create(Capture.In(issueOwners), Capture.In(issueNames), It.IsAny<Octokit.NewIssue>())).Returns(Task.FromResult(new Octokit.Issue()));
+            mockGithubIssues.Setup(m => m.GetAllForRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RepositoryIssueRequest>())).Returns(Task.FromResult((IReadOnlyList<Issue>)(new List<Issue> {mockIssue.Object})));
 
             var mockGithubClient = new Mock<IGitHubClient>();
             mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
@@ -304,6 +401,14 @@ namespace DotNet.Status.Web.Tests
                             Assignee = "assignee",
                             IssuesId = "first-issues",
                             Tags = new string[] { "tag1" }
+                        },
+                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                        {
+                            Project = "test-project-name",
+                            DefinitionPath = "\\test\\definition\\path3",
+                            Branches = new string[] { "sourceBranch" },
+                            Assignee = "assignee",
+                            IssuesId = "second-issues"
                         }
                     }
                 };
@@ -314,7 +419,16 @@ namespace DotNet.Status.Web.Tests
                         Id = "first-issues",
                         Owner = "dotnet",
                         Name = "repo",
-                        Labels = new string[] { "label" }
+                        Labels = new string[] { "label" },
+                        UpdateExisting = false
+                    },
+                    new BuildMonitorOptions.IssuesOptions
+                    {
+                        Id = "second-issues",
+                        Owner = "dotnet",
+                        Name = "repo",
+                        Labels = new string[] { "label" },
+                        UpdateExisting = true
                     }
                 };
             });
@@ -326,7 +440,7 @@ namespace DotNet.Status.Web.Tests
 
             var services = collection.BuildServiceProvider();
 
-            return new TestData(services.GetRequiredService<AzurePipelinesController>(), services, owners, names);
+            return new TestData(services.GetRequiredService<AzurePipelinesController>(), services, issueOwners, issueNames, commentOwners, commentNames);
         }
 
         public class TestData : IDisposable
@@ -334,24 +448,30 @@ namespace DotNet.Status.Web.Tests
             public TestData(
                 AzurePipelinesController controller,
                 ServiceProvider services,
-                List<string> owners, 
-                List<string> names)
+                List<string> issueOwners, 
+                List<string> issueNames,
+                List<string> commentOwners, 
+                List<string> commentNames)
             {
                 Controller = controller;
                 _services = services;
-                Owners = owners;
-                Names = names;
+                IssueOwners = issueOwners;
+                IssueNames = issueNames;
+                CommentOwners = commentOwners;
+                CommentNames = commentNames;
             }
 
             public readonly AzurePipelinesController Controller;
             private readonly ServiceProvider _services;
-            public List<string> Owners { get; }
-            public List<string> Names { get; }
+            public List<string> IssueOwners { get; }
+            public List<string> IssueNames { get; }
+            public List<string> CommentOwners { get; }
+            public List<string> CommentNames { get; }
 
-            public void VerifyAll(List<string> expectedOwners, List<string> expectedNames)
+            public void VerifyAll(List<string> expectedIssueOwners, List<string> expectedIssueNames, List<string> expectedCommentOwners, List<string> expectedCommentNames)
             {
-                Owners.Should().BeEquivalentTo(expectedOwners);
-                Names.Should().BeEquivalentTo(expectedNames);
+                IssueOwners.Should().BeEquivalentTo(expectedIssueOwners);
+                IssueNames.Should().BeEquivalentTo(expectedIssueNames);
             }
 
             public void Dispose()

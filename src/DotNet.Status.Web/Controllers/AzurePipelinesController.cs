@@ -177,7 +177,7 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
-                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"tags '{string.Join(", ", build.Tags)}'" : "";
+                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"{string.Join(", ", build.Tags)}" : "";
 
                 _logger.LogInformation(
                     "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}', tags '{prettyTags}', and branch '{branch}' matches monitoring criteria, sending notification",
@@ -234,9 +234,9 @@ namespace DotNet.Status.Web.Controllers
 {changesMessage}
 ";
                     string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
-                    bool createNew = repo.CreateNew;
+                    bool updateExisting = repo.UpdateExisting;
 
-                    if (!createNew)
+                    if (updateExisting)
                     {
                         RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
                             Creator = "dotnet-eng-status[bot]",
@@ -270,11 +270,12 @@ namespace DotNet.Status.Web.Controllers
                         else
                         {
                             _logger.LogInformation("Matching issues for {issueTitlePrefix} not found. Creating a new issue.", issueTitlePrefix);
-                            createNew = true;
+                            updateExisting = false;
                         }
                     }
 
-                    if (createNew)
+                    // Create new issue if repo.UpdateExisting is false or there were no matching issues
+                    if (!updateExisting)
                     {
                         var newIssue =
                             new NewIssue($"{issueTitlePrefix} #{build.BuildNumber}")
