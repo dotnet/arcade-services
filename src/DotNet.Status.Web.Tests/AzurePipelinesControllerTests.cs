@@ -249,7 +249,7 @@ namespace DotNet.Status.Web.Tests
         }
 
         [Test]
-        public async Task BuildCompleteUpdateExistingIssue()
+        public async Task BuildCompleteUpdateExistingIssueExists()
         {
             var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
             {
@@ -302,7 +302,7 @@ namespace DotNet.Status.Web.Tests
                     ["displayName"] = "requested-for"
                 },
                 ["result"] = "failed",
-                ["sourceBranch"] = "sourceBranch",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
                 ["startTime"] = "05/01/2008 5:00:00",
             };
 
@@ -318,12 +318,87 @@ namespace DotNet.Status.Web.Tests
                 "repo"
             };
 
+            using TestData testData = SetupTestData(build, true);
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            testData.VerifyAll(expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
+        }
+
+        [Test]
+        public async Task BuildCompleteUpdateExistingIssueDoesNotExist()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path3",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+            };
+
+            var expectedIssueOwners = new List<string>
+            {
+                "dotnet"
+            };
+            var expectedIssueNames = new List<string>
+            {
+                "repo"
+            };
+
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
+
             using TestData testData = SetupTestData(build, false);
             var response = await testData.Controller.BuildComplete(buildEvent);
             testData.VerifyAll(expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
         }
 
-        public TestData SetupTestData(JObject buildData, bool expectNotification)
+        public TestData SetupTestData(JObject buildData, bool expectMatchingTitle)
         {
             var commentOwners = new List<string>();
             var commentNames = new List<string>();
@@ -336,16 +411,22 @@ namespace DotNet.Status.Web.Tests
                     It.IsAny<string>()))
                 .Returns(Task.FromResult(new Octokit.IssueComment()));
 
-            var mockIssue = new Mock<Octokit.Issue>();
-            mockIssue.SetupGet(m => m.Id).Returns(123456);
-            mockIssue.SetupGet(m => m.Title).Returns($"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString()}");
+            string title =
+                expectMatchingTitle ?
+                $"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString().Substring("refs/heads/".Length)} " :
+                "";
 
+            Octokit.Issue mockIssue = new Issue(
+                "url", "html", "comments", "events", 123456, ItemState.Open, title,
+                "body", null, null, null, null, null, null, 1, null, null, DateTimeOffset.MinValue,
+                null, 123456, "nodeid", false, null, null);
+           
             var issueOwners = new List<string>();
             var issueNames = new List<string>();
             var mockGithubIssues = new Mock<IIssuesClient>();
             mockGithubIssues.SetupGet(m => m.Comment).Returns(mockGithubComments.Object);
             mockGithubIssues.Setup(m => m.Create(Capture.In(issueOwners), Capture.In(issueNames), It.IsAny<Octokit.NewIssue>())).Returns(Task.FromResult(new Octokit.Issue()));
-            mockGithubIssues.Setup(m => m.GetAllForRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RepositoryIssueRequest>())).Returns(Task.FromResult((IReadOnlyList<Issue>)(new List<Issue> {mockIssue.Object})));
+            mockGithubIssues.Setup(m => m.GetAllForRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RepositoryIssueRequest>())).Returns(Task.FromResult((IReadOnlyList<Issue>)(new List<Issue> {mockIssue})));
 
             var mockGithubClient = new Mock<IGitHubClient>();
             mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
