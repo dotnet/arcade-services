@@ -12,8 +12,7 @@ keys:
 importSecretsFrom: dotneteng-status-secrets.yaml
 
 secrets:
-
-  storage-account:
+  dotnet-status-storage-account:
     type: azure-storage-connection-string
     parameters:
       subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
