@@ -23,6 +23,7 @@ namespace SubscriptionActorService.Tests
     public class PullRequestPolicyFailureNotifierTests
     {
         protected Mock<IBarClient> BarClient;
+        protected Mock<IGitRepo> GitRepo;
         protected Mock<IRemoteFactory> RemoteFactory;
         protected Mock<IHostEnvironment> Env;
         protected Mock<Octokit.IGitHubClient> GithubClient;
@@ -72,9 +73,26 @@ namespace SubscriptionActorService.Tests
                               select subscription).FirstOrDefault());
                      });
 
-            MockRemote = new Remote(null, BarClient.Object, NullLogger.Instance);
+            GitRepo = new Mock<IGitRepo>(MockBehavior.Strict);
+            GitRepo.Setup(g => g.GetPullRequestChecksAsync(It.IsAny<string>()))
+                   .Returns((string fakePrsUrl) =>
+                   {
+                       List<Check> checksToReturn = new List<Check>();
+                       checksToReturn.Add(new Check(CheckState.Failure, "Some Maestro Policy", "", true));
+                       checksToReturn.Add(new Check(CheckState.Error, "Some Other Maestro Policy", "", true));
+
+                       if (fakePrsUrl.EndsWith("/12345"))
+                       {
+                           checksToReturn.Add(new Check(CheckState.Failure, "Important PR Check", "", false));
+                       }
+
+                       return Task.FromResult((IList<Check>)checksToReturn);
+                   });
+
+
+            MockRemote = new Remote(GitRepo.Object, BarClient.Object, NullLogger.Instance);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-            RemoteFactory.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
+            RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
         }
@@ -108,11 +126,9 @@ namespace SubscriptionActorService.Tests
         }
 
         [TestCase()]
-        public async Task MultipleSubscriptionsIncluded()
+        public async Task MultipleBuildsIncluded()
         {
-            // Somehow got called with a batch of subscriptions. In practice, this actually happens but we don't fully understand why yet.
-            // Seems like this shouldn't be possible but since it is, this test bakes in the behavior (use the first's tags)
-            // The class also has new logging so we can understand what's going on.
+            // Scenario where a bunch of commits / builds are included in the same non-batched, single subscription PR
             var testObject = GetInstance();
             InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345", 2);
 
@@ -135,6 +151,20 @@ namespace SubscriptionActorService.Tests
 
                 PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
             }
+        }
+
+        [TestCase()]
+        public async Task OnlyMaestroChecksHaveFailedOrErrored()
+        {
+            // Checks like "all checks succeeded" stay in a failed state until all the other checks, err, succeed.
+            // Ensure we don't just go tag everyone's automerge PRs.
+            var testObject = GetInstance();
+            InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/67890", 1);
+
+            await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
+
+            prToTag.SourceRepoNotified.Should().BeFalse();
+            PrCommentsMade.Count.Should().Be(0);
         }
 
         [TestCase()]

@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     class UpdateSubscriptionOperation : Operation
     {
-        UpdateSubscriptionCommandLineOptions _options;
+        readonly UpdateSubscriptionCommandLineOptions _options;
 
         public UpdateSubscriptionOperation(UpdateSubscriptionCommandLineOptions options)
             : base(options)
@@ -42,33 +42,77 @@ namespace Microsoft.DotNet.Darc.Operations
             var suggestedRepos = remote.GetSubscriptionsAsync();
             var suggestedChannels = remote.GetChannelsAsync();
 
-            UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
-                "update-subscription/update-subscription-todo",
-                Logger,
-                subscription,
-                (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
-                (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                Constants.AvailableFrequencies,
-                Constants.AvailableMergePolicyYamlHelp,
-                subscription.PullRequestFailureNotificationTags ?? string.Empty);
+            string channel = subscription.Channel.Name;
+            string sourceRepository = subscription.SourceRepository;
+            string updateFrequency = subscription.Policy.UpdateFrequency.ToString();
+            bool batchable = subscription.Policy.Batchable;
+            bool enabled = subscription.Enabled;
+            string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
+            List<MergePolicy> mergePolicies = new List<MergePolicy>();
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
 
-            int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
-
-            if (exitCode != Constants.SuccessCode)
+            if (UpdatingViaCommandLine())
             {
-                return exitCode;
+                if (_options.Channel != null)
+                {
+                    channel = _options.Channel;
+                }
+                if (_options.SourceRepoUrl != null)
+                {
+                    sourceRepository = _options.SourceRepoUrl;
+                }
+                if (_options.Batchable != null)
+                {
+                    batchable = (bool) _options.Batchable;
+                }
+                if (_options.UpdateFrequency != null)
+                {
+                    if (!Constants.AvailableFrequencies.Contains(_options.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
+                    {
+                        Logger.LogError($"Unknown update frequency '{_options.UpdateFrequency}'. Available options: {string.Join(',', Constants.AvailableFrequencies)}");
+                        return 1;
+                    }
+                    updateFrequency = _options.UpdateFrequency;
+                }
+                if (_options.Enabled != null)
+                {
+                    enabled = (bool) _options.Enabled;
+                }
+                if (_options.FailureNotificationTags != null)
+                {
+                    failureNotificationTags = _options.FailureNotificationTags;
+                }
+
             }
+            else
+            {
+                UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+                    "update-subscription/update-subscription-todo",
+                    Logger,
+                    subscription,
+                    (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
+                    (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
+                    Constants.AvailableFrequencies,
+                    Constants.AvailableMergePolicyYamlHelp,
+                    subscription.PullRequestFailureNotificationTags ?? string.Empty);
 
-            string channel = updateSubscriptionPopUp.Channel;
-            string sourceRepository = updateSubscriptionPopUp.SourceRepository;
-            string updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
-            bool batchable = updateSubscriptionPopUp.Batchable;
-            bool enabled = updateSubscriptionPopUp.Enabled;
-            string failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
-            List<MergePolicy> mergePolicies = updateSubscriptionPopUp.MergePolicies;
+                UxManager uxManager = new UxManager(_options.GitLocation, Logger);
 
+                int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
+
+                if (exitCode != Constants.SuccessCode)
+                {
+                    return exitCode;
+                }
+            
+                channel = updateSubscriptionPopUp.Channel;
+                sourceRepository = updateSubscriptionPopUp.SourceRepository;
+                updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
+                batchable = updateSubscriptionPopUp.Batchable;
+                enabled = updateSubscriptionPopUp.Enabled;
+                failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
+                mergePolicies = updateSubscriptionPopUp.MergePolicies;
+            }
             try
             {
                 SubscriptionUpdate subscriptionToUpdate = new SubscriptionUpdate
@@ -80,7 +124,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     PullRequestFailureNotificationTags = failureNotificationTags
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
-                subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency);
+                subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
                 subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(
@@ -131,6 +175,18 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(e, $"Failed to update subscription.");
                 return Constants.ErrorCode;
             }
+        }
+
+        private bool UpdatingViaCommandLine()
+        {
+            // If any specific values come from the command line, we'll skip the popup.
+            // This enables bulk update for users who have many subscriptions, as the text-editor approach can be slow for them.
+            return _options.Channel != null ||
+                   _options.SourceRepoUrl != null ||
+                   _options.Batchable != null ||
+                   _options.UpdateFrequency != null ||
+                   _options.Enabled != null || 
+                   _options.FailureNotificationTags != null;
         }
     }
 }
