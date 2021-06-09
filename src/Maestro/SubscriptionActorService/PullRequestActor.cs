@@ -1034,7 +1034,7 @@ namespace SubscriptionActorService
                             Logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
                         }
                         shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), startingReferenceId + changesLinks.Count);
-                        changesLinks.Append(changesUri);
+                        changesLinks.Add(changesUri);
                     }
 
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{shaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
