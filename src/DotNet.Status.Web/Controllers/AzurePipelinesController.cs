@@ -240,7 +240,9 @@ namespace DotNet.Status.Web.Controllers
                     {
                         RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
                             Creator = "dotnet-eng-status[bot]",
-                            State = ItemStateFilter.Open
+                            State = ItemStateFilter.Open,
+                            SortProperty = IssueSort.Created,
+                            SortDirection = SortDirection.Descending
                         };
 
                         if (!string.IsNullOrEmpty(monitor.Assignee))
