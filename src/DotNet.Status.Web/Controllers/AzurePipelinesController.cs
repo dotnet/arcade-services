@@ -234,21 +234,16 @@ namespace DotNet.Status.Web.Controllers
 {changesMessage}
 ";
                     string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
-                    bool updateExisting = repo.UpdateExisting;
 
-                    if (updateExisting)
+                    if (repo.UpdateExisting)
                     {
+                        string creator = (await github.GitHubApps.GetCurrent()).Name;
                         RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
-                            Creator = "dotnet-eng-status[bot]",
+                            Creator = creator,
                             State = ItemStateFilter.Open,
                             SortProperty = IssueSort.Created,
                             SortDirection = SortDirection.Descending
                         };
-
-                        if (!string.IsNullOrEmpty(monitor.Assignee))
-                        {
-                            issueRequest.Assignee = monitor.Assignee;
-                        }
 
                         foreach (string label in repo.Labels.OrEmpty())
                         {
@@ -268,42 +263,40 @@ namespace DotNet.Status.Web.Controllers
                             // Add a new comment to the issue with the body
                             IssueComment newComment = await github.Issue.Comment.Create(repo.Owner, repo.Name, matchingIssue.Id, body);
                             _logger.LogInformation("Logged comment in {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, matchingIssue.Number);
+
+                            return;
                         }
                         else
                         {
                             _logger.LogInformation("Matching issues for {issueTitlePrefix} not found. Creating a new issue.", issueTitlePrefix);
-                            updateExisting = false;
                         }
                     }
 
                     // Create new issue if repo.UpdateExisting is false or there were no matching issues
-                    if (!updateExisting)
+                    var newIssue =
+                        new NewIssue($"{issueTitlePrefix} #{build.BuildNumber}")
+                        {
+                            Body = body,
+                        };
+
+                    if (!string.IsNullOrEmpty(monitor.Assignee))
                     {
-                        var newIssue =
-                            new NewIssue($"{issueTitlePrefix} #{build.BuildNumber}")
-                            {
-                                Body = body,
-                            };
-
-                        if (!string.IsNullOrEmpty(monitor.Assignee))
-                        {
-                            newIssue.Assignees.Add(monitor.Assignee);
-                        }
-                        
-                        foreach (string label in repo.Labels.OrEmpty())
-                        {
-                            newIssue.Labels.Add(label);
-                        }
-
-                        foreach (string label in monitor.Labels.OrEmpty())
-                        {
-                            newIssue.Labels.Add(label);
-                        }
-
-                        Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
-
-                        _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
+                        newIssue.Assignees.Add(monitor.Assignee);
                     }
+                    
+                    foreach (string label in repo.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
+
+                    foreach (string label in monitor.Labels.OrEmpty())
+                    {
+                        newIssue.Labels.Add(label);
+                    }
+
+                    Issue issue = await github.Issue.Create(repo.Owner, repo.Name, newIssue);
+
+                    _logger.LogInformation("Logged issue {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, issue.Number);
                 }
                 else
                 {
