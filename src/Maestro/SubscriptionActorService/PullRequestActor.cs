@@ -249,11 +249,6 @@ namespace SubscriptionActorService
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
-        private class ReferenceLinksMap
-        {
-            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = new Dictionary<(string from, string to), int>();
-        }
-
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(subscriptionId);
@@ -668,7 +663,7 @@ namespace SubscriptionActorService
             catch (HttpRequestException reqEx) when (reqEx.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))
             {
                 // We want to preserve the HttpRequestException's information but it's not serializable
-                // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure 
+                // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure
                 // GitHub issues are properly created.
                 Logger.LogError(reqEx, "Failure to authenticate to repository");
                 throw new DarcAuthenticationFailureException($"Failure to authenticate: {reqEx.Message}");
@@ -697,9 +692,9 @@ namespace SubscriptionActorService
                 string baseTitle = $"[{targetBranch}] Update dependencies from";
                 StringBuilder titleBuilder = new StringBuilder(baseTitle);
                 bool prefixComma = false;
-                // Github title limit -348 
-                // Azdo title limit - 419 
-                // maxTitleLength = 150 to fit 2/3 repo names in the title. 
+                // Github title limit -348
+                // Azdo title limit - 419
+                // maxTitleLength = 150 to fit 2/3 repo names in the title.
                 const int maxTitleLength = 150;
                 foreach (Guid subscriptionId in uniqueSubscriptionIds)
                 {
@@ -835,7 +830,7 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        /// Commit a dependency update to a target branch 
+        /// Commit a dependency update to a target branch
         /// </summary>
         /// <param name="requiredUpdates">Version updates to apply</param>
         /// <param name="description">
@@ -867,6 +862,7 @@ namespace SubscriptionActorService
             // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
+            int startingReferenceId = 1;
             foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
                 var message = new StringBuilder();
@@ -877,13 +873,13 @@ namespace SubscriptionActorService
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
+                    startingReferenceId += await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, startingReferenceId);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                await CalculatePRDescription(update, deps, committedFiles, description);
+                startingReferenceId += await CalculatePRDescription(update, deps, committedFiles, description, startingReferenceId);
             }
 
             // If the coherency update wasn't combined, then
@@ -892,7 +888,7 @@ namespace SubscriptionActorService
             {
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
+                startingReferenceId += await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, startingReferenceId);
 
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
@@ -905,8 +901,8 @@ namespace SubscriptionActorService
                 Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
                 FirstOrDefault();
 
-            // The list of committedFiles can contain the `global.json` file (and others) 
-            // even though no actual change was made to the file and therefore there is no 
+            // The list of committedFiles can contain the `global.json` file (and others)
+            // even though no actual change was made to the file and therefore there is no
             // metadata for it.
             if (globalJsonFile?.Metadata != null)
             {
@@ -957,13 +953,16 @@ namespace SubscriptionActorService
         /// <param name="update">Update</param>
         /// <param name="deps">Dependencies updated</param>
         /// <param name="description">PR description string builder.</param>
-        /// <returns>Task</returns>
+        /// <param name="startingReferenceId">Starting ID of changes link reference.</param>
+        /// <returns>Number of created change references</returns>
         /// <remarks>
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description)
+        private async Task<int> CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description, int startingReferenceId)
         {
+            var changesLinks = new List<string>();
+
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
             {
@@ -1019,40 +1018,33 @@ namespace SubscriptionActorService
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine($"- **Updates**:");
 
-                ReferenceLinksMap dependencyMapObject = new ReferenceLinksMap();
+                var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
-                int referenceLinkId = 1;
                 foreach (DependencyUpdate dep in deps)
                 {
-                    if (!dependencyMapObject.ShaRangeToLinkId.ContainsKey((dep.From.Commit, dep.To.Commit)))
+                    if (!shaRangeToLinkId.ContainsKey((dep.From.Commit, dep.To.Commit)))
                     {
-                        dependencyMapObject.ShaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), referenceLinkId++);
+                        string changesUri = string.Empty;
+                        try
+                        {
+                            changesUri = GetChangesURI(dep.To.RepoUri, dep.From.Commit, dep.To.Commit);
+                        }
+                        catch (ArgumentNullException e)
+                        {
+                            Logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
+                        }
+                        shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), startingReferenceId + changesLinks.Count);
+                        changesLinks.Append(changesUri);
                     }
-                }
 
-                foreach (DependencyUpdate dep in deps)
-                {
-                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{dependencyMapObject.ShaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
+                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{shaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
                 }
 
                 subscriptionSection.AppendLine();
-                for (int i = 1; i <= referenceLinkId; i++)
+
+                for (int i = 0; i < changesLinks.Count; i++)
                 {
-                    foreach (KeyValuePair<(string, string), int> entry in dependencyMapObject.ShaRangeToLinkId)
-                    {
-                        if (entry.Value == i)
-                        {
-                            DependencyDetail to = deps.Find(d => d.To.Commit == entry.Key.Item2).To;
-                            try
-                            {
-                                subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
-                            }
-                            catch (ArgumentNullException e)
-                            {
-                                Logger.LogError(e, $"Failed to create SHA comparison link for dependency {to.Name} during asset update for subscription {update.SubscriptionId}");
-                            }
-                        }
-                    }
+                    subscriptionSection.AppendLine($"[{i + startingReferenceId}]: {changesLinks[i]}");
                 }
 
                 subscriptionSection.AppendLine();
@@ -1066,6 +1058,7 @@ namespace SubscriptionActorService
 
             }
             description.AppendLine();
+            return changesLinks.Count;
         }
 
         private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker, ref StringBuilder description)
@@ -1248,7 +1241,7 @@ namespace SubscriptionActorService
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)>();
-            // Existing details 
+            // Existing details
             List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, branch)).ToList();
 
             foreach (UpdateAssetsParameters update in updates)
