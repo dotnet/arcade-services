@@ -13,6 +13,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <NoWarn>$(NoWarn);NU5125</NoWarn>
     <LangVersion>8.0</LangVersion>
     <IsShipping>false</IsShipping>
