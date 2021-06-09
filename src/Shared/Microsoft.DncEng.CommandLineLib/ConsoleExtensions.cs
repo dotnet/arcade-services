@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Microsoft.DncEng.CommandLineLib
 {
@@ -77,18 +78,60 @@ namespace Microsoft.DncEng.CommandLineLib
         }
 
         /// <summary>
-        ///   Writes an error, using the VSTS logging commands if running inside VSTS. Forwards to <see cref="WriteError"/> if outside of VSTS.
+        ///   Writes an issue, using the VSTS logging commands if running inside VSTS. Forwards to stderr if outside of VSTS.
         /// </summary>
-        public static void LogError(this IConsole console, string message, string file, int line, int column)
+        public static void LogIssue(this IConsole console, IssueKind kind, string message, string file = null, int? line = null, int? column = null)
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ID")))
+            var (type, color) = (kind) switch
             {
-                console.Write(VerbosityLevel.Quiet, $"##vso[task.logissue type=error;sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
+                IssueKind.Warning => ("warning", ConsoleColor.Yellow),
+                IssueKind.Error => ("error", ConsoleColor.Red),
+                _ => throw new ArgumentException("Invalid IssueKind", nameof(kind)),
+            };
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AGENT_ID")))
+            {
+                console.Error(VerbosityLevel.Quiet, $"##vso[task.logissue type={type};sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
             }
             else
             {
-                console.WriteError($"{file}({line},{column}): error : {message}");
+                var m = new StringBuilder();
+                if (!string.IsNullOrEmpty(file))
+                {
+                    m.Append(file);
+                    if (line != null)
+                    {
+                        if (column != null)
+                        {
+                            m.Append($"({line},{column})");
+                        }
+                        else
+                        {
+                            m.Append($"({line})");
+                        }
+                    }
+
+                    m.Append(": ");
+                }
+
+                m.Append($"{type} : {message}\n");
+                console.Error(VerbosityLevel.Quiet, m.ToString(), color);
             }
+        }
+
+        /// <summary>
+        ///   Writes an error, using the VSTS logging commands if running inside VSTS. Forwards to stderr if outside of VSTS.
+        /// </summary>
+        public static void LogError(this IConsole console, string message, string file = null, int? line = null, int? column = null)
+        {
+            console.LogIssue(IssueKind.Error, message, file, line, column);
+        }
+
+        /// <summary>
+        ///   Writes a warning, using the VSTS logging commands if running inside VSTS. Forwards to stderr if outside of VSTS.
+        /// </summary>
+        public static void LogWarning(this IConsole console, string message, string file = null, int? line = null, int? column = null)
+        {
+            console.LogIssue(IssueKind.Warning, message, file, line, column);
         }
 
         /// <summary>
@@ -98,5 +141,11 @@ namespace Microsoft.DncEng.CommandLineLib
         {
             console.Error(VerbosityLevel.Quiet, message, null);
         }
+    }
+
+    public enum IssueKind
+    {
+        Warning,
+        Error
     }
 }

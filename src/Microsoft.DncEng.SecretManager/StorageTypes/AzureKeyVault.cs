@@ -91,7 +91,9 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
 
         private static ImmutableDictionary<string, string> GetTags(global::Azure.Security.KeyVault.Secrets.SecretProperties properties)
         {
-            ImmutableDictionary<string, string> tags = properties.Tags.Where(p => p.Key != _nextRotationOnTag)
+            ImmutableDictionary<string, string> tags = properties.Tags
+                .Where(p => p.Key != _nextRotationOnTag)
+                .Where(p => p.Key != "Md5")
                 .ToImmutableDictionary();
             return tags;
         }
@@ -99,7 +101,7 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
         public override async Task SetSecretValueAsync(AzureKeyVaultParameters parameters, string name, SecretValue value)
         {
             SecretClient client = await CreateSecretClient(parameters);
-            var createdSecret = await client.SetSecretAsync(name, value.Value);
+            var createdSecret = await client.SetSecretAsync(name, value.Value ?? "");
             var properties = createdSecret.Value.Properties;
             foreach (var (k, v) in value.Tags)
             {
@@ -107,6 +109,9 @@ namespace Microsoft.DncEng.SecretManager.StorageTypes
             }
             properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
             properties.Tags["ChangedBy"] = "secret-manager.exe";
+            // Tags to appease the old secret management system
+            properties.Tags["Owner"] = "secret-manager.exe";
+            properties.Tags["SecretType"] = "MANAGED";
             properties.ExpiresOn = value.ExpiresOn;
             await client.UpdateSecretPropertiesAsync(properties);
         }

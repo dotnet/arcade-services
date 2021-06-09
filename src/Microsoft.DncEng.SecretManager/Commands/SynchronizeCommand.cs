@@ -79,8 +79,8 @@ namespace Microsoft.DncEng.SecretManager.Commands
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
                 {
-                    existingSecrets.TryGetValue(n, out SecretProperties e);
-                    existing.Add(e); // here we intentionally ignore the result of TryGetValue because we want to add null to the list to represent "this isn't in the store"
+                    existingSecrets.Remove(n, out SecretProperties e);
+                    existing.Add(e); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
                 }
 
                 bool regenerate = false;
@@ -148,6 +148,11 @@ namespace Microsoft.DncEng.SecretManager.Commands
             foreach (var (name, key) in manifest.Keys)
             {
                 await storage.EnsureKeyAsync(name, key);
+            }
+
+            foreach (var (name, value) in existingSecrets)
+            {
+                _console.LogWarning($"Extra secret '{name}' consider deleting it.");
             }
         }
 

@@ -90,7 +90,7 @@ secrets:
                     .Should()
                     .CompleteWithinAsync(new TimeSpan(0, 0, 5)))
                 .Subject.Should().BeFalse();
-            data.Console.Errors.Should().HaveCount(1).And.Subject.First().message.Should().Contain("(4,21): error : Secret 'two' does not exist in manifest file.");
+            data.Console.Errors.Should().HaveCount(1).And.Subject.First().message.Should().Contain("Secret 'two' does not exist in manifest file.");
         }
 
         [Test]

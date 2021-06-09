@@ -30,7 +30,7 @@ namespace DotNet.Status.Web
                         .AddCommandLine(args)
                         .AddUserSecrets(Assembly.GetEntryAssembly())
                         .AddEnvironmentVariables()
-                        .AddDefaultJsonConfiguration(host.HostingEnvironment, "appsettings{0}.json");
+                        .AddDefaultJsonConfiguration(host.HostingEnvironment);
                 })
                 .ConfigureLogging(
                     builder =>

@@ -1,14 +1,6 @@
 {
-  "GitHubAuthentication": {
-    "ClientId": "Iv1.18b5e46af890d4b9"
-  },
-  "GitHubAppAuth": {
-    "GitHubAppId": 45907
-  },
+  "HealthTableUri": "",
   "KeyVaultUri": "https://DotNetEng-Status-Staging.vault.azure.net/",
-  "AzureTableTokenStore": {
-    "TableUri": "https://dotnetengstatusstaging.table.core.windows.net/tokens"
-  },
   "GitHub": {
     "Organization": "dotnet",
     "Repository": "core-eng",
@@ -20,8 +12,5 @@
       "Repository": "core-eng",
       "IssueNumber": 882
     }
-  },
-  "Grafana": {
-    "TableUri": "https://dotnetengstatusstaging.table.core.windows.net/deployments"
   }
 }

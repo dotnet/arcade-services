@@ -1,6 +1,6 @@
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
@@ -15,23 +15,25 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             public SecretReference ADApplication { get; set; }
         }
 
-        private readonly ISystemClock _clock;
-
-        public KustoConnectionString(ISystemClock clock)
-        {
-            _clock = clock;
-        }
-
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
             string adAppId = await context.GetSecretValue(new SecretReference { Location = parameters.ADApplication.Location, Name = parameters.ADApplication.Name + ADApplication.AppIdSuffix });
             SecretValue adAppSecret = await context.GetSecret(new SecretReference { Location = parameters.ADApplication.Location, Name = parameters.ADApplication.Name + ADApplication.AppSecretSuffix });
 
-            string connectionString = $"Data Source={parameters.DataSource};Initial Catalog={parameters.InitialCatalog};AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret?.Value}";
-            if (!string.IsNullOrWhiteSpace(parameters.AdditionalParameters))
-                connectionString += $";{parameters.AdditionalParameters}";
+            var connectionString = new StringBuilder();
+            connectionString.Append($"Data Source={parameters.DataSource}");
+            if (!string.IsNullOrEmpty(parameters.InitialCatalog))
+            {
+                connectionString.Append($";Initial Catalog={parameters.InitialCatalog}");
+            }
 
-            return new SecretData(connectionString, adAppSecret.ExpiresOn, adAppSecret.NextRotationOn);
+            connectionString.Append($";AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret?.Value}");
+            if (!string.IsNullOrWhiteSpace(parameters.AdditionalParameters))
+            {
+                connectionString.Append($";{parameters.AdditionalParameters}");
+            }
+
+            return new SecretData(connectionString.ToString(), adAppSecret.ExpiresOn, adAppSecret.NextRotationOn);
         }
     }
 }
