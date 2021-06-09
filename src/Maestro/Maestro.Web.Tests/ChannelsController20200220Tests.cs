@@ -9,7 +9,6 @@ using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,12 +22,12 @@ using NUnit.Framework;
 namespace Maestro.Web.Tests
 {
     [TestFixture]
-    public partial class ChannelsController20200220Tests
+    public class ChannelsController20200220Tests
     {
         [Test]
         public async Task CreateChannel()
         {
-            using TestData data = await TestData.Default.BuildAsync();
+            using TestData data = await BuildDefaultAsync();
             Channel channel;
             string channelName = "TEST-CHANNEL-BASIC";
             string classification = "TEST-CLASSIFICATION";
@@ -58,7 +57,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task ListRepositories()
         {
-            using TestData data = await TestData.Default.BuildAsync();
+            using TestData data = await BuildDefaultAsync();
             string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
             string classification = "TEST-CLASSIFICATION";
             string commitHash = "FAKE-COMMIT";
@@ -106,7 +105,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task AddingBuildToChannelTwiceWorks()
         {
-            using TestData data = await TestData.Default.BuildAsync();
+            using TestData data = await BuildDefaultAsync();
             const string channelName = "TEST-CHANNEL-ADD-TWICE-2020";
             const string classification = "TEST-CLASSIFICATION";
             const string commitHash = "FAKE-COMMIT";
@@ -151,12 +150,26 @@ namespace Maestro.Web.Tests
             }
         }
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfiguration
+        private Task<TestData> BuildDefaultAsync()
         {
-            public static async Task Dependencies(IServiceCollection collection)
+            return new TestDataBuilder().BuildAsync();
+        }
+
+        private sealed class TestDataBuilder
+        {
+            private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
+
+            public TestDataBuilder WithImmediateBackgroundQueue()
+            {
+                _backgroundQueueType = typeof(ImmediateBackgroundQueue);
+                return this;
+            }
+
+            public async Task<TestData> BuildAsync()
             {
                 string connectionString = await SharedData.Database.GetConnectionString();
+
+                var collection = new ServiceCollection();
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
@@ -167,26 +180,36 @@ namespace Maestro.Web.Tests
                     options.UseSqlServer(connectionString);
                     options.EnableServiceProviderCaching(false);
                 });
-                collection.AddSingleton(Mock.Of<IRemoteFactory>());
-                collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
-            }
-
-            public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
-            {
-                collection.AddSingleton<ISystemClock, TestClock>();
-                return s=> (TestClock) s.GetRequiredService<ISystemClock>();
-            }
-
-            public static Func<IServiceProvider, ChannelsController> Controller(IServiceCollection collection)
-            {
                 collection.AddSingleton<ChannelsController>();
-                return s=> s.GetRequiredService<ChannelsController>();
-            }
-
-            public static Func<IServiceProvider, BuildsController> BuildsController(IServiceCollection collection)
-            {
                 collection.AddSingleton<BuildsController>();
-                return s=> s.GetRequiredService<BuildsController>();
+                collection.AddSingleton<ISystemClock, TestClock>();
+                collection.AddSingleton(Mock.Of<IRemoteFactory>());
+                collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
+                ServiceProvider provider = collection.BuildServiceProvider();
+
+                var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
+
+                return new TestData(provider, clock);
+            }
+        }
+
+        private sealed class TestData : IDisposable
+        {
+            private readonly ServiceProvider _provider;
+            public TestClock Clock { get; }
+
+            public TestData(ServiceProvider provider, TestClock clock)
+            {
+                _provider = provider;
+                Clock = clock;
+            }
+            
+            public ChannelsController Controller => _provider.GetRequiredService<ChannelsController>();
+            public BuildsController BuildsController => _provider.GetRequiredService<BuildsController>();
+
+            public void Dispose()
+            {
+                _provider.Dispose();
             }
         }
     }

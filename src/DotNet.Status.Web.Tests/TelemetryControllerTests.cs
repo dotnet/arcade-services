@@ -4,7 +4,6 @@ using DotNet.Status.Web.Controllers;
 using FluentAssertions;
 using Kusto.Ingest;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,50 +13,60 @@ using NUnit.Framework;
 namespace DotNet.Status.Web.Tests
 {
     [TestFixture]
-    public partial class TelemetryControllerTests
+    public class TelemetryControllerTests
     {
-        [TestDependencyInjectionSetup]
-        public static class TestDataConfiguration
+        private class TestData : IDisposable
         {
-            public static void Default(IServiceCollection collection)
+            public readonly TelemetryController Controller;
+            private readonly ServiceProvider _services;
+
+            public TestData(TelemetryController controller, ServiceProvider services)
             {
-                collection.AddOptions();
-                collection.AddLogging(l =>
-                {
-                    l.AddProvider(new NUnitLogger());
-                });
+                Controller = controller;
+                _services = services;
             }
 
-            public static Func<IServiceProvider, TelemetryController> Controller(IServiceCollection collection)
+            public void Dispose()
             {
-                collection.AddScoped<TelemetryController>();
-                return s => s.GetRequiredService<TelemetryController>();
+                _services?.Dispose();
             }
+        }
 
-            public static void KustoClient(IServiceCollection collection, string connectionString, string database)
+        private static TestData SetUp(KustoOptions customOptions = null)
+        {
+            var collection = new ServiceCollection();
+            collection.AddOptions();
+            collection.AddLogging(l =>
             {
-                collection.Configure<KustoOptions>(options =>
-                {
-                    options.IngestConnectionString = connectionString ?? "fakekustoconnectionstring";
-                    options.Database = database ?? "fakekustodatbase";
-                });
-                
-                var kustoIngestClientMock = new Mock<IKustoIngestClient>();
-                kustoIngestClientMock.Setup(x => x.IngestFromStreamAsync(It.IsAny<System.IO.Stream>(), It.IsAny<KustoIngestionProperties>(), null))
-                    .Returns(Task.FromResult(Mock.Of<IKustoIngestionResult>()));
+                l.AddProvider(new NUnitLogger());
+            });
 
-                var kustoIngestClientFactoryMock = new Mock<IKustoIngestClientFactory>();
-                kustoIngestClientFactoryMock.Setup(x => x.GetClient())
-                    .Returns(kustoIngestClientMock.Object);
+            collection.Configure<KustoOptions>(options =>
+            {
+                options.IngestConnectionString = customOptions != null ? customOptions.IngestConnectionString : "fakekustoconnectionstring";
+                options.Database = customOptions != null ? customOptions.Database : "fakekustodatbase";
+            });
 
-                collection.AddSingleton(kustoIngestClientFactoryMock.Object);
-            }
+            collection.AddScoped<TelemetryController>();
+
+            var kustoIngestClientMock = new Mock<IKustoIngestClient>();
+            kustoIngestClientMock.Setup(x => x.IngestFromStreamAsync(It.IsAny<System.IO.Stream>(), It.IsAny<KustoIngestionProperties>(), null))
+                .Returns(Task.FromResult(Mock.Of<IKustoIngestionResult>()));
+
+            var kustoIngestClientFactoryMock = new Mock<IKustoIngestClientFactory>();
+            kustoIngestClientFactoryMock.Setup(x => x.GetClient())
+                .Returns(kustoIngestClientMock.Object);
+
+            collection.AddSingleton(kustoIngestClientFactoryMock.Object);
+
+            var services = collection.BuildServiceProvider();
+            return new TestData(services.GetRequiredService<TelemetryController>(), services);
         }
 
         [Test]
         public async Task TestArcadeValidationTelemetryCollection()
         {
-            using TestData testData = TestData.Default.Build();
+            using TestData testData = SetUp();
             IActionResult result = await testData.Controller.CollectArcadeValidation(new ArcadeValidationData
             {
                 BuildDateTime = new DateTimeOffset(2001, 2, 3, 16, 5, 6, 7, TimeSpan.Zero),
@@ -77,11 +86,8 @@ namespace DotNet.Status.Web.Tests
         [Test]
         public async Task TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
-            using TestData testData = TestData.Default
-                .WithConnectionString("")
-                .Build();
-            await (((Func<Task>) (() => testData.Controller.CollectArcadeValidation(new ArcadeValidationData()))))
-                .Should().ThrowExactlyAsync<InvalidOperationException>();
+            using TestData testData = SetUp(new KustoOptions());
+            await (((Func<Task>)(() => testData.Controller.CollectArcadeValidation(new ArcadeValidationData())))).Should().ThrowExactlyAsync<InvalidOperationException>();
         }
     }
 }

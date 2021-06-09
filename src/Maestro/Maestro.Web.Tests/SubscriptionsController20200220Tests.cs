@@ -15,7 +15,6 @@ using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,12 +28,18 @@ using NUnit.Framework;
 namespace Maestro.Web.Tests
 {
     [TestFixture]
-    public partial class SubscriptionsController20200220Tests
+    public class SubscriptionsController20200220Tests
     {
+        private readonly TestData data;
+
+        public SubscriptionsController20200220Tests()
+        {
+            data = GetTestData();
+        }
+
         [Test]
         public async Task CreateGetAndListSubscriptions()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
@@ -143,7 +148,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task GetAndListNonexistentSubscriptions()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             Guid shouldntExist = Guid.Parse("00000000-0000-0000-0000-000000000042");
 
             // No subs added, get a random Guid
@@ -171,7 +175,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateSubscriptionForNonMicrosoftUserFails()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
@@ -197,7 +200,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateSubscriptionForNonExistentChannelFails()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
             string defaultBranchName = "main";
@@ -220,7 +222,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task DeleteSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
             string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
@@ -255,7 +256,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task TriggerSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
             string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
@@ -354,7 +354,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task UpdateSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
@@ -427,35 +426,63 @@ namespace Maestro.Web.Tests
             }
         }
 
-        private class MockOrg : Octokit.Organization
+        private TestData GetTestData()
         {
-            public MockOrg(int id, string login)
-            {
-                Id = id;
-                Login = login;
-            }
+            return BuildDefaultAsync().GetAwaiter().GetResult();
         }
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfiguration
+        private Task<TestData> BuildDefaultAsync()
         {
-            public static void Dependencies(IServiceCollection collection)
+            return new TestDataBuilder().BuildAsync();
+        }
+
+        private sealed class TestDataBuilder
+        {
+            private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
+
+            public TestDataBuilder WithImmediateBackgroundQueue()
             {
+                _backgroundQueueType = typeof(ImmediateBackgroundQueue);
+                return this;
+            }
+
+            public async Task<TestData> BuildAsync()
+            {
+                string connectionString = await SharedData.Database.GetConnectionString();
+                string testChannelName = "test-channel-sub-controller20200220";
+                string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+                string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+                string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
+                string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
+                string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
+                string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
+                string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
+                string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
+                string defaultClassification = "classy-classification";
+                uint defaultInstallationId = 1234;
+
+                var collection = new ServiceCollection();
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
                     EnvironmentName = Environments.Development
                 });
+                collection.AddBuildAssetRegistry(options =>
+                {
+                    options.UseSqlServer(connectionString);
+                    options.EnableServiceProviderCaching(false);
+                });
+                collection.AddSingleton<SubscriptionsController>();
+                collection.AddSingleton<ChannelsController>();
+                collection.AddSingleton<BuildsController>();
+                collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
-                collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
-            }
+                collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
 
-            public static void GitHub(IServiceCollection collection)
-            {
-                var gitHubClient = new Mock<Octokit.IGitHubClient>(MockBehavior.Strict);
+                Mock<Octokit.IGitHubClient> gitHubClient = new Mock<Octokit.IGitHubClient>(MockBehavior.Strict);
 
                 gitHubClient.Setup(ghc => ghc.Organization.GetAllForUser(It.IsAny<string>()))
-                    .Returns((string userLogin) => CallFakeGetAllForUser(userLogin));
+                            .Returns((string userLogin) => CallFakeGetAllForUser(userLogin));
 
                 var clientFactoryMock = new Mock<IGitHubClientFactory>();
                 clientFactoryMock.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
@@ -466,157 +493,148 @@ namespace Maestro.Web.Tests
                     o.ProductHeader = new Octokit.ProductHeaderValue("TEST", "1.0");
                 });
 
-                static async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
+                ServiceProvider provider = collection.BuildServiceProvider();
+
+                // Setup common data context stuff for the background
+                var dataContext = provider.GetRequiredService<BuildAssetRegistryContext>();
+
+                await dataContext.Channels.AddAsync(new Data.Models.Channel()
                 {
-                    await Task.Delay(0); // Added just to suppress green squiggles
-                    List<Octokit.Organization> returnValue = new List<Octokit.Organization>();
-
-                    switch (userLogin.ToLower())
-                    {
-                        case "somemicrosoftuser": // valid user, in MS org
-                            returnValue.Add(MockOrganization(123, "microsoft"));
-                            break;
-                        case "someexternaluser":  // "real" user, but not in MS org
-                            returnValue.Add(MockOrganization(456, "definitely-not-microsoft"));
-                            break;
-                        default: // Any other user; GitHub "teams" will fall through here.
-                            throw new Octokit.NotFoundException("Unknown user", HttpStatusCode.NotFound);
-                    }
-
-                    return returnValue.AsReadOnly();
-                }
-            }
-
-
-            public static async Task<Func<IServiceProvider, Task>> DataContext(IServiceCollection collection)
-            {
-                string connectionString = await SharedData.Database.GetConnectionString();
-                collection.AddBuildAssetRegistry(options =>
-                {
-                    options.UseSqlServer(connectionString);
-                    options.EnableServiceProviderCaching(false);
+                    Name = testChannelName,
+                    Classification = defaultClassification
                 });
 
-                return async provider =>
+                // Add some repos
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
                 {
-                    string testChannelName = "test-channel-sub-controller20200220";
-                    string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
-                    string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
-                    string defaultAzdoSourceRepo =
-                        "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
-                    string defaultAzdoTargetRepo =
-                        "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
-                    string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
-                    string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
-                    string triggerScenarioSourceRepo =
-                        "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
-                    string triggerScenarioTargetRepo =
-                        "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
-                    string defaultClassification = "classy-classification";
-                    uint defaultInstallationId = 1234;
+                    RepositoryName = defaultGitHubSourceRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = defaultGitHubTargetRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = defaultAzdoSourceRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = defaultAzdoTargetRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = deleteScenarioSourceRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = deleteScenarioTargetRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = triggerScenarioSourceRepo,
+                    InstallationId = defaultInstallationId
+                });
+                await dataContext.Repositories.AddAsync(new Data.Models.Repository()
+                {
+                    RepositoryName = triggerScenarioTargetRepo,
+                    InstallationId = defaultInstallationId
+                });
 
-                    // Setup common data context stuff for the background
-                    var dataContext = provider.GetRequiredService<BuildAssetRegistryContext>();
+                await dataContext.SaveChangesAsync();
 
-                    await dataContext.Channels.AddAsync(
-                        new Data.Models.Channel()
-                        {
-                            Name = testChannelName,
-                            Classification = defaultClassification
-                        }
-                    );
+                var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
 
-                    // Add some repos
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = defaultGitHubSourceRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = defaultGitHubTargetRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = defaultAzdoSourceRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = defaultAzdoTargetRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = deleteScenarioSourceRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = deleteScenarioTargetRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = triggerScenarioSourceRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-                    await dataContext.Repositories.AddAsync(
-                        new Data.Models.Repository()
-                        {
-                            RepositoryName = triggerScenarioTargetRepo,
-                            InstallationId = defaultInstallationId
-                        }
-                    );
-
-                    await dataContext.SaveChangesAsync();
-                };
+                return new TestData(provider, clock);
             }
 
-            public static Func<IServiceProvider, ChannelsController> ChannelsController(IServiceCollection collection)
+            private async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
             {
-                collection.AddSingleton<ChannelsController>();
-                return s => s.GetRequiredService<ChannelsController>();
+                await Task.Delay(0); // Added just to suppress green squiggles
+                List<Octokit.Organization> returnValue = new List<Octokit.Organization>();
+
+                switch (userLogin.ToLower())
+                {
+                    case "somemicrosoftuser": // valid user, in MS org
+                        returnValue.Add(MockOrganization(123, "microsoft"));
+                        break;
+                    case "someexternaluser":  // "real" user, but not in MS org
+                        returnValue.Add(MockOrganization(456, "definitely-not-microsoft"));
+                        break;
+                    default: // Any other user; GitHub "teams" will fall through here.
+                        throw new Octokit.NotFoundException("Unknown user", HttpStatusCode.NotFound);
+                }
+
+                return returnValue.AsReadOnly();
             }
 
-            public static Func<IServiceProvider, SubscriptionsController> SubscriptionsController(IServiceCollection collection)
+            // Copied from GitHubClaimsResolverTests; could refactor if needed in another place
+            private Octokit.Organization MockOrganization(int id, string login)
             {
-                collection.AddSingleton<SubscriptionsController>();
-                return s => s.GetRequiredService<SubscriptionsController>();
-            }
-
-            public static Func<IServiceProvider, BuildsController> BuildsController(IServiceCollection collection)
-            {
-                collection.AddSingleton<BuildsController>();
-                return s => s.GetRequiredService<BuildsController>();
-            }
-
-            public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
-            {
-                collection.AddSingleton<ISystemClock, TestClock>();
-                return s => (TestClock) s.GetRequiredService<ISystemClock>();
+                return new Octokit.Organization(
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    id,
+                    default,
+                    default,
+                    login,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default);
             }
         }
 
-        // Copied from GitHubClaimsResolverTests; could refactor if needed in another place
-        private static Octokit.Organization MockOrganization(int id, string login)
+        private sealed class TestData : IDisposable
         {
-            return new MockOrg(id, login);
+            private readonly ServiceProvider _provider;
+            public TestClock Clock { get; }
+
+            public TestData(ServiceProvider provider, TestClock clock)
+            {
+                _provider = provider;
+                Clock = clock;
+            }
+
+            public ChannelsController ChannelsController => _provider.GetRequiredService<ChannelsController>();
+            public SubscriptionsController SubscriptionsController => _provider.GetRequiredService<SubscriptionsController>();
+            public BuildsController BuildsController => _provider.GetRequiredService<BuildsController>();
+
+            public void Dispose()
+            {
+                _provider.Dispose();
+            }
         }
     }
 }

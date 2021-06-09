@@ -7,7 +7,6 @@ using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +21,7 @@ using Commit = Maestro.Web.Api.v2020_02_20.Models.Commit;
 namespace Maestro.Web.Tests
 {
     [TestFixture]
-    public partial class BuildController20200914Tests
+    public class BuildController20200914Tests
     {
         static string repository = "FAKE-REPOSITORY";
         static string commitHash = "FAKE-COMMIT";
@@ -35,7 +34,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CommitIsFound()
         {
-            using TestData data = await TestData.Default.BuildAsync();
+            using TestData data = await BuildDefaultAsync();
 
             int id;
             {
@@ -78,12 +77,18 @@ namespace Maestro.Web.Tests
             }
         }
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfiguration
+        private Task<TestData> BuildDefaultAsync()
         {
-            public static async Task Dependencies(IServiceCollection collection)
+            return new TestDataBuilder().BuildAsync();
+        }
+
+        private sealed class TestDataBuilder
+        {
+            public async Task<TestData> BuildAsync()
             {
                 string connectionString = await SharedData.Database.GetConnectionString();
+
+                ServiceCollection collection = new ServiceCollection();
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
 
                 var mockIRemoteFactory = new Mock<IRemoteFactory>();
@@ -103,13 +108,29 @@ namespace Maestro.Web.Tests
                     options.UseSqlServer(connectionString);
                     options.EnableServiceProviderCaching(false);
                 });
+                collection.AddTransient<BuildsController>();
                 collection.AddSingleton<ISystemClock, TestClock>();
+                ServiceProvider provider = collection.BuildServiceProvider();
+
+                var controller = provider.GetRequiredService<BuildsController>();
+
+                return new TestData(provider, controller);
+            }
+        }
+        private sealed class TestData : IDisposable
+        {
+            private readonly ServiceProvider _provider;
+            public BuildsController Controller { get; }
+
+            public TestData(ServiceProvider provider, BuildsController controller)
+            {
+                _provider = provider;
+                Controller = controller;
             }
 
-            public static Func<IServiceProvider, BuildsController> Controller(IServiceCollection collection)
+            public void Dispose()
             {
-                collection.AddTransient<BuildsController>();
-                return s => s.GetRequiredService<BuildsController>();
+                _provider.Dispose();
             }
         }
     }
