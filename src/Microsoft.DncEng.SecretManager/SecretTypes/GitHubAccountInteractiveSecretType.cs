@@ -19,17 +19,19 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             Console = console;
         }
 
-        protected async Task ShowGitHubLoginInformation(RotationContext context, string gitHubSecretName, string gitHubAccountName)
+        protected async Task ShowGitHubLoginInformation(RotationContext context, SecretReference gitHubSecret, string helpUrl, string gitHubAccountName)
         {
-            var password = await context.GetSecretValue(gitHubSecretName + GitHubPasswordSuffix);
-            var secret = await context.GetSecretValue(gitHubSecretName + GitHubSecretSuffix);
+            var passwordReference = new SecretReference{Name = gitHubSecret.Name + GitHubPasswordSuffix, Location = gitHubSecret.Location};
+            var secretReference = new SecretReference{Name = gitHubSecret.Name + GitHubSecretSuffix, Location = gitHubSecret.Location};
+            var password = await context.GetSecretValue(passwordReference);
+            var secret = await context.GetSecretValue(secretReference);
 
-            await ShowGitHubLoginInformation(gitHubAccountName, password, secret);
+            await ShowGitHubLoginInformation(helpUrl, gitHubAccountName, password, secret);
         }
 
-        protected async Task ShowGitHubLoginInformation(string gitHubAccountName, string gitHubPassword, string gitHubSecret)
+        protected async Task ShowGitHubLoginInformation(string helpUrl, string gitHubAccountName, string gitHubPassword, string gitHubSecret)
         {
-            Console.WriteLine($"Please login to GitHub account {gitHubAccountName} using password: {gitHubPassword}");
+            Console.WriteLine($"Please login to {helpUrl} using GitHub account {gitHubAccountName} and password: {gitHubPassword}");
             await ShowGitHubOneTimePassword(gitHubSecret);
         }
 

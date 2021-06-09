@@ -44,7 +44,7 @@ secrets:
       c: six
 ";
 
-            var parsed = SecretManifest.Parse(new StringReader(testManifest));
+            var parsed = SecretManifest.ParseWithoutImports(new StringReader(testManifest));
 
             parsed.Should().BeEquivalentTo(new
             {

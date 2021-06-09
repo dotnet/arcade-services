@@ -1,14 +1,14 @@
 {
   "HealthTableUri": "[vault(health-report-table-sas-uri)]",
   "GitHubAuthentication": {
-    "ClientId": "<<must override in environment>>",
+    "ClientId": "[vault(github-oauth-id)]",
     "ClientSecret": "[vault(github-oauth-secret)]",
     "SaveTokens": true,
     "CallbackPath": "/signin-callback"
   },
   "GitHubAppAuth": {
-    "GitHubAppId": "<<must override in environment>>",
-    "PrivateKey": "[vault(github-application-private-key)]"
+    "GitHubAppId": "[vault(github-app-id)]",
+    "PrivateKey": "[vault(github-app-private-key)]"
   },
   "AllowedHosts": "*",
   "ApplicationInsights": {
@@ -83,8 +83,7 @@
     "RcaLabel": "RCA"
   },
   "AzureTableTokenStore": {
-    "TableUri": "<<must override in environment>>",
-    "TableSasToken": "[vault(token-table-sas-token)]"
+    "TableUri": "[vault(token-table-sas-uri)]"
   },
   "DataProtection": {
     "KeyFileUri": "[vault(data-protection-key-file-uri)]",
@@ -93,13 +92,12 @@
   "Grafana": {
     "BaseUrl": "https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com",
     "ApiToken": "[vault(grafana-api-token)]",
-    "TableUri": "<<must override in environment>>",
-    "TableSasToken": "[vault(deployment-table-sas-token)]"
+    "TableUri": "[vault(deployment-table-sas-uri)]"
   },
   "WebHooks": {
     "github": {
       "SecretKey": {
-        "default": "[vault(github-webhook-secret)]"
+        "default": "[vault(github-app-webhook-secret)]"
       }
     }
   },
@@ -108,8 +106,7 @@
   },
   "Kusto": {
     "Database": "engineeringdata",
-    "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
-    "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"
+    "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]"
   },
   "IssueMentionForwarding": {
     "WatchedTeam": "dotnet/dnceng",

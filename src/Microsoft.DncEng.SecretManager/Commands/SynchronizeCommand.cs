@@ -59,17 +59,28 @@ namespace Microsoft.DncEng.SecretManager.Commands
             DateTimeOffset now = _clock.UtcNow;
             SecretManifest manifest = SecretManifest.Read(_manifestFile);
             using StorageLocationType.Bound storage = _storageLocationTypeRegistry.Get(manifest.StorageLocation.Type).BindParameters(manifest.StorageLocation.Parameters);
+            using var disposables = new DisposableList();
+            var references = new Dictionary<string, StorageLocationType.Bound>();
+            foreach (var (name, storageReference) in manifest.References)
+            {
+                var bound = _storageLocationTypeRegistry.Get(storageReference.Type).BindParameters(storageReference.Parameters);
+                disposables.Add(bound);
+                references.Add(name, bound);
+            }
             Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
-            foreach (var (name, secret) in manifest.Secrets)
+
+            List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)> orderedSecretTypes = GetTopologicallyOrderedSecrets(manifest.Secrets);
+            var regeneratedSecrets = new HashSet<string>();
+
+            foreach (var (name, secret, secretType, secretReferences) in orderedSecretTypes)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
-                using SecretType.Bound secretType = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
                 {
-                    existingSecrets.TryGetValue(n, out SecretProperties e);
-                    existing.Add(e); // here we intentionally ignore the result of TryGetValue because we want to add null to the list to represent "this isn't in the store"
+                    existingSecrets.Remove(n, out SecretProperties e);
+                    existing.Add(e); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
                 }
 
                 bool regenerate = false;
@@ -83,6 +94,11 @@ namespace Microsoft.DncEng.SecretManager.Commands
                 {
                     _console.WriteLine("Secret not found in storage, will create.");
                     // secret is missing from storage (either completely missing or partially missing)
+                    regenerate = true;
+                }
+                else if (regeneratedSecrets.Overlaps(secretReferences))
+                {
+                    _console.WriteLine("Referenced secret was rotated, will rotate.");
                     regenerate = true;
                 }
                 else
@@ -115,9 +131,10 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     _console.WriteLine($"Generating new value(s) for secret {name}...");
                     SecretProperties primary = existing.FirstOrDefault(p => p != null);
                     IImmutableDictionary<string, string> currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
-                    var context = new RotationContext(name, currentTags, storage);
+                    var context = new RotationContext(name, currentTags, storage, references);
                     List<SecretData> newValues = await secretType.RotateValues(context, cancellationToken);
                     IImmutableDictionary<string, string> newTags = context.GetValues();
+                    regeneratedSecrets.Add(name);
                     _console.WriteLine("Done.");
                     _console.WriteLine($"Storing new value(s) in storage for secret {name}...");
                     foreach (var (n, value) in names.Zip(newValues))
@@ -132,6 +149,56 @@ namespace Microsoft.DncEng.SecretManager.Commands
             {
                 await storage.EnsureKeyAsync(name, key);
             }
+
+            foreach (var (name, value) in existingSecrets)
+            {
+                _console.LogWarning($"Extra secret '{name}' consider deleting it.");
+            }
+        }
+
+        private List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)> GetTopologicallyOrderedSecrets(IImmutableDictionary<string, SecretManifest.Secret> secrets)
+        {
+            var boundedSecrets = new List<(string name, SecretManifest.Secret secret, List<string> references, SecretType.Bound bound)>();
+            foreach (var (name, secret) in secrets)
+            {
+                SecretType.Bound bound = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
+                List<string> secretReferences = bound.GetSecretReferences();
+                boundedSecrets.Add((name, secret, secretReferences, bound));
+            }
+
+            var orderedBoundedSecrets = new List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)>();
+            var expandedReferences = new Dictionary<string, HashSet<string>>();
+            bool hasChanged;
+            do
+            {
+                hasChanged = false;
+                foreach (var boundedSecret in boundedSecrets)
+                {
+                    if (expandedReferences.ContainsKey(boundedSecret.name))
+                        continue;
+
+                    if (boundedSecret.references.All(l => expandedReferences.ContainsKey(l)))
+                    {
+                        hasChanged = true;
+                        var references = new HashSet<string>();
+                        foreach (var reference in boundedSecret.references)
+                        {
+                            references.Add(reference);
+                            references.UnionWith(expandedReferences[reference]);
+                        }
+                        expandedReferences[boundedSecret.name] = references;
+                        orderedBoundedSecrets.Add((boundedSecret.name, boundedSecret.secret, boundedSecret.bound, references));
+                    }
+                }
+            } while (hasChanged);
+
+            if (orderedBoundedSecrets.Count < boundedSecrets.Count)
+            {
+                var unprocessedSecrets = boundedSecrets.Where(l => !expandedReferences.ContainsKey(l.name)).Select(l => l.name);
+                throw new InvalidOperationException($"Secrets {string.Join(',', unprocessedSecrets)} have unresolved references.");
+            }
+
+            return orderedBoundedSecrets;
         }
     }
 }

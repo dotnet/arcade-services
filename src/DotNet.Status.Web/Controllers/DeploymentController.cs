@@ -160,7 +160,7 @@ namespace DotNet.Status.Web.Controllers
             else
             {
                 GrafanaOptions options = _grafanaOptions.CurrentValue;
-                table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute), new StorageCredentials(options.TableSasToken));
+                table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute));
             }
             return table;
         }

@@ -22,7 +22,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            var existing = await context.GetSecretValue(context.SecretName);
+            var existing = await context.GetSecretValue(new SecretReference(context.SecretName));
             if (!_console.IsInteractive)
             {
                 throw new InvalidOperationException($"Text secret doesn't exist. Human intervention required.");

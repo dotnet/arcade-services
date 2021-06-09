@@ -9,6 +9,5 @@ namespace DotNet.Status.Web.Options
         public string BaseUrl { get; set; }
         public string ApiToken { get; set; }
         public string TableUri { get; set; }
-        public string TableSasToken { get; set; }
     }
 }

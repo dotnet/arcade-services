@@ -50,29 +50,29 @@ namespace SubscriptionActorService
                 pr.SourceRepoNotified = true;
                 return;
             }
-            // Previous comments were wrong, there absolutely can be more than one contained sub in non-batched PR. Context: https://github.com/dotnet/arcade/issues/7445
-            // Since we don't want to fail, we'll just take the first and keep going.  (Worst case scenario this will result in having to update more subscriptions for notifications).
-            // Once the issue is understood we can consider modifying or removing this part.
-            if (pr.ContainedSubscriptions.Count > 1)
-            {
-                StringBuilder sb = new StringBuilder();
-                foreach (var subscription in pr.ContainedSubscriptions)
-                {
-                    sb.Append($"{subscription.SubscriptionId} ({subscription.BuildId}), ");
-                }
-                Logger.LogInformation($"Unexpectedly saw a non-batched dependency flow PR with {pr.ContainedSubscriptions.Count} 'contained subscriptions'.  Full list: {sb} should be investigated.");
-            }
 
-            var darcRemote = await DarcRemoteFactory.GetBarOnlyRemoteAsync(Logger);
-            var darcSubscriptionObject = await darcRemote.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId.ToString());
-            string sourceRepository = darcSubscriptionObject.SourceRepository;
-            string targetRepository = darcSubscriptionObject.TargetRepository;
+            // In practice these all contain the same subscription id, the property is more like "containedBuildsAndTheirSubscriptions"
+            Logger.LogInformation($"PR contains {pr.ContainedSubscriptions.Count} builds.  Using first ({subscriptionFromPr.SubscriptionId}) for notification tagging.");
 
             (string owner, string repo, int prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);
             if (owner == null || repo == null || prIssueId == 0)
             {
                 Logger.LogInformation($"Unable to parse pull request URI '{pr.Url}' (typically due to Azure DevOps pull requests), will not notify on this PR.");
                 pr.SourceRepoNotified = true;
+                return;
+            }
+
+            var darcRemote = await DarcRemoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", Logger);
+            var darcSubscriptionObject = await darcRemote.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId.ToString());
+            string sourceRepository = darcSubscriptionObject.SourceRepository;
+            string targetRepository = darcSubscriptionObject.TargetRepository;
+
+            // If we're here, there are failing checks, but if the only checks that failed were Maestro Merge Policy checks, we'll skip informing until something else fails too.
+            var prChecks = await darcRemote.GetPullRequestChecksAsync(pr.Url);
+            var failedPrChecks = prChecks.Where(p => !p.IsMaestroMergePolicy && (p.Status == CheckState.Failure || p.Status == CheckState.Error)).AsEnumerable();
+            if (failedPrChecks.Count() == 0)
+            {
+                Logger.LogInformation($"All failing or error state checks are 'Maestro Merge Policy'-type checks, not notifying subscribed users.");
                 return;
             }
 
