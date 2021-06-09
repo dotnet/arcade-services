@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebHooks.Filters;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.Tests;
 using Microsoft.Extensions.Configuration;

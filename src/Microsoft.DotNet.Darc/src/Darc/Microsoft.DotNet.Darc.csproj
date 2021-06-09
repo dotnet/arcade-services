@@ -8,6 +8,7 @@
     <Description>Darc CLI</Description>
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
+    <RuntimeIdentifier></RuntimeIdentifier>
     <ToolCommandName>darc</ToolCommandName>
   </PropertyGroup>
 
