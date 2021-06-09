@@ -69,7 +69,7 @@ namespace Example.Tests
             // The resulting TestData is IDiposable, which will clean up all services built for the test
             using TestData t = TestData.Default
                 // This controls the "exampleValue" parameters to the GetExampleName method
-                // the named parameters aren't necessary, they are only for illustrative purposed
+                // the named parameters aren't necessary, they are only for illustrative purposes
                 .WithExampleValue(exampleValue: "test-value") 
                 .WithConcatenated(a: "AAA", b: "BBB")
                 .Build();
