@@ -9,7 +9,7 @@ keys:
     type: RSA
     size: 2048
 
-importSecretsFrom: dotneteng-status-secrets.yaml
+importSecretsFrom: shared/dotneteng-status-secrets.yaml
 
 secrets:
   dotnet-status-storage-account:

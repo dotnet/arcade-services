@@ -4,8 +4,8 @@
     "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
   },
   "GitHub": {
-    "GitHubAppId": "[vault(github-application-id)]",
-    "PrivateKey": "[vault(github-application-private-key)]"
+    "GitHubAppId": "[vault(github-app-id)]",
+    "PrivateKey": "[vault(github-app-private-key)]"
   },
   "AzureDevOps": {
     "Tokens": [
