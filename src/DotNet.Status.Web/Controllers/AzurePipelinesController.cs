@@ -237,9 +237,15 @@ namespace DotNet.Status.Web.Controllers
 
                     if (repo.UpdateExisting)
                     {
-                        string creator = (await github.GitHubApps.GetCurrent()).Name;
+                        // There is no way to get the username of our bot directly from the GithubApp with the C# api.
+                        // Issue opened in Octokit: https://github.com/octokit/octokit.net/issues/2335
+                        // We do, however, have access to the HtmlUrl, which ends with the name of the bot.
+                        // Additionally, when the bot opens issues, the username used ends with [bot], which isn't strictly
+                        // part of the name anywhere else. So, to get the correct creator name, get the HtmlUrl, grab
+                        // the bot's name from it, and append [bot] to that string.
+                        string creator = (await github.GitHubApps.GetCurrent()).HtmlUrl.Split("/").Last();
                         RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
-                            Creator = creator,
+                            Creator = $"{creator}[bot]",
                             State = ItemStateFilter.Open,
                             SortProperty = IssueSort.Created,
                             SortDirection = SortDirection.Descending
