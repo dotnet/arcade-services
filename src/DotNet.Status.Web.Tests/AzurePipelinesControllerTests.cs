@@ -413,7 +413,7 @@ namespace DotNet.Status.Web.Tests
 
             string title =
                 expectMatchingTitle ?
-                $"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString().Substring("refs/heads/".Length)}" :
+                $"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString().Substring("refs/heads/".Length)} " :
                 "";
 
             Octokit.Issue mockIssue = new Issue(
