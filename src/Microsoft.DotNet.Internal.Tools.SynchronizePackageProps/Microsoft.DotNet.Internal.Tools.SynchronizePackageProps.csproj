@@ -4,7 +4,6 @@
     <OutputType>Exe</OutputType>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
-    <RuntimeIdentifier></RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
