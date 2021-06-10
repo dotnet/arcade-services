@@ -8,14 +8,67 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Internal;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
-    public class AzureDevOpsTimelineTests
+    public partial class AzureDevOpsTimelineTests
     {
+        [TestDependencyInjectionSetup]
+        public static class TestDataConfiguration
+        {
+            public static void Dependencies(IServiceCollection collection)
+            {
+                collection.AddOptions();
+                collection.AddLogging(logging =>
+                {
+                    logging.AddProvider(new NUnitLogger());
+                });
+            }
+
+            public static Func<IServiceProvider,AzureDevOpsTimeline> Controller(IServiceCollection collection)
+            {
+                collection.AddScoped<AzureDevOpsTimeline>();
+                return s => s.GetRequiredService<AzureDevOpsTimeline>();
+            }
+
+            [ConfigureAllParameters]
+            public static Func<IServiceProvider, InMemoryTimelineTelemetryRepository> Repository(
+                IServiceCollection collection,string project, DateTimeOffset latestTime)
+            {
+                collection.AddSingleton<ITimelineTelemetryRepository>(
+                    s => new InMemoryTimelineTelemetryRepository(
+                        new List<(string project, DateTimeOffset latestTime)> {(project, latestTime)}
+                    )
+                );
+
+                return s => (InMemoryTimelineTelemetryRepository) s.GetRequiredService<ITimelineTelemetryRepository>();
+            }
+
+            public static void Clock(IServiceCollection collection, DateTimeOffset staticClock)
+            {
+                Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
+                mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
+                collection.AddSingleton(mockSystemClock.Object);
+            }
+
+            public static void Build(IServiceCollection collection, BuildAndTimeline build)
+            {
+                collection.AddSingleton<IAzureDevOpsClient>(client => new MockAzureClient(new Dictionary<Build, List<Timeline>>
+                {
+                    {build.Build, build.Timelines.ToList()}
+                }));
+            }
+        }
+
         /// <summary>
         /// Test a happy path. Database is empty, so all returned builds will be added.
         /// </summary>
@@ -33,12 +86,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 ).Build();
 
             // Test setup
-            using TestData testData = new TestDataBuilder()
-                .AddTelemetryRepository()
-                .AddStaticClock(timeDatum)
-                .AddBuildsWithTimelines(new List<BuildAndTimeline>() {
-                    build
-                }).Build();
+            await using TestData testData = await TestData.Default
+                .WithStaticClock(timeDatum)
+                .WithBuild(build)
+                .BuildAsync();
 
             /// Test execution
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
@@ -84,12 +135,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .Build();
 
             // Test setup
-            using TestData testData = new TestDataBuilder()
-                .AddTelemetryRepository()
-                .AddStaticClock(timeDatum)
-                .AddBuildsWithTimelines(new List<BuildAndTimeline>() {
-                    build
-                }).Build();
+            using TestData testData = await TestData.Default
+                .WithStaticClock(timeDatum)
+                .WithBuild(build)
+                .BuildAsync();
 
             /// Test execution
             await testData.Controller.RunProject("public", 1000, CancellationToken.None);
@@ -125,12 +174,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .Build();
 
             // Test setup
-            using TestData testData = new TestDataBuilder()
-                .AddTelemetryRepository(azdoProjectName, timeDatum.AddHours(-1))
-                .AddStaticClock(timeDatum)
-                .AddBuildsWithTimelines(new List<BuildAndTimeline>() {
-                    build
-                }).Build();
+            await using TestData testData = await TestData.Default
+                .WithRepository(azdoProjectName, timeDatum.AddHours(-1))
+                .WithStaticClock(timeDatum)
+                .WithBuild(build)
+                .BuildAsync();
 
             /// Test execution
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
@@ -159,12 +207,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 ).Build();
 
             // Test setup
-            using TestData testData = new TestDataBuilder()
-                .AddTelemetryRepository()
-                .AddStaticClock(timeDatum)
-                .AddBuildsWithTimelines(new List<BuildAndTimeline>() {
-                    build
-                }).Build();
+            await using TestData testData = await TestData.Default
+                .WithStaticClock(timeDatum)
+                .WithBuild(build)
+                .BuildAsync();
 
             /// Test execution
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
