@@ -1,8 +1,13 @@
 {
+  "HealthTableUri": "",
   "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
   "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
   "BuildAssetRegistry": {
     "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
   },
-  "ForceLocalApi": false
+  "ForceLocalApi": false,
+  "DataProtection": {
+    "KeyFileUri": "",
+    "KeyIdentifier": ""
+  }
 }

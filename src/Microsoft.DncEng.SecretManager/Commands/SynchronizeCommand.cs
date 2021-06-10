@@ -162,7 +162,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
             foreach (var (name, secret) in secrets)
             {
                 SecretType.Bound bound = _secretTypeRegistry.Get(secret.Type).BindParameters(secret.Parameters);
-                List<string> secretReferences = bound.GetSecretReferences();
+                List<string> secretReferences = bound.GetSecretReferences().Except(new[]{name}).ToList(); // circular references okay, they get ignored by the sort
                 boundedSecrets.Add((name, secret, secretReferences, bound));
             }
 

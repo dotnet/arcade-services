@@ -153,7 +153,29 @@ ALTER ROLE db_datawriter ADD MEMBER [{nextUserId}]
                 Encrypt = true,
             };
             var result = connectionString.ToString();
+            result = OldifyConnectionString(result);
             return new SecretData(result, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(1));
+        }
+
+        private string OldifyConnectionString(string result)
+        {
+            var pairs = new[]
+            {
+                ("ApplicationIntent", "Application Intent"),
+                ("ConnectRetryCount", "Connect Retry Count"),
+                ("ConnectRetryInterval", "Connect Retry Interval"),
+                ("PoolBlockingPeriod", "Pool Blocking Period"),
+                ("MultipleActiveResultSets", "Multiple Active Result Sets"),
+                ("MultiSubnetFailover", "Multi Subnet Failover"),
+                ("TransparentNetworkIPResolution", "Transparent Network IP Resolution"),
+                ("TrustServerCertificate", "Trust Server Certificate"),
+            };
+            foreach (var (oldName, newName) in pairs)
+            {
+                result = result.Replace(newName, oldName);
+            }
+
+            return result;
         }
 
         private async Task UpdateMasterDbWithFullAdmin(RotationContext context, SqlConnection masterDbConnection)

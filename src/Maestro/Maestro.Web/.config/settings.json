@@ -9,8 +9,8 @@
     "ClaimsIssuer": "github"
   },
   "GitHub": {
-    "GitHubAppId": "[vault(github-application-id)]",
-    "PrivateKey": "[vault(github-application-private-key)]"
+    "GitHubAppId": "[vault(github-app-id)]",
+    "PrivateKey": "[vault(github-app-private-key)]"
   },
   "AzureDevOps": {
     "Tokens": [
@@ -38,7 +38,7 @@
   "WebHooks": {
     "github": {
       "SecretKey": {
-        "default": "[vault(github-webhook-secret)]"
+        "default": "[vault(github-app-webhook-secret)]"
       }
     }
   },
