@@ -29,12 +29,23 @@ using NUnit.Framework;
 namespace Maestro.Web.Tests
 {
     [TestFixture]
-    public partial class SubscriptionsController20200220Tests
+    public partial class SubscriptionsController20200220Tests : IDisposable
     {
+        private readonly TestData data;
+
+        public SubscriptionsController20200220Tests()
+        {
+            data = TestData.Default.Build();
+        }
+
+        public void Dispose()
+        {
+            data.Dispose();
+        }
+
         [Test]
         public async Task CreateGetAndListSubscriptions()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
@@ -143,7 +154,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task GetAndListNonexistentSubscriptions()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             Guid shouldntExist = Guid.Parse("00000000-0000-0000-0000-000000000042");
 
             // No subs added, get a random Guid
@@ -171,7 +181,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateSubscriptionForNonMicrosoftUserFails()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
@@ -197,7 +206,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateSubscriptionForNonExistentChannelFails()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
             string defaultBranchName = "main";
@@ -220,7 +228,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task DeleteSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
             string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
@@ -255,7 +262,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task TriggerSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
             string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
@@ -354,7 +360,6 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task UpdateSubscription()
         {
-            await using TestData data = await TestData.Default.BuildAsync();
             string testChannelName = "test-channel-sub-controller20200220";
             string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
             string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";

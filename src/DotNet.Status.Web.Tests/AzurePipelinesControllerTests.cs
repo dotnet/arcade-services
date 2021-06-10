@@ -91,7 +91,7 @@ namespace DotNet.Status.Web.Tests
                 "repo"
             };
 
-            using TestData testData = TestData.Default.Build();
+            await using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
             VerifyGitHubCalls(testData, expectedOwners, expectedNames);
         }
@@ -320,7 +320,6 @@ namespace DotNet.Status.Web.Tests
                 mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
                     .Returns(Task.FromResult(mockGithubClient.Object));
 
-                var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
                 var project = new[]
                 {
                     new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
@@ -329,9 +328,16 @@ namespace DotNet.Status.Web.Tests
                 var mockAzureDevOpsClient = new Mock<IAzureDevOpsClient>();
                 mockAzureDevOpsClient.Setup(m => m.ListProjectsAsync(It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(project));
-                mockAzureDevOpsClient
-                    .Setup(m => m.GetBuildAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                    .Returns(Task.FromResult(build));
+                if (buildData != null)
+                {
+                    var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
+                    mockAzureDevOpsClient
+                        .Setup(
+                            m => m.GetBuildAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
+                        )
+                        .Returns(Task.FromResult(build));
+                }
+
                 mockAzureDevOpsClient
                     .Setup(
                         m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
