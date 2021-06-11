@@ -3,7 +3,6 @@
     <IsPackable>false</IsPackable>
     <SignAssembly>false</SignAssembly>
     <PreserveCompilationContext>true</PreserveCompilationContext>
-    <RuntimeIdentifier></RuntimeIdentifier>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />

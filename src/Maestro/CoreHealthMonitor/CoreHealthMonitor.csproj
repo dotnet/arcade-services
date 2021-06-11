@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <ServerGarbageCollection>True</ServerGarbageCollection>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
