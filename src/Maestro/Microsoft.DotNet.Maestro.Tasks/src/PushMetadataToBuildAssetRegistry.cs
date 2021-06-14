@@ -479,6 +479,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
             // Use a deep copy constructor to avoid modifying the argument objects
             BuildData mergedBuild = new BuildData(buildsMetadata[0]);
 
+            // Normalize the Azure DevOps repo for both the original and each build metadata in the list
+            mergedBuild.AzureDevOpsRepository = AzureDevOpsClient.NormalizeUrl(mergedBuild.AzureDevOpsRepository);
+
             for (int i = 1; i < buildsMetadata.Count; i++)
             {
                 BuildData build = buildsMetadata[i];
@@ -486,7 +489,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 if (mergedBuild.AzureDevOpsBranch != build.AzureDevOpsBranch ||
                     mergedBuild.AzureDevOpsBuildNumber != build.AzureDevOpsBuildNumber ||
                     mergedBuild.Commit != build.Commit ||
-                    mergedBuild.AzureDevOpsRepository != build.AzureDevOpsRepository)
+                    mergedBuild.AzureDevOpsRepository != AzureDevOpsClient.NormalizeUrl(build.AzureDevOpsRepository))
                 {
                     throw new Exception("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
                 }
