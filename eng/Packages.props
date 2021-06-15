@@ -21,10 +21,10 @@
     <PackageReference Update="Humanizer.Core" Version="2.4.2" />
     <PackageReference Update="JetBrains.Annotations" Version="11.1.0" PrivateAssets="All" />
     <PackageReference Update="LibGit2Sharp" Version="0.27.0-preview-0024" />
-    <PackageReference Update="Microsoft.ApplicationInsights" Version="2.13.1" />
-    <PackageReference Update="Microsoft.ApplicationInsights.AspNetCore" Version="2.8.2" />
-    <PackageReference Update="Microsoft.ApplicationInsights.DependencyCollector" Version="2.11.2" />
-    <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.11.2" />
+    <PackageReference Update="Microsoft.ApplicationInsights" Version="2.15.0" />
+    <PackageReference Update="Microsoft.ApplicationInsights.AspNetCore" Version="2.15.0" />
+    <PackageReference Update="Microsoft.ApplicationInsights.DependencyCollector" Version="2.15.0" />
+    <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.15.0" />
     <PackageReference Update="Microsoft.ApplicationInsights.ServiceFabric" Version="2.3.1" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.6" />
     <PackageReference Update="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
@@ -78,7 +78,7 @@
     <PackageReference Update="Microsoft.Extensions.Identity.Core" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="$(DotNetAssemblyVersion)" />
-    <PackageReference Update="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.13.1" />
+    <PackageReference Update="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.15.0" />
     <PackageReference Update="Microsoft.Extensions.Logging.Console" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging.Debug" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Options" Version="$(DotNetAssemblyVersion)" /> 
