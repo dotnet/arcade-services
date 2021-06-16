@@ -72,11 +72,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private static void ConfigureApplicationInsights(IServiceCollection services)
         {
-            ApplicationInsightsServiceOptions aiOptions = new ApplicationInsightsServiceOptions();
-            // Disable dependency tracking
-            aiOptions.EnableDependencyTrackingTelemetryModule = false;
-            
-            services.AddApplicationInsightsTelemetry(aiOptions);
+            services.AddApplicationInsightsTelemetry();
             services.Configure<LoggerFilterOptions>(o =>
             {
                 // This handler is added by 'AddApplicationInsightsTelemetry' above and hard limits
@@ -135,6 +131,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             options.InstrumentationKey = GetApplicationInsightsKey();
             options.EnableQuickPulseMetricStream = false;
             options.EnableAdaptiveSampling = false;
+            options.EnableDependencyTrackingTelemetryModule = false;
         }
     }
 }
