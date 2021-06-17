@@ -51,7 +51,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
             if (_force || _forcedSecrets.Any())
             {
                 bool confirmed = await _console.ConfirmAsync(
-                    "--force or --force-secret is set, this will rotate one or more secrets, possibly causing service disruption. Continue? ");
+                    "--force or --force-secret is set, this will rotate one or more secrets ahead of schedule, possibly causing service disruption. Continue? ");
                 if (!confirmed)
                 {
                     return;
