@@ -8,6 +8,8 @@ using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.Services.AppAuthentication;
 using NUnit.Framework;
 using Octokit;
+using RolloutScorer.Models;
+using RolloutScorer.Providers;
 
 namespace RolloutScorer.Tests
 {
@@ -21,7 +23,8 @@ namespace RolloutScorer.Tests
         private const string EXPECTED_BAD_HOST_REDIRECT_MESSAGE = "Bad redirect host";
         private const string EXPECTED_BAD_SCHEME_REDIRECT_MESSAGE = "Bad redirect scheme";
 
-        private RolloutScorer _rolloutScorer;
+        private Models.RolloutScorer _rolloutScorer;
+        private RolloutScorerProvider _rolloutScorerProvider;
 
         public static IEnumerable<object[]> GetUriTestCases()
         {
@@ -38,7 +41,7 @@ namespace RolloutScorer.Tests
         [SetUp]
         public void RolloutScorerTests_SetUp()
         {
-            _rolloutScorer = new RolloutScorer
+            _rolloutScorer = new Models.RolloutScorer
             {
                 RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig,
                 RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.First(),
@@ -47,7 +50,7 @@ namespace RolloutScorer.Tests
             _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             _rolloutScorer.Repo = _rolloutScorer.RepoConfig.Repo;
 
-            _rolloutScorer.SetupHttpClient("fakePat");
+            _rolloutScorerProvider.SetupHttpClient("fakePat");
         }
 
         [TestCaseSource(nameof(GetUriTestCases))]

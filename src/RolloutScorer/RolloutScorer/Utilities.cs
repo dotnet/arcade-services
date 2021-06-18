@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
-using Newtonsoft.Json;
 using Octokit;
 using System;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -16,38 +14,7 @@ namespace RolloutScorer
         public const string KeyVaultUri = "https://engkeyvault.vault.azure.net";
         public const string GitHubPatSecretName = "BotAccount-dotnet-bot-repo-PAT";
 
-        public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel, ILogger log = null, Microsoft.Extensions.Logging.LogLevel logLevel = Microsoft.Extensions.Logging.LogLevel.Information)
-        {
-            if (issue == null)
-            {
-                WriteWarning("A null issue was passed.", log);
-                return false;
-            }
-
-            WriteTrace($"Issue {issue.Number} has labels {string.Join(", ", issue.Labels.Select(l => $"'{l.Name}'"))}", log, logLevel);
-
-            bool isIssueLabel = false;
-
-            if (issueLabel == GithubLabelNames.IssueLabel)
-            {
-                isIssueLabel = issue.Labels.Any(l => l.Name == repoLabel)
-                    && !issue.Labels.Any(l => l.Name == GithubLabelNames.HotfixLabel ||
-                    l.Name == GithubLabelNames.RollbackLabel ||
-                    l.Name == GithubLabelNames.DowntimeLabel ||
-                    l.Name == GithubLabelNames.FailureLabel);
-            }
-            else
-            {
-                isIssueLabel = issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
-            }
-
-            if (isIssueLabel)
-            {
-                WriteDebug($"Issue {issue.Number} determined to be {issueLabel} for {repoLabel}", log, logLevel);
-            }
-
-            return isIssueLabel;
-        }
+        
 
         public static string HandleApiRedirect(HttpResponseMessage redirect, Uri apiRequest, ILogger log = null)
         {

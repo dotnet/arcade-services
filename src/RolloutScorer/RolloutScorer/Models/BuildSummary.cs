@@ -1,10 +1,8 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace RolloutScorer
+namespace RolloutScorer.Models
 {
     public class BuildSummary
     {
@@ -35,23 +33,5 @@ namespace RolloutScorer
         public string SourceLink => Links.SourceLink.Href;
         [JsonIgnore]
         public string TimelineLink => Links.TimelineLink.Href;
-    }
-
-    public class BuildLinks
-    {
-        [JsonProperty("self")]
-        public BuildLink SelfLink { get; set; } = new BuildLink();
-        [JsonProperty("web")]
-        public BuildLink WebLink { get; set; } = new BuildLink();
-        [JsonProperty("sourceVersionDisplayUri")]
-        public BuildLink SourceLink { get; set; } = new BuildLink();
-        [JsonProperty("timeline")]
-        public BuildLink TimelineLink { get; set; } = new BuildLink();
-    }
-
-    public class BuildLink
-    {
-        [JsonProperty("href")]
-        public string Href { get; set; }
     }
 }

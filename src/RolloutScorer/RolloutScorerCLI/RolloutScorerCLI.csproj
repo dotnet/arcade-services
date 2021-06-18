@@ -1,24 +1,28 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <SignAssembly>false</SignAssembly>
+    <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.KeyVault" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
     <PackageReference Include="Mono.Options" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="WindowsAzure.Storage" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
-    <ProjectReference Include="..\..\Telemetry\AzureDevOpsClient\AzureDevOpsClient.csproj" />
+    <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />
   </ItemGroup>
-
+  <ItemGroup>
+    <None Update="config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

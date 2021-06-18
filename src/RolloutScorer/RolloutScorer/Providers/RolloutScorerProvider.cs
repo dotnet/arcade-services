@@ -11,103 +11,111 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Models = RolloutScorer.Models;
+using RolloutScorer.Services;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.TeamFoundation.Build.WebApi;
 
-namespace RolloutScorer
+namespace RolloutScorer.Providers
 {
-    public class RolloutScorer
+    public class RolloutScorerProvider : IRolloutScorerService
     {
-        public string Repo { get; set; }
-        public string Branch { get; set; } = "refs/heads/production";
-        public DateTimeOffset RolloutStartDate { get; set; }
-        public DateTimeOffset RolloutEndDate { get; set; } = DateTimeOffset.Now;
-        public int ManualRollbacks { get; set; } = 0;
-        public int ManualHotfixes { get; set; } = 0;
-        public bool AssumeNoTags { get; set; } = false;
-        public TimeSpan Downtime { get; set; } = TimeSpan.Zero;
-        public bool Failed { get; set; } = false;
-        public string OutputFile { get; set; }
-        public bool SkipOutput { get; set; } = false;
-        public bool Upload { get; set; } = false;
-        public bool Help { get; set; } = false;
-
-        public RepoConfig RepoConfig { get; set; }
-        public AzdoInstanceConfig AzdoConfig { get; set; }
-        public RolloutWeightConfig RolloutWeightConfig { get; set; }
-        public GithubConfig GithubConfig { get; set; }
-
-        public List<ScorecardBuildBreakdown> BuildBreakdowns { get; set; } = new List<ScorecardBuildBreakdown>();
+        private readonly ILogger<RolloutScorerProvider> _logger;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
+        private readonly IIssueService _issueService;
+        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
+        private readonly BuildHttpClient _buildHttpClient;
 
         // The AzDO API has some 302s in it that break auth so we have to handle those ourselves
         private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
-        private GitHubClient _githubClient;
+        private IGitHubClient _githubClient;
+        
 
-        public ILogger Log { get; set; }
-        public LogLevel LogLevel { get; set; } = LogLevel.Information;
-
-        public async Task InitAsync()
+        public RolloutScorerProvider(
+            ILogger<RolloutScorerProvider> logger,
+            IGitHubClientFactory gitHubClientFactory,
+            IIssueService issueService,
+            IAzureDevOpsClientFactory azureDevOpsClientFactory,
+            BuildHttpClient buildHttpClient)
         {
-            // Convert the rollout start time and end time to the strings the AzDO API recognizes and fetch builds
-            string rolloutStartTimeUriString = RolloutStartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
-            string rolloutEndTimeUriString = RolloutEndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+            _logger = logger;
+            _gitHubClientFactory = gitHubClientFactory;
+            _issueService = issueService;
+            _azureDevOpsClientFactory = azureDevOpsClientFactory;
+            _buildHttpClient = buildHttpClient;
+        }
 
-            foreach (string buildDefinitionId in RepoConfig.BuildDefinitionIds)
+        public async Task InitAsync(Models.RolloutScorer rolloutScorer)
+        {
+            foreach (string buildDefinitionId in rolloutScorer.RepoConfig.BuildDefinitionIds)
             {
-                string azdoQuery = $"https://dev.azure.com/{RepoConfig.AzdoInstance}/" +
-                    $"{AzdoConfig.Project}/_apis/build/builds?definitions={buildDefinitionId}&branchName={Branch}" +
-                    $"&minTime={rolloutStartTimeUriString}&maxTime={rolloutEndTimeUriString}&api-version=5.1";
-                Utilities.WriteDebug($"Querying AzDO API: {azdoQuery}", Log, LogLevel);
-                JObject responseContent = await GetAzdoApiResponseAsync(azdoQuery);
+                // organization = rolloutScorer.RepoConfig.AzdoInstance
+                // project = rolloutScorer.AzdoConfig.Project
+                // definitions = buildDefinitionId
+                // branchName = rolloutScorer.Branch
+                // minTime = 
+                // maxTime = 
+
+                var azDOBuilds = await _buildHttpClient.GetBuildsAsync(
+                    definitions: new []{ Convert.ToInt32(buildDefinitionId) }, 
+                    minFinishTime: rolloutScorer.RolloutStartDate.UtcDateTime, 
+                    maxFinishTime: rolloutScorer.RolloutEndDate.UtcDateTime, 
+                    branchName: rolloutScorer.Branch);
+                _logger.LogInformation($"Querying AzDO API");
 
                 // No builds is a valid case (e.g. a failed rollout) and so the rest of the code can handle this
                 // It still is potentially unexpected, so we're going to warn the user here
-                if (responseContent.Value<int>("count") == 0)
+                if(azDOBuilds.Count == 0)
                 {
-                    Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
-                            $"(Build ID: '{buildDefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
+                    _logger.LogWarning($"No builds were found for repo '{rolloutScorer.RepoConfig.Repo}' " +
+                            $"(Build ID: '{buildDefinitionId}') during the specified dates ({rolloutScorer.RolloutStartDate} to {rolloutScorer.RolloutEndDate})");
                 }
 
-                JArray builds = responseContent.Value<JArray>("value");
-                foreach (JToken build in builds)
+                foreach (Microsoft.TeamFoundation.Build.WebApi.Build build in azDOBuilds)
                 {
-                    BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
+                    // TODO: Convert Build into BuildSummary
+                    rolloutScorer.BuildBreakdowns.Add(new Models.ScorecardBuildBreakdown(build.ToObject<Models.BuildSummary>()));
                 }
             }
-            BuildBreakdowns = BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime).ToList();
-            Utilities.WriteDebug($"Builds breakdowns created for: \n\t {string.Join(" \n\t ", BuildBreakdowns.Select(b => b?.BuildSummary?.WebLink ?? ""))}", Log, LogLevel);
+            rolloutScorer.BuildBreakdowns = rolloutScorer.BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime).ToList();
+            _logger.LogInformation($"Builds breakdowns created for: \n\t {string.Join(" \n\t ", rolloutScorer.BuildBreakdowns.Select(b => b?.BuildSummary?.WebLink ?? ""))}");
 
-            await Task.WhenAll(BuildBreakdowns.Select(b => CollectStages(b)));
+            await Task.WhenAll(rolloutScorer.BuildBreakdowns.Select(b => CollectStages(b, rolloutScorer)));
         }
 
-        public async Task CollectStages(ScorecardBuildBreakdown buildBreakdown)
+        public async Task CollectStages(Models.ScorecardBuildBreakdown buildBreakdown, Models.RolloutScorer rolloutScorer)
         {
+            
+
             string timelineLinkWithAttempts = $"{buildBreakdown.BuildSummary.TimelineLink}?changeId=1";
-            Utilities.WriteDebug($"Querying AzDO API: {timelineLinkWithAttempts}", Log, LogLevel);
+            _logger.LogInformation($"Querying AzDO API: {timelineLinkWithAttempts}");
             JObject jsonTimelineResponse = await GetAzdoApiResponseAsync(timelineLinkWithAttempts);
-            BuildTimeline timeline = jsonTimelineResponse.ToObject<BuildTimeline>();
+            Models.BuildTimeline timeline = jsonTimelineResponse.ToObject<Models.BuildTimeline>();
 
             if (timeline.Records != null)
             {
                 // We're going to use this to store previous attempts as we find them
-                Dictionary<string, BuildTimeline> previousAttemptTimelines = new Dictionary<string, BuildTimeline>();
+                Dictionary<string, Models.BuildTimeline> previousAttemptTimelines = new Dictionary<string, Models.BuildTimeline>();
 
-                foreach (BuildTimelineEntry record in timeline.Records)
+                foreach (Models.BuildTimelineEntry record in timeline.Records)
                 {
                     // We measure times at the stage level because this is the simplest thing to do
                     // By taking the min start time and max end time of all the stages except for the ones we exclude,
                     // we can determine a pretty accurate measurement of how long it took to rollout
-                    if ((record.Type == "Checkpoint.Approval" || record.Type == "Stage") && !RepoConfig.ExcludeStages.Any(s => s == record.Name))
+                    if ((record.Type == "Checkpoint.Approval" || record.Type == "Stage") && !rolloutScorer.RepoConfig.ExcludeStages.Any(s => s == record.Name))
                     {
                         buildBreakdown.BuildSummary.Stages.Add(record);
 
                         if (record.PreviousAttempts.Count > 0)
                         {
                             // we're going to just add these attempts as additional stages
-                            foreach (PreviousAttempt attempt in record.PreviousAttempts)
+                            foreach (Models.PreviousAttempt attempt in record.PreviousAttempts)
                             {
                                 if (!previousAttemptTimelines.ContainsKey(attempt.TimelineId))
                                 {
                                     previousAttemptTimelines.Add(attempt.TimelineId,
-                                        (await GetAzdoApiResponseAsync($"{buildBreakdown.BuildSummary.TimelineLink}/{attempt.TimelineId}")).ToObject<BuildTimeline>());
+                                        (await GetAzdoApiResponseAsync($"{buildBreakdown.BuildSummary.TimelineLink}/{attempt.TimelineId}")).ToObject<Models.BuildTimeline>());
                                 }
 
                                 if (previousAttemptTimelines[attempt.TimelineId] != null)
@@ -123,11 +131,11 @@ namespace RolloutScorer
                 if (buildBreakdown.BuildSummary.Stages.Any(s => s.Name.StartsWith("deploy", StringComparison.InvariantCultureIgnoreCase) && !string.IsNullOrEmpty(s.EndTime)))
                 {
                     buildBreakdown.BuildSummary.DeploymentReached = true;
-                    Utilities.WriteDebug($"Build {buildBreakdown.BuildSummary.BuildNumber} determined to have reached deployment.", Log, LogLevel);
+                    _logger.LogInformation($"Build {buildBreakdown.BuildSummary.BuildNumber} determined to have reached deployment.");
                 }
                 else
                 {
-                    Utilities.WriteDebug($"Build {buildBreakdown.BuildSummary.BuildNumber} determined to NOT have reached deployment.", Log, LogLevel);
+                    _logger.LogInformation($"Build {buildBreakdown.BuildSummary.BuildNumber} determined to NOT have reached deployment.");
                 }
             }
         }
@@ -136,18 +144,18 @@ namespace RolloutScorer
         /// Calculates the "Time to Rollout" portion of the scorecard
         /// </summary>
         /// <returns>A timespan representing the total time to rollout and a list of scorecard build breakdowns for each rollout</returns>
-        public TimeSpan CalculateTimeToRollout()
+        public TimeSpan CalculateTimeToRollout(Models.RolloutScorer rolloutScorer)
         {
             List<TimeSpan> rolloutBuildTimes = new List<TimeSpan>();
 
             // Loop over all the builds in the returned content and calculate start and end times
-            foreach (ScorecardBuildBreakdown build in BuildBreakdowns)
+            foreach (Models.ScorecardBuildBreakdown build in rolloutScorer.BuildBreakdowns)
             {
-                Utilities.WriteDebug($"Calculating time to rollout for build {build.BuildSummary.BuildNumber}", Log, LogLevel);
+                _logger.LogInformation($"Calculating time to rollout for build {build.BuildSummary.BuildNumber}");
                 TimeSpan duration = GetPipelineDurationFromStages(build.BuildSummary.Stages);
                 rolloutBuildTimes.Add(duration);
                 build.Score.TimeToRollout = duration;
-                Utilities.WriteDebug($"Build {build.BuildSummary.BuildNumber} determined to have rollout duration of {duration}.", Log, LogLevel);
+                _logger.LogInformation($"Build {build.BuildSummary.BuildNumber} determined to have rollout duration of {duration}.");
             }
 
             return new TimeSpan(rolloutBuildTimes.Sum(t => t.Ticks));
@@ -157,7 +165,7 @@ namespace RolloutScorer
         /// Calculates and returns the number of hotfixes and rollouts that occurred as part of the build
         /// </summary>
         /// <returns>The number of hotfixes and rollbacks which occurred as part of the rollout</returns>
-        public async Task<(int numHotfixes, int numRollbacks)> CalculateNumHotfixesAndRollbacksFromAzdoAsync()
+        public async Task<(int numHotfixes, int numRollbacks)> CalculateNumHotfixesAndRollbacksFromAzdoAsync(Models.RolloutScorer rolloutScorer)
         {
             // Any attempt to figure out whether a deployment succeeded or failed will be inherently flawed
             // The process used here is as follows:
@@ -169,77 +177,77 @@ namespace RolloutScorer
 
             // This is a list of all builds that were part of this rollout which reached a deployment stage
             // We skip the first deployment because only things after that one can be hotfixes or rollbacks
-            IEnumerable<ScorecardBuildBreakdown> buildsToCheck = BuildBreakdowns.Where(b => b.BuildSummary.DeploymentReached).Skip(1);
+            IEnumerable<Models.ScorecardBuildBreakdown> buildsToCheck = rolloutScorer.BuildBreakdowns.Where(b => b.BuildSummary.DeploymentReached).Skip(1);
 
-            foreach (ScorecardBuildBreakdown build in buildsToCheck)
+            foreach (Models.ScorecardBuildBreakdown build in buildsToCheck)
             {
-                BuildSource source = (await GetAzdoApiResponseAsync(build.BuildSummary.SourceLink)).ToObject<BuildSource>();
+                Models.BuildSource source = (await GetAzdoApiResponseAsync(build.BuildSummary.SourceLink)).ToObject<Models.BuildSource>();
 
                 // we can only automatically calculate rollbacks if they're tagged; so we specifically don't try when --assume-no-tags is passed
-                if (!AssumeNoTags && source.Comment.Contains(AzureDevOpsCommitTags.RollbackTag, StringComparison.InvariantCultureIgnoreCase))
+                if (!rolloutScorer.AssumeNoTags && source.Comment.Contains(AzureDevOpsCommitTags.RollbackTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numRollbacks++;
                     build.Score.Rollbacks = 1;
-                    Utilities.WriteDebug($"Build {build.BuildSummary.BuildNumber} determined to be a ROLLBACK with commit message '{source.Comment}'", Log, LogLevel);
-                    Utilities.WriteDebug($"Web link: {build.BuildSummary.WebLink}", Log, LogLevel);
+                    _logger.LogInformation($"Build {build.BuildSummary.BuildNumber} determined to be a ROLLBACK with commit message '{source.Comment}'");
+                    _logger.LogInformation($"Web link: {build.BuildSummary.WebLink}");
                 }
                 // if we're assuming no tags, every deployment after the first is assumed to be a hotfix; otherwise we need to look specifically for the hotfix tag
-                else if (AssumeNoTags || source.Comment.Contains(AzureDevOpsCommitTags.HotfixTag, StringComparison.InvariantCultureIgnoreCase))
+                else if (rolloutScorer.AssumeNoTags || source.Comment.Contains(AzureDevOpsCommitTags.HotfixTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numHotfixes++;
                     build.Score.Hotfixes = 1;
-                    Utilities.WriteDebug($"Build {build.BuildSummary.BuildNumber} determined to be a HOTFIX with commit message '{source.Comment}'", Log, LogLevel);
-                    Utilities.WriteDebug($"Web link: {build.BuildSummary.WebLink}", Log, LogLevel);
+                    _logger.LogInformation($"Build {build.BuildSummary.BuildNumber} determined to be a HOTFIX with commit message '{source.Comment}'");
+                    _logger.LogInformation($"Web link: {build.BuildSummary.WebLink}");
                 }
                 // if none of these caught this deployment, then there's an untagged deployment when tags should be present; we'll warn the user about this
                 else if (!source.Comment.Contains(AzureDevOpsCommitTags.RolloutTag, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    Utilities.WriteWarning($"Untagged deployment found: build number '{build.BuildSummary.BuildNumber}' with commit message '{source.Comment}'", Log);
-                    Utilities.WriteWarning($"Web link: {build.BuildSummary.WebLink}", Log);
+                    _logger.LogInformation($"Untagged deployment found: build number '{build.BuildSummary.BuildNumber}' with commit message '{source.Comment}'");
+                    _logger.LogInformation($"Web link: {build.BuildSummary.WebLink}");
                 }
             }
-            numHotfixes += ManualHotfixes;
-            numRollbacks += ManualRollbacks;
-            Utilities.WriteDebug($"Detected {numHotfixes} hotfixes ({ManualHotfixes} manual) and {numRollbacks} rollbacks ({ManualRollbacks} manual).", Log, LogLevel);
+            numHotfixes += rolloutScorer.ManualHotfixes;
+            numRollbacks += rolloutScorer.ManualRollbacks;
+            _logger.LogInformation($"Detected {numHotfixes} hotfixes ({rolloutScorer.ManualHotfixes} manual) and {numRollbacks} rollbacks ({rolloutScorer.ManualRollbacks} manual).");
 
             return (numHotfixes, numRollbacks);
         }
 
-        public bool DetermineFailure(List<Issue> githubIssues)
+        public bool DetermineFailure(List<Octokit.Issue> githubIssues, Models.RolloutScorer rolloutScorer)
         {
-            Utilities.WriteDebug($"Determining failure for {Repo}...", Log, LogLevel);
-            if (githubIssues.Any(i => Utilities.IssueContainsRelevantLabels(i, GithubLabelNames.FailureLabel, RepoConfig.GithubIssueLabel, Log, LogLevel)))
+            _logger.LogInformation($"Determining failure for {rolloutScorer.Repo}...");
+            if (githubIssues.Any(i => _issueService.IssueContainsRelevantLabels(i, GithubLabelNames.FailureLabel, rolloutScorer.RepoConfig.GithubIssueLabel)))
             {
-                Utilities.WriteDebug($"Issue with failure tag found for {Repo}; rollout marked as FAILED", Log, LogLevel);
+                _logger.LogInformation($"Issue with failure tag found for {rolloutScorer.Repo}; rollout marked as FAILED");
                 return true;
             }
 
-            if (BuildBreakdowns.Count == 0)
+            if (rolloutScorer.BuildBreakdowns.Count == 0)
             {
-                Utilities.WriteDebug($"No builds found for {Repo} this rollout; rollout marked as FAILED.", Log, LogLevel);
+                _logger.LogInformation($"No builds found for {rolloutScorer.Repo} this rollout; rollout marked as FAILED.");
                 return true;
             }
 
-            ScorecardBuildBreakdown lastBuild = BuildBreakdowns.Last();
-            Utilities.WriteDebug($"Last build is for {Repo} is {lastBuild.BuildSummary.BuildNumber} ({lastBuild.BuildSummary.WebLink})", Log, LogLevel);
+            Models.ScorecardBuildBreakdown lastBuild = rolloutScorer.BuildBreakdowns.Last();
+            _logger.LogInformation($"Last build is for {rolloutScorer.Repo} is {lastBuild.BuildSummary.BuildNumber} ({lastBuild.BuildSummary.WebLink})");
 
             if (lastBuild.Score.Rollbacks == 1)
             {
-                Utilities.WriteDebug($"Last build ({lastBuild.BuildSummary.BuildNumber}) was a rollback; rollout marked as FAILED.", Log, LogLevel);
+                _logger.LogInformation($"Last build ({lastBuild.BuildSummary.BuildNumber}) was a rollback; rollout marked as FAILED.");
                 return true;
             }
 
             string lastBuildResult = lastBuild.BuildSummary.Result;
-            Utilities.WriteDebug($"Build {lastBuild.BuildSummary.BuildNumber} has result '{lastBuildResult}'", Log, LogLevel);
+            _logger.LogInformation($"Build {lastBuild.BuildSummary.BuildNumber} has result '{lastBuildResult}'");
             switch (lastBuildResult)
             {
                 case "succeeded":
                 case "partiallySucceeded":
-                    Utilities.WriteDebug($"Last build determined successful.", Log, LogLevel);
+                    _logger.LogInformation($"Last build determined successful.");
                     return false;
 
                 default:
-                    Utilities.WriteDebug($"Last build determined unsuccessful; rollout marked as FAILED.", Log, LogLevel);
+                    _logger.LogInformation($"Last build determined unsuccessful; rollout marked as FAILED.");
                     return true;
             }
         }
@@ -249,21 +257,21 @@ namespace RolloutScorer
         /// </summary>
         /// <param name="githubIssues">All GitHub issues associated with this rollout</param>
         /// <returns></returns>
-        public async Task<TimeSpan> CalculateDowntimeAsync(List<Issue> githubIssues)
+        public async Task<TimeSpan> CalculateDowntimeAsync(List<Octokit.Issue> githubIssues, Models.RolloutScorer rolloutScorer)
         {
             TimeSpan downtime = TimeSpan.Zero;
-            IEnumerable<Issue> downtimeIssues = githubIssues
-                .Where(i => Utilities.IssueContainsRelevantLabels(i, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log, LogLevel));
+            IEnumerable<Octokit.Issue> downtimeIssues = githubIssues
+                .Where(i => _issueService.IssueContainsRelevantLabels(i, GithubLabelNames.DowntimeLabel, rolloutScorer.RepoConfig.GithubIssueLabel));
 
-            foreach (Issue issue in downtimeIssues)
+            foreach (Octokit.Issue issue in downtimeIssues)
             {
-                Utilities.WriteDebug($"Determining downtime from issue {issue.Number}...", Log, LogLevel);
+                _logger.LogInformation($"Determining downtime from issue {issue.Number}...");
 
                 DateTimeOffset? downtimeStart;
                 DateTimeOffset? downtimeFinish;
 
                 // First, check the issue body
-                Utilities.WriteDebug($"Checking issue body for downtime information...", Log, LogLevel);
+                _logger.LogInformation($"Checking issue body for downtime information...");
                 downtimeStart = GetStartTimeFromIssueText(issue.Body, issue.HtmlUrl);
                 WriteDowntimeDebugMessage(downtimeStart, "start");
                 downtimeFinish = GetEndTimeFromIssueText(issue.Body, issue.HtmlUrl);
@@ -275,12 +283,12 @@ namespace RolloutScorer
                 }
 
                 // Next, we're going to check all the comments on the issue
-                Utilities.WriteDebug($"Checking issue comments for downtime information...", Log, LogLevel);
+                _logger.LogInformation($"Checking issue comments for downtime information...");
                 IEnumerable<IssueComment> comments = (await _githubClient.Issue.Comment
-                    .GetAllForIssue(GithubConfig.ScorecardsGithubOrg, GithubConfig.ScorecardsGithubRepo, issue.Number));
+                    .GetAllForIssue(rolloutScorer.GithubConfig.ScorecardsGithubOrg, rolloutScorer.GithubConfig.ScorecardsGithubRepo, issue.Number));
                 foreach (IssueComment comment in comments)
                 {
-                    Utilities.WriteDebug($"Checking comment at {comment.HtmlUrl} for downtime information...", Log, LogLevel);
+                    _logger.LogInformation($"Checking comment at {comment.HtmlUrl} for downtime information...");
                     downtimeStart ??= GetStartTimeFromIssueText(comment.Body, comment.HtmlUrl);
                     WriteDowntimeDebugMessage(downtimeStart, "start");
                     downtimeFinish ??= GetEndTimeFromIssueText(comment.Body, comment.HtmlUrl);
@@ -298,22 +306,22 @@ namespace RolloutScorer
                 }
 
                 // If we haven't found both a start and end time yet, we're going to default to creation and/or close time
-                Utilities.WriteDebug($"Downtime not yet found in body or comments; looking at issue start & close times...", Log, LogLevel);
+                _logger.LogInformation($"Downtime not yet found in body or comments; looking at issue start & close times...");
                 downtimeStart ??= issue.CreatedAt;
                 WriteDowntimeDebugMessage(downtimeStart, "start");
                 downtimeFinish ??= issue.ClosedAt;
                 WriteDowntimeDebugMessage(downtimeFinish, "finish");
                 if (downtimeFinish == null)
                 {
-                    Utilities.WriteWarning($"Downtime issue was found unclosed and with no specified end time; " +
-                        $"downtime calculation will be inaccurate (issue {issue.HtmlUrl})", Log);
+                    _logger.LogWarning($"Downtime issue was found unclosed and with no specified end time; " +
+                        $"downtime calculation will be inaccurate (issue {issue.HtmlUrl})");
                     continue;
                 }
 
                 downtime += (TimeSpan)(downtimeFinish - downtimeStart);
             }
 
-            Utilities.WriteDebug($"Downtime calculated as {downtime}.", Log, LogLevel);
+            _logger.LogInformation($"Downtime calculated as {downtime}.");
             return downtime;
         }
 
@@ -346,7 +354,7 @@ namespace RolloutScorer
                 }
                 else
                 {
-                    Utilities.WriteWarning($"Failed to parse specified downtime in issue or comment {issueUri} (date/time string: '{dateTimeString}')", Log);
+                    _logger.LogWarning($"Failed to parse specified downtime in issue or comment {issueUri} (date/time string: '{dateTimeString}')");
                 }
             }
 
@@ -354,7 +362,7 @@ namespace RolloutScorer
         }
         private void WriteDowntimeDebugMessage(DateTimeOffset? downtimeEvent, string downtimeEventDescription)
         {
-            Utilities.WriteDebug($"Downtime {downtimeEventDescription} {downtimeEvent?.ToString() ?? "not"} found.", Log, LogLevel);
+            _logger.LogInformation($"Downtime {downtimeEventDescription} {downtimeEvent?.ToString() ?? "not"} found.");
         }
 
         /// <summary>
@@ -362,57 +370,57 @@ namespace RolloutScorer
         /// with string-tags in the title marking them as critical issues, hotfixes, and rollbacks
         /// </summary>
         /// <returns>A list of GitHub issues filed during the rollout window containing string-tags in the title marking them as critical issues, hotfixes, and/or rollbacks</returns>
-        public async Task<List<Issue>> GetRolloutIssuesFromGithubAsync()
+        public async Task<List<Octokit.Issue>> GetRolloutIssuesFromGithubAsync(Models.RolloutScorer rolloutScorer)
         {
-            Utilities.WriteDebug($"Getting rollout issues for {Repo} (searching issues in {GithubConfig.ScorecardsGithubOrg}/{GithubConfig.ScorecardsGithubRepo} "
-                + $"from {RolloutStartDate} to {RolloutEndDate})", Log, LogLevel);
+            _logger.LogInformation($"Getting rollout issues for {rolloutScorer.Repo} (searching issues in {rolloutScorer.GithubConfig.ScorecardsGithubOrg}/{rolloutScorer.GithubConfig.ScorecardsGithubRepo} "
+                + $"from {rolloutScorer.RolloutStartDate} to {rolloutScorer.RolloutEndDate})");
             SearchIssuesRequest searchIssuesRequest = new SearchIssuesRequest
             {
-                Created = new DateRange(RolloutStartDate, RolloutEndDate),
+                Created = new DateRange(rolloutScorer.RolloutStartDate, rolloutScorer.RolloutEndDate),
             };
-            searchIssuesRequest.Repos.Add(GithubConfig.ScorecardsGithubOrg, GithubConfig.ScorecardsGithubRepo);
+            searchIssuesRequest.Repos.Add(rolloutScorer.GithubConfig.ScorecardsGithubOrg, rolloutScorer.GithubConfig.ScorecardsGithubRepo);
 
-            List<Issue> issueSearchResults = await GetAllIssuesFromSearchAsync(searchIssuesRequest);
-            Utilities.WriteDebug($"Found {issueSearchResults.Count} issues in given time range.", Log, LogLevel);
+            List<Octokit.Issue> issueSearchResults = await GetAllIssuesFromSearchAsync(searchIssuesRequest);
+            _logger.LogInformation($"Found {issueSearchResults.Count} issues in given time range.");
 
             return issueSearchResults.Where(issue =>
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, RepoConfig.GithubIssueLabel, Log) ||
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.FailureLabel, RepoConfig.GithubIssueLabel, Log, LogLevel)
+                _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, rolloutScorer.RepoConfig.GithubIssueLabel) ||
+                _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, rolloutScorer.RepoConfig.GithubIssueLabel) ||
+                _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, rolloutScorer.RepoConfig.GithubIssueLabel) ||
+                _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.DowntimeLabel, rolloutScorer.RepoConfig.GithubIssueLabel) ||
+                _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.FailureLabel, rolloutScorer.RepoConfig.GithubIssueLabel)
                 ).ToList();
         }
 
-        private TimeSpan GetPipelineDurationFromStages(List<BuildTimelineEntry> stages)
+        private TimeSpan GetPipelineDurationFromStages(List<Models.BuildTimelineEntry> stages)
         {
             if (stages.Count == 0)
             {
-                Utilities.WriteTrace($"Build had no stages; time to roll out logged as 0", Log, LogLevel);
+                _logger.LogInformation($"Build had no stages; time to roll out logged as 0");
                 return TimeSpan.Zero;
-            }   
-            
+            }
+
             DateTimeOffset startTime = stages.Min(s =>
             {
                 return DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) ? start : DateTimeOffset.MaxValue;
             });
-            Utilities.WriteTrace($"Build start time logged as {startTime}", Log, LogLevel);
+            _logger.LogInformation($"Build start time logged as {startTime}");
             DateTimeOffset endTime = stages.Max(s =>
             {
                 return DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end) ? end : DateTimeOffset.MinValue;
             });
-            Utilities.WriteTrace($"Build end time logged as {endTime}", Log, LogLevel);
+            _logger.LogInformation($"Build end time logged as {endTime}");
 
             TimeSpan approvalTime = stages
                 .Where(s => s.Type == "Checkpoint.Approval")
                 .Select(s => (DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) && DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end)) ? end - start : TimeSpan.Zero)
                 .Aggregate(TimeSpan.Zero, (l, r) => l + r);
-            Utilities.WriteTrace($"Time spent waiting for approval calculated as {approvalTime}", Log, LogLevel);
+            _logger.LogInformation($"Time spent waiting for approval calculated as {approvalTime}");
 
             TimeSpan duration = (endTime - startTime) - approvalTime;
             if (duration < TimeSpan.Zero)
             {
-                Utilities.WriteWarning("Build time determined to be less than zero; reporting it as zero.", Log);
+                _logger.LogWarning("Build time determined to be less than zero; reporting it as zero.");
             }
 
             return duration >= TimeSpan.Zero ? duration : TimeSpan.Zero;
@@ -423,10 +431,10 @@ namespace RolloutScorer
         /// </summary>
         /// <param name="searchIssuesRequest">A SearchIssuesRequest object representing the GitHub issue search</param>
         /// <returns>All the issues in the given search</returns>
-        public async Task<List<Issue>> GetAllIssuesFromSearchAsync(SearchIssuesRequest searchIssuesRequest)
+        public async Task<List<Octokit.Issue>> GetAllIssuesFromSearchAsync(SearchIssuesRequest searchIssuesRequest)
         {
             SearchIssuesResult searchIssuesResult = await _githubClient.Search.SearchIssues(searchIssuesRequest);
-            List<Issue> issues = new List<Issue>();
+            List<Octokit.Issue> issues = new List<Octokit.Issue>();
             issues.AddRange(searchIssuesResult.Items);
 
             // Loop through the pagination starting at page 2 since we've already done page 1 above
@@ -440,9 +448,9 @@ namespace RolloutScorer
                 }
                 catch (Exception e)
                 {
-                    Utilities.WriteWarning($"An exception occurred while attempting to paginate through the GitHub issues search API.", Log);
-                    Utilities.WriteWarning($"Attempting to access page {page} of search; currently read {issues.Count} of {searchIssuesResult.TotalCount}'", Log);
-                    Utilities.WriteWarning($"Exception: ${e.Message}", Log);
+                    _logger.LogWarning($"An exception occurred while attempting to paginate through the GitHub issues search API.");
+                    _logger.LogWarning($"Attempting to access page {page} of search; currently read {issues.Count} of {searchIssuesResult.TotalCount}'");
+                    _logger.LogWarning($"Exception: ${e.Message}");
                     break;
                 }
             }
@@ -452,7 +460,7 @@ namespace RolloutScorer
 
         public void SetupHttpClient(string azdoPat)
         {
-            Utilities.WriteInformation("Setting up HTTP client...", Log);
+            _logger.LogInformation("Setting up HTTP client...");
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.UserAgent.Add(Program.GetProductInfoHeaderValue());
@@ -462,8 +470,8 @@ namespace RolloutScorer
 
         public void SetupGithubClient(string githubPat)
         {
-            Utilities.WriteInformation("Setting up GitHub client...", Log);
-            _githubClient = Utilities.GetGithubClient(githubPat);
+            _logger.LogInformation("Setting up GitHub client...");
+            _githubClient = _gitHubClientFactory.CreateGitHubClient(githubPat);
         }
 
         public async Task<JObject> GetAzdoApiResponseAsync(string apiRequest)

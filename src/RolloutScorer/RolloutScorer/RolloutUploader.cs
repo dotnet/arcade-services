@@ -8,11 +8,18 @@ using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using RolloutScorer.Models;
+using RolloutScorer.Services;
+using Microsoft.DotNet.GitHub.Authentication;
 
 namespace RolloutScorer
 {
     public class RolloutUploader
     {
+        private readonly ILogger<RolloutUploader> _logger;
+        private readonly IScorecardService _scorecardService;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
+        private readonly IGitHubClient _gitHubClient;
         private const string _gitFileBlobMode = "100644";
 
         private struct ScorecardBatch
@@ -27,6 +34,17 @@ namespace RolloutScorer
             public string Breakdown;
         }
 
+        public RolloutUploader(ILogger<RolloutUploader> logger, 
+            IScorecardService scorecardService,
+            IGitHubClientFactory gitHubClientFactory,
+            IGitHubClient gitHubClient)
+        {
+            _logger = logger;
+            _scorecardService = scorecardService;
+            _gitHubClientFactory = gitHubClientFactory;
+            _gitHubClient = gitHubClient;
+        }
+
         /// <summary>
         /// Uploads results to GitHub/Azure Table Storage
         /// </summary>
@@ -35,31 +53,24 @@ namespace RolloutScorer
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKey">A secret bundle containing the key to the rollout scorecards storage account</param>
         /// <returns>Exit code (0 = success, 1 = failure)</returns>
-        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, GitHubClient githubClient, string storageAccountKey, ILogger log = null, bool skipPr = false)
+        public async Task<int> UploadResultsAsync(List<string> scorecardFiles, string storageAccountKey, bool skipPr = false)
         {
             try
             {
                 await UploadResultsAsync(new List<Scorecard>(
                     await Task.WhenAll(scorecardFiles.Select(
-                    file => Scorecard.ParseScorecardFromCsvAsync(file, StandardConfig.DefaultConfig)
-                    ))), githubClient, storageAccountKey, StandardConfig.DefaultConfig.GithubConfig, skipPr);
+                    file => _scorecardService.ParseScorecardFromCsvAsync(file, StandardConfig.DefaultConfig)
+                    ))), storageAccountKey, StandardConfig.DefaultConfig.GithubConfig, skipPr);
             }
             catch (IOException e)
             {
-                Utilities.WriteError($"File could not be opened for writing; do you have it open in Excel?", log);
-                Utilities.WriteError(e.Message, log);
+                _logger.LogError($"File could not be opened for writing; do you have it open in Excel?");
+                _logger.LogError(e.Message);
                 return 1;
             }
 
             string successMessage = $"Successfully uploaded:\n\t{string.Join("\n\t", scorecardFiles)}";
-            if (log == null)
-            {
-                Console.WriteLine(successMessage);
-            }
-            else
-            {
-                log.LogInformation(successMessage);
-            }
+            _logger.LogInformation(successMessage);
 
             return 0;
         }
@@ -71,7 +82,7 @@ namespace RolloutScorer
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKey">Key to the rollout scorecards storage account</param>
         /// <param name="githubConfig">GitHubConfig object representing config</param>
-        public async static Task UploadResultsAsync(List<Scorecard> scorecards, GitHubClient githubClient, string storageAccountKey, GithubConfig githubConfig, bool skipPr = false)
+        public async Task UploadResultsAsync(List<Scorecard> scorecards, string storageAccountKey, GithubConfig githubConfig, bool skipPr = false)
         {
             // We batch the scorecards by date so they can be sorted into markdown files properly
             IEnumerable<ScorecardBatch> scorecardBatches = scorecards
@@ -81,7 +92,7 @@ namespace RolloutScorer
 
             if (!skipPr)
             {
-                Reference targetBranch = await githubClient.Git.Reference
+                Reference targetBranch = await _gitHubClient.Git.Reference
                     .Get(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, "heads/" + TargetBranch);
 
                 string newBranchName = $"{DateTime.Today:yyyy-MM-dd}-Scorecard-Update";
@@ -91,17 +102,17 @@ namespace RolloutScorer
                 // If this succeeds than the branch exists and we should update it directly
                 try
                 {
-                    newBranch = await githubClient.Git.Reference.Get(githubConfig.ScorecardsGithubOrg,
+                    newBranch = await _gitHubClient.Git.Reference.Get(githubConfig.ScorecardsGithubOrg,
                         githubConfig.ScorecardsGithubRepo, newBranchRef);
                 }
                 // If not, we've got to create the new branch
                 catch (NotFoundException)
                 {
-                    newBranch = await githubClient.Git.Reference.CreateBranch(githubConfig.ScorecardsGithubOrg,
+                    newBranch = await _gitHubClient.Git.Reference.CreateBranch(githubConfig.ScorecardsGithubOrg,
                         githubConfig.ScorecardsGithubRepo, newBranchName, targetBranch);
                 }
 
-                TreeResponse currentTree = await githubClient.Git.Tree.Get(githubConfig.ScorecardsGithubOrg,
+                TreeResponse currentTree = await _gitHubClient.Git.Tree.Get(githubConfig.ScorecardsGithubOrg,
                     githubConfig.ScorecardsGithubRepo, newBranchRef);
                 NewTree newTree = new NewTree
                 {
@@ -131,18 +142,18 @@ namespace RolloutScorer
                     newTree.Tree.Add(markdownBlob);
                 }
 
-                TreeResponse treeResponse = await githubClient.Git.Tree.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newTree);
+                TreeResponse treeResponse = await _gitHubClient.Git.Tree.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newTree);
 
                 // Commit the new response to the new branch
                 NewCommit newCommit = new NewCommit("Add scorecards for " +
                     string.Join(", ", scorecardBatches.Select(s => s.Date.Date.ToString("yyyy-MM-dd"))),
                     treeResponse.Sha,
                     newBranch.Object.Sha);
-                Commit commit = await githubClient.Git.Commit
+                Commit commit = await _gitHubClient.Git.Commit
                     .Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newCommit);
 
                 ReferenceUpdate update = new ReferenceUpdate(commit.Sha);
-                Reference updatedRef = await githubClient.Git.Reference.Update(githubConfig.ScorecardsGithubOrg,
+                Reference updatedRef = await _gitHubClient.Git.Reference.Update(githubConfig.ScorecardsGithubOrg,
                     githubConfig.ScorecardsGithubRepo, newBranchRef, update);
 
                 PullRequestRequest prRequest = new PullRequestRequest
@@ -153,11 +164,11 @@ namespace RolloutScorer
                 };
                 // If an open PR exists already, we shouldn't try to create a new one
                 List<PullRequest> prs =
-                    (await githubClient.PullRequest.GetAllForRepository(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo)).ToList();
+                    (await _gitHubClient.PullRequest.GetAllForRepository(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo)).ToList();
                 if (!prs.Any(pr => pr.Head.Ref == newBranchName))
                 {
                     NewPullRequest newPullRequest = new NewPullRequest(newCommit.Message, newBranchName, TargetBranch);
-                    await githubClient.PullRequest.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newPullRequest);
+                    await _gitHubClient.PullRequest.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newPullRequest);
                 }
             }
 

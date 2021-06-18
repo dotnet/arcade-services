@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RolloutScorer.Models;
 
 namespace RolloutScorer
 {

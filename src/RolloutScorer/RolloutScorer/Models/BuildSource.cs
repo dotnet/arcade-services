@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace RolloutScorer
+namespace RolloutScorer.Models
 {
     public class BuildSource
     {

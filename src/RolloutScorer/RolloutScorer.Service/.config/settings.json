@@ -1,0 +1,14 @@
+{
+  "AzureDevOps": {
+    "AccessToken": "[vault(dn-bot-dnceng-build-r-test-rw-pat)]",
+    "CollectionUri": "https://dev.azure.com/dnceng/"
+  },
+  "GitHub": {
+    "Organization": "dotnet",
+    "Repository": "core-eng"
+  },
+  "GitHubAppAuth": {
+    "GitHubAppId": "[vault(github-app-id)]",
+    "PrivateKey": "[vault(github-app-private-key)]"
+  }
+}

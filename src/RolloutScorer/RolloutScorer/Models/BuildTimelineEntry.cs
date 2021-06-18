@@ -1,14 +1,10 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Text;
 
-namespace RolloutScorer
+namespace RolloutScorer.Models
 {
-    public class BuildTimeline
-    {
-        [JsonProperty("records")]
-        public List<BuildTimelineEntry> Records { get; set; }
-    }
-
     public class BuildTimelineEntry
     {
         [JsonProperty("previousAttempts")]
@@ -21,13 +17,5 @@ namespace RolloutScorer
         public string StartTime { get; set; }
         [JsonProperty("finishTime")]
         public string EndTime { get; set; }
-    }
-
-    public class PreviousAttempt
-    {
-        [JsonProperty("attempt")]
-        public int Attempt { get; set; }
-        [JsonProperty("timelineId")]
-        public string TimelineId { get; set; }
     }
 }

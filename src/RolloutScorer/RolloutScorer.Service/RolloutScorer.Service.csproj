@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include=".config\settings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />
+  </ItemGroup>
+
+</Project>

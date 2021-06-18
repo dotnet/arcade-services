@@ -1,23 +1,32 @@
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Mono.Options;
+using RolloutScorer;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
-namespace RolloutScorer
+namespace RolloutScorerCLI
 {
     public class ScoreCommand : Command
     {
-        private RolloutScorer _rolloutScorer = new RolloutScorer();
+        private readonly RolloutScorer.Models.RolloutScorer _rolloutScorer;
+        private readonly ILogger<ScoreCommand> _logger;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
         private bool _showHelp;
 
-        public ScoreCommand() : base("score", "Scores the specified rollout")
+        public ScoreCommand(RolloutScorer.Models.RolloutScorer rolloutScorer,
+            ILogger<ScoreCommand> logger,
+            IGitHubClientFactory gitHubClientFactory) : base("score", "Scores the specified rollout")
         {
+            _rolloutScorer = rolloutScorer;
+            _logger = logger;
+            _gitHubClientFactory = gitHubClientFactory;
+
             Options = new OptionSet()
             {
                 "The score command calculates a particular rollout's score and generates the scorecard which it outputs as a CSV for review.",
@@ -62,7 +71,7 @@ namespace RolloutScorer
             if (string.IsNullOrEmpty(_rolloutScorer.OutputFile))
             {
                 _rolloutScorer.OutputFile = Path.Combine(Directory.GetCurrentDirectory(),
-                    $"{_rolloutScorer.Repo}-{_rolloutScorer.RolloutStartDate.Date.ToShortDateString().Replace("/","-")}-scorecard.csv");
+                    $"{_rolloutScorer.Repo}-{_rolloutScorer.RolloutStartDate.Date.ToShortDateString().Replace("/", "-")}-scorecard.csv");
             }
 
             _rolloutScorer.RolloutWeightConfig = StandardConfig.DefaultConfig.RolloutWeightConfig;
@@ -71,21 +80,21 @@ namespace RolloutScorer
             // If they haven't told us to upload but they also haven't specified a repo & rollout start date, we need to throw
             if (string.IsNullOrEmpty(_rolloutScorer.Repo) || (_rolloutScorer.RolloutStartDate == null))
             {
-                Utilities.WriteError($"ERROR: One or both of required parameters 'repo' and 'rollout-start-date' were not specified.");
+                _logger.LogError($"ERROR: One or both of required parameters 'repo' and 'rollout-start-date' were not specified.");
                 return 1;
             }
 
             _rolloutScorer.RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.Find(r => r.Repo == _rolloutScorer.Repo);
             if (_rolloutScorer.RepoConfig == null)
             {
-                Utilities.WriteError($"ERROR: Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
+                _logger.LogError($"ERROR: Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
                 return 1;
             }
 
             _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             if (_rolloutScorer.AzdoConfig == null)
             {
-                Utilities.WriteError($"ERROR: Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +
+                _logger.LogError($"ERROR: Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +
                     $"references unknown AzDO instance '{_rolloutScorer.RepoConfig.AzdoInstance}'");
                 return 1;
             }
@@ -109,11 +118,11 @@ namespace RolloutScorer
             }
             catch (ArgumentException e)
             {
-                Utilities.WriteError(e.Message);
+                _logger.LogError(e.Message);
                 return 1;
             }
 
-            Scorecard scorecard = await Scorecard.CreateScorecardAsync(_rolloutScorer);
+            RolloutScorer.Models.Scorecard scorecard = await Scorecard.CreateScorecardAsync(_rolloutScorer);
             string expectedTimeToRollout = TimeSpan.FromMinutes(_rolloutScorer.RepoConfig.ExpectedTime).ToString();
 
             Console.WriteLine($"The {_rolloutScorer.Repo} {_rolloutScorer.RolloutStartDate.Date.ToShortDateString()} rollout score is {scorecard.TotalScore}.\n");
@@ -130,7 +139,7 @@ namespace RolloutScorer
             if (_rolloutScorer.Upload)
             {
                 Console.WriteLine("Directly uploading results.");
-                await RolloutUploader.UploadResultsAsync(new List<Scorecard> { scorecard }, Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value, _rolloutScorer.GithubConfig);
+                await RolloutUploader.UploadResultsAsync(new List<RolloutScorer.Models.Scorecard> { scorecard }, storageAccountConnectionString.Value, _rolloutScorer.GithubConfig);
             }
 
             if (_rolloutScorer.SkipOutput)
@@ -147,44 +156,6 @@ namespace RolloutScorer
             }
 
             return 0;
-        }
-    }
-
-    public class UploadCommand : Command
-    {
-        public UploadCommand() : base("upload", "The upload command takes a series of inline arguments which specify the" +
-            "locations of the scorecard CSV files to upload. Each of these files will be combined into a single scorecard document.\n\n" +
-            "\"Uploading\" the file here means making a PR to core-eng containing adding the scorecard to '/Documentation/Rollout-Scorecards/'" +
-            "and placing the data in Kusto which backs a PowerBI dashboard.\n\n" +
-            "usage: RolloutScorer upload [CSV_FILE_1] [CSV_FILE_2] ...\n")
-        {
-
-        }
-
-        public override int Invoke(IEnumerable<string> arguments)
-        {
-            return InvokeAsync(arguments).GetAwaiter().GetResult();
-        }
-        private async Task<int> InvokeAsync(IEnumerable<string> arguments)
-        {
-            if (arguments.Count() == 0)
-            {
-                Utilities.WriteError($"Invalid number of arguments ({arguments.Count()} provided to command 'upload'; must specify at least one CSV to upload");
-                return 1;
-            }
-
-            // Get the GitHub PAT and storage account connection string from key vault
-            AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
-            SecretBundle githubPat;
-            SecretBundle storageAccountConnectionString;
-            using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
-            {
-                Console.WriteLine("Fetching PAT and connection string from key vault.");
-                githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
-                storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
-            }
-
-            return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value);
         }
     }
 }
