@@ -18,6 +18,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
         private readonly ISystemClock _clock;
         private readonly IConsole _console;
         private bool _force = false;
+        private List<string> _forcedSecrets = new List<string>();
 
         public SynchronizeCommand(StorageLocationTypeRegistry storageLocationTypeRegistry, SecretTypeRegistry secretTypeRegistry, ISystemClock clock, IConsole console)
         {
@@ -40,16 +41,17 @@ namespace Microsoft.DncEng.SecretManager.Commands
             return new OptionSet
             {
                 {"f|force", "Force rotate all secrets", f => _force = !string.IsNullOrEmpty(f)},
+                {"force-secret=", "Force rotate the specified secret", f => _forcedSecrets.Add(f)},
             };
         }
 
         public override async Task RunAsync(CancellationToken cancellationToken)
         {
             _console.WriteLine($"Synchronizing secrets contained in {_manifestFile}");
-            if (_force)
+            if (_force || _forcedSecrets.Any())
             {
                 bool confirmed = await _console.ConfirmAsync(
-                    "-force is set, this will rotate every secret that exists, possibly causing service disruption. Continue? ");
+                    "--force or --force-secret is set, this will rotate one or more secrets ahead of schedule, possibly causing service disruption. Continue? ");
                 if (!confirmed)
                 {
                     return;
@@ -87,7 +89,12 @@ namespace Microsoft.DncEng.SecretManager.Commands
 
                 if (_force)
                 {
-                    _console.WriteLine("-force is set, will rotate.");
+                    _console.WriteLine("--force is set, will rotate.");
+                    regenerate = true;
+                }
+                else if (_forcedSecrets.Contains(name))
+                {
+                    _console.WriteLine($"--force-secret={name} is set, will rotate.");
                     regenerate = true;
                 }
                 else if (existing.Any(e => e == null))
