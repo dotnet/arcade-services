@@ -351,6 +351,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             { $"{githubRepoPrefix}dotnet/templating", (coreRepoCategory, "templating") },
             { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
+            { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -359,6 +360,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             { $"{azdoRepoPrefix}dotnet-templating", (coreRepoCategory, "templating") },
             { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
+            { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
 
             // ASPNET
 
