@@ -6,5 +6,19 @@ storageLocation:
 
 
 secrets:
-  nethelix-kusto-ad-application:
+  nethelix-staging-kusto-ad-application:
     type: ad-application
+
+  nethelix-prod-kusto-ad-application:
+    type: ad-application
+
+  dn-bot-account-redmond:
+    type: domain-account
+    parameters:
+      accountName: dn-bot
+      description: The dn-bot account
+
+  dotnet-mc-bot-account:
+    type: github-account
+    parameters:
+      name: dotnet-mc-bot
