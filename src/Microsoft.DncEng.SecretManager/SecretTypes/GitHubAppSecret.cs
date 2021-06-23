@@ -14,19 +14,19 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     {
         public class Parameters
         {
-            public string AppName { get; set; }
             public bool HasPrivateKey { get; set; }
             public bool HasWebhookSecret { get; set; }
-            public bool HasAppSecret { get; set; }
+            public bool HasOAuthSecret { get; set; }
 
         }
 
         private const string AppId = "-app-id";
         private const string AppPrivateKey = "-app-private-key";
-        private const string AppSecret = "-app-secret";
-        private const string AppHook = "-app-hook";
+        private const string OAuthId = "-oauth-id";
+        private const string OAuthSecret = "-oauth-secret";
+        private const string AppHookSecret = "-app-webhook-secret";
 
-        private readonly List<string> _suffixes = new List<string> { AppId, AppPrivateKey, AppSecret, AppHook };
+        private readonly List<string> _suffixes = new List<string> { AppId, AppPrivateKey, OAuthId, OAuthSecret, AppHookSecret };
         private readonly ISystemClock _clock;
         private readonly IConsole _console;
 
@@ -50,21 +50,25 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             string appId = await context.GetSecretValue(new SecretReference(context.SecretName + AppId));
             string privateKey = await context.GetSecretValue(new SecretReference(context.SecretName + AppPrivateKey));
-            string clientSecret = await context.GetSecretValue(new SecretReference(context.SecretName + AppSecret));
-            string webhookSecret = await context.GetSecretValue(new SecretReference(context.SecretName + AppHook));
+            string oauthId = await context.GetSecretValue(new SecretReference(context.SecretName + OAuthId));
+            string oauthSecret = await context.GetSecretValue(new SecretReference(context.SecretName + OAuthSecret));
+            string webhookSecret = await context.GetSecretValue(new SecretReference(context.SecretName + AppHookSecret));
             bool isNew = string.IsNullOrEmpty(appId);
 
             if (isNew)
             {
                 _console.WriteLine("Please login to https://github.com/settings/apps/new using your GitHub account, create a new GitHub App and generate a new private key.");
 
+                string name = await _console.PromptAsync("Application Name (From the Url)");
+                context.SetValue("app-name", name);
                 appId = await _console.PromptAndValidateAsync("App Id",
                     "Allowed are only digits.",
                     l => !string.IsNullOrEmpty(l) && l.All(c => char.IsDigit(c)));
             }
             else
             {
-                _console.WriteLine("Please login to https://github.com/settings/apps/{parameters.AppName} using your GitHub account.");
+                string name = context.GetValue("app-name", "<null>");
+                _console.WriteLine($"Please login to https://github.com/settings/apps/{name} using your GitHub account.");
                 _console.WriteLine("To roll Private Key and Client Secret: first generate a new one and remove the old once it was successfully saved.");
             }
 
@@ -75,9 +79,12 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                     (ConsoleExtension.TryParse<string>)TryParsePemFileWithPrivateKey);
             }
 
-            if (parameters.HasAppSecret)
+            if (parameters.HasOAuthSecret)
             {
-                clientSecret = await _console.PromptAndValidateAsync("Client Secret",
+                oauthId = await _console.PromptAndValidateAsync("OAuth Client Id",
+                    "Iv1. followed by 16 hex digits",
+                    l => !string.IsNullOrEmpty(l) && Regex.IsMatch(l, "^Iv1\\.[a-fA-F0-9]{16}$"));
+                oauthSecret = await _console.PromptAndValidateAsync("OAuth Client Secret",
                     "Hexadecimal number with at least 40 digits",
                     l => !string.IsNullOrEmpty(l) && l.Length >= 40 && l.All(c => c.IsHexChar()));
             }
@@ -93,9 +100,10 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             DateTimeOffset rollOn = _clock.UtcNow.AddMonths(6);
 
             return new List<SecretData> {
-                    new SecretData(appId, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),
+                    new SecretData(appId, DateTimeOffset.MaxValue, rollOn),
                     new SecretData(privateKey, DateTimeOffset.MaxValue, rollOn),
-                    new SecretData(clientSecret, DateTimeOffset.MaxValue, rollOn),
+                    new SecretData(oauthId, DateTimeOffset.MaxValue, rollOn),
+                    new SecretData(oauthSecret, DateTimeOffset.MaxValue, rollOn),
                     new SecretData(webhookSecret, DateTimeOffset.MaxValue, rollOn)};
         }
 

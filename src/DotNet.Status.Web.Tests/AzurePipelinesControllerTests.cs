@@ -10,6 +10,7 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -20,7 +21,7 @@ namespace DotNet.Status.Web.Tests
 {
 
     [TestFixture]
-    public class AzurePipelinesControllerTests
+    public partial class AzurePipelinesControllerTests
     {
         [Test]
         public async Task BuildCompleteBuildHasNoTags()
@@ -90,9 +91,9 @@ namespace DotNet.Status.Web.Tests
                 "repo"
             };
 
-            using TestData testData = SetupTestData(build, false);
+            await using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
         }
 
         [Test]
@@ -167,9 +168,9 @@ namespace DotNet.Status.Web.Tests
                 "repo"
             };
 
-            using TestData testData = SetupTestData(build, false);
+            using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
         }
 
         [Test]
@@ -238,126 +239,137 @@ namespace DotNet.Status.Web.Tests
 
             var expectedNames = new List<string>();
 
-            using TestData testData = SetupTestData(build, false);
+            using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            testData.VerifyAll(expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
         }
 
-        public TestData SetupTestData(JObject buildData, bool expectNotification)
+        [TestDependencyInjectionSetup]
+        public static class TestDataConfiguration
         {
-            var owners = new List<string>();
-            var names = new List<string>();
-            var mockGithubIssues = new Mock<IIssuesClient>();
-            mockGithubIssues.Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>())).Returns(Task.FromResult(new Octokit.Issue()));
-
-            var mockGithubClient = new Mock<IGitHubClient>();
-            mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
-
-            var mockGithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
-            mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>())).Returns(Task.FromResult(mockGithubClient.Object));
-
-            var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
-            var project = new AzureDevOpsProject[]
+            public static void Default(IServiceCollection collection)
             {
-                new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
-            };
+                collection.AddOptions();
+                collection.AddLogging(l => { l.AddProvider(new NUnitLogger()); });
 
-            var mockAzureDevOpsClient = new Mock<IAzureDevOpsClient>();
-            mockAzureDevOpsClient.Setup(m => m.ListProjectsAsync(It.IsAny<CancellationToken>())).Returns(Task.FromResult(project));
-            mockAzureDevOpsClient.Setup(m => m.GetBuildAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(build));
-            mockAzureDevOpsClient.Setup(m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult((new BuildChange[0], 0)));
-            mockAzureDevOpsClient.Setup(m => m.GetTimelineAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(new Timeline()));
-
-            var mockAzureClientFactory = new Mock<IAzureDevOpsClientFactory>();
-            mockAzureClientFactory.Setup(m => m.CreateAzureDevOpsClient(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>())).Returns(mockAzureDevOpsClient.Object);
-
-            var collection = new ServiceCollection();
-            collection.AddOptions();
-            collection.AddLogging(l =>
-            {
-                l.AddProvider(new NUnitLogger());
-            });
-
-            collection.Configure<BuildMonitorOptions>(options =>
-            {
-                options.Monitor = new BuildMonitorOptions.AzurePipelinesOptions
-                {
-                    BaseUrl = "https://example.test",
-                    Organization = "dnceng",
-                    MaxParallelRequests = 10,
-                    AccessToken = "fake",
-                    Builds = new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription[]
+                collection.Configure<BuildMonitorOptions>(
+                    options =>
                     {
-                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                        options.Monitor = new BuildMonitorOptions.AzurePipelinesOptions
                         {
-                            Project = "test-project-name",
-                            DefinitionPath = "\\test\\definition\\path",
-                            Branches = new string[] { "sourceBranch" },
-                            Assignee = "assignee",
-                            IssuesId = "first-issues"
-                        },
-                        new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                            BaseUrl = "https://example.test",
+                            Organization = "dnceng",
+                            MaxParallelRequests = 10,
+                            AccessToken = "fake",
+                            Builds = new[]
+                            {
+                                new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                                {
+                                    Project = "test-project-name",
+                                    DefinitionPath = "\\test\\definition\\path",
+                                    Branches = new[] {"sourceBranch"},
+                                    Assignee = "assignee",
+                                    IssuesId = "first-issues"
+                                },
+                                new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                                {
+                                    Project = "test-project-name",
+                                    DefinitionPath = "\\test\\definition\\path2",
+                                    Branches = new string[] {"sourceBranch"},
+                                    Assignee = "assignee",
+                                    IssuesId = "first-issues",
+                                    Tags = new[] {"tag1"}
+                                }
+                            }
+                        };
+                        options.Issues = new[]
                         {
-                            Project = "test-project-name",
-                            DefinitionPath = "\\test\\definition\\path2",
-                            Branches = new string[] { "sourceBranch" },
-                            Assignee = "assignee",
-                            IssuesId = "first-issues",
-                            Tags = new string[] { "tag1" }
-                        }
+                            new BuildMonitorOptions.IssuesOptions
+                            {
+                                Id = "first-issues",
+                                Owner = "dotnet",
+                                Name = "repo",
+                                Labels = new[] {"label"}
+                            }
+                        };
                     }
-                };
-                options.Issues = new BuildMonitorOptions.IssuesOptions[]
+                );
+            }
+
+            public static Func<IServiceProvider, AzurePipelinesController> Controller(IServiceCollection collection)
+            {
+                collection.AddScoped<AzurePipelinesController>();
+                return s => s.GetRequiredService<AzurePipelinesController>();
+            }
+
+            public static
+                Func<IServiceProvider, (List<string> Names, List<string> Owners)>
+                GitHubCalls(IServiceCollection collection, JObject buildData)
+            {
+                var owners = new List<string>();
+                var names = new List<string>();
+                var mockGithubIssues = new Mock<IIssuesClient>();
+                mockGithubIssues
+                    .Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>()))
+                    .Returns(Task.FromResult(new Octokit.Issue()));
+
+                var mockGithubClient = new Mock<IGitHubClient>();
+                mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
+
+                var mockGithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
+                mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
+                    .Returns(Task.FromResult(mockGithubClient.Object));
+
+                var project = new[]
                 {
-                    new BuildMonitorOptions.IssuesOptions
-                    {
-                        Id = "first-issues",
-                        Owner = "dotnet",
-                        Name = "repo",
-                        Labels = new string[] { "label" }
-                    }
+                    new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
                 };
-            });
 
-            collection.AddScoped<AzurePipelinesController>();
+                var mockAzureDevOpsClient = new Mock<IAzureDevOpsClient>();
+                mockAzureDevOpsClient.Setup(m => m.ListProjectsAsync(It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult(project));
+                if (buildData != null)
+                {
+                    var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
+                    mockAzureDevOpsClient
+                        .Setup(
+                            m => m.GetBuildAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
+                        )
+                        .Returns(Task.FromResult(build));
+                }
 
-            collection.AddSingleton<IGitHubApplicationClientFactory>(mockGithubClientFactory.Object);
-            collection.AddSingleton<IAzureDevOpsClientFactory>(mockAzureClientFactory.Object);
+                mockAzureDevOpsClient
+                    .Setup(
+                        m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
+                    )
+                    .Returns(Task.FromResult((new BuildChange[0], 0)));
+                mockAzureDevOpsClient
+                    .Setup(m => m.GetTimelineAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                    .Returns(Task.FromResult(new Timeline()));
 
-            var services = collection.BuildServiceProvider();
+                var mockAzureClientFactory = new Mock<IAzureDevOpsClientFactory>();
+                mockAzureClientFactory
+                    .Setup(
+                        m => m.CreateAzureDevOpsClient(
+                            It.IsAny<string>(),
+                            It.IsAny<string>(),
+                            It.IsAny<int>(),
+                            It.IsAny<string>()
+                        )
+                    )
+                    .Returns(mockAzureDevOpsClient.Object);
 
-            return new TestData(services.GetRequiredService<AzurePipelinesController>(), services, owners, names);
+                collection.AddSingleton(mockGithubClientFactory.Object);
+                collection.AddSingleton(mockAzureClientFactory.Object);
+
+                return _ => (names, owners);
+            }
         }
 
-        public class TestData : IDisposable
+        private void VerifyGitHubCalls(TestData testData, List<string> expectedOwners, List<string> expectedNames)
         {
-            public TestData(
-                AzurePipelinesController controller,
-                ServiceProvider services,
-                List<string> owners, 
-                List<string> names)
-            {
-                Controller = controller;
-                _services = services;
-                Owners = owners;
-                Names = names;
-            }
-
-            public readonly AzurePipelinesController Controller;
-            private readonly ServiceProvider _services;
-            public List<string> Owners { get; }
-            public List<string> Names { get; }
-
-            public void VerifyAll(List<string> expectedOwners, List<string> expectedNames)
-            {
-                Owners.Should().BeEquivalentTo(expectedOwners);
-                Names.Should().BeEquivalentTo(expectedNames);
-            }
-
-            public void Dispose()
-            {
-                _services?.Dispose();
-            }
+            testData.GitHubCalls.Owners.Should().BeEquivalentTo(expectedOwners);
+            testData.GitHubCalls.Names.Should().BeEquivalentTo(expectedNames);
         }
     }
 }

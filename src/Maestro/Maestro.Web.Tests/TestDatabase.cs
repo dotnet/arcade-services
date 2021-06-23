@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Data;
@@ -37,7 +38,7 @@ namespace Maestro.Web.Tests
 
     public class TestDatabase : IDisposable
     {
-        private const string TestDatabasePrefix = "TestFixtureDatabase_";
+        private const string TestDatabasePrefix = "TFD_";
         private string _databaseName;
         private readonly SemaphoreSlim _createLock = new SemaphoreSlim(1);
 
@@ -62,7 +63,8 @@ namespace Maestro.Web.Tests
             await _createLock.WaitAsync();
             try
             {
-                string databaseName = $"{TestDatabasePrefix}{DateTime.Now:yyyyMMddHHmmss}";
+                string databaseName = $"{TestDatabasePrefix}_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}_{TestContext.CurrentContext.Test.MethodName}_{DateTime.Now:yyyyMMddHHmmss}";
+                TestContext.WriteLine($"Creating database '{databaseName}'");
                 await using (var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true"))
                 {
                     await connection.OpenAsync();

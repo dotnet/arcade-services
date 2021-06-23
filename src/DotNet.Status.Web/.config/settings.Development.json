@@ -1,10 +1,5 @@
 {
-  "GitHubAuthentication": {
-    "ClientId": "Iv1.ae8135dbf0741619"
-  },
-  "GitHubAppAuth": {
-    "GitHubAppId": 45313
-  },
+  "HealthTableUri": "",
   "Logging": {
     "LogLevel": {
       "Default": "Debug",
@@ -28,21 +23,29 @@
   },
   "KeyVaultUri": "https://DotNetEng-Status-Local.vault.azure.net/",
   "AzureTableTokenStore": {
-    "TableUri": "",
-    "TableSasToken": ""
+    "TableUri": ""
   },
   "GitHub": {
     "TitlePrefix": "LOCAL DEV - ",
     "NotificationEpic": {
       "Repository": "status-test",
       "IssueNumber": 2
-    },
-    "Grafana": {
-      "TableUri": "",
-      "TableSasToken": ""
     }
   },
   "ZenHub": {
     "ApiToken": null
+  },
+  "DataProtection": {
+    "KeyFileUri": "",
+    "KeyIdentifier": ""
+  },
+  "Grafana": {
+    "TableUri": ""
+  },
+  "Kusto": {
+    "QueryConnectionString": ""
+  },
+  "IssueMentionForwarding": {
+    "TeamsWebHookUri": ""
   }
 }

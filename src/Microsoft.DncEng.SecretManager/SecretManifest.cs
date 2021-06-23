@@ -13,16 +13,36 @@ namespace Microsoft.DncEng.SecretManager
         public static SecretManifest Read(string filePath)
         {
             using var reader = new StreamReader(filePath, Encoding.UTF8);
-            return Parse(reader);
+            var parsed = Parse<Format>(reader);
+            var importFile = parsed.importSecretsFrom;
+            if (!string.IsNullOrEmpty(importFile))
+            {
+                if (!Path.IsPathRooted(importFile))
+                {
+                    importFile = Path.Join(Path.GetDirectoryName(filePath), importFile);
+                }
+                var importReader = new StreamReader(importFile, Encoding.UTF8);
+                var importedSecrets = Parse<Dictionary<string, Format.Secret>>(importReader);
+                foreach (var (name, secret) in importedSecrets)
+                {
+                    parsed.secrets.Add(name, secret);
+                }
+            }
+            return new SecretManifest(parsed);
         }
 
-        public static SecretManifest Parse(TextReader reader)
+        private static T Parse<T>(TextReader reader)
         {
             IDeserializer deserializer = new DeserializerBuilder()
                 .Build();
 
             var parser = new Parser(reader);
-            return new SecretManifest(deserializer.Deserialize<Format>(parser));
+            return deserializer.Deserialize<T>(parser);
+        }
+
+        public static SecretManifest ParseWithoutImports(TextReader reader)
+        {
+            return new SecretManifest(Parse<Format>(reader));
         }
 
         #pragma warning disable IDE1006
@@ -30,6 +50,7 @@ namespace Microsoft.DncEng.SecretManager
         private class Format
         {
             public Storage storageLocation { get; set; }
+            public string importSecretsFrom { get; set; }
             public Dictionary<string, Storage> references { get; set; }
             public Dictionary<string, Key> keys { get; set; }
             public Dictionary<string, Secret> secrets { get; set; }

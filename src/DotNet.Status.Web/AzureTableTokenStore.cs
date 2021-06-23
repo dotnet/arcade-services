@@ -48,7 +48,7 @@ namespace DotNet.Status.Web
             else
             {
                 AzureTableTokenStoreOptions options = _options.CurrentValue;
-                table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute), new StorageCredentials(options.TableSasToken));
+                table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute));
             }
             return table;
         }
