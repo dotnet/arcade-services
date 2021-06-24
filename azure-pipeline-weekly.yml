@@ -36,7 +36,7 @@ stages:
           scriptType: ps
           scriptLocation: inlineScript
           inlineScript: |
-            eng/synchronize-secrets.ps1 -ConfigDir ./.vault-config -Command "dotnet run -p src/Microsoft.DncEng.SecretManager --"
+            Get-ChildItem .vault-config/*.yaml |% { dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize $_}
 
   - stage: Build
     jobs:
