@@ -16,6 +16,7 @@ parameters:
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
   # dotnet-build-bot-dotnet-eng-status-token
+  # secret-manager-scenario-tests-auth-connection-string
 
 stages:
 - stage: approval
@@ -104,7 +105,7 @@ stages:
 
   - job: deployMaestro
     displayName: Deploy maestro service fabric application
-    dependsOn: 
+    dependsOn:
     - updateDatabase
     steps:
     - download: current
@@ -188,7 +189,7 @@ stages:
         enableCustomDeployment: true
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
-  
+
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
     dependsOn:
@@ -260,10 +261,12 @@ stages:
   displayName: Validate deployment
   pool:
     vmImage: vs2017-win2016
-  dependsOn: 
+  dependsOn:
   - deploy
   variables:
   - group: ${{ parameters.VariableGroup }}
+  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
+  - group: Secret-Manager-Scenario-Tests
   - name: MaestroTestEndpoint
     value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
@@ -273,6 +276,8 @@ stages:
     steps:
     - download: current
       artifact: PackageArtifacts
+    - download: current
+      artifact: Microsoft.DncEng.SecretManager.ScenarioTests
     - download: current
       artifact: Maestro.ScenarioTests
 
@@ -288,6 +293,17 @@ stages:
         version: 3.1.x
 
     - task: VSTest@2
+      displayName: Secret Manager Scenario Tests
+      inputs:
+        testSelector: testAssemblies
+        testAssemblyVer2: |
+          Microsoft.DncEng.SecretManager.ScenarioTests.dll
+        searchFolder: $(Pipeline.Workspace)/Microsoft.DncEng.SecretManager.ScenarioTests
+      env:
+        AzureServicesAuthConnectionString: $(secret-manager-scenario-tests-client-secret)
+
+    - task: VSTest@2
+      displayName: Maestro Scenario Tests
       inputs:
         testSelector: testAssemblies
         testAssemblyVer2: |
@@ -312,4 +328,4 @@ stages:
       displayName: Get DARC version
 
 
-    
+
