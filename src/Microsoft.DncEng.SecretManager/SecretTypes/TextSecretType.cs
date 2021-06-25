@@ -25,7 +25,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             var existing = await context.GetSecretValue(new SecretReference(context.SecretName));
             if (!_console.IsInteractive)
             {
-                throw new InvalidOperationException($"Text secret doesn't exist. Human intervention required.");
+                throw new HumanInterventionRequiredException($"Text secret rotation required. Human intervention required.");
             }
             var newValue = await _console.PromptAsync($"Input value for {context.SecretName} (empty to keep existing), {parameters.Description}: ");
             if (string.IsNullOrEmpty(newValue))
