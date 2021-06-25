@@ -16,7 +16,7 @@ resources:
     branch: main
 
 stages:
-  - stage: Synchronize Secrets
+  - stage: SynchronizeSecrets
     jobs:
     - job: Synchronize
       pool:
