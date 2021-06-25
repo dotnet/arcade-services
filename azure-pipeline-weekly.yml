@@ -38,7 +38,7 @@ stages:
 
       - task: AzureCLI@2
         inputs:
-          azureSubscription: NetHelix
+          azureSubscription: DotNet Eng Services Secret Manager
           scriptType: ps
           scriptLocation: inlineScript
           inlineScript: |
