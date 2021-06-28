@@ -1,0 +1,60 @@
+storageLocation:
+  type: azure-key-vault
+  parameters:
+    subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
+    name: maestroprod
+
+references:
+  helixkv:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: helixkv
+
+keys:
+  data-protection-encryption-key:
+    type: RSA
+    size: 2048
+
+importSecretsFrom: shared/maestro-secrets.yaml
+
+secrets:
+  maestro-storage-account:
+    type: azure-storage-connection-string
+    parameters:
+      subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
+      account: maestroprod1337
+
+  build-asset-registry-admin-connection-string:
+    type: sql-connection-string
+    parameters:
+      adminConnection: build-asset-registry-admin-connection-string
+      dataSource: tcp:maestro-prod.database.windows.net,1433
+      database: BuildAssetRegistry
+      permissions: admin
+
+  build-asset-registry-sql-connection-string:
+    type: sql-connection-string
+    parameters:
+      adminConnection: build-asset-registry-admin-connection-string
+      dataSource: tcp:maestro-prod.database.windows.net,1433
+      database: BuildAssetRegistry
+      permissions: rw
+
+  nethelix-engsrv-kusto-connection-string-ingest:
+    type: kusto-connection-string
+    parameters:
+      adApplication:
+        location: helixkv
+        name: nethelix-prod-kusto-ad-application
+      dataSource: https://ingest-engsrvprod.kusto.windows.net:443
+      additionalParameters: Streaming=true;Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
+
+  nethelix-engsrv-kusto-connection-string-query:
+    type: kusto-connection-string
+    parameters:
+      adApplication:
+        location: helixkv
+        name: nethelix-prod-kusto-ad-application
+      dataSource: https://engsrvprod.kusto.windows.net:443
+      additionalParameters: Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47

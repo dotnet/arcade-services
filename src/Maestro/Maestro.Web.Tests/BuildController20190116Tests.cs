@@ -8,6 +8,7 @@ using Maestro.Data;
 using Maestro.Web.Api.v2019_01_16.Controllers;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,12 +21,12 @@ using NUnit.Framework;
 namespace Maestro.Web.Tests
 {
     [TestFixture, NonParallelizable]
-    public class BuildController20190116Tests
+    public partial class BuildController20190116Tests
     {
         [Test]
         public async Task MinimalBuildIsCreatedAndCanRetrieved()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
 
             string commitHash = "FAKE-COMMIT";
             string account = "FAKE-ACCOUNT";
@@ -82,7 +83,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task NonsenseBuildIdReturnsNotFound()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
             var result = await data.Controller.GetBuild(-99999);
             result.Should().BeAssignableTo<StatusCodeResult>();
             ((StatusCodeResult) result).StatusCode.Should().Be((int) HttpStatusCode.NotFound);
@@ -91,7 +92,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task BuildWithDependenciesIsRegistered()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
 
             string commitHash = "FAKE-COMMIT";
             string account = "FAKE-ACCOUNT";
@@ -171,7 +172,7 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task BuildGraphIncludesOnlyRelatedBuilds()
         {
-            using TestData data = await BuildDefaultAsync();
+            using TestData data = await TestData.Default.BuildAsync();
 
             string commitHash = "FAKE-COMMIT";
             string account = "FAKE-ACCOUNT";
@@ -220,18 +221,13 @@ namespace Maestro.Web.Tests
             graph.Builds[bBuild.Id].Dependencies.Should().BeEmpty();
         }
 
-        private Task<TestData> BuildDefaultAsync()
+        [TestDependencyInjectionSetup]
+        private static class TestDataConfiguration
         {
-            return new TestDataBuilder().BuildAsync();
-        }
-
-        private sealed class TestDataBuilder
-        {
-            public async Task<TestData> BuildAsync()
+            public static async Task Default(IServiceCollection collection)
             {
                 string connectionString = await SharedData.Database.GetConnectionString();
 
-                ServiceCollection collection = new ServiceCollection();
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
@@ -242,33 +238,18 @@ namespace Maestro.Web.Tests
                     options.UseSqlServer(connectionString);
                     options.EnableServiceProviderCaching(false);
                 });
-                collection.AddTransient<BuildsController>();
+            }
+
+            public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
+            {
                 collection.AddSingleton<ISystemClock, TestClock>();
-                ServiceProvider provider = collection.BuildServiceProvider();
-
-                var controller = provider.GetRequiredService<BuildsController>();
-                var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
-
-                return new TestData(provider, controller, clock);
-            }
-        }
-
-        private sealed class TestData : IDisposable
-        {
-            private readonly ServiceProvider _provider;
-            public BuildsController Controller { get; }
-            public TestClock Clock { get; }
-
-            public TestData(ServiceProvider provider, BuildsController controller, TestClock clock)
-            {
-                _provider = provider;
-                Controller = controller;
-                Clock = clock;
+                return s => (TestClock) s.GetRequiredService<ISystemClock>();
             }
 
-            public void Dispose()
+            public static Func<IServiceProvider, BuildsController> Controller(IServiceCollection collection)
             {
-                _provider.Dispose();
+                collection.AddTransient<BuildsController>();
+                return s => s.GetRequiredService<BuildsController>();
             }
         }
     }

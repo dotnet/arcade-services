@@ -34,7 +34,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
             return new OptionSet
             {
                 {"m|manifest-file=", "A secret manifest file. Can be specified more than once.", m => _manifestFiles.Add(m)},
-                {"base-path=", "The base path to search for settings files.", b => _basePath = b},
+                {"b|base-path=", "The base path to search for settings files.", b => _basePath = b},
             };
         }
 

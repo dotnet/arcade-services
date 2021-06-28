@@ -135,6 +135,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             options.InstrumentationKey = GetApplicationInsightsKey();
             options.EnableQuickPulseMetricStream = false;
             options.EnableAdaptiveSampling = false;
+            options.EnableDependencyTrackingTelemetryModule = false;
         }
     }
 }
