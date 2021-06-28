@@ -395,7 +395,17 @@ namespace DotNet.Status.Web.Controllers
                         builder.Append(") - ");
                     }
 
-                    builder.AppendLine(issue.Message);
+                    string[] message = issue.Message.Split(Environment.NewLine);
+
+                    builder.AppendLine(message[0]);
+
+                    if (message.Length > 1)
+                    {
+                        builder.AppendLine("<details>");
+                        builder.AppendLine(string.Join(Environment.NewLine, message.Skip(1)));
+                        builder.AppendLine("</details>");
+                    }
+                    
                     builder.AppendLine();
                 }
             }
