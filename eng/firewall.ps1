@@ -20,8 +20,13 @@ function Get-FirewalledIp() {
                 return $server, $ip
             }
         }
+        else {
+            throw;
+        }
     } finally {
-        $ipConn.Dispose()
+        if ($ipConn) {
+            $ipConn.Dispose()
+        }
     }
 }
 
@@ -33,7 +38,9 @@ function Get-ServerName() {
             return $server
         }
     } finally {
-        $ipConn.Dispose()
+        if ($ipConn) {
+            $ipConn.Dispose()
+        }
     }
 }
 
@@ -86,3 +93,4 @@ if ($Remove) {
 }
 
 throw "One of -Add or -Remove is required"
+
