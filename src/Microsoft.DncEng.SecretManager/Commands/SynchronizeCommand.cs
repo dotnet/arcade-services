@@ -18,6 +18,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
         private readonly ISystemClock _clock;
         private readonly IConsole _console;
         private bool _force = false;
+        private bool _verifyOnly = false;
         private List<string> _forcedSecrets = new List<string>();
 
         public SynchronizeCommand(StorageLocationTypeRegistry storageLocationTypeRegistry, SecretTypeRegistry secretTypeRegistry, ISystemClock clock, IConsole console)
@@ -42,6 +43,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
             {
                 {"f|force", "Force rotate all secrets", f => _force = !string.IsNullOrEmpty(f)},
                 {"force-secret=", "Force rotate the specified secret", f => _forcedSecrets.Add(f)},
+                {"verify-only", "Does not rotate any secrets, instead, produces an error for every secret that needs to be rotated.", v => _verifyOnly = !string.IsNullOrEmpty(v)},
             };
         }
 
@@ -142,7 +144,11 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     }
 
 
-                    if (regenerate)
+                    if (regenerate && _verifyOnly)
+                    {
+                        _console.LogError($"Secret {name} requires rotation.");
+                    }
+                    else if (regenerate)
                     {
                         _console.WriteLine($"Generating new value(s) for secret {name}...");
                         SecretProperties primary = existing.FirstOrDefault(p => p != null);
@@ -164,14 +170,17 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     }
                 }
 
-                foreach (var (name, key) in manifest.Keys)
+                if (!_verifyOnly)
                 {
-                    await storage.EnsureKeyAsync(name, key);
-                }
+                    foreach (var (name, key) in manifest.Keys)
+                    {
+                        await storage.EnsureKeyAsync(name, key);
+                    }
 
-                foreach (var (name, value) in existingSecrets)
-                {
-                    _console.LogWarning($"Extra secret '{name}' consider deleting it.");
+                    foreach (var (name, value) in existingSecrets)
+                    {
+                        _console.LogWarning($"Extra secret '{name}' consider deleting it.");
+                    }
                 }
             }
             catch (FailWithExitCodeException)

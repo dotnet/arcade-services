@@ -177,7 +177,7 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
-                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"tags '{string.Join(", ", build.Tags)}'" : "";
+                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"{string.Join(", ", build.Tags)}" : "";
 
                 _logger.LogInformation(
                     "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}', tags '{prettyTags}', and branch '{branch}' matches monitoring criteria, sending notification",
@@ -233,9 +233,54 @@ namespace DotNet.Status.Web.Controllers
 
 {changesMessage}
 ";
+                    string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
 
+                    if (repo.UpdateExisting)
+                    {
+                        // There is no way to get the username of our bot directly from the GithubApp with the C# api.
+                        // Issue opened in Octokit: https://github.com/octokit/octokit.net/issues/2335
+                        // We do, however, have access to the HtmlUrl, which ends with the name of the bot.
+                        // Additionally, when the bot opens issues, the username used ends with [bot], which isn't strictly
+                        // part of the name anywhere else. So, to get the correct creator name, get the HtmlUrl, grab
+                        // the bot's name from it, and append [bot] to that string.
+                        string creator = (await github.GitHubApps.GetCurrent()).HtmlUrl.Split("/").Last();
+                        RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
+                            Creator = $"{creator}[bot]",
+                            State = ItemStateFilter.Open,
+                            SortProperty = IssueSort.Created,
+                            SortDirection = SortDirection.Descending
+                        };
+
+                        foreach (string label in repo.Labels.OrEmpty())
+                        {
+                            issueRequest.Labels.Add(label);
+                        }
+
+                        foreach (string label in monitor.Labels.OrEmpty())
+                        {
+                            issueRequest.Labels.Add(label);
+                        }
+
+                        List<Issue> matchingIssues = (await github.Issue.GetAllForRepository(repo.Owner, repo.Name, issueRequest)).ToList();
+                        Issue matchingIssue = matchingIssues.FirstOrDefault(i => i.Title.StartsWith(issueTitlePrefix));
+
+                        if (matchingIssue != null)
+                        {
+                            // Add a new comment to the issue with the body
+                            IssueComment newComment = await github.Issue.Comment.Create(repo.Owner, repo.Name, matchingIssue.Id, body);
+                            _logger.LogInformation("Logged comment in {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, matchingIssue.Number);
+
+                            return;
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Matching issues for {issueTitlePrefix} not found. Creating a new issue.", issueTitlePrefix);
+                        }
+                    }
+
+                    // Create new issue if repo.UpdateExisting is false or there were no matching issues
                     var newIssue =
-                        new NewIssue($"Build failed: {build.Definition.Name}/{prettyBranch} #{build.BuildNumber}")
+                        new NewIssue($"{issueTitlePrefix} #{build.BuildNumber}")
                         {
                             Body = body,
                         };
@@ -350,7 +395,17 @@ namespace DotNet.Status.Web.Controllers
                         builder.Append(") - ");
                     }
 
-                    builder.AppendLine(issue.Message);
+                    string[] message = issue.Message.Split(Environment.NewLine);
+
+                    builder.AppendLine(message[0]);
+
+                    if (message.Length > 1)
+                    {
+                        builder.AppendLine("<details>");
+                        builder.AppendLine(string.Join(Environment.NewLine, message.Skip(1)));
+                        builder.AppendLine("</details>");
+                    }
+                    
                     builder.AppendLine();
                 }
             }

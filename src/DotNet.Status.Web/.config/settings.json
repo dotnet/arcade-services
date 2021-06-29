@@ -62,7 +62,8 @@
         "Id": "dotnet-runtime-infra",
         "Owner": "dotnet",
         "Name": "runtime",
-        "Labels": [ "area-Infrastructure" ]
+        "Labels": [ "area-Infrastructure" ],
+        "UpdateExisting": true
       }
     ]
   },
