@@ -76,24 +76,20 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     references.Add(name, bound);
                 }
 
-                Dictionary<string, SecretProperties> existingSecrets =
-                    (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
+                Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
 
-                List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)>
-                    orderedSecretTypes = GetTopologicallyOrderedSecrets(manifest.Secrets);
+                List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)> orderedSecretTypes = GetTopologicallyOrderedSecrets(manifest.Secrets);
                 var regeneratedSecrets = new HashSet<string>();
 
                 foreach (var (name, secret, secretType, secretReferences) in orderedSecretTypes)
                 {
                     _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
-                    List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix)
-                        .ToList();
+                    List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                     var existing = new List<SecretProperties>();
                     foreach (string n in names)
                     {
                         existingSecrets.Remove(n, out SecretProperties e);
-                        existing.Add(
-                            e); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
+                        existing.Add(e); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
                     }
 
                     bool regenerate = false;
@@ -152,8 +148,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
                     {
                         _console.WriteLine($"Generating new value(s) for secret {name}...");
                         SecretProperties primary = existing.FirstOrDefault(p => p != null);
-                        IImmutableDictionary<string, string> currentTags =
-                            primary?.Tags ?? ImmutableDictionary.Create<string, string>();
+                        IImmutableDictionary<string, string> currentTags = primary?.Tags ?? ImmutableDictionary.Create<string, string>();
                         var context = new RotationContext(name, currentTags, storage, references);
                         List<SecretData> newValues = await secretType.RotateValues(context, cancellationToken);
                         IImmutableDictionary<string, string> newTags = context.GetValues();
@@ -162,8 +157,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
                         _console.WriteLine($"Storing new value(s) in storage for secret {name}...");
                         foreach (var (n, value) in names.Zip(newValues))
                         {
-                            await storage.SetSecretValueAsync(n,
-                                new SecretValue(value.Value, newTags, value.NextRotationOn, value.ExpiresOn));
+                            await storage.SetSecretValueAsync(n, new SecretValue(value.Value, newTags, value.NextRotationOn, value.ExpiresOn));
                         }
 
                         _console.WriteLine("Done.");
