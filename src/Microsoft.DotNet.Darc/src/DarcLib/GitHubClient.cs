@@ -986,12 +986,12 @@ namespace Microsoft.DotNet.DarcLib
                             switch (run.Conclusion?.Value)
                             {
                                 case CheckConclusion.Success:
-                                case CheckConclusion.Neutral:
                                     state = CheckState.Success;
                                     break;
                                 case CheckConclusion.ActionRequired:
                                 case CheckConclusion.Cancelled:
                                 case CheckConclusion.Failure:
+                                case CheckConclusion.Neutral:
                                 case CheckConclusion.TimedOut:
                                     state = CheckState.Failure;
                                     break;

@@ -13,6 +13,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
     {
         private readonly List<string> _suffixes = new List<string> { GitHubPasswordSuffix, GitHubRecoveryCodesSuffix, GitHubSecretSuffix };
         private readonly Regex _recoveryCodesRegex = new Regex(@"^([a-fA-F0-9]{5}-?[a-fA-F0-9]{5}\s+)*[a-fA-F0-9]{5}-?[a-fA-F0-9]{5}$");
+        private readonly Regex _secretRegex = new Regex(@"[A-Za-z2-7]+");
 
         public class Parameters
         {
@@ -125,7 +126,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             string secret = await Console.PromptAndValidateAsync("secret",
                 "Allowed chars are A-Z and digits 2-7.",
-                l => !string.IsNullOrWhiteSpace(l) && l.All(l => (l >= 'A' && l <= 'Z') || (l >= '2' && l <= '7')));
+                l => l != null && _secretRegex.IsMatch(l));
 
             await ShowGitHubOneTimePassword(secret);
             return secret;

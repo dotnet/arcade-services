@@ -26,7 +26,8 @@ namespace Maestro.MergePolicies
                     new JArray(
                         "WIP",
                         "license/cla",
-                        "auto-merge.config.enforce"
+                        "auto-merge.config.enforce",
+                        "Build Analysis"
                     )
                 },
             });

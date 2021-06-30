@@ -265,6 +265,11 @@ stages:
 
           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
             artifact: Maestro.ScenarioTests
+            displayName: Publish Maestro Scenario Tests
+
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DncEng.SecretManager.ScenarioTests\$(_BuildConfig)\netcoreapp3.1
+            artifact: Microsoft.DncEng.SecretManager.ScenarioTests
+            displayName: Publish Secret Manager Scenario Tests
 
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59
