@@ -23,7 +23,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!Console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of a GitHub access token.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of a GitHub access token.");
             }
 
             const string helpUrl = "https://github.com/settings/tokens";

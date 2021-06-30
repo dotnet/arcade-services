@@ -34,7 +34,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!Console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of a {TokenName}.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of a {TokenName}.");
             }
 
             var mapHelpEnvironmentToHost = new Dictionary<string, string>(EnvironmentToHost, StringComparer.OrdinalIgnoreCase);

@@ -39,7 +39,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             {
                 if (!_console.IsInteractive)
                 {
-                    throw new InvalidOperationException($"No admin connection for server {dataSource} available, user intervention required.");
+                    throw new HumanInterventionRequiredException($"No admin connection for server {dataSource} available, user intervention required.");
                 }
 
                 adminConnectionString = await _console.PromptAsync($"No admin connection for server {dataSource} is available, please input one: ");

@@ -27,7 +27,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!_console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of a Domain Account.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of a Domain Account.");
             }
 
             string generatedPassword = PasswordGenerator.GenerateRandomPassword(15, false);

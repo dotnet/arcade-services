@@ -29,7 +29,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!Console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of an Azure DevOps access token.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of an Azure DevOps access token.");
             }
 
             string helpUrl = $"https://dev.azure.com/{parameters.Organization}/_usersSettings/tokens";

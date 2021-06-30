@@ -323,7 +323,7 @@ secrets:
         public void InvalidSecretReferenceThrowsException()
         {
             var now = DateTimeOffset.Parse("3/25/2021 1:30");
-            Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Assert.ThrowsAsync<FailWithExitCodeException>(() =>
                 TestCommand(now, @"
     storageLocation:
       type: test
