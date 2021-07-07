@@ -16,7 +16,7 @@ resources:
     branch: main
 
 stages:
-  - stage: Synchronize Secrets
+  - stage: SynchronizeSecrets
     jobs:
     - job: Synchronize
       pool:
@@ -27,18 +27,25 @@ stages:
         inputs:
           useGlobalJson: true
 
+      - task: UseDotNet@2
+        displayName: Install .NET 3.1 runtime
+        inputs:
+          packageType: runtime
+          version: 3.1.x
+
       - script: dotnet build
         workingDirectory: src/Microsoft.DncEng.SecretManager
 
       - task: AzureCLI@2
         inputs:
-          azureSubscription: NetHelix
+          azureSubscription: DotNet Eng Services Secret Manager
           scriptType: ps
           scriptLocation: inlineScript
           inlineScript: |
             Get-ChildItem .vault-config/*.yaml |% { dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize $_}
 
   - stage: Build
+    dependsOn:
     jobs:
     - job: Build
       pool:

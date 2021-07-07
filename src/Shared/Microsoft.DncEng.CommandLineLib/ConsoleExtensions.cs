@@ -91,6 +91,10 @@ namespace Microsoft.DncEng.CommandLineLib
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AGENT_ID")))
             {
                 console.Error(VerbosityLevel.Quiet, $"##vso[task.logissue type={type};sourcepath={file};linenumber={line};columnnumber={column};]{message}\n", ConsoleColor.Black);
+                if (kind == IssueKind.Error)
+                {
+                    console.Error(VerbosityLevel.Quiet, "##vso[task.complete result=Failed;]", ConsoleColor.Black);
+                }
             }
             else
             {

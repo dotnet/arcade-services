@@ -37,7 +37,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!_console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub OAuth secret.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of GitHub OAuth secret.");
             }
 
             string clientId = await context.GetSecretValue(new SecretReference(context.SecretName + ClientId));

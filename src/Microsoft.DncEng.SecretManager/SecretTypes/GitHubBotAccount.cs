@@ -33,7 +33,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!Console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of GitHub bot account.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of GitHub bot account.");
             }
 
             string password = await context.GetSecretValue(new SecretReference(context.SecretName + GitHubPasswordSuffix));
