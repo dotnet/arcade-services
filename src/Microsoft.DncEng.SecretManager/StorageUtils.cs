@@ -9,10 +9,12 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 using Microsoft.Rest;
 using Microsoft.Rest.Azure;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.DncEng.SecretManager
 {
-    public static class StorageKeyUtils
+    public static class StorageUtils
     {
         public static async Task<string> RotateStorageAccountKey(string subscriptionId, string accountName, RotationContext context, TokenCredentialProvider tokenCredentialProvider, CancellationToken cancellationToken)
         {
@@ -45,6 +47,20 @@ namespace Microsoft.DncEng.SecretManager
             context.SetValue("currentKey", keyToReturn);
 
             return key.Value;
+        }
+
+        public static (string containerUri,string sas) GenerateBlobContainerSas(string connectionString, string containerName, string permissions, DateTimeOffset expiryTime)
+        {
+            CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
+            CloudBlobClient blobClient = account.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference(containerName);
+            string sas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
+            {
+                Permissions = SharedAccessBlobPolicy.PermissionsFromString(permissions),
+                SharedAccessExpiryTime = expiryTime,
+            });
+
+            return (container.Uri.AbsoluteUri, sas);
         }
 
         private static async Task<StorageManagementClient> CreateManagementClient(string subscriptionId, TokenCredentialProvider tokenCredentialProvider, CancellationToken cancellationToken)
