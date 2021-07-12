@@ -59,6 +59,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
                 ex => ex is ApiException && ((ApiException)ex).StatusCode == HttpStatusCode.InternalServerError);
         }
 
+        public string GetTokenForApp()
+        {
+            return _tokens.GetAppToken();
+        }
+
         public async Task<string> GetTokenForRepository(string repositoryUrl)
         {
             return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));
