@@ -243,9 +243,9 @@ namespace DotNet.Status.Web.Controllers
                         // Additionally, when the bot opens issues, the username used ends with [bot], which isn't strictly
                         // part of the name anywhere else. So, to get the correct creator name, get the HtmlUrl, grab
                         // the bot's name from it, and append [bot] to that string.
-                        var githubAppClient = _gitHubApplicationClientFactory.CreateGithubAppClient();
+                        var githubAppClient = _gitHubApplicationClientFactory.CreateGitHubAppClient();
                         string creator = (await githubAppClient.GitHubApps.GetCurrent()).HtmlUrl.Split("/").Last();
-                        
+
                         RepositoryIssueRequest issueRequest = new RepositoryIssueRequest {
                             Creator = $"{creator}[bot]",
                             State = ItemStateFilter.Open,
