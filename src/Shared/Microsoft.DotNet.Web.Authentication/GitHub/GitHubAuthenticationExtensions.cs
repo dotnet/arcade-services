@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
     {
         public static AuthenticationBuilder AddGitHubOAuth(this AuthenticationBuilder auth, IConfigurationSection section, string scheme)
         {
-            auth.Services.Configure<GitHubAuthenticationOptions>(scheme, section.Bind);
+            auth.Services.Configure<GitHubAuthenticationOptions>(scheme, section);
             auth.Services.AddSingleton<GitHubClaimResolver>();
             auth.Services.TryAddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             return auth.AddOAuth<GitHubAuthenticationOptions, GitHubAuthenticationHandler>(

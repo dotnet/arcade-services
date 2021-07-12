@@ -3,22 +3,20 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using System;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.DotNet.Kusto
 {
     public static class KustoServiceCollectionExtensions
     {
-        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<IServiceProvider, KustoClientProviderOptions> configure = null)
+        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, string sectionName)
         {
             services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
-            if (configure != null)
+            services.Configure<KustoClientProviderOptions>(sectionName, (o, s) =>
             {
-                services.AddSingleton<IConfigureOptions<KustoClientProviderOptions>>(
-                    provider => new ConfigureOptions<KustoClientProviderOptions>(options => configure(provider, options))
-                );
-            }
+                s.Bind(o);
+            });
             return services;
         }
 
