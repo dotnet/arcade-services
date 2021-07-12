@@ -511,8 +511,14 @@ namespace DotNet.Status.Web.Tests
                     .Setup(m => m.GetAllForRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RepositoryIssueRequest>()))
                     .Returns(Task.FromResult((IReadOnlyList<Issue>)(new List<Issue> {mockIssue})));
 
+                Octokit.GitHubApp mockGithubApp = new GitHubApp(12345, "app", null, "desc", "url", "url", DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+
+                var mockGithubAppsClient = new Mock<IGitHubAppsClient>();
+                mockGithubAppsClient.Setup(m => m.GetCurrent()).Returns(Task.FromResult(mockGithubApp));
+
                 var mockGithubClient = new Mock<IGitHubClient>();
                 mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
+                mockGithubClient.SetupGet(m => m.GitHubApps).Returns(mockGithubAppsClient.Object);
 
                 var mockGithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
                 mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))

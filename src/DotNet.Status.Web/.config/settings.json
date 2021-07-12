@@ -16,7 +16,6 @@
   },
   "BuildMonitor": {
     "Monitor": {
-      "BotName": "dotnet-eng-status[bot]",
       "BaseUrl": "https://dev.azure.com",
       "Organization": "dnceng",
       "MaxParallelRequests": 10,
