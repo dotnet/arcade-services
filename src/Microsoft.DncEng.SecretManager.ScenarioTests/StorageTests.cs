@@ -18,7 +18,8 @@ namespace Microsoft.DncEng.SecretManager.Tests
         const string ConnectionStringNamePrefix = "azure-storage-connection-string";
         const string BlobSasNamePrefix = "azure-storage-blob-sas-uri";
         const string TableSasNamePrefix = "azure-storage-table-sas-uri";
-        const string ContainerSasNamePrefix = "azure-storage-container-sas-uri";
+        const string ContainerSasUriNamePrefix = "azure-storage-container-sas-uri";
+        const string ContainerSasTokenNamePrefix = "azure-storage-container-sas-token";
         const string KeyNamePrefix = "azure-storage-key";
         const string AccountKeyPrefix = "AccountKey=";
 
@@ -59,14 +60,22 @@ secrets:
       ConnectionString: {ConnectionStringNamePrefix}{{0}}
       Table: testTable
       Permissions: r
-  {ContainerSasNamePrefix}{{0}}:
+  {ContainerSasUriNamePrefix}{{0}}:
     type: azure-storage-container-sas-uri
     owner: scenarioTests
-    description: container sas
+    description: container sas uri
     parameters:
       ConnectionString: {ConnectionStringNamePrefix}{{0}}
       Container: test
-      Permissions: lr";
+      Permissions: lr
+  {ContainerSasTokenNamePrefix}{{0}}:
+    type: azure-storage-container-sas-token
+    owner: scenarioTests
+    description: container sas token
+    parameters:
+      ConnectionString: {ConnectionStringNamePrefix}{{0}}
+      Container: test
+      Permissions: l";
 
 
         [Test]
@@ -77,7 +86,8 @@ secrets:
             string connectionStringSecretName = ConnectionStringNamePrefix + nameSuffix;
             string blobSasSecretName = BlobSasNamePrefix + nameSuffix;
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
-            string containerSasSecretName = ContainerSasNamePrefix + nameSuffix;
+            string containerSasUriSecretName = ContainerSasUriNamePrefix + nameSuffix;
+            string containerSasTokenSecretName = ContainerSasTokenNamePrefix + nameSuffix;
             string manifest = string.Format(Manifest, nameSuffix);
 
             await ExecuteSynchronizeCommand(manifest);
@@ -93,11 +103,13 @@ secrets:
             Assert.AreEqual(keySecret.Value.Value, extractedAccountKey);
 
             Response<KeyVaultSecret> blobSasSecret = await client.GetSecretAsync(blobSasSecretName);
-            AssertValidSAS(blobSasSecret.Value.Value);
+            AssertValidSasUri(blobSasSecret.Value.Value);
             Response<KeyVaultSecret> tableSasSecret = await client.GetSecretAsync(tableSasSecretName);
-            AssertValidSAS(tableSasSecret.Value.Value);
-            Response<KeyVaultSecret> containerSasSecret = await client.GetSecretAsync(containerSasSecretName);
-            AssertValidSAS(containerSasSecret.Value.Value);
+            AssertValidSasUri(tableSasSecret.Value.Value);
+            Response<KeyVaultSecret> containerSasUriSecret = await client.GetSecretAsync(containerSasUriSecretName);
+            AssertValidSasUri(containerSasUriSecret.Value.Value);
+            Response<KeyVaultSecret> containerSasTokenSecret = await client.GetSecretAsync(containerSasTokenSecretName);
+            AssertValidSas(containerSasTokenSecret.Value.Value);
         }
 
         [Test]
@@ -108,7 +120,8 @@ secrets:
             string connectionStringSecretName = ConnectionStringNamePrefix + nameSuffix;
             string blobSasSecretName = BlobSasNamePrefix + nameSuffix;
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
-            string containerSasSecretName = ContainerSasNamePrefix + nameSuffix;
+            string containerSasUriSecretName = ContainerSasUriNamePrefix + nameSuffix;
+            string containerSasTokenSecretName = ContainerSasTokenNamePrefix + nameSuffix;
             string manifest = string.Format(Manifest, nameSuffix);
 
             SecretClient client = GetSecretClient();
@@ -121,8 +134,10 @@ secrets:
             await UpdateNextRotationTagIntoFuture(client, blobSasSecret.Value);
             Response<KeyVaultSecret> tableSasSecret = await client.SetSecretAsync(tableSasSecretName, "TEST");
             await UpdateNextRotationTagIntoFuture(client, tableSasSecret.Value);
-            Response<KeyVaultSecret> containerSasSecret = await client.SetSecretAsync(containerSasSecretName, "TEST");
-            await UpdateNextRotationTagIntoFuture(client, containerSasSecret.Value);
+            Response<KeyVaultSecret> containerSasUriSecret = await client.SetSecretAsync(containerSasUriSecretName, "TEST");
+            await UpdateNextRotationTagIntoFuture(client, containerSasUriSecret.Value);
+            Response<KeyVaultSecret> containerSasTokenSecret = await client.SetSecretAsync(containerSasTokenSecretName, "TEST");
+            await UpdateNextRotationTagIntoFuture(client, containerSasTokenSecret.Value);
 
 
             HashSet<string> accessKeys = await GetAccessKeys();
@@ -145,11 +160,13 @@ secrets:
             Assert.AreEqual(keySecret.Value.Value, accountKeyFromConnectionString);
 
             blobSasSecret = await client.GetSecretAsync(blobSasSecretName);
-            AssertValidSAS(blobSasSecret.Value.Value);
+            AssertValidSasUri(blobSasSecret.Value.Value);
             tableSasSecret = await client.GetSecretAsync(tableSasSecretName);
-            AssertValidSAS(tableSasSecret.Value.Value);
-            containerSasSecret = await client.GetSecretAsync(containerSasSecretName);
-            AssertValidSAS(containerSasSecret.Value.Value);
+            AssertValidSasUri(tableSasSecret.Value.Value);
+            containerSasUriSecret = await client.GetSecretAsync(containerSasUriSecretName);
+            AssertValidSasUri(containerSasUriSecret.Value.Value);
+            containerSasTokenSecret = await client.GetSecretAsync(containerSasTokenSecretName);
+            AssertValidSas(containerSasTokenSecret.Value.Value);
         }
 
         [OneTimeTearDown]
@@ -158,10 +175,15 @@ secrets:
             await PurgeAllSecrets();
         }
 
-        private static void AssertValidSAS(string uriText)
+        private static void AssertValidSasUri(string uriText)
         {
             var uri = new Uri(uriText);
-            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            AssertValidSas(uri.Query);
+        }
+
+        private static void AssertValidSas(string sas)
+        {            
+            var query = System.Web.HttpUtility.ParseQueryString(sas);
             Assert.IsNotNull(query["sig"]);
         }
 

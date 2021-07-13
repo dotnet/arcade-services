@@ -42,7 +42,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
             else
             {
-                key = await StorageKeyUtils.RotateStorageAccountKey(parameters.Subscription.ToString(), parameters.Account, context, _tokenCredentialProvider, cancellationToken);
+                key = await StorageUtils.RotateStorageAccountKey(parameters.Subscription.ToString(), parameters.Account, context, _tokenCredentialProvider, cancellationToken);
                 expiresOn = DateTimeOffset.MaxValue;
                 nextRotationOn = _clock.UtcNow.AddMonths(6);
             }

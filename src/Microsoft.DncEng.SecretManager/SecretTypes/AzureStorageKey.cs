@@ -27,10 +27,8 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
-            string key = await StorageKeyUtils.RotateStorageAccountKey(parameters.Subscription.ToString(), parameters.Account, context, _tokenCredentialProvider, cancellationToken);
+            string key = await StorageUtils.RotateStorageAccountKey(parameters.Subscription.ToString(), parameters.Account, context, _tokenCredentialProvider, cancellationToken);
             return new SecretData(key, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(6));
         }
-
-
     }
 }
