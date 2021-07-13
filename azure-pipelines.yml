@@ -149,6 +149,14 @@ stages:
           name: Build
           displayName: Build / Publish
           condition: succeeded()
+        
+        - powershell: |
+            $manifestArgs = @()
+            Get-ChildItem .vault-config/*.yaml |% {
+              $manifestArgs += @("-m", $_.FullName)
+            }
+            dotnet run -p src/Microsoft.DncEng.SecretManager -- validate-all -b src @manifestArgs
+          displayName: Verify Secret Usages
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 

@@ -10,6 +10,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
     {
         Task<string> GetTokenForInstallationAsync(long installationId);
         Task<string> GetTokenForRepository(string repositoryUrl);
+        string GetTokenForApp();
     }
 
     public static class GitHubTokenProviderExtensions

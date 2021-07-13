@@ -523,6 +523,7 @@ namespace DotNet.Status.Web.Tests
                 var mockGithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
                 mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
                     .Returns(Task.FromResult(mockGithubClient.Object));
+                mockGithubClientFactory.Setup(m => m.CreateGitHubAppClient()).Returns(mockGithubClient.Object);
 
                 var project = new[]
                 {

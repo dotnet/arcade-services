@@ -10,5 +10,6 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public interface IGitHubApplicationClientFactory
     { 
         Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo);
+        IGitHubClient CreateGitHubAppClient();
     }
 }

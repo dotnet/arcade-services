@@ -1,19 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure;
-using Azure.Core;
-using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Management.Storage;
-using Microsoft.Azure.Management.Storage.Models;
-using Microsoft.DncEng.CommandLineLib.Authentication;
 using Microsoft.Rest;
-using Microsoft.WindowsAzure.Storage.Blob;
 using NUnit.Framework;
 
 namespace Microsoft.DncEng.SecretManager.Tests
@@ -27,6 +19,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
         const string BlobSasNamePrefix = "azure-storage-blob-sas-uri";
         const string TableSasNamePrefix = "azure-storage-table-sas-uri";
         const string ContainerSasNamePrefix = "azure-storage-container-sas-uri";
+        const string KeyNamePrefix = "azure-storage-key";
         const string AccountKeyPrefix = "AccountKey=";
 
         readonly string Manifest = @$"storageLocation:
@@ -35,12 +28,19 @@ namespace Microsoft.DncEng.SecretManager.Tests
     name: {KeyVaultName}
     subscription: {SubscriptionId}
 secrets:
+  {KeyNamePrefix}{{0}}:
+    type: azure-storage-key
+    owner: scenarioTests
+    description: storage key
+    parameters:
+      Subscription: {SubscriptionId}
+      Account: {AccountName}
   {ConnectionStringNamePrefix}{{0}}:
     type: azure-storage-connection-string
     owner: scenarioTests
     description: storage connection string
     parameters:
-      Subscription: {SubscriptionId}
+      StorageKeySecret: {KeyNamePrefix}{{0}}
       Account: {AccountName}
   {BlobSasNamePrefix}{{0}}:
     type: azure-storage-blob-sas-uri
@@ -73,6 +73,7 @@ secrets:
         public async Task NewStorageSecretsTest()
         {
             string nameSuffix = Guid.NewGuid().ToString("N");
+            string keySecretName = KeyNamePrefix + nameSuffix;
             string connectionStringSecretName = ConnectionStringNamePrefix + nameSuffix;
             string blobSasSecretName = BlobSasNamePrefix + nameSuffix;
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
@@ -82,11 +83,14 @@ secrets:
             await ExecuteSynchronizeCommand(manifest);
 
             SecretClient client = GetSecretClient();
+            Response<KeyVaultSecret> keySecret = await client.GetSecretAsync(keySecretName);
             Response<KeyVaultSecret> connectionStringSecret = await client.GetSecretAsync(connectionStringSecretName);
+
             HashSet<string> connectionStringAccessKeys = await GetAccessKeys();
 
             string extractedAccountKey = ExtractKeyFromConnectionString(connectionStringSecret.Value);
             Assert.IsTrue(connectionStringAccessKeys.Contains(extractedAccountKey));
+            Assert.AreEqual(keySecret.Value.Value, extractedAccountKey);
 
             Response<KeyVaultSecret> blobSasSecret = await client.GetSecretAsync(blobSasSecretName);
             AssertValidSAS(blobSasSecret.Value.Value);
@@ -100,6 +104,7 @@ secrets:
         public async Task RotateSecretTest()
         {
             string nameSuffix = Guid.NewGuid().ToString("N");
+            string keySecretName = KeyNamePrefix + nameSuffix;
             string connectionStringSecretName = ConnectionStringNamePrefix + nameSuffix;
             string blobSasSecretName = BlobSasNamePrefix + nameSuffix;
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
@@ -108,6 +113,8 @@ secrets:
 
             SecretClient client = GetSecretClient();
 
+            Response<KeyVaultSecret> keySecret = await client.SetSecretAsync(keySecretName, "TEST");
+            await UpdateNextRotationTagIntoPast(client, keySecret.Value);
             Response<KeyVaultSecret> connectionStringSecret = await client.SetSecretAsync(connectionStringSecretName, "TEST");
             await UpdateNextRotationTagIntoPast(client, connectionStringSecret.Value);
             Response<KeyVaultSecret> blobSasSecret = await client.SetSecretAsync(blobSasSecretName, "TEST");
@@ -130,10 +137,12 @@ secrets:
             Assert.AreEqual(1, accessKeysRotated.Count);
             var rotatedAccountKey = accessKeysRotated.First();
 
+            keySecret = await client.GetSecretAsync(keySecretName);
             connectionStringSecret = await client.GetSecretAsync(connectionStringSecretName);
             string accountKeyFromConnectionString = ExtractKeyFromConnectionString(connectionStringSecret.Value);
 
             Assert.AreEqual(rotatedAccountKey, accountKeyFromConnectionString);
+            Assert.AreEqual(keySecret.Value.Value, accountKeyFromConnectionString);
 
             blobSasSecret = await client.GetSecretAsync(blobSasSecretName);
             AssertValidSAS(blobSasSecret.Value.Value);

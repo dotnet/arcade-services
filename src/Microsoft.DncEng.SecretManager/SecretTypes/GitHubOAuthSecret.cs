@@ -13,6 +13,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         public class Parameters
         {
             public string AppName { get; set; }
+            public string Description { get; set; }
         }
 
         private const string ClientId = "-client-id";
@@ -41,6 +42,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             }
 
             string clientId = await context.GetSecretValue(new SecretReference(context.SecretName + ClientId));
+            string clientSecret = await context.GetSecretValue(new SecretReference(context.SecretName + ClientSecret));
 
             if (string.IsNullOrEmpty(clientId))
             {
@@ -49,15 +51,24 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 clientId = await _console.PromptAndValidateAsync("Client Id",
                     "It should be a hexadecimal number.",
                     l => !string.IsNullOrEmpty(l) && l.All(c => c.IsHexChar()));
+
+                clientSecret = await _console.PromptAndValidateAsync("Client Secret",
+                    "It should be a hexadecimal number with at least 40 digits",
+                    l => !string.IsNullOrEmpty(l) && l.Length >= 40 && l.All(c => c.IsHexChar()));
             }
             else
             {
                 _console.WriteLine($"Please login to https://github.com/settings/developers using your GitHub account, open {parameters.AppName} and generate a new client secret.");
-            }
 
-            string clientSecret = await _console.PromptAndValidateAsync("Client Secret",
-                "It should be a hexadecimal number with at least 40 digits",
-                l => !string.IsNullOrEmpty(l) && l.Length >= 40 && l.All(c => c.IsHexChar()));
+                string clientSecretNewValue = await _console.PromptAndValidateAsync($"Client Secret (empty to keep existing), {parameters.Description}",
+                    "It should be a hexadecimal number with at least 40 digits",
+                    l => string.IsNullOrEmpty(l) || (l.Length >= 40 && l.All(c => c.IsHexChar())));
+
+                if (!string.IsNullOrEmpty(clientSecretNewValue))
+                {
+                    clientSecret = clientSecretNewValue;
+                }
+            }
 
             return new List<SecretData> {
                 new SecretData(clientId, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue),

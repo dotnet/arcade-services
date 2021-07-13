@@ -25,19 +25,17 @@ namespace RolloutScorerAzureFunction
             string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
             log.LogInformation($"INFO: Deployment Environment: {deploymentEnvironment}");
 
-            log.LogInformation("INFO: Getting storage account keys from KeyVault...");
-            SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
+            log.LogInformation("INFO: Getting scorecard storage account key and deployment table's SAS URI from KeyVault...");
+            SecretBundle scorecardsStorageAccountKey = await GetSecretBundleFromKeyVaultAsync(tokenProvider,
                 Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
-            SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
-                "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-token");
+            SecretBundle deploymentTableSasUriBundle = await GetSecretBundleFromKeyVaultAsync(tokenProvider,
+                "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-uri");
 
             log.LogInformation("INFO: Getting cloud tables...");
             CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey.Value);
-            CloudTable deploymentsTable = new CloudTable(
-                new Uri($"https://dotnetengstatusprod.table.core.windows.net/deployments{deploymentTableSasToken.Value}"));
+            CloudTable deploymentsTable = new CloudTable(new Uri(deploymentTableSasUriBundle.Value));
 
-            List<ScorecardEntity> scorecardEntries =
-                await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
+            List<ScorecardEntity> scorecardEntries = await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
             scorecardEntries.Sort((x, y) => x.Date.CompareTo(y.Date));
             List<AnnotationEntity> deploymentEntries =
                 await GetAllTableEntriesAsync<AnnotationEntity>(deploymentsTable);
@@ -145,7 +143,7 @@ namespace RolloutScorerAzureFunction
             return items;
         }
 
-        private static async Task<SecretBundle> GetStorageAccountKeyAsync(AzureServiceTokenProvider tokenProvider, string keyVaultUri, string secretName)
+        private static async Task<SecretBundle> GetSecretBundleFromKeyVaultAsync(AzureServiceTokenProvider tokenProvider, string keyVaultUri, string secretName)
         {
             using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
             {
