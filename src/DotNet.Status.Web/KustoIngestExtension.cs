@@ -3,14 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Configuration;
 
 namespace DotNet.Status.Web
 {
     public static class KustoIngestExtension
     {
-        public static IServiceCollection AddKustoIngest(this IServiceCollection services, Action<IOptions<KustoOptions>> configure)
+        public static IServiceCollection AddKustoIngest(this IServiceCollection services, IConfiguration config)
         {
-            services.Configure(configure);
+            services.Configure<KustoOptions>(config);
             services.AddSingleton<IKustoIngestClientFactory, KustoIngestClientFactory>();
             return services;
         }

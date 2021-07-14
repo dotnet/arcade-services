@@ -38,13 +38,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.BuildBatchSize = c["BuildBatchSize"];
                             });
 
-                            services.Configure<KustoTimelineTelemetryOptions>((o, p) =>
+                            services.Configure<KustoTimelineTelemetryOptions>("KustoTimelineTelemetry", (o, s) =>
                             {
-                                IConfiguration config = p.GetRequiredService<IConfiguration>();
-                                config.GetSection("KustoTimelineTelemetry").Bind(o);
+                                s.Bind(o);
                             });
 
-                            services.AddSingleton<IAzureDevOpsClient>(p =>
+                            services.AddTransient<IAzureDevOpsClient>(p =>
                             {
                                 IConfiguration c = p.GetRequiredService<IConfiguration>();
 
