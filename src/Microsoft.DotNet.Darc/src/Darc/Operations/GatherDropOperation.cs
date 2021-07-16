@@ -1477,19 +1477,15 @@ namespace Microsoft.DotNet.Darc.Operations
                 replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
                 replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
 
-                // blob packages sometimes confuse x86 and x64 as being part of the version
-                string replacedVersion = asset.Version.Replace("64.", "");
-                replacedVersion = replacedVersion.Replace("86.", "");
-
                 // finally, remove the version from the name
-                replacedName = replacedName.Replace($".{replacedVersion}", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace($".{asset.Version}", "", StringComparison.OrdinalIgnoreCase);
 
                 // create a temp asset with the mangled name and version
                 Asset mangledAsset = new Asset(asset.Id,
                     asset.BuildId,
                     asset.NonShipping,
                     replacedName,
-                    replacedVersion,
+                    asset.Version,
                     asset.Locations);
 
                 string packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,
