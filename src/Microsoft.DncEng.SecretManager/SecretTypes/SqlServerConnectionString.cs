@@ -20,6 +20,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             public string DataSource { get; set; }
             public string Database { get; set; }
             public string Permissions { get; set; }
+            public string ExtraSettings { get; set; }
         }
 
         public SqlServerConnectionString(ISystemClock clock, IConsole console)
@@ -154,6 +155,10 @@ ALTER ROLE db_datawriter ADD MEMBER [{nextUserId}]
             };
             var result = connectionString.ToString();
             result = OldifyConnectionString(result);
+            if (!string.IsNullOrEmpty(parameters.ExtraSettings))
+            {
+                result += parameters.ExtraSettings;
+            }
             return new SecretData(result, DateTimeOffset.MaxValue, _clock.UtcNow.AddMonths(1));
         }
 
