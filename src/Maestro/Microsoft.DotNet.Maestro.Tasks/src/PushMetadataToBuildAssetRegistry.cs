@@ -594,7 +594,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 else
                 {
                     Log.LogMessage(MessageImportance.High,
-                        $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} from repoIdentity: {repoIdentity} and commit: {mergedBuild.Commit}.");
+                        $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} for repoIdentity: {repoIdentity} and commit: {mergedBuild.Commit}.");
                     mergedBuild.GitHubRepository = null;
                     mergedBuild.GitHubBranch = null;
                 }
