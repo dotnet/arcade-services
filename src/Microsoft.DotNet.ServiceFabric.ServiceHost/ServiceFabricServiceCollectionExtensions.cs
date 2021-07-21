@@ -3,11 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Configuration;
 using System.Fabric;
 using JetBrains.Annotations;
 using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Services.Remoting;
 
@@ -53,6 +56,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     provider.GetRequiredService<TelemetryClient>(),
                     provider.GetRequiredService<ServiceContext>()));
             return services;
+        }
+
+        public static IServiceCollection RegisterOptionsForConfigurationChangeNotifications<TOptions>(this IServiceCollection services, [CanBeNull] string name, IConfiguration config)
+        {
+            name ??= Options.DefaultName;
+            return services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(
+                new ConfigurationChangeTokenSource<TOptions>(name, config));
+
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Models;
 using DotNet.Status.Web.Options;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -184,7 +185,8 @@ namespace DotNet.Status.Web
             services.AddControllers()
                 .AddGitHubWebHooks();
 
-            services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
+            services.AddApplicationInsightsTelemetry();
+            services.Configure<ApplicationInsightsServiceOptions>(Configuration.GetSection("ApplicationInsights"));
             services.Configure<LoggerFilterOptions>(o =>
             {
                 // This handler is added by 'AddApplicationInsightsTelemetry' above and hard limits
@@ -239,7 +241,7 @@ namespace DotNet.Status.Web
                     })
                 .AddExternalCookie()
                 ;
-            services.AddAzureTableTokenStore(o => Configuration.GetSection("AzureTableTokenStore").Bind(o));
+            services.AddAzureTableTokenStore(Configuration.GetSection("AzureTableTokenStore"));
             services.AddAuthorization(
                 options =>
                 {
@@ -254,7 +256,7 @@ namespace DotNet.Status.Web
                             }
                         });
                 });
-            services.AddKustoIngest(options => Configuration.GetSection("Kusto").Bind(options));
+            services.AddKustoIngest(Configuration.GetSection("Kusto"));
 
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();

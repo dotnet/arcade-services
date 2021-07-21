@@ -25,19 +25,15 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         }
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
-        {
-            DateTimeOffset now = _clock.UtcNow;
-            CloudStorageAccount account = CloudStorageAccount.Parse(await context.GetSecretValue(parameters.ConnectionString));
-            CloudBlobClient blobClient = account.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference(parameters.Container);
-            string sas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy
-            {
-                Permissions = SharedAccessBlobPolicy.PermissionsFromString(parameters.Permissions),
-                SharedAccessExpiryTime = now.AddMonths(1),
-            });
-            string result = container.Uri.AbsoluteUri + sas;
+        {            
+            DateTimeOffset expiresOn = _clock.UtcNow.AddMonths(1);
+            DateTimeOffset nextRotationOn = _clock.UtcNow.AddDays(15);
 
-            return new SecretData(result, now.AddMonths(1), now.AddDays(15));
+            string connectionString = await context.GetSecretValue(parameters.ConnectionString);
+            (string containerUri, string sas) containerUriAndSas = StorageUtils.GenerateBlobContainerSas(connectionString, parameters.Container, parameters.Permissions, expiresOn);
+            string uriWithSas = containerUriAndSas.containerUri + containerUriAndSas.sas;
+
+            return new SecretData(uriWithSas, expiresOn, nextRotationOn);
         }
     }
 }
