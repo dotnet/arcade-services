@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
 
         public IGitHubClient CreateGitHubAppClient()
         {
-            return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp());
+            return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(), AuthenticationType.Bearer);
         }
     }
 }
