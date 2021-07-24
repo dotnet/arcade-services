@@ -36,7 +36,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             if (!_console.IsInteractive)
             {
-                throw new InvalidOperationException($"User intervention required for creation or rotation of an AD Application.");
+                throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of an AD Application.");
             }
 
             string appId = await context.GetSecretValue(new SecretReference(context.SecretName + AppIdSuffix));

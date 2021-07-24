@@ -237,29 +237,20 @@ namespace Maestro.Web
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure<GitHubTokenProviderOptions>(
-                (options, provider) =>
-                {
-                    IConfigurationSection section = Configuration.GetSection("GitHub");
-                    section.Bind(options);
-                });
+            services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHub"));
             services.AddAzureDevOpsTokenProvider();
+
+            services.RegisterOptionsForConfigurationChangeNotifications<AzureDevOpsTokenProviderOptions>(null, Configuration);
             services.Configure<AzureDevOpsTokenProviderOptions>(
                 (options, provider) =>
                 {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+                    var tokenMap = Configuration.GetSection("AzureDevOps:Tokens").GetChildren();
                     foreach (IConfigurationSection token in tokenMap)
                     {
                         options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
                     }
                 });
-            services.AddKustoClientProvider(
-                options =>
-                {
-                    IConfigurationSection section = Configuration.GetSection("Kusto");
-                    section.Bind(options);
-                });
+            services.AddKustoClientProvider("Kusto");
 
             // We do not use AddMemoryCache here. We use our own cache because we wish to
             // use a sized cache and some components, such as EFCore, do not implement their caching

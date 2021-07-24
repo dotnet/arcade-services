@@ -20,4 +20,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DotNet.Internal.DependencyInjection\Microsoft.DotNet.Internal.DependencyInjection.csproj" />
+  </ItemGroup>
+
 </Project>

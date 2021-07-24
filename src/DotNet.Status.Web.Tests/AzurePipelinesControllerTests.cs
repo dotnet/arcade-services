@@ -90,10 +90,12 @@ namespace DotNet.Status.Web.Tests
             {
                 "repo"
             };
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
-            await using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
+            await using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(false).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
         }
 
         [Test]
@@ -167,10 +169,12 @@ namespace DotNet.Status.Web.Tests
             {
                 "repo"
             };
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
-            using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
+            using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(false).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
         }
 
         [Test]
@@ -236,12 +240,163 @@ namespace DotNet.Status.Web.Tests
             };
 
             var expectedOwners = new List<string>();
-
             var expectedNames = new List<string>();
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
 
-            using TestData testData = await TestData.Default.WithBuildData(build).BuildAsync();
+            using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(false).BuildAsync();
             var response = await testData.Controller.BuildComplete(buildEvent);
-            VerifyGitHubCalls(testData, expectedOwners, expectedNames);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
+        }
+
+        [Test]
+        public async Task BuildCompleteUpdateExistingIssueExists()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path3",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+            };
+
+            var expectedIssueOwners = new List<string>();
+            var expectedIssueNames = new List<string>();
+
+            var expectedCommentOwners = new List<string>
+            {
+                "dotnet"
+            };
+            var expectedCommentNames = new List<string>
+            {
+                "repo"
+            };
+
+            await using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(true).BuildAsync();
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            VerifyGitHubCalls(testData, expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
+        }
+
+        [Test]
+        public async Task BuildCompleteUpdateExistingIssueDoesNotExist()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["name"] = "path3",
+                    ["path"] = "\\test\\definition"
+                },
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+            };
+
+            var expectedIssueOwners = new List<string>
+            {
+                "dotnet"
+            };
+            var expectedIssueNames = new List<string>
+            {
+                "repo"
+            };
+
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
+
+            await using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(false).BuildAsync();
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            VerifyGitHubCalls(testData, expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
         }
 
         [TestDependencyInjectionSetup]
@@ -279,6 +434,14 @@ namespace DotNet.Status.Web.Tests
                                     Assignee = "assignee",
                                     IssuesId = "first-issues",
                                     Tags = new[] {"tag1"}
+                                },
+                                new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
+                                {
+                                    Project = "test-project-name",
+                                    DefinitionPath = "\\test\\definition\\path3",
+                                    Branches = new string[] { "sourceBranch" },
+                                    Assignee = "assignee",
+                                    IssuesId = "second-issues"
                                 }
                             }
                         };
@@ -290,6 +453,14 @@ namespace DotNet.Status.Web.Tests
                                 Owner = "dotnet",
                                 Name = "repo",
                                 Labels = new[] {"label"}
+                            },
+                            new BuildMonitorOptions.IssuesOptions
+                            {
+                                Id = "second-issues",
+                                Owner = "dotnet",
+                                Name = "repo",
+                                Labels = new string[] { "label" },
+                                UpdateExisting = true
                             }
                         };
                     }
@@ -303,22 +474,56 @@ namespace DotNet.Status.Web.Tests
             }
 
             public static
-                Func<IServiceProvider, (List<string> Names, List<string> Owners)>
-                GitHubCalls(IServiceCollection collection, JObject buildData)
+                Func<IServiceProvider, (List<string> IssueNames, List<string> IssueOwners, List<string> CommentNames, List<string> CommentOwners)>
+                GitHubCalls(IServiceCollection collection, JObject buildData, bool expectMatchingTitle)
             {
-                var owners = new List<string>();
-                var names = new List<string>();
+                var commentOwners = new List<string>();
+                var commentNames = new List<string>();
+                var mockGithubComments = new Mock<IIssueCommentsClient>();
+                mockGithubComments.Setup(
+                    m => 
+                        m.Create(Capture.In(commentOwners), 
+                        Capture.In(commentNames), 
+                        It.IsAny<int>(), 
+                        It.IsAny<string>()))
+                    .Returns(Task.FromResult(new Octokit.IssueComment()));
+
+                string title =
+                    expectMatchingTitle ?
+                    $"Build failed: {buildData["definition"]["name"].ToString()}/{buildData["sourceBranch"].ToString().Substring("refs/heads/".Length)} " :
+                    "";
+
+                Octokit.Issue mockIssue = new Issue(
+                    "url", "html", "comments", "events", 123456, ItemState.Open, title,
+                    "body", null, null, null, null, null, null, 1, null, null, DateTimeOffset.MinValue,
+                    null, 123456, "nodeid", false, null, null);
+                    
+                var issueOwners = new List<string>();
+                var issueNames = new List<string>();
                 var mockGithubIssues = new Mock<IIssuesClient>();
                 mockGithubIssues
-                    .Setup(m => m.Create(Capture.In(owners), Capture.In(names), It.IsAny<Octokit.NewIssue>()))
+                    .SetupGet(m => m.Comment)
+                    .Returns(mockGithubComments.Object);
+                mockGithubIssues
+                    .Setup(m => m.Create(Capture.In(issueOwners), Capture.In(issueNames), It.IsAny<Octokit.NewIssue>()))
                     .Returns(Task.FromResult(new Octokit.Issue()));
+                mockGithubIssues
+                    .Setup(m => m.GetAllForRepository(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RepositoryIssueRequest>()))
+                    .Returns(Task.FromResult((IReadOnlyList<Issue>)(new List<Issue> {mockIssue})));
+
+                Octokit.GitHubApp mockGithubApp = new GitHubApp(12345, "app", null, "desc", "url", "url", DateTimeOffset.MinValue, DateTimeOffset.MinValue);
+
+                var mockGithubAppsClient = new Mock<IGitHubAppsClient>();
+                mockGithubAppsClient.Setup(m => m.GetCurrent()).Returns(Task.FromResult(mockGithubApp));
 
                 var mockGithubClient = new Mock<IGitHubClient>();
                 mockGithubClient.SetupGet(m => m.Issue).Returns(mockGithubIssues.Object);
+                mockGithubClient.SetupGet(m => m.GitHubApps).Returns(mockGithubAppsClient.Object);
 
                 var mockGithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
                 mockGithubClientFactory.Setup(m => m.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
                     .Returns(Task.FromResult(mockGithubClient.Object));
+                mockGithubClientFactory.Setup(m => m.CreateGitHubAppClient()).Returns(mockGithubClient.Object);
 
                 var project = new[]
                 {
@@ -362,14 +567,21 @@ namespace DotNet.Status.Web.Tests
                 collection.AddSingleton(mockGithubClientFactory.Object);
                 collection.AddSingleton(mockAzureClientFactory.Object);
 
-                return _ => (names, owners);
+                return _ => (issueNames, issueOwners, commentNames, commentOwners);
             }
         }
 
-        private void VerifyGitHubCalls(TestData testData, List<string> expectedOwners, List<string> expectedNames)
+        private void VerifyGitHubCalls(
+            TestData testData, 
+            List<string> expectedOwners, 
+            List<string> expectedNames,
+            List<string> expectedCommentOwners,
+            List<string> expectedCommentNames)
         {
-            testData.GitHubCalls.Owners.Should().BeEquivalentTo(expectedOwners);
-            testData.GitHubCalls.Names.Should().BeEquivalentTo(expectedNames);
+            testData.GitHubCalls.IssueOwners.Should().BeEquivalentTo(expectedOwners);
+            testData.GitHubCalls.IssueNames.Should().BeEquivalentTo(expectedNames);
+            testData.GitHubCalls.CommentOwners.Should().BeEquivalentTo(expectedCommentOwners);
+            testData.GitHubCalls.CommentNames.Should().BeEquivalentTo(expectedCommentNames);
         }
     }
 }

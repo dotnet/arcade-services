@@ -351,6 +351,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             { $"{githubRepoPrefix}dotnet/templating", (coreRepoCategory, "templating") },
             { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
+            { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -359,6 +360,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             { $"{azdoRepoPrefix}dotnet-templating", (coreRepoCategory, "templating") },
             { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
+            { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
 
             // ASPNET
 
@@ -1475,19 +1477,15 @@ namespace Microsoft.DotNet.Darc.Operations
                 replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
                 replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
 
-                // blob packages sometimes confuse x86 and x64 as being part of the version
-                string replacedVersion = asset.Version.Replace("64.", "");
-                replacedVersion = replacedVersion.Replace("86.", "");
-
                 // finally, remove the version from the name
-                replacedName = replacedName.Replace($".{replacedVersion}", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace($".{asset.Version}", "", StringComparison.OrdinalIgnoreCase);
 
                 // create a temp asset with the mangled name and version
                 Asset mangledAsset = new Asset(asset.Id,
                     asset.BuildId,
                     asset.NonShipping,
                     replacedName,
-                    replacedVersion,
+                    asset.Version,
                     asset.Locations);
 
                 string packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,

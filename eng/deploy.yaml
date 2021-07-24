@@ -11,17 +11,49 @@ parameters:
   StatusVariableGroup: ''
 
   # --- Secret Variable group requirements ---
-  # maestro-admin-sql-connection-string
+  # build-asset-registry-admin-connection-string
   # scenario-test-maestro-token
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
   # dotnet-build-bot-dotnet-eng-status-token
+  # secret-manager-scenario-tests-client-secret
 
 stages:
+- stage: ValidateSecrets
+  dependsOn:
+  - build
+  jobs:
+  - job: ValidateSecrets
+    pool:
+      vmImage: windows-2019
+    steps:
+    - task: UseDotNet@2
+      displayName: Install Correct .NET Version
+      inputs:
+        useGlobalJson: true
+
+    - task: UseDotNet@2
+      displayName: Install .NET 3.1 runtime
+      inputs:
+        packageType: runtime
+        version: 3.1.x
+
+    - script: dotnet build
+      workingDirectory: src/Microsoft.DncEng.SecretManager
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: DotNet Eng Services Secret Manager
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          Get-ChildItem .vault-config/*.yaml |% { dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize --verify-only $_}
+
 - stage: approval
   dependsOn:
   - build
   - Validate
+  - ValidateSecrets
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -82,7 +114,7 @@ stages:
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(maestro-admin-sql-connection-string)"
+        ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
         azurePowerShellVersion: LatestVersion
     - task: PowerShell@2
       displayName: update-database.ps1
@@ -92,19 +124,19 @@ stages:
         arguments: Maestro.Data.dll
         workingDirectory: $(Pipeline.Workspace)/Maestro.Data
       env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(maestro-admin-sql-connection-string)
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Remove
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(maestro-admin-sql-connection-string)"
+        ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
         azurePowerShellVersion: LatestVersion
       condition: always()
 
   - job: deployMaestro
     displayName: Deploy maestro service fabric application
-    dependsOn: 
+    dependsOn:
     - updateDatabase
     steps:
     - download: current
@@ -188,7 +220,7 @@ stages:
         enableCustomDeployment: true
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
-  
+
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
     dependsOn:
@@ -260,10 +292,12 @@ stages:
   displayName: Validate deployment
   pool:
     vmImage: vs2017-win2016
-  dependsOn: 
+  dependsOn:
   - deploy
   variables:
   - group: ${{ parameters.VariableGroup }}
+  # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
+  - group: Secret-Manager-Scenario-Tests
   - name: MaestroTestEndpoint
     value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
@@ -273,6 +307,8 @@ stages:
     steps:
     - download: current
       artifact: PackageArtifacts
+    - download: current
+      artifact: Microsoft.DncEng.SecretManager.ScenarioTests
     - download: current
       artifact: Maestro.ScenarioTests
 
@@ -288,6 +324,17 @@ stages:
         version: 3.1.x
 
     - task: VSTest@2
+      displayName: Secret Manager Scenario Tests
+      inputs:
+        testSelector: testAssemblies
+        testAssemblyVer2: |
+          Microsoft.DncEng.SecretManager.ScenarioTests.dll
+        searchFolder: $(Pipeline.Workspace)/Microsoft.DncEng.SecretManager.ScenarioTests
+      env:
+        AzureServicesAuthConnectionString: $(secret-manager-scenario-tests-client-secret)
+
+    - task: VSTest@2
+      displayName: Maestro Scenario Tests
       inputs:
         testSelector: testAssemblies
         testAssemblyVer2: |
@@ -312,4 +359,4 @@ stages:
       displayName: Get DARC version
 
 
-    
+

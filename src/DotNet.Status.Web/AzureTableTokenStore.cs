@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -234,9 +235,9 @@ namespace DotNet.Status.Web
 
     public static class AzureTableTokenStoreExtension
     {
-        public static IServiceCollection AddAzureTableTokenStore(this IServiceCollection services, Action<AzureTableTokenStoreOptions> configure)
+        public static IServiceCollection AddAzureTableTokenStore(this IServiceCollection services, IConfiguration configuration)
         {
-            services.Configure(configure);
+            services.Configure<AzureTableTokenStoreOptions>(configuration);
             services.AddSingleton<AzureTableTokenStore>();
             services.AddSingleton<ITokenRevocationProvider>(s => s.GetRequiredService<AzureTableTokenStore>());
             services.AddSingleton<ITokenStore>(s => s.GetRequiredService<AzureTableTokenStore>());
