@@ -1,12 +1,6 @@
 # The .NET Core Engineering Secret Manager
 This tool is used to track and rotate the secrets in one or more key vaults, and to validate the usages of the same. This is done through a yaml manifest file for each vault, and json settings files for each service.
 
-## Rotating secrets
-The synchronize command can be used to rotate secrets that need rotation. It will automatically rotate all secrets that have either expired or hit their rotation time. This command is run as part of a scheduled build to keep all secrets up to date. Any secrets that can be rotated without a human involved will be rotated automatically. For secrets that require human interaction, the build will fail and a human will have to run synchronize.
-
-## Creating new secrets
-New secrets can be created by adding new entries to the manifest file, then running synchronize. The tool will then create the new secret and add it to the secret store.
-
 ## Manifest Files
 A manifest file describes the expected state of a single secret store (currently only Azure Key Vault, but support for other stores can be added easily). The manifest contains an inventory of all secrets and the information required to generate/rotate them. The format is as follows.
 ```yaml
@@ -94,22 +88,58 @@ Each service has at least one settings file. These are expected to be named `set
 }
 ```
 
+## Functionality in the Builds (FR Look Here)
+The Secret Manager is set up to run 3 separate parts in our builds: usage validation during the testing phase, vault validation before deployment, and secret rotation on a weekly cadence.
+
+### Usage Validation
+This step runs the `validate-all` command. This command finds all `settings.json` and `settings.<environment>.json` files and validates those files with the manifests in the repo. This step doesn't talk to azure at all, it simply validates that all `[vault()]` references in the settings files have matching specifications in the appropriate manifest. Failures in this step require either adding missing definitions to the manifest, or removing the offending references in the settings file.
+
+### Pre-Deployment Validation
+This step runs the `synchronize --verify-only` command before the "approval" stage for the deployments. This command compares each manifest with the contents of the corresponding vault, and produces errors if secrets in the vault are missing or out-of-date. Failures in this step can be fixed by running the weekly build again, or by manually running the `synchronize` command.
+
+### Weekly Rotation
+This step runs the `synchronize` command. This compares every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it. Failures in this step are caused by secrets that require rotation and can't be rotated manually. To manually rotate these secrets a human will need to run the `synchronize` command manually and specify the manifest that contains the secret requiring rotation.
+
+
+## Creating new secrets
+New secrets can be created by adding new entries to the manifest file, then running synchronize. The tool will then create the new secret and add it to the secret store.
+
 ## Secret Types
 Each secret in the manifest has a specified type, and these types determine what parameters are required, and what ends up in the secret store. Some secret types require human interaction to generate and/or rotate. For such secrets the tool will prompt the user or fail if in a build context. Some secret types also produce multiple values. These values are all stored with additional suffixes in the secret store. Each type is documented below.
 
 ### Azure Storage
 
+#### Storage Key
+Only use this secret type if the connection string is required in multiple vaults. The storage key should be in one of them, and each vault can have a connection string secret that references the key.
+```yaml
+type: azure-storage-key
+parameters:
+  account: storage account name
+  subscription: Azure subscription id
+```
+
 #### Connection String
 ```yaml
 type: azure-storage-connection-string
 parameters:
-  subscription: Azure subscription id
   account: storage account name
+  # one of the following is required
+  storageKeySecret: SecretReference to an azure-storage-key
+  subscription: Azure subscription id
 ```
 
 #### Container Sas Uri
 ```yaml
 type: azure-storage-container-sas-uri
+parameters:
+  connectionString: SecretReference to the connection string for the account
+  container: storage container name
+  permissions: permissions needed for the sas e.g. 'racwd'
+```
+
+#### Container Sas Token
+```yaml
+type: azure-storage-container-sas-token
 parameters:
   connectionString: SecretReference to the connection string for the account
   container: storage container name
@@ -174,6 +204,16 @@ parameters:
   permissions: 'admin', 'r', 'w', or 'rw'
 ```
 
+### Kusto Connection String
+```yaml
+type: kusto-connection-string
+parameters:
+  dataSource: the DataSource in the connection string
+  initialCatalog: the InitialCatalog in the connection string
+  additionalParameters: and extra 
+  adApplication: SecretReference to the ad-application used for authentication
+```
+
 ### GitHub access token
 ```yaml
 type: github-access-token
@@ -183,11 +223,10 @@ parameters:
 ```
 
 ### GitHub Application Secret
-This type produces 4 values: `<name>-app-id`, `<name>-app-private-key`, `<name>-app-secret`, and `<name>-app-hook`.
+This type produces 5 values: `<name>-app-id`, `<name>-app-private-key`, `<name>-oauth-id`, `<name>-oauth-secret`, and `<name>-app-webhook-secret`.
 ```yaml
 type: github-app-secret
 parameters:
-  appName: name of GitHub app
   hasPrivateKey: boolean
   hasWebHookSecret: boolean
   hasAppSecret: boolean
@@ -207,27 +246,33 @@ This type produces 2 values: `<name>-client-id`, and `<name>-client-secret`.
 type: github-oauth-secret
 parameters:
   appName: name of application
+  description: description
 ```
 
 ### Grafana Api Key
 ```yaml
 type: grafana-api-key
 parameters:
-  environment: staging or production
+  environment: hostname of target grafana instance
 ```
 
 ### Helix Access Token
 ```yaml
 type: helix-access-token
 parameters:
-  environment: staging or production
+  environment: hostname of target helix instance
 ```
 
 ### Maestro Access Token
 ```yaml
 type: maestro-access-token
 parameters:
-  environment: staging or production
+  environment: hostname of target maestro++ instance
+```
+
+### Zen Hub Access Token
+```yaml
+type: zenhub-access-token
 ```
 
 ### Text
@@ -244,4 +289,28 @@ type: domain-account
 parameters:
   accountName: full account name including domain
   description: additional description for rotation of the password
+```
+
+### Azure Active Directory Appljcation
+```yaml
+type: ad-application
+```
+
+### Azure DevOps Access Token
+```yaml
+type: azure-devops-access-token
+parameters:
+  organization: azure devops org
+  requiredScopes: string describing the required scopes
+  # only one of the following is required
+  domainAccountSecret: secret reference to a domain-account
+  gitHubBotAccountSecret: secret reference to a github-account
+```
+
+### Base64 Encode
+This type base64 encodes the referenced secret.
+```yaml
+type: base64-encoder
+parameters:
+  secret: SecretReference to another secret
 ```
