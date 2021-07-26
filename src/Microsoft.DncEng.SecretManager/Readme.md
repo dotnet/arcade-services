@@ -98,7 +98,7 @@ This step runs the `validate-all` command. This command finds all `settings.json
 This step runs the `synchronize --verify-only` command before the "approval" stage for the deployments. This command compares each manifest with the contents of the corresponding vault, and produces errors if secrets in the vault are missing or out-of-date. Failures in this step can be fixed by running the weekly build again, or by manually running the `synchronize` command.
 
 ### Weekly Rotation
-This step runs the `synchronize` command. This compares every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it. Failures in this step are caused by secrets that require rotation and can't be rotated manually. To manually rotate these secrets a human will need to run the `synchronize` command manually and specify the manifest that contains the secret requiring rotation.
+This step runs the `synchronize` command. This compares every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it. Failures in this step are caused by secrets that require rotation and can't be rotated automatically. To manually rotate these secrets a human will need to run the `synchronize` command manually and specify the manifest that contains the secret requiring rotation.
 
 
 ## Creating new secrets
