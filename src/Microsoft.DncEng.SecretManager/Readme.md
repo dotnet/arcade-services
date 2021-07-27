@@ -291,7 +291,7 @@ parameters:
   description: additional description for rotation of the password
 ```
 
-### Azure Active Directory Appljcation
+### Azure Active Directory Application
 ```yaml
 type: ad-application
 ```
