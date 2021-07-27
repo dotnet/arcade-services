@@ -5,6 +5,7 @@
     <IsPackable>true</IsPackable>
     <IsShipping>false</IsShipping>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup><ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
