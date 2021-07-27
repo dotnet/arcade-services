@@ -1626,7 +1626,14 @@ namespace Microsoft.DotNet.Darc.Operations
                                                       _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                       FileAccess.Write))
                 {
-                    HttpRequestManager manager = new HttpRequestManager(client, HttpMethod.Get, sourceUri, Logger, authHeader: authHeader);
+                    HttpRequestManager manager = new HttpRequestManager(
+                        client,
+                        HttpMethod.Get,
+                        sourceUri,
+                        Logger,
+                        authHeader: authHeader,
+                        httpCompletionOption: HttpCompletionOption.ResponseHeadersRead);
+
                     using (var response = await manager.ExecuteAsync())
                     {
                         using (var inStream = await response.Content.ReadAsStreamAsync())
