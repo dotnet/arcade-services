@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.DarcLib
         private readonly string _requestUri;
         private readonly AuthenticationHeaderValue _authHeader;
         private readonly HttpMethod _method;
+        private readonly HttpCompletionOption _httpCompletionOption;
 
         public HttpRequestManager(
             HttpClient client,
@@ -31,7 +32,8 @@ namespace Microsoft.DotNet.DarcLib
             string body = null,
             string versionOverride = null,
             bool logFailure = true,
-            AuthenticationHeaderValue authHeader = null)
+            AuthenticationHeaderValue authHeader = null,
+            HttpCompletionOption httpCompletionOption = HttpCompletionOption.ResponseContentRead)
         {
             _client = client;
             _logger = logger;
@@ -40,6 +42,7 @@ namespace Microsoft.DotNet.DarcLib
             _requestUri = requestUri;
             _method = method;
             _authHeader = authHeader;
+            _httpCompletionOption = httpCompletionOption;
         }
 
         public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
@@ -73,7 +76,7 @@ namespace Microsoft.DotNet.DarcLib
                             message.Headers.Authorization = _authHeader;
                         }
 
-                        response = await _client.SendAsync(message);
+                        response = await _client.SendAsync(message, _httpCompletionOption);
 
                         if (stopRetriesHttpStatusCodes.Contains(response.StatusCode))
                         {

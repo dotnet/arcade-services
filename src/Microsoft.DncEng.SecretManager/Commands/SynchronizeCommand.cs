@@ -125,8 +125,19 @@ namespace Microsoft.DncEng.SecretManager.Commands
                             _console.WriteLine($"Secret scheduled for rotation on {nextRotation}, will rotate.");
                             // we have hit the rotation time, rotate
                             regenerate = true;
+
+                            // since the rotation runs weekly, we need a 1 week grace period
+                            // where verification runs will not fail, but rotation will happen.
+                            // otherwise a secret scheduled for rotation on tuesday, will cause
+                            // a build failure on wednesday, before it gets rotated normally on the following monday
+                            // the verification mode is to catch the "the rotation hasn't happened in months" case
+                            if (_verifyOnly && nextRotation > now.AddDays(-7))
+                            {
+                                _console.WriteLine("Secret is within verification grace period.");
+                                regenerate = false;
+                            }
                         }
-                        else if (expires <= now)
+                        if (expires <= now)
                         {
                             _console.WriteLine($"Secret expired on {expires}, will rotate.");
                             // the secret has expired, this shouldn't happen in normal operation but we should rotate
