@@ -76,13 +76,15 @@
         "Id": "dotnet-installer-infra",
         "Owner": "dotnet",
         "Name": "installer",
-        "Labels": [ "Area-Infrastructure" ]
+        "Labels": [ "Area-Infrastructure" ],
+        "UpdateExisting": true
       },
       {
         "Id": "dotnet-sdk-infra",
         "Owner": "dotnet",
         "Name": "sdk",
-        "Labels": [ "Area-Infrastructure" ]
+        "Labels": [ "Area-Infrastructure" ],
+        "UpdateExisting": true
       },
       {
         "Id": "dotnet-runtime-infra",
