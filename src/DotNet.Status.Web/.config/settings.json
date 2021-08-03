@@ -46,6 +46,20 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
           "Branches": [ "main" ],
+          "IssuesId": "dotnet-installer-infra",
+          "Tags": [ "installer" ]
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-sdk-infra",
+          "Tags": [ "sdk" ]
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
+          "Branches": [ "main" ],
           "IssuesId": "dotnet-runtime-infra",
           "Tags": [ "runtime" ]
         }
@@ -57,6 +71,18 @@
         "Owner": "dotnet",
         "Name": "core-eng",
         "Labels": [ "Build Failed" ]
+      },
+      {
+        "Id": "dotnet-installer-infra",
+        "Owner": "dotnet",
+        "Name": "installer",
+        "Labels": [ "Area-Infrastructure" ]
+      },
+      {
+        "Id": "dotnet-sdk-infra",
+        "Owner": "dotnet",
+        "Name": "sdk",
+        "Labels": [ "Area-Infrastructure" ]
       },
       {
         "Id": "dotnet-runtime-infra",
