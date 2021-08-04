@@ -9,6 +9,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public interface IInstallationLookup
     {
         Task<long> GetInstallationId(string repositoryUrl);
+        Task<bool> IsOrganizationSupported(string org);
     }
 
     public static class InstallationLookup
