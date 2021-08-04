@@ -268,8 +268,9 @@ namespace DotNet.Status.Web.Controllers
 
                         if (matchingIssue != null)
                         {
+                            _logger.LogInformation("Found matching issue {issueNumber} in {owner}/{repo}. Will attempt to add a new comment.", matchingIssue.Number, repo.Owner, repo.Name);
                             // Add a new comment to the issue with the body
-                            IssueComment newComment = await github.Issue.Comment.Create(repo.Owner, repo.Name, matchingIssue.Id, body);
+                            IssueComment newComment = await github.Issue.Comment.Create(repo.Owner, repo.Name, matchingIssue.Number, body);
                             _logger.LogInformation("Logged comment in {owner}/{repo}#{issueNumber} for build failure", repo.Owner, repo.Name, matchingIssue.Number);
 
                             return;

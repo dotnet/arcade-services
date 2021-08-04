@@ -7,7 +7,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         where TParameters : new()
     {
         protected const string GitHubPasswordSuffix = "-password";
-        protected const string GitHubSecretSuffix = "-secret";
+        protected const string GitHubSecretSuffix = "-otp";
         protected const string GitHubRecoveryCodesSuffix = "-recovery-codes";
 
         protected ISystemClock Clock { get; }
