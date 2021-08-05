@@ -596,7 +596,7 @@ namespace Microsoft.DotNet.DarcLib
                         continue;
                     }
 
-                    _logger.LogInformation($"Dependency {dependencyToUpdate} will be updated to " +
+                    _logger.LogInformation($"Dependency {dependencyToUpdate.Name} will be updated to " +
                         $"{cpdDependency.Version} from {cpdDependency.RepoUri}@{cpdDependency.Commit}.");
 
                     Asset coherentAsset = await DisambiguateAssetsAsync(remoteFactory, buildCache, nugetConfigCache,
