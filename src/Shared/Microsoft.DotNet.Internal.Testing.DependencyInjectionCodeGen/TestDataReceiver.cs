@@ -303,7 +303,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                 type is INamedTypeSymbol namedPType &&
                 namedPType.IsGenericType &&
                 !namedPType.IsUnboundGenericType &&
-                namedPType.ConstructedFrom.FullName() == "System.Nullable";
+                namedPType.ConstructedFrom.FullName() == "System.Nullable<T>";
         }
     }
 }
