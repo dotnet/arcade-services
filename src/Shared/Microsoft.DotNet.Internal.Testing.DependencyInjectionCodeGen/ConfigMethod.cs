@@ -19,7 +19,17 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
         {
             Name = name;
             Parameters = parameters;
-            ReturnTypeSymbol = returnTypeSymbol;
+            if (returnTypeSymbol != null)
+            {
+                if (returnTypeSymbol.StartsWith("("))
+                {
+                    ReturnTypeSymbol = returnTypeSymbol;
+                }
+                else
+                {
+                    ReturnTypeSymbol = "global::" + returnTypeSymbol;
+                }
+            }
             ConfigureAllParameters = configureAllParameters;
             IsConfigurationAsync = isConfigurationAsync;
             IsFetchAsync = isFetchAsync;
