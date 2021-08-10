@@ -21,6 +21,11 @@
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
+	
+	<DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
+	<DisableImplicitNamespaceImports_DotNet>true</DisableImplicitNamespaceImports_DotNet>
+	<DisableImplicitNamespaceImports_Web>true</DisableImplicitNamespaceImports_Web>
+	<DisableImplicitNamespaceImports_Worker>true</DisableImplicitNamespaceImports_Worker>
   </PropertyGroup>
 
   <PropertyGroup>
