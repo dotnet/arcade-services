@@ -413,7 +413,7 @@ namespace SubscriptionActorService
                     $"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
             }
 
-            (string targetRepository, string targetBranch) = await GetTargetAsync();
+            (string targetRepository, _) = await GetTargetAsync();
             IRemote darc = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             InProgressPullRequest pr = maybePr.Value;
