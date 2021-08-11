@@ -61,20 +61,21 @@ namespace SubscriptionActorService
             // a deterministic modification of that for the name of the semaphore (using a raw path as the name throws)
             string semaphoreName = _tempFiles.GetFilePath("git-download-semaphore").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
             Semaphore crossProcessSemaphore = new Semaphore(1, 1, semaphoreName);
-            crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5));
-
-            string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
-            string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
-            string remoteFileName = pathSegments[pathSegments.Length - 1];
-
-            // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
-            // falling through into CheckGitInstallation()
-            string gitRoot = _tempFiles.GetFilePath("git-portable");
-            string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
-            _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
 
             try
             {
+                crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5));
+
+                string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
+                string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
+                string remoteFileName = pathSegments[pathSegments.Length - 1];
+
+                // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
+                // falling through into CheckGitInstallation()
+                string gitRoot = _tempFiles.GetFilePath("git-portable");
+                string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
+                _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
+
                 // Determine whether another process/ thread ended up getting the lock and downloaded git in the meantime.
                 if (!File.Exists(_gitExecutable))
                 {
