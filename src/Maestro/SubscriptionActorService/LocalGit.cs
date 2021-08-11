@@ -21,7 +21,6 @@ namespace SubscriptionActorService
     {
         private string _gitExecutable;
         private readonly TemporaryFiles _tempFiles;
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly IConfiguration _configuration;
         private readonly ILogger<LocalGit> _logger;
         private readonly OperationManager _operations;
@@ -53,94 +52,66 @@ namespace SubscriptionActorService
                     return _gitExecutable;
                 }
                 catch
-                { 
+                {
                     _logger.LogWarning($"Something went wrong with validating git executable at {_gitExecutable}. Downloading new version.");
                 }
             }
 
-            // First, make sure we're the only actor in the process doing this
-            await _semaphoreSlim.WaitAsync();
-
             // Since the collisions are already using paths from _tempFiles.GetFilePath (instance-specific) we'll try
-            // a deterministic modification of that for the name of the mutex (using a raw path as the name throws)
-            string mutexName = _tempFiles.GetFilePath("git-download-mutex").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
+            // a deterministic modification of that for the name of the semaphore (using a raw path as the name throws)
+            string semaphoreName = _tempFiles.GetFilePath("git-download-mutex").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
+            Semaphore crossProcessSemaphore = new Semaphore(1, 1, semaphoreName);
+            crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5));
 
-            using (var mutex = new Mutex(false, mutexName))
+            string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
+            string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
+            string remoteFileName = pathSegments[pathSegments.Length - 1];
+
+            // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
+            // falling through into CheckGitInstallation()
+            string gitRoot = _tempFiles.GetFilePath("git-portable");
+            string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
+            _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
+
+            try
             {
-                bool mutexAcquired = false;
-
-                // The Portable Git is around ~120 MB so 5 minutes should be plenty of time for the other Actor to
-                // download and unzip, otherwise we'll just throw/retry when the TimeoutException is thrown, allowing
-                // even more time for the instance that is downloading.
-                try
+                // Determine whether another process/ thread ended up getting the lock and downloaded git in the meantime.
+                if (!File.Exists(_gitExecutable))
                 {
-                    // acquire the mutex (or timeout after 5 minutes)
-                    // will return false if it timed out
-                    mutexAcquired = mutex.WaitOne((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
-                }
-                catch (AbandonedMutexException)
-                {
-                    // "abandoned" means still acquired
-                    mutexAcquired = true;
-                }
-
-                // if it wasn't acquired, it timed out, throw so it goes to retry.
-                if (!mutexAcquired)
-                {
-                    throw new TimeoutException("Timed out acquiring a Mutex for git download, will retry.");
-                }
-
-                string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
-                string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
-                string remoteFileName = pathSegments[pathSegments.Length - 1];
-
-                // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
-                // falling through into CheckGitInstallation()
-                string gitRoot = _tempFiles.GetFilePath("git-portable");
-                string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
-                _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
-
-                try
-                {
-                    // Determine whether another process/ thread ended up getting the lock and downloaded git in the meantime.
-                    if (!File.Exists(_gitExecutable))
+                    using (_operations.BeginOperation($"Installing a local copy of git"))
                     {
-                        using (_operations.BeginOperation($"Installing a local copy of git"))
+                        string gitZipFile = Path.Combine(gitRoot, remoteFileName);
+
+                        _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
+
+                        if (Directory.Exists(targetPath))
                         {
-                            string gitZipFile = Path.Combine(gitRoot, remoteFileName);
+                            _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
 
-                            _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
-
-                            if (Directory.Exists(targetPath))
-                            {
-                                _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
-
-                                // https://github.com/dotnet/arcade/issues/7343
-                                // If this continues to fail despite having both process/thread semaphores wrapping it, we should consider
-                                // killing any git.exe whose image path resides under this folder or simply using another folder and wasting disk space.
-                                Directory.Delete(targetPath, true);
-                            }
-
-                            Directory.CreateDirectory(targetPath);
-
-                            using (HttpClient client = new HttpClient())
-                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
-                            using (var inStream = await client.GetStreamAsync(gitLocation))
-                            {
-                                await inStream.CopyToAsync(outStream);
-                            }
-
-                            _logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
-
-                            ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
+                            // https://github.com/dotnet/arcade/issues/7343
+                            // If this continues to fail despite having both process/thread semaphores wrapping it, we should consider
+                            // killing any git.exe whose image path resides under this folder or simply using another folder and wasting disk space.
+                            Directory.Delete(targetPath, true);
                         }
+
+                        Directory.CreateDirectory(targetPath);
+
+                        using (HttpClient client = new HttpClient())
+                        using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
+                        using (var inStream = await client.GetStreamAsync(gitLocation))
+                        {
+                            await inStream.CopyToAsync(outStream);
+                        }
+
+                        _logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
+
+                        ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
                     }
                 }
-                finally
-                {
-                    mutex.ReleaseMutex();
-                    _semaphoreSlim.Release();
-                }
+            }
+            finally
+            {
+                crossProcessSemaphore.Release();
             }
 
             // Will throw if something is wrong with the git executable, forcing a retry
