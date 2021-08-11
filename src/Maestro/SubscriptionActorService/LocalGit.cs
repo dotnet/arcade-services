@@ -118,9 +118,6 @@ namespace SubscriptionActorService
                                 // https://github.com/dotnet/arcade/issues/7343
                                 // If this continues to fail despite having both process/thread semaphores wrapping it, we should consider
                                 // killing any git.exe whose image path resides under this folder or simply using another folder and wasting disk space.
-
-                                // However, since we now only check for the executable's presence, if we somehow do just hang a git.exe or two,
-                                // since we already know _gitExecutable we'll be able to just test if it runs.
                                 Directory.Delete(targetPath, true);
                             }
 
