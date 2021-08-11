@@ -62,59 +62,59 @@ namespace SubscriptionActorService
             string semaphoreName = _tempFiles.GetFilePath("git-download-semaphore").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
             Semaphore crossProcessSemaphore = new Semaphore(1, 1, semaphoreName);
 
-            try
+            if (crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5)))
             {
-                crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5));
-
-                string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
-                string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
-                string remoteFileName = pathSegments[pathSegments.Length - 1];
-
-                // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
-                // falling through into CheckGitInstallation()
-                string gitRoot = _tempFiles.GetFilePath("git-portable");
-                string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
-                _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
-
-                // Determine whether another process/ thread ended up getting the lock and downloaded git in the meantime.
-                if (!File.Exists(_gitExecutable))
+                try
                 {
-                    using (_operations.BeginOperation($"Installing a local copy of git"))
+                    string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
+                    string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
+                    string remoteFileName = pathSegments[pathSegments.Length - 1];
+
+                    // There are multiple checks whether Git Works, so if it's already there, we'll just rely on 
+                    // falling through into CheckGitInstallation()
+                    string gitRoot = _tempFiles.GetFilePath("git-portable");
+                    string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
+                    _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
+
+                    // Determine whether another process/ thread ended up getting the lock and downloaded git in the meantime.
+                    if (!File.Exists(_gitExecutable))
                     {
-                        string gitZipFile = Path.Combine(gitRoot, remoteFileName);
-
-                        _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
-
-                        if (Directory.Exists(targetPath))
+                        using (_operations.BeginOperation($"Installing a local copy of git"))
                         {
-                            _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
+                            string gitZipFile = Path.Combine(gitRoot, remoteFileName);
 
-                            // https://github.com/dotnet/arcade/issues/7343
-                            // If this continues to fail despite having a named semaphore, we should consider 
-                            // killing any git.exe whose image path resides under this folder, or simply using another folder and wasting disk space.
-                            Directory.Delete(targetPath, true);
+                            _logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
+
+                            if (Directory.Exists(targetPath))
+                            {
+                                _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
+
+                                // https://github.com/dotnet/arcade/issues/7343
+                                // If this continues to fail despite having a named semaphore, we should consider 
+                                // killing any git.exe whose image path resides under this folder, or simply using another folder and wasting disk space.
+                                Directory.Delete(targetPath, true);
+                            }
+
+                            Directory.CreateDirectory(targetPath);
+
+                            using (HttpClient client = new HttpClient())
+                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
+                            using (var inStream = await client.GetStreamAsync(gitLocation))
+                            {
+                                await inStream.CopyToAsync(outStream);
+                            }
+
+                            _logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
+
+                            ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
                         }
-
-                        Directory.CreateDirectory(targetPath);
-
-                        using (HttpClient client = new HttpClient())
-                        using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
-                        using (var inStream = await client.GetStreamAsync(gitLocation))
-                        {
-                            await inStream.CopyToAsync(outStream);
-                        }
-
-                        _logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
-
-                        ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
                     }
                 }
+                finally
+                {
+                    crossProcessSemaphore.Release();
+                }
             }
-            finally
-            {
-                crossProcessSemaphore.Release();
-            }
-
             // Will throw if something is wrong with the git executable, forcing a retry
             LocalHelpers.CheckGitInstallation(_gitExecutable, _logger);
             return _gitExecutable;
