@@ -9,5 +9,6 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public class GitHubClientOptions
     {
         public ProductHeaderValue ProductHeader { get; set; }
+        public string[] AllowOrgs { get; set; }
     }
 }

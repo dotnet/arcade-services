@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -33,10 +34,27 @@ namespace Microsoft.DotNet.GitHub.Authentication
             _log = log;
         }
 
+        public async Task<bool> IsOrganizationSupported(string org)
+        {
+            return await GetInstallationIdForOrg(org.ToLowerInvariant()) != 0;
+        }
+
         public async Task<long> GetInstallationId(string repositoryUrl)
         {
             string[] segments = new Uri(repositoryUrl, UriKind.Absolute).Segments;
-            string org = segments[segments.Length - 2].TrimEnd('/').ToLowerInvariant();
+            string org = segments[^2].TrimEnd('/').ToLowerInvariant();
+            
+            return await GetInstallationIdForOrg(org);
+        }
+
+        private async Task<long> GetInstallationIdForOrg(string org)
+        {
+            string[] allowed = _options.Value.AllowOrgs;
+            if (allowed != null && !allowed.Contains(org))
+            {
+                // We have an allow list, and this org isn't in it, bail
+                return 0;
+            }
 
             if (HasCachedValue(org, out long installation))
             {
