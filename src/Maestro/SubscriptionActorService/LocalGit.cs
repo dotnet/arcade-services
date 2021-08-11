@@ -59,7 +59,7 @@ namespace SubscriptionActorService
 
             // Since the collisions are already using paths from _tempFiles.GetFilePath (instance-specific) we'll try
             // a deterministic modification of that for the name of the semaphore (using a raw path as the name throws)
-            string semaphoreName = _tempFiles.GetFilePath("git-download-mutex").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
+            string semaphoreName = _tempFiles.GetFilePath("git-download-semaphore").Replace('/', '-').Replace('\\', '-').Replace(':', '-');
             Semaphore crossProcessSemaphore = new Semaphore(1, 1, semaphoreName);
             crossProcessSemaphore.WaitOne(TimeSpan.FromMinutes(5));
 
@@ -89,8 +89,8 @@ namespace SubscriptionActorService
                             _logger.LogInformation($"Target directory {targetPath} already exists. Deleting it.");
 
                             // https://github.com/dotnet/arcade/issues/7343
-                            // If this continues to fail despite having both process/thread semaphores wrapping it, we should consider
-                            // killing any git.exe whose image path resides under this folder or simply using another folder and wasting disk space.
+                            // If this continues to fail despite having a named semaphore, we should consider 
+                            // killing any git.exe whose image path resides under this folder, or simply using another folder and wasting disk space.
                             Directory.Delete(targetPath, true);
                         }
 
