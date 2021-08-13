@@ -100,12 +100,14 @@ This step runs the `synchronize --verify-only` command before the "approval" sta
 ### Weekly Rotation
 This step runs the `synchronize` command. This compares every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it. Failures in this step are caused by secrets that require rotation and can't be rotated automatically. To manually rotate these secrets a human will need to run the `synchronize` command manually and specify the manifest that contains the secret requiring rotation.
 
+## Rotating Secrets On-Demand
+Secrets can be rotated on-demand with the synchronize command. Just pass `--force` to rotate all secrets in the manifest, or `--force-secret=<secretName>` one or more times to rotate a specific secret or secrets.
+
 ## Onboarding a new Repo
-- if .config/dotnet-tools.json doesn't exist
-  - dotnet new tool manifest
-- dotnet tool install microsoft.dnceng.secretmanager --version 1.1.0-*
-- create manifests for vaults in .vault-config
-- Add the following stage to a weekly build
+- If .config/dotnet-tools.json doesn't exist, run `dotnet new tool manifest`
+- Run `dotnet tool install microsoft.dnceng.secretmanager --version 1.1.0-*`
+- Create manifests for vaults in `$(RepoRoot)/.vault-config`. The path is arbitrary, but must match the scripts below.
+- Add the following stage to a weekly build:
 ```yaml
   - stage: SynchronizeSecrets
     jobs:
@@ -134,7 +136,7 @@ This step runs the `synchronize` command. This compares every secret specified i
           inlineScript: |
             Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize $_}
 ```
-- Add the following steps immediately after the compilation for PR and CI builds
+- Add the following steps immediately after the compilation for PR and CI builds:
 ```yaml
 - script: dotnet tool restore
 
@@ -146,7 +148,7 @@ This step runs the `synchronize` command. This compares every secret specified i
     dotnet secret-manager validate-all -b src @manifestArgs
   displayName: Verify Secret Usages
 ```
-- Add the following stage before the "approval" stage that precedes deployment
+- Add the following stage before the "approval" stage that precedes deployment:
 ```yaml
 - stage: ValidateSecrets
   dependsOn:
