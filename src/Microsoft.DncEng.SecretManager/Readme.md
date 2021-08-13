@@ -100,6 +100,86 @@ This step runs the `synchronize --verify-only` command before the "approval" sta
 ### Weekly Rotation
 This step runs the `synchronize` command. This compares every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it. Failures in this step are caused by secrets that require rotation and can't be rotated automatically. To manually rotate these secrets a human will need to run the `synchronize` command manually and specify the manifest that contains the secret requiring rotation.
 
+## Rotating Secrets On-Demand
+Secrets can be rotated on-demand with the synchronize command. Just pass `--force` to rotate all secrets in the manifest, or `--force-secret=<secretName>` one or more times to rotate a specific secret or secrets.
+
+## Onboarding a new Repo
+- If .config/dotnet-tools.json doesn't exist, run `dotnet new tool manifest`
+- Run `dotnet tool install microsoft.dnceng.secretmanager --version 1.1.0-*`
+- Create manifests for vaults in `$(RepoRoot)/.vault-config`. The path is arbitrary, but must match the scripts below.
+- Add the following stage to a weekly build:
+```yaml
+  - stage: SynchronizeSecrets
+    jobs:
+    - job: Synchronize
+      pool:
+        vmImage: windows-2019
+      steps:
+      - task: UseDotNet@2
+        displayName: Install Correct .NET Version
+        inputs:
+          useGlobalJson: true
+
+      - task: UseDotNet@2
+        displayName: Install .NET 3.1 runtime
+        inputs:
+          packageType: runtime
+          version: 3.1.x
+
+      - script: dotnet tool restore
+
+      - task: AzureCLI@2
+        inputs:
+          azureSubscription: DotNet Eng Services Secret Manager
+          scriptType: ps
+          scriptLocation: inlineScript
+          inlineScript: |
+            Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize $_}
+```
+- Add the following steps immediately after the compilation for PR and CI builds:
+```yaml
+- script: dotnet tool restore
+
+- powershell: |
+    $manifestArgs = @()
+    Get-ChildItem .vault-config/*.yaml |% {
+      $manifestArgs += @("-m", $_.FullName)
+    }
+    dotnet secret-manager validate-all -b src @manifestArgs
+  displayName: Verify Secret Usages
+```
+- Add the following stage before the "approval" stage that precedes deployment:
+```yaml
+- stage: ValidateSecrets
+  dependsOn:
+  - Build
+  jobs:
+  - job: ValidateSecrets
+    pool:
+      vmImage: windows-2019
+    steps:
+    - task: UseDotNet@2
+      displayName: Install Correct .NET Version
+      inputs:
+        useGlobalJson: true
+
+    - task: UseDotNet@2
+      displayName: Install .NET 3.1 runtime
+      inputs:
+        packageType: runtime
+        version: 3.1.x
+
+    - script: dotnet tool restore
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: DotNet Eng Services Secret Manager
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize --verify-only $_}
+```
+
 
 ## Creating new secrets
 New secrets can be created by adding new entries to the manifest file, then running synchronize. The tool will then create the new secret and add it to the secret store.
