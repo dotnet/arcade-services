@@ -19,15 +19,23 @@ namespace Maestro.MergePolicies
         {
             try
             {
-                if (HasAnyDowngrade(pr))
+                List<string> versionCheckMessages = GetDowngradeOrInvalidVersionMessages(pr);
+
+                if (versionCheckMessages.Count > 0)
                 {
-                    return Task.FromResult(
-                        Fail("Some dependency updates are downgrades. Aborting auto-merge."));
+                    // It'd be great if this could be markdown, but checks as implemented today are just a big run-on sentence with no special formatting characters.
+                    string errorMessage = @$"
+The following dependency updates appear to be downgrades or invalid versions: {string.Join(',', versionCheckMessages)}. Aborting auto-merge.
+ Note that manual commits pushed to fix up the pull request won't cause the downgrade check to be re-evaluated, 
+ you can ignore the check in this case.
+ If you think this PR should merge but lack permission to override this check, considering finding an admin or recreating the pull request manually.
+ If you feel you are seeing this message in error, please contact the dnceng team.";
+                    return Task.FromResult(Fail(errorMessage));
                 }
                 else
                 {
                     return Task.FromResult(
-                        Succeed("No version downgrade detected."));
+                        Succeed("No version downgrade detected and all specified versions semantically valid."));
                 }
             }
             catch (Exception e)
@@ -37,27 +45,32 @@ namespace Maestro.MergePolicies
             }
         }
 
-        private static bool HasAnyDowngrade(IPullRequest pr)
+        private static List<string> GetDowngradeOrInvalidVersionMessages(IPullRequest pr)
         {
+            List<string> messages = new List<string>();
+
             foreach (var dependency in pr.RequiredUpdates)
             {
+                bool gotValidVersions = true;
                 if (!SemanticVersion.TryParse(dependency.FromVersion, out var fromVersion))
                 {
-                    throw new ArgumentException($"Could not parse '{dependency.FromVersion}' as a Semantic Version string.");
+                    messages.Add($" Could not parse the 'from' version '{dependency.FromVersion}' of {dependency.DependencyName} as a Semantic Version string");
+                    gotValidVersions = false;
                 }
 
                 if (!SemanticVersion.TryParse(dependency.ToVersion, out var toVersion))
                 {
-                    throw new ArgumentException($"Could not parse '{dependency.ToVersion}' as a Semantic Version string.");
+                    messages.Add($" Could not parse the 'to' version '{dependency.ToVersion}' of {dependency.DependencyName} as a Semantic Version string");
+                    gotValidVersions = false;
                 }
 
-                if (fromVersion.CompareTo(toVersion) > 0)
+                if (gotValidVersions && fromVersion.CompareTo(toVersion) > 0)
                 {
-                    return true;
+                    messages.Add($" Dependency {dependency.DependencyName} was downgraded from {fromVersion} to {toVersion}");
                 }
             }
 
-            return false;
+            return messages;
         }
     }
 
