@@ -123,4 +123,32 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
             testData.Values.Value3.Should().Be("THIRD-VALUE");
         }
     }
+
+    public partial class NullableParameterTests
+    {
+        [TestDependencyInjectionSetup]
+        private static class TestDataConfiguration
+        {
+            public static Func<IServiceProvider, int?> Value(IServiceCollection collection, int? value)
+            {
+                return _ => value;
+            }
+        }
+
+        [Test]
+        public void Defaults()
+        {
+            using TestData testData = TestData.Default.Build();
+            testData.Value.Should().BeNull();
+        }
+
+        [Test]
+        public void SetValue()
+        {
+            using TestData testData = TestData.Default
+                .WithValue(5)
+                .Build();
+            testData.Value.Should().Be(5);
+        }
+    }
 }
