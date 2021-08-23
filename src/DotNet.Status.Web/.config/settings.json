@@ -46,6 +46,13 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
           "Branches": [ "main" ],
+          "IssuesId": "dotnet-aspnetcore-infra",
+          "Tags": [ "aspnetcore" ]
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
+          "Branches": [ "main" ],
           "IssuesId": "dotnet-installer-infra",
           "Tags": [ "installer" ]
         },
@@ -71,6 +78,13 @@
         "Owner": "dotnet",
         "Name": "core-eng",
         "Labels": [ "Build Failed" ]
+      },
+      {
+        "Id": "dotnet-aspnetcore-infra",
+        "Owner": "dotnet",
+        "Name": "aspnetcore",
+        "Labels": [ "area-infrastructure" ],
+        "UpdateExisting": true
       },
       {
         "Id": "dotnet-installer-infra",
