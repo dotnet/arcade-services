@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using System.Threading.Tasks;
 using Kusto.Data.Common;
 using Kusto.Ingest;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Kusto
 {
@@ -141,5 +143,38 @@ namespace Microsoft.DotNet.Kusto
 
             logger.LogTrace("Ingest complete");
         }
+    }
+
+    public class KustoIngestClientFactory : IKustoIngestClientFactory
+    {
+        private readonly IOptions<KustoOptions> _kustoOptions;
+        private readonly ConcurrentDictionary<string, IKustoIngestClient> _clients = new ConcurrentDictionary<string, IKustoIngestClient>();
+
+        public KustoIngestClientFactory(IOptions<KustoOptions> options)
+        {
+            _kustoOptions = options;
+        }
+
+        public IKustoIngestClient GetClient()
+        {
+            string ingestConnectionString = _kustoOptions.Value.IngestConnectionString;
+
+            if (string.IsNullOrWhiteSpace(ingestConnectionString))
+                throw new InvalidCastException($"Kusto {nameof(_kustoOptions.Value.IngestConnectionString)} is not configured in settings or related KeyVault");
+
+            return _clients.GetOrAdd(ingestConnectionString, _ => KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString));
+        }
+    }
+
+    public interface IKustoIngestClientFactory
+    {
+        IKustoIngestClient GetClient();
+    }
+
+    public class KustoOptions
+    {
+        public string QueryConnectionString { get; set; }
+        public string IngestConnectionString { get; set; }
+        public string Database { get; set; }
     }
 }
