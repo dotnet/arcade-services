@@ -6,6 +6,7 @@ using Kusto.Ingest;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
