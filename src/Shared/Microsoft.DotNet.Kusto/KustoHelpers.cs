@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,82 +16,89 @@ namespace Microsoft.DotNet.Kusto
 {
     public static class KustoHelpers
     {
-        public static async Task WriteDataToKustoInMemoryAsync<T>(
+        public static Task WriteDataToKustoInMemoryAsync<T>(
             IKustoIngestClient client,
             string databaseName,
             string tableName,
             ILogger logger,
             IEnumerable<T> data,
+            Func<T, IList<KustoValue>> mapFunc) =>
+            WriteDataToKustoInMemoryAsync(client, databaseName, tableName, logger, data.ToAsyncEnumerable(), mapFunc);
+
+        public static async Task WriteDataToKustoInMemoryAsync<T>(
+            IKustoIngestClient client,
+            string databaseName,
+            string tableName,
+            ILogger logger,
+            IAsyncEnumerable<T> data,
             Func<T, IList<KustoValue>> mapFunc)
         {
             CsvColumnMapping[] mappings = null;
             int size = 5;
-            using (var stream = new MemoryStream())
+            await using var stream = new MemoryStream();
+            await using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true))
             {
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true))
+                await foreach (T d in data)
                 {
-                    foreach (T d in data)
+                    IList<KustoValue> kustoValues = mapFunc(d);
+                    if (kustoValues == null)
                     {
-                        IList<KustoValue> kustoValues = mapFunc(d);
-                        if (kustoValues == null)
-                        {
-                            continue;
-                        }
-
-                        var dataList = new List<string>(size);
-                        if (mappings == null)
-                        {
-                            var mapList = new List<CsvColumnMapping>();
-                            foreach (KustoValue p in kustoValues)
-                            {
-                                mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType.CslDataType});
-                                dataList.Add(p.StringValue);
-                            }
-
-                            mappings = mapList.ToArray();
-                            size = mappings.Length;
-                        }
-                        else
-                        {
-                            if (!kustoValues.Select(v => v.Column).SequenceEqual(mappings.Select(m => m.ColumnName)))
-                            {
-                                throw new ArgumentException("Fields must be supplied in the same order for each record");
-                            }
-
-                            dataList.AddRange(kustoValues.Select(p => p.StringValue));
-                        }
-
-                        await writer.WriteCsvLineAsync(dataList);
+                        continue;
                     }
-                }
 
-                if (mappings == null)
-                {
-                    logger.LogInformation("No rows to upload.");
-                    return;
-                }
-
-                for (int i = 0; i < mappings.Length; i++)
-                {
-                    mappings[i].Ordinal = i;
-                }
-
-                stream.Seek(0, SeekOrigin.Begin);
-
-                logger.LogInformation($"Ingesting {mappings.Length} columns at {stream.Length} bytes...");
-
-                await client.IngestFromStreamAsync(
-                    stream,
-                    new KustoQueuedIngestionProperties(databaseName, tableName)
+                    var dataList = new List<string>(size);
+                    if (mappings == null)
                     {
-                        Format = DataSourceFormat.csv,
-                        ReportLevel = IngestionReportLevel.FailuresOnly,
-                        ReportMethod = IngestionReportMethod.Queue,
-                        CSVMapping = mappings
-                    });
+                        var mapList = new List<CsvColumnMapping>();
+                        foreach (KustoValue p in kustoValues)
+                        {
+                            mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType.CslDataType});
+                            dataList.Add(p.StringValue);
+                        }
 
-                logger.LogTrace("Ingest complete");
+                        mappings = mapList.ToArray();
+                        size = mappings.Length;
+                    }
+                    else
+                    {
+                        if (!kustoValues.Select(v => v.Column).SequenceEqual(mappings.Select(m => m.ColumnName)))
+                        {
+                            throw new ArgumentException("Fields must be supplied in the same order for each record");
+                        }
+
+                        dataList.AddRange(kustoValues.Select(p => p.StringValue));
+                    }
+
+                    await writer.WriteCsvLineAsync(dataList);
+                }
             }
+
+            if (mappings == null)
+            {
+                logger.LogInformation("No rows to upload.");
+                return;
+            }
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                mappings[i].Ordinal = i;
+            }
+
+            stream.Seek(0, SeekOrigin.Begin);
+
+            logger.LogInformation($"Ingesting {mappings.Length} columns at {stream.Length} bytes...");
+
+            await client.IngestFromStreamAsync(
+                stream,
+                new KustoQueuedIngestionProperties(databaseName, tableName)
+                {
+                    Format = DataSourceFormat.csv,
+                    ReportLevel = IngestionReportLevel.FailuresOnly,
+                    ReportMethod = IngestionReportMethod.Queue,
+                    CSVMapping = mappings
+                });
+
+            logger.LogTrace("Ingest complete");
         }
     }
 }
