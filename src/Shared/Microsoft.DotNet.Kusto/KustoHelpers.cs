@@ -147,20 +147,20 @@ namespace Microsoft.DotNet.Kusto
 
     public class KustoIngestClientFactory : IKustoIngestClientFactory
     {
-        private readonly IOptions<KustoOptions> _kustoOptions;
+        private readonly IOptionsMonitor<KustoOptions> _kustoOptions;
         private readonly ConcurrentDictionary<string, IKustoIngestClient> _clients = new ConcurrentDictionary<string, IKustoIngestClient>();
 
-        public KustoIngestClientFactory(IOptions<KustoOptions> options)
+        public KustoIngestClientFactory(IOptionsMonitor<KustoOptions> options)
         {
             _kustoOptions = options;
         }
 
         public IKustoIngestClient GetClient()
         {
-            string ingestConnectionString = _kustoOptions.Value.IngestConnectionString;
+            string ingestConnectionString = _kustoOptions.CurrentValue.IngestConnectionString;
 
             if (string.IsNullOrWhiteSpace(ingestConnectionString))
-                throw new InvalidCastException($"Kusto {nameof(_kustoOptions.Value.IngestConnectionString)} is not configured in settings or related KeyVault");
+                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.IngestConnectionString)} is not configured in settings or related KeyVault");
 
             return _clients.GetOrAdd(ingestConnectionString, _ => KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString));
         }
