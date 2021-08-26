@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Kusto.Data.Common;
 using Kusto.Ingest;
@@ -16,6 +17,51 @@ namespace Microsoft.DotNet.Kusto
 {
     public static class KustoHelpers
     {
+        // we can't use "ToAsyncEnumerable" because of the namespace that's in and name conflicts in EF core
+        // https://github.com/dotnet/efcore/issues/18124
+        private struct AsyncEnumerableWrapper<T> : IAsyncEnumerable<T>
+        {
+            private IEnumerable<T> _inner;
+
+            public AsyncEnumerableWrapper(IEnumerable<T> inner)
+            {
+                _inner = inner;
+            }
+
+            public struct Enumerator : IAsyncEnumerator<T>
+            {
+                private readonly IEnumerator<T> _inner;
+
+                public Enumerator(IEnumerator<T> inner)
+                {
+                    _inner = inner;
+                }
+
+                public ValueTask DisposeAsync()
+                {
+                    _inner.Dispose();
+                    return default;
+                }
+
+                public ValueTask<bool> MoveNextAsync()
+                {
+                    return new ValueTask<bool>(_inner.MoveNext());
+                }
+
+                public T Current => _inner.Current;
+            }
+            
+            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+            {
+                return GetAsyncEnumerator(cancellationToken);
+            }
+
+            public Enumerator GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+            {
+                return new Enumerator(_inner.GetEnumerator());
+            }
+        }
+
         public static Task WriteDataToKustoInMemoryAsync<T>(
             IKustoIngestClient client,
             string databaseName,
@@ -23,7 +69,7 @@ namespace Microsoft.DotNet.Kusto
             ILogger logger,
             IEnumerable<T> data,
             Func<T, IList<KustoValue>> mapFunc) =>
-            WriteDataToKustoInMemoryAsync(client, databaseName, tableName, logger, data.ToAsyncEnumerable(), mapFunc);
+            WriteDataToKustoInMemoryAsync(client, databaseName, tableName, logger, new AsyncEnumerableWrapper<T>(data), mapFunc);
 
         public static async Task WriteDataToKustoInMemoryAsync<T>(
             IKustoIngestClient client,
