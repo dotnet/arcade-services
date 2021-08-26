@@ -19,16 +19,16 @@ namespace Microsoft.DotNet.Kusto
     {
         // we can't use "ToAsyncEnumerable" because of the namespace that's in and name conflicts in EF core
         // https://github.com/dotnet/efcore/issues/18124
-        private struct AsyncEnumerableWrapper<T> : IAsyncEnumerable<T>
+        private class AsyncEnumerableWrapper<T> : IAsyncEnumerable<T>
         {
-            private IEnumerable<T> _inner;
+            private readonly IEnumerable<T> _inner;
 
             public AsyncEnumerableWrapper(IEnumerable<T> inner)
             {
                 _inner = inner;
             }
 
-            public struct Enumerator : IAsyncEnumerator<T>
+            public class Enumerator : IAsyncEnumerator<T>
             {
                 private readonly IEnumerator<T> _inner;
 
@@ -51,12 +51,7 @@ namespace Microsoft.DotNet.Kusto
                 public T Current => _inner.Current;
             }
             
-            IAsyncEnumerator<T> IAsyncEnumerable<T>.GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
-            {
-                return GetAsyncEnumerator(cancellationToken);
-            }
-
-            public Enumerator GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+            public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
             {
                 return new Enumerator(_inner.GetEnumerator());
             }
