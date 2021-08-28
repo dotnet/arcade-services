@@ -2220,15 +2220,15 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "d09e4531f3d441f2b24d1c4556b47044"
+          "NotificationId": "733a0451120b477d87f73a551cbe91a1"
         },
         "conditions": [
           {
             "evaluator": {
               "params": [
-                100
+                10
               ],
-              "type": "lt"
+              "type": "gt"
             },
             "operator": {
               "type": "and"
@@ -2242,18 +2242,18 @@
             },
             "reducer": {
               "params": [],
-              "type": "avg"
+              "type": "sum"
             },
             "type": "query"
           }
         ],
         "executionErrorState": "keep_state",
-        "for": "5m",
-        "frequency": "1m",
+        "for": "0m",
+        "frequency": "5m",
         "handler": 1,
-        "message": "Mission Control alert!",
-        "name": "Mission Control availability",
-        "noDataState": "keep_state",
+        "message": "Certificate has expired.",
+        "name": "Pool Provider (Internal) AuthenticationException",
+        "noDataState": "ok",
         "notifications": [
           {
             "uid": "statusHook"
@@ -2264,8 +2264,9 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix",
-      "fill": 0,
+      "datasource": "AI-pool-provider-internal",
+      "description": "Sends an alert when the service tries to use an expired certificate ",
+      "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
@@ -2274,7 +2275,7 @@
         "y": 24
       },
       "hiddenSeries": false,
-      "id": 3,
+      "id": 54,
       "legend": {
         "avg": false,
         "current": false,
@@ -2285,19 +2286,7 @@
         "values": false
       },
       "lines": true,
-      "linewidth": 4,
-      "links": [
-        {
-          "targetBlank": true,
-          "title": "Azure Portal: Availability",
-          "url": "https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/helixinfrarg/providers/microsoft.insights/components/helix-prod/availability"
-        },
-        {
-          "targetBlank": true,
-          "title": "Mission Control",
-          "url": "https://mc.dot.net"
-        }
-      ],
+      "linewidth": 1,
       "nullPointMode": "null",
       "options": {
         "dataLinks": []
@@ -2314,17 +2303,19 @@
         {
           "appInsights": {
             "aggOptions": [
-              "avg",
-              "count"
+              "sum"
             ],
-            "aggregation": "avg",
-            "alias": "{{dimensionvalue}}",
-            "dimension": "availabilityResult/location",
-            "dimensionFilter": "availabilityResult/name eq 'Mission Control'",
+            "aggregation": "sum",
+            "alias": "Authorization Exception Count",
+            "dimension": "exception/type",
+            "dimensionFilter": "exception/type eq 'System.Security.Authentication.AuthenticationException'",
             "dimensions": [
-              "availabilityResult/name",
-              "availabilityResult/location",
-              "availabilityResult/success",
+              "exception/problemId",
+              "exception/handledAt",
+              "exception/type",
+              "exception/assembly",
+              "exception/method",
+              "exception/severityLevel",
               "operation/name",
               "operation/synthetic",
               "operation/syntheticSource",
@@ -2339,53 +2330,42 @@
               "client/browser",
               "cloud/roleName",
               "cloud/roleInstance",
-              "customDimensions/FullTestResultAvailable",
-              "customDimensions/WebtestArmResourceName",
-              "customDimensions/SyntheticMonitorId",
-              "customDimensions/WebtestLocationId",
-              "customDimensions/_MS.GSMv2",
-              "customDimensions/SourceId"
+              "customDimensions/ActionId",
+              "customDimensions/CorrelationId",
+              "customDimensions/AspNetCoreEnvironment",
+              "customDimensions/RequestPath",
+              "customDimensions/orchestrationId",
+              "customDimensions/RequestId",
+              "customDimensions/agentPool",
+              "customDimensions/ActionName",
+              "customDimensions/jobName",
+              "customDimensions/agentId",
+              "customDimensions/CategoryName",
+              "customDimensions/{OriginalFormat}",
+              "customDimensions/Exception"
             ],
-            "metricName": "availabilityResults/availabilityPercentage",
+            "metricName": "exceptions/count",
             "rawQuery": false,
             "rawQueryString": "",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
-            "timeGrainCount": "",
-            "timeGrainType": "auto",
-            "timeGrainUnit": "",
             "valueColumn": ""
           },
           "azureLogAnalytics": {
-            "query": "//change this example to create your own time series query\navailabilityResults                                                             //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
-            "resultFormat": "time_series",
-            "workspace": "b165f541-bd03-4f8d-a509-8358194e2831"
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
           },
           "azureMonitor": {
-            "aggOptions": [
-              "None",
-              "Average",
-              "Minimum",
-              "Maximum",
-              "Total",
-              "Count"
-            ],
-            "aggregation": "",
-            "allowedTimeGrainsMs": [
-              300000,
-              3600000,
-              86400000
-            ],
-            "dimension": "",
+            "aggOptions": [],
             "dimensionFilter": "*",
-            "dimensions": [],
-            "metricDefinition": "microsoft.insights/components",
+            "metricDefinition": "select",
             "metricName": "select",
-            "metricNamespace": "availabilityResults",
-            "resourceGroup": "helixinfrarg",
-            "resourceName": "helix-prod",
-            "timeGrain": "",
-            "timeGrains": []
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": [],
+            "top": "10"
           },
           "queryType": "Application Insights",
           "refId": "A"
@@ -2396,21 +2376,19 @@
           "colorMode": "critical",
           "fill": true,
           "line": true,
-          "op": "lt",
-          "value": 100,
-          "yaxis": "left"
+          "op": "gt",
+          "value": 10
         }
       ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Mission Control",
+      "title": "Pool Provider (Internal) AuthenticationException",
       "tooltip": {
         "shared": true,
         "sort": 0,
         "value_type": "individual"
       },
-      "transparent": true,
       "type": "graph",
       "xaxis": {
         "buckets": null,
@@ -2421,11 +2399,11 @@
       },
       "yaxes": [
         {
-          "format": "percent",
+          "format": "short",
           "label": null,
           "logBase": 1,
-          "max": "101",
-          "min": "90",
+          "max": null,
+          "min": null,
           "show": true
         },
         {
@@ -3073,209 +3051,6 @@
           "max": null,
           "min": null,
           "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "alert": {
-        "alertRuleTags": {
-          "NotificationId": "733a0451120b477d87f73a551cbe91a1"
-        },
-        "conditions": [
-          {
-            "evaluator": {
-              "params": [
-                10
-              ],
-              "type": "gt"
-            },
-            "operator": {
-              "type": "and"
-            },
-            "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
-            },
-            "reducer": {
-              "params": [],
-              "type": "sum"
-            },
-            "type": "query"
-          }
-        ],
-        "executionErrorState": "keep_state",
-        "for": "0m",
-        "frequency": "5m",
-        "handler": 1,
-        "message": "Certificate has expired.",
-        "name": "Pool Provider (Internal) AuthenticationException",
-        "noDataState": "ok",
-        "notifications": [
-          {
-            "uid": "statusHook"
-          }
-        ]
-      },
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "AI-pool-provider-internal",
-      "description": "Sends an alert when the service tries to use an expired certificate ",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 7,
-        "x": 0,
-        "y": 32
-      },
-      "hiddenSeries": false,
-      "id": 54,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "appInsights": {
-            "aggOptions": [
-              "sum"
-            ],
-            "aggregation": "sum",
-            "alias": "Authorization Exception Count",
-            "dimension": "exception/type",
-            "dimensionFilter": "exception/type eq 'System.Security.Authentication.AuthenticationException'",
-            "dimensions": [
-              "exception/problemId",
-              "exception/handledAt",
-              "exception/type",
-              "exception/assembly",
-              "exception/method",
-              "exception/severityLevel",
-              "operation/name",
-              "operation/synthetic",
-              "operation/syntheticSource",
-              "user/authenticated",
-              "application/version",
-              "client/type",
-              "client/model",
-              "client/os",
-              "client/city",
-              "client/stateOrProvince",
-              "client/countryOrRegion",
-              "client/browser",
-              "cloud/roleName",
-              "cloud/roleInstance",
-              "customDimensions/ActionId",
-              "customDimensions/CorrelationId",
-              "customDimensions/AspNetCoreEnvironment",
-              "customDimensions/RequestPath",
-              "customDimensions/orchestrationId",
-              "customDimensions/RequestId",
-              "customDimensions/agentPool",
-              "customDimensions/ActionName",
-              "customDimensions/jobName",
-              "customDimensions/agentId",
-              "customDimensions/CategoryName",
-              "customDimensions/{OriginalFormat}",
-              "customDimensions/Exception"
-            ],
-            "metricName": "exceptions/count",
-            "rawQuery": false,
-            "rawQueryString": "",
-            "timeColumn": "timestamp",
-            "timeGrain": "auto",
-            "valueColumn": ""
-          },
-          "azureLogAnalytics": {
-            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
-            "resultFormat": "time_series"
-          },
-          "azureMonitor": {
-            "aggOptions": [],
-            "dimensionFilter": "*",
-            "metricDefinition": "select",
-            "metricName": "select",
-            "metricNamespace": "select",
-            "resourceGroup": "select",
-            "resourceName": "select",
-            "timeGrain": "auto",
-            "timeGrains": [],
-            "top": "10"
-          },
-          "queryType": "Application Insights",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [
-        {
-          "colorMode": "critical",
-          "fill": true,
-          "line": true,
-          "op": "gt",
-          "value": 10
-        }
-      ],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Pool Provider (Internal) AuthenticationException",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
         }
       ],
       "yaxis": {
