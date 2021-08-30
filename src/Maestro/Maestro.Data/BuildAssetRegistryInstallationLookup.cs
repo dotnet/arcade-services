@@ -21,5 +21,10 @@ namespace Maestro.Data
                 return await ctx.GetInstallationId(repositoryUrl);
             }
         }
+
+        public Task<bool> IsOrganizationSupported(string org)
+        {
+            return Task.FromResult(true);
+        }
     }
 }

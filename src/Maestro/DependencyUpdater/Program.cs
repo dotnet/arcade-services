@@ -49,24 +49,21 @@ namespace DependencyUpdater
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure<GitHubTokenProviderOptions>((options, provider) =>
+            services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) =>
             {
-                var config = provider.GetRequiredService<IConfiguration>();
-                IConfigurationSection section1 = config.GetSection("GitHub");
-                section1.Bind(options);
+                s.Bind(o);
             });
             services.AddGitHubTokenProvider();
 
             services.AddAzureDevOpsTokenProvider();
-            services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
+            services.Configure<AzureDevOpsTokenProviderOptions>("AzureDevOps:Tokens", (o, s) =>
+            {
+                var tokenMap = s.GetChildren();
+                foreach (IConfigurationSection token in tokenMap)
                 {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                    foreach (IConfigurationSection token in tokenMap)
-                    {
-                        options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-                    }
-                });
+                    o.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                }
+            });
 
             // We do not use AddMemoryCache here. We use our own cache because we wish to
             // use a sized cache and some components, such as EFCore, do not implement their caching
@@ -74,12 +71,7 @@ namespace DependencyUpdater
             services.AddSingleton<DarcRemoteMemoryCache>();
 
             services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-            services.AddKustoClientProvider((provider, options) =>
-            {
-                var config = provider.GetRequiredService<IConfiguration>();
-                IConfigurationSection section = config.GetSection("Kusto");
-                section.Bind(options);
-            });
+            services.AddKustoClientProvider("Kusto");
         }
     }
 }

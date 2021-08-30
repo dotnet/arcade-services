@@ -1596,13 +1596,13 @@
             "query": {
               "params": [
                 "A",
-                "5m",
+                "30m",
                 "now"
               ]
             },
             "reducer": {
               "params": [],
-              "type": "avg"
+              "type": "max"
             },
             "type": "query"
           }
@@ -4086,7 +4086,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 21,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {

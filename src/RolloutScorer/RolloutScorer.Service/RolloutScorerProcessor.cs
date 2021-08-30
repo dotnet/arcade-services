@@ -12,17 +12,24 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using System.Threading;
+using RolloutScorer.Services;
 
 namespace RolloutScorer.Service
 {
     public class RolloutScorerProcessor : IServiceImplementation
     {
         private readonly ILogger<RolloutScorerProcessor> _logger;
+        private readonly IScorecardService _scorecardService;
+        private readonly IRolloutScorerService _rolloutScorerService;
         private const int ScoringBufferInDays = 2;
 
-        public RolloutScorerProcessor(ILogger<RolloutScorerProcessor> logger)
+        public RolloutScorerProcessor(ILogger<RolloutScorerProcessor> logger,
+            IScorecardService scorecardService,
+            IRolloutScorerService rolloutScorerService)
         {
             _logger = logger;
+            _scorecardService = scorecardService;
+            _rolloutScorerService = rolloutScorerService;
         }
 
         // public static async Task Run([TimerTrigger("0 0 0 * * *")] TimerInfo myTimer, ILogger log)
@@ -33,19 +40,17 @@ namespace RolloutScorer.Service
             string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
             _logger.LogInformation($"INFO: Deployment Environment: {deploymentEnvironment}");
 
-            _logger.LogInformation("INFO: Getting storage account keys from KeyVault...");
-            SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
+            _logger.LogInformation("INFO: Getting scorecard storage account key and deployment table's SAS URI from KeyVault...");
+            SecretBundle scorecardsStorageAccountKey = await GetSecretBundleFromKeyVaultAsync(tokenProvider,
                 Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
-            SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
-                "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-token");
+            SecretBundle deploymentTableSasUriBundle = await GetSecretBundleFromKeyVaultAsync(tokenProvider,
+                "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-uri");
 
             _logger.LogInformation("INFO: Getting cloud tables...");
             CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey.Value);
-            CloudTable deploymentsTable = new CloudTable(
-                new Uri($"https://dotnetengstatusprod.table.core.windows.net/deployments{deploymentTableSasToken.Value}"));
+            CloudTable deploymentsTable = new CloudTable(new Uri(deploymentTableSasUriBundle.Value));
 
-            List<ScorecardEntity> scorecardEntries =
-                await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
+            List<ScorecardEntity> scorecardEntries = await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
             scorecardEntries.Sort((x, y) => x.Date.CompareTo(y.Date));
             List<AnnotationEntity> deploymentEntries =
                 await GetAllTableEntriesAsync<AnnotationEntity>(deploymentsTable);
@@ -115,7 +120,7 @@ namespace RolloutScorer.Service
                         }
 
                         _logger.LogInformation($"INFO: Creating rollout scorecard...");
-                        scorecards.Add(await Models.Scorecard.CreateScorecardAsync(rolloutScorer));
+                        scorecards.Add(await _scorecardService.CreateScorecardAsync(rolloutScorer));
                         _logger.LogInformation($"INFO: Successfully created scorecard for {rolloutScorer.RolloutStartDate.Date} rollout of {rolloutScorer.Repo}.");
                     }
 
@@ -155,7 +160,7 @@ namespace RolloutScorer.Service
             return items;
         }
 
-        private static async Task<SecretBundle> GetStorageAccountKeyAsync(AzureServiceTokenProvider tokenProvider, string keyVaultUri, string secretName)
+        private static async Task<SecretBundle> GetSecretBundleFromKeyVaultAsync(AzureServiceTokenProvider tokenProvider, string keyVaultUri, string secretName)
         {
             using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
             {

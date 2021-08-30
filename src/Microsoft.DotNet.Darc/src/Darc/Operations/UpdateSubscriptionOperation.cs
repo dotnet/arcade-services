@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
             bool batchable = subscription.Policy.Batchable;
             bool enabled = subscription.Enabled;
             string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
-            List<MergePolicy> mergePolicies = new List<MergePolicy>();
+            List<MergePolicy> mergePolicies;
 
 
             if (UpdatingViaCommandLine())
@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     failureNotificationTags = _options.FailureNotificationTags;
                 }
-
+                mergePolicies = subscription.Policy.MergePolicies.ToList();
             }
             else
             {

@@ -13,10 +13,13 @@ namespace RolloutScorer.Providers
     public class PersistenceProvider : IPersistenceService
     {
         private readonly ILogger<PersistenceProvider> _logger;
+        private readonly IIssueService _issueService;
 
-        public PersistenceProvider(ILogger<PersistenceProvider> logger)
+        public PersistenceProvider(ILogger<PersistenceProvider> logger,
+            IIssueService issueService)
         {
             _logger = logger;
+            _issueService = issueService;
         }
 
         /// <summary>
@@ -34,11 +37,11 @@ namespace RolloutScorer.Providers
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Time to Rollout,Critical Issues,Issue Links,Hotfixes,Hotfix Links,Rollbacks,Rollback Links,Downtime,Failure,Failure Links");
                     await writer.WriteLineAsync($"{scorecard.TimeToRollout:c}," +
-                        $"{scorecard.CriticalIssues},{string.Join(";", scorecard.GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
-                        $"{scorecard.Hotfixes},{string.Join(";", scorecard.GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
-                        $"{scorecard.Rollbacks},{string.Join(";", scorecard.GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{scorecard.CriticalIssues},{string.Join(";", scorecard.GithubIssues.Where(issue => _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{scorecard.Hotfixes},{string.Join(";", scorecard.GithubIssues.Where(issue => _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{scorecard.Rollbacks},{string.Join(";", scorecard.GithubIssues.Where(issue => _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
                         $"{scorecard.Downtime:c}," +
-                        $"{scorecard.Failure},{string.Join(";", scorecard.GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.FailureLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}");
+                        $"{scorecard.Failure},{string.Join(";", scorecard.GithubIssues.Where(issue => _issueService.IssueContainsRelevantLabels(issue, GithubLabelNames.FailureLabel, scorecard.Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}");
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Build,Link,Time to Rollout,Critical Issues,Hotfixes,Rollbacks,Downtime");
                     foreach (ScorecardBuildBreakdown buildBreakdown in scorecard.BuildBreakdowns)
