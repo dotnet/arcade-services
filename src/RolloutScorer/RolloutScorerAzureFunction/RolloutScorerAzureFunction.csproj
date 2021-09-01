@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" />
     <PackageReference Include="System.Text.Encodings.Web" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" VersionOverride="2.1.22" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
