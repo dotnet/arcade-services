@@ -88,7 +88,7 @@
     <PackageReference Update="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.0" />
     <PackageReference Update="Microsoft.IdentityModel.Tokens" Version="5.4.0" />
     <PackageReference Update="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageReference Update="Microsoft.NET.Sdk.Functions" Version="3.0.2" />
+    <PackageReference Update="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Update="Microsoft.ServiceFabric" Version="6.5.677" />
     <PackageReference Update="Microsoft.ServiceFabric.Actors" Version="3.4.677" />
