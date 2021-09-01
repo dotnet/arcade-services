@@ -30,9 +30,13 @@
     <PackageReference Update="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="$(DotNetAssemblyVersion)" />
+    <!-- Force version 2.1.22 to avoid unsafe versions -->
+    <PackageReference Update="Microsoft.AspNetCore.Http" Version="2.1.22" />
     <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetAssemblyVersion)" />
+    <!-- Force version 2.0.2 to avoid unsafe versions -->
+    <PackageReference Update="Microsoft.AspNetCore.Server.HttpSys" Version="2.0.2" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />

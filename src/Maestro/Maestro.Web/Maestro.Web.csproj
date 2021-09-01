@@ -22,8 +22,8 @@
     <PackageReference Include="JetBrains.Annotations" /> 
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Azurestorage" />
-    <PackageReference Include="Microsoft.AspNetCore.Http" VersionOverride="2.1.22" />
-    <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" VersionOverride="2.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
