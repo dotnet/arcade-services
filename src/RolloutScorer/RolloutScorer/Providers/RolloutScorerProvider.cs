@@ -90,6 +90,11 @@ namespace RolloutScorer.Providers
 
             string timelineLinkWithAttempts = $"{buildBreakdown.BuildSummary.TimelineLink}?changeId=1";
             _logger.LogInformation($"Querying AzDO API: {timelineLinkWithAttempts}");
+
+            //Project, buildid, timelineId, changeId
+            //_buildHttpClient.GetBuildTimelineAsync();
+
+            // Convert this call into using BuildHttpClient
             JObject jsonTimelineResponse = await GetAzdoApiResponseAsync(timelineLinkWithAttempts);
             Models.BuildTimeline timeline = jsonTimelineResponse.ToObject<Models.BuildTimeline>();
 

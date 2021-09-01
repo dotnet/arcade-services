@@ -102,15 +102,15 @@ namespace RolloutScorer.Service
                         _logger.LogInformation($"INFO: Fetching AzDO PAT from KeyVault...");
                         using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                         {
-                            rolloutScorer.SetupHttpClient(
+                            _rolloutScorerService.SetupHttpClient(
                                 (await kv.GetSecretAsync(rolloutScorer.AzdoConfig.KeyVaultUri, rolloutScorer.AzdoConfig.PatSecretName)).Value);
                         }
-                        rolloutScorer.SetupGithubClient(githubPat.Value);
+                        _rolloutScorerService.SetupGithubClient(githubPat.Value);
 
                         _logger.LogInformation($"INFO: Attempting to initialize RolloutScorer...");
                         try
                         {
-                            await rolloutScorer.InitAsync();
+                            await _rolloutScorerService.InitAsync(rolloutScorer);
                         }
                         catch (ArgumentException e)
                         {
