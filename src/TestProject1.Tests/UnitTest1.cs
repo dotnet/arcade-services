@@ -17,7 +17,7 @@ namespace TestProject1
             else
             {
                 File.Delete("test.txt");
-                Assert.IsTrue(true, "test.txt found, deleting");                
+                Assert.IsTrue(true, "test.txt found, deleting");
             }
 
         }

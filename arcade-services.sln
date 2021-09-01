@@ -199,7 +199,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.T
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.SecretManager.ScenarioTests", "src\Microsoft.DncEng.SecretManager.ScenarioTests\Microsoft.DncEng.SecretManager.ScenarioTests.csproj", "{C3BAF297-79EB-4853-B251-1A2976CA31FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "src\TestProject1\TestProject1.csproj", "{E70B2386-E320-4032-8E5A-FFCF688C899D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1.Tests", "src\TestProject1.Tests\TestProject1.Tests.csproj", "{E70B2386-E320-4032-8E5A-FFCF688C899D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
