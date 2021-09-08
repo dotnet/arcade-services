@@ -876,7 +876,7 @@ namespace Microsoft.DotNet.Darc.Operations
             bool success = true;
             var downloaded = new ConcurrentBag<DownloadedAsset>();
             bool anyShipping = false;
-            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
+            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromMinutes(5) })
             {
                 using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
                 {
