@@ -28,7 +28,7 @@ namespace Maestro.MergePolicies
 The following dependency updates appear to be downgrades or invalid versions: {string.Join(',', versionCheckMessages)}. Aborting auto-merge.
  Note that manual commits pushed to fix up the pull request won't cause the downgrade check to be re-evaluated, 
  you can ignore the check in this case.
- If you think this PR should merge but lack permission to override this check, considering finding an admin or recreating the pull request manually.
+ If you think this PR should merge but lack permission to override this check, consider finding an admin or recreating the pull request manually.
  If you feel you are seeing this message in error, please contact the dnceng team.";
                     return Task.FromResult(Fail(errorMessage));
                 }
