@@ -77,10 +77,7 @@ namespace SubscriptionActorService
 
                 long installationId = await _context.GetInstallationId(normalizedUrl);
 
-                var gitExe = await _retry.RetryAsync(
-                    async () => await _localGit.GetPathToLocalGitAsync(),
-                    ex => logger.LogError(ex, $"Failed to install git to local temporary directory."),
-                    ex => true);
+                var gitExe = _localGit.GetPathToLocalGit();
 
                 switch (normalizedRepoUri.Host)
                 {
