@@ -1006,7 +1006,7 @@ namespace SubscriptionActorService
                 subscriptionSection.AppendLine($"## From {sourceRepository}");
                 subscriptionSection.AppendLine($"- **Subscription**: {updateSubscriptionId}");
                 subscriptionSection.AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
-                subscriptionSection.AppendLine($"- **Date Produced**: {build.DateProduced.ToString("g")}");
+                subscriptionSection.AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}");
                 // This is duplicated from the files changed, but is easier to read here.
                 subscriptionSection.AppendLine($"- **Commit**: {build.Commit}");
                 string branch = build.AzureDevOpsBranch ?? build.GitHubBranch;

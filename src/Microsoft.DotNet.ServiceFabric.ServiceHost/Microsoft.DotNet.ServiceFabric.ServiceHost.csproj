@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Azure.KeyVault" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" />
     <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Newtonsoft.Json.Bson" />
