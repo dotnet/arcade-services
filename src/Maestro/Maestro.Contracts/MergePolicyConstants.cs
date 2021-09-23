@@ -12,7 +12,6 @@ namespace Maestro.Contracts
     {
         public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessful";
         public const string StandardMergePolicyName = "Standard";
-        public const string NoExtraCommitsMergePolicyName = "NoExtraCommits";
         public const string NoRequestedChangesMergePolicyName = "NoRequestedChanges";
         public const string DontAutomergeDowngradesPolicyName = "DontAutomergeDowngrades";
 

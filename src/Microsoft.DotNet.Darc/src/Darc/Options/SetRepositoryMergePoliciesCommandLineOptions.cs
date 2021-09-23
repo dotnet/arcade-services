@@ -31,9 +31,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("no-requested-changes", HelpText = "PR is not merged if there are changes requested or the PR has been rejected.")]
         public bool NoRequestedChangesMergePolicy { get; set; }
 
-        [Option("no-extra-commits", HelpText = "PR is automatically merged if no non-bot commits exist in the PR.")]
-        public bool NoExtraCommitsMergePolicy { get; set; }
-
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }
 
