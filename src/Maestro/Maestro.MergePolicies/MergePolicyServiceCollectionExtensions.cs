@@ -10,7 +10,6 @@ namespace Maestro.MergePolicies
     {
         public static IServiceCollection AddMergePolicies(this IServiceCollection services)
         {
-            services.AddTransient<IMergePolicyBuilder, NoExtraCommitsMergePolicyBuilder>();
             services.AddTransient<IMergePolicyBuilder, AllChecksSuccessfulMergePolicyBuilder>();
             services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
             services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();

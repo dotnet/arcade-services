@@ -38,15 +38,6 @@ namespace Maestro.ScenarioTests.ObjectHelpers
                 });
             }
 
-            if (mergePolicyNames.Contains(MergePolicyConstants.NoExtraCommitsMergePolicyName))
-            {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.NoExtraCommitsMergePolicyName
-                    });
-            }
-
             if (mergePolicyNames.Contains(MergePolicyConstants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
             {
                 mergePolicies.Add(

@@ -4461,10 +4461,6 @@
                         {
                             "name": "AllChecksSuccessful",
                             "properties": {}
-                        },
-                        {
-                            "name": "NoExtraCommits",
-                            "properties": {}
                         }
                     ]
                 },
@@ -24971,10 +24967,6 @@
                     "batchable": false,
                     "updateFrequency": 2,
                     "mergePolicies": [
-                        {
-                            "name": "NoExtraCommits",
-                            "properties": {}
-                        },
                         {
                             "name": "AllChecksSuccessful",
                             "properties": {
