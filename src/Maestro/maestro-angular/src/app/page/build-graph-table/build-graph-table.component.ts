@@ -234,6 +234,7 @@ export class BuildGraphTableComponent implements OnChanges {
   @Input() public graph?: BuildGraph;
   @Input() public includeToolsets?: boolean;
   @Input() public showAllDependencies?: boolean;
+  @Input() public showReleasedDependencies?: boolean;
   public sortedBuilds?: BuildData[];
   public locked: boolean = false;
   public focusedBuildId?: number;
@@ -329,6 +330,15 @@ export class BuildGraphTableComponent implements OnChanges {
         {
           featureName: "includeToolsets",
           featureState: changes.includeToolsets.currentValue
+        });
+    }
+    
+    if(changes.showReleasedDependencies && (changes.showReleasedDependencies.previousValue != changes.showReleasedDependencies.currentValue))
+    {
+      this.ai.trackEvent({name: "featureEnabled"}, 
+        {
+          featureName: "showReleasedDependencies",
+          featureState: changes.showReleasedDependencies.currentValue
         });
     }
   }

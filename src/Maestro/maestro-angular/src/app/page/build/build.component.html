@@ -124,6 +124,12 @@
               Show Sub-Dependencies
             </label>
           </span>
+          <span class="form-check float-right">
+            <mc-switch [style]="" [(value)]="showReleasedDependencies" title="Include Released Builds"></mc-switch>
+            <label class="form-check-label">
+              Include Released Builds
+            </label>
+          </span>
         </div>
         <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
           <ul class="nav nav-tabs">
@@ -136,7 +142,7 @@
           </ul>
           <ng-container *ngIf="view$ | async as view">
             <ng-container *ngIf="view == 'graph'">
-              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets" [showAllDependencies]="showAllDependencies"></mc-build-graph-table>
+              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets" [showAllDependencies]="showAllDependencies" [showReleasedDependencies]="showReleasedDependencies"></mc-build-graph-table>
             </ng-container>
             <ng-container *ngIf="view == 'tree'">
               <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id"></mc-build-graph-tree>
