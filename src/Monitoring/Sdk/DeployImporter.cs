@@ -19,6 +19,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
     {
         private readonly string[] _environments;
         private readonly JsonSerializer _serializer = new JsonSerializer {Formatting = Formatting.Indented};
+        private readonly string _parametersFilePath;
+        private readonly string _environment;
 
         public DeployImporter(
             GrafanaClient grafanaClient,
@@ -27,10 +29,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string datasourceDirectory,
             string notificationDirectory,
             string[] environments,
+            string parametersFilePath,
+            string environment,
             TaskLoggingHelper log) : base(
             grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
             _environments = environments;
+            _parametersFilePath = parametersFilePath;
+            _environment = environment;
         }
 
         public Task ImportFromGrafana(params string[] dashboardUids)
@@ -63,6 +69,21 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 }
             }
 
+            List<Parameter> parameters;
+
+            if (File.Exists(_parametersFilePath))
+            {
+                using (var sr = new StreamReader(_parametersFilePath))
+                using (var jr = new JsonTextReader(sr))
+                {
+                    parameters = _serializer.Deserialize<List<Parameter>>(jr) ?? new List<Parameter>();
+                }
+            }
+            else
+            {
+                parameters = new List<Parameter>();
+            }
+
             foreach (string dashboardUid in dashboardUids)
             {
                 // Get a dashboard
@@ -72,7 +93,10 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
                 string targetUid = dashboard.Value<JObject>("dashboard").Value<string>("uid");
 
-                JObject slimmedDashboard = GrafanaSerialization.SanitizeDashboard(dashboard);
+                // SanitizeDashboard makes structural changes to the JSON and ParameterizeDashboard
+                // expects a certain structure, so order matters when calling these methods.
+                JObject parameterizedDashboard = GrafanaSerialization.ParameterizeDashboard(dashboard, parameters, _environments, _environment);
+                JObject slimmedDashboard = GrafanaSerialization.SanitizeDashboard(parameterizedDashboard);
 
                 UpdateNotificationIds(slimmedDashboard, usedNotificationIds);
 
@@ -157,6 +181,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 {
                     _serializer.Serialize(dashboardJsonWriter, slimmedDashboard);
                 }
+            }
+
+            // Save parameters back to disk
+            Log.LogMessage(MessageImportance.Normal, "Saving parameters {0}...", _parametersFilePath);
+            using (var sr = new StreamWriter(_parametersFilePath))
+            using (var jr = new JsonTextWriter(sr))
+            {
+                _serializer.Serialize(jr, parameters);
             }
         }
 

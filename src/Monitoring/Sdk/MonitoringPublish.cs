@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -40,6 +40,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         [Required]
         public string Environment { get; set; }
 
+        [Required]
+        public string ParameterFile { get; set; }
+
         public sealed override bool Execute()
         {
             var s = Assembly.GetExecutingAssembly();
@@ -49,7 +52,17 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private async Task<bool> ExecuteAsync()
         {
             using (var client = new GrafanaClient(Host, AccessToken))
-            using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationDirectory, Environment, Log))
+            using (var deploy = new DeployPublisher(
+                grafanaClient: client,
+                keyVaultName: KeyVaultName,
+                keyVaultConnectionString: KeyVaultConnectionString,
+                sourceTagValue: Tag,
+                dashboardDirectory: DashboardDirectory,
+                datasourceDirectory: DataSourceDirectory,
+                notificationDirectory: NotificationDirectory,
+                environment: Environment, 
+                parameterFile: ParameterFile,
+                log: Log))
             {
                 try
                 {
