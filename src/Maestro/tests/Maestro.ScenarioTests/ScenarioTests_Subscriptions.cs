@@ -66,7 +66,7 @@ namespace Maestro.ScenarioTests
                     await using AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(
                         channel1Name, repo1Name, repo1Name, targetBranch, "none", "maestro-auth-test",
                         new List<string>
-                        { "--all-checks-passed", "--no-extra-commits", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" }, targetIsAzDo: true);
+                        { "--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" }, targetIsAzDo: true);
 
                     Subscription expectedSubscription2 = SubscriptionBuilder.BuildSubscription(
                         repo1Uri,
@@ -76,7 +76,7 @@ namespace Maestro.ScenarioTests
                         subscription2Id.Value,
                         UpdateFrequency.None,
                         false,
-                        new List<string> { MergePolicyConstants.NoExtraCommitsMergePolicyName, MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
+                        new List<string> { MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
                         new List<string> { "WIP", "license/cla" });
 
                     string expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
@@ -86,7 +86,7 @@ namespace Maestro.ScenarioTests
                     await using AsyncDisposableValue<string> subscription3Id = await CreateSubscriptionAsync(
                         channel2Name, repo1Name, repo2Name, targetBranch, "none", "maestro-auth-test",
                         new List<string>
-                        { "--all-checks-passed", "--no-extra-commits", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" });
+                        { "--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" });
 
                     Subscription expectedSubscription3 = SubscriptionBuilder.BuildSubscription(
                         repo1Uri,
@@ -96,7 +96,7 @@ namespace Maestro.ScenarioTests
                         subscription3Id.Value,
                         UpdateFrequency.None,
                         false,
-                        new List<string> { MergePolicyConstants.NoExtraCommitsMergePolicyName, MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
+                        new List<string> { MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
                         new List<string> { "WIP", "license/cla" });
 
                     string expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);

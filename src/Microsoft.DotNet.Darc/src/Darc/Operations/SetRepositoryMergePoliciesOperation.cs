@@ -41,14 +41,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
             // Parse the merge policies
             List<MergePolicy> mergePolicies = new List<MergePolicy>();
-            if (_options.NoExtraCommitsMergePolicy)
-            {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = MergePolicyConstants.NoExtraCommitsMergePolicyName
-                    });
-            }
 
             if (_options.AllChecksSuccessfulMergePolicy)
             {
