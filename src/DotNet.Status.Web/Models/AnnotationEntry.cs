@@ -19,11 +19,11 @@ namespace DotNet.Status.Web.Models
         /// <summary>
         /// Tags for the annotation. (optional)
         /// </summary>
-        public string[]? Tags { get; set; }
+        public string[] Tags { get; set; }
         /// <summary>
         /// Text for the annotation. (optional)
         /// </summary>
-        public string? Text { get; set; }
+        public string Text { get; set; }
 
         public AnnotationEntry(Annotation annotation, long time, string title)
         {
