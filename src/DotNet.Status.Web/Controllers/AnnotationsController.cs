@@ -37,7 +37,7 @@ namespace DotNet.Status.Web.Controllers
         [HttpGet]
         public ActionResult Get()
         {
-            return Ok();
+            return NoContent();
         }
 
         [HttpPost]
