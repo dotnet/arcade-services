@@ -24,8 +24,7 @@ namespace DotNet.Status.Web.Controllers
     [ApiController]
     public class AnnotationsController : ControllerBase
     {
-        // Limit query complexity
-        private const int _maximumServerCount = 10;
+        private const int _maximumServerCount = 10; // Safety limit on query complexity
         private readonly ILogger<AnnotationsController> _logger;
         private readonly IOptionsMonitor<AnnotationsOptions> _options;
 
@@ -44,14 +43,14 @@ namespace DotNet.Status.Web.Controllers
         [HttpPost]
         [Route("query")]
         public ActionResult Query()
-        {   // Not supported
+        {   // Required endpoint, but not used
             return NoContent();
         }
 
         [HttpPost]
         [Route("search")]
         public ActionResult Search()
-        {   // Not supported
+        {   // Required endpoint, but not used
             return NoContent();
         }
 
