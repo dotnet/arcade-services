@@ -43,6 +43,9 @@
   "Grafana": {
     "TableUri": ""
   },
+  "Annotations": {
+    "DeploymentsTableConnectionString": ""
+  },
   "Kusto": {
     "QueryConnectionString": ""
   },

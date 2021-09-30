@@ -136,6 +136,9 @@
     "ApiToken": "[vault(grafana-api-token)]",
     "TableUri": "[vault(deployment-table-sas-uri)]"
   },
+  "Annotations": {
+    "DeploymentsTableConnectionString": "[vault(deployment-table-sas-uri)]"
+  },
   "WebHooks": {
     "github": {
       "SecretKey": {
