@@ -20,7 +20,7 @@ namespace DotNet.Status.Web.Controllers
     /// "Simple JSON Datasource". It is used to expose the "Deployments" table data to 
     /// Grafana, which may then render the information in dashboards.
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/annotations")]
     [ApiController]
     public class AnnotationsController : ControllerBase
     {
