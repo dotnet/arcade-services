@@ -27,10 +27,10 @@ namespace DotNet.Status.Web
                 .ConfigureAppConfiguration((host, config) =>
                 {
                     config
-                        .AddCommandLine(args)
+                        .AddDefaultJsonConfiguration(host.HostingEnvironment)
                         .AddUserSecrets(Assembly.GetEntryAssembly())
                         .AddEnvironmentVariables()
-                        .AddDefaultJsonConfiguration(host.HostingEnvironment);
+                        .AddCommandLine(args);
                 })
                 .ConfigureLogging(
                     builder =>
