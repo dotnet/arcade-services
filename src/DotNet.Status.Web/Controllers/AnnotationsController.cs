@@ -83,24 +83,32 @@ namespace DotNet.Status.Web.Controllers
 
             await foreach (DeploymentEntity entity in entityQuery)
             {
-                if (entity.Started == null)
+                AnnotationEntry entry;
+
+                if (entity.Started != null && entity.Ended != null)
                 {
-                    // Invalid entity, skip it.
+                    entry = new AnnotationEntry(
+                        annotationQuery.Annotation,
+                        entity.Started.Value.ToUnixTimeMilliseconds(),
+                        $"Deployment of {entity.Service}")
+                    {
+                        IsRange = true,
+                        TimeEnd = entity.Ended.Value.ToUnixTimeMilliseconds()
+                    };
+                }
+                else if (entity.Started == null && entity.Ended == null)
+                {
                     continue;
                 }
-
-                AnnotationEntry entry = new AnnotationEntry(
-                    annotationQuery.Annotation,
-                    entity.Started.Value.ToUnixTimeMilliseconds(),
-                    $"Deployment of {entity.Service}");
+                else
+                {
+                    entry = new AnnotationEntry(
+                        annotationQuery.Annotation,
+                        entity.Started?.ToUnixTimeMilliseconds() ?? entity.Ended.Value.ToUnixTimeMilliseconds(),
+                        $"Deployment of {entity.Service}");
+                }
 
                 entry.Tags = new[] { "deploy", $"deploy-{entity.Service}", entity.Service };
-
-                if (entity.Ended != null)
-                {
-                    entry.IsRange = true;
-                    entry.TimeEnd = entity.Ended.Value.ToUnixTimeMilliseconds();
-                }
 
                 yield return entry;
             }
