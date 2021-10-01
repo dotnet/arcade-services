@@ -125,9 +125,9 @@ namespace DotNet.Status.Web.Tests
                     services.AddControllers()
                         .AddApplicationPart(typeof(AnnotationsController).Assembly);
 
-                    services.Configure<AnnotationsOptions>(options =>
+                    services.Configure<GrafanaOptions>(options =>
                     {
-                        options.DeploymentsTableConnectionString = "https://127.0.0.1:10002/devstoreaccount1/deployments";
+                        options.TableUri = "https://127.0.0.1:10002/devstoreaccount1/deployments";
                     });
 
                     services.AddLogging();

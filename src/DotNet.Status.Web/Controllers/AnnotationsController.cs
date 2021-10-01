@@ -26,9 +26,9 @@ namespace DotNet.Status.Web.Controllers
     {
         private const int _maximumServerCount = 10; // Safety limit on query complexity
         private readonly ILogger<AnnotationsController> _logger;
-        private readonly IOptionsMonitor<AnnotationsOptions> _options;
+        private readonly IOptionsMonitor<GrafanaOptions> _options;
 
-        public AnnotationsController(ILogger<AnnotationsController> logger, IOptionsMonitor<AnnotationsOptions> options)
+        public AnnotationsController(ILogger<AnnotationsController> logger, IOptionsMonitor<GrafanaOptions> options)
         {
             _logger = logger;
             _options = options;
@@ -79,7 +79,7 @@ namespace DotNet.Status.Web.Controllers
             string filter = filterBuilder.ToString();
             _logger.LogTrace("Compiled filter query: {Query}", filter);
 
-            TableClient tableClient = new TableClient(new Uri(_options.CurrentValue.DeploymentsTableConnectionString));
+            TableClient tableClient = new TableClient(new Uri(_options.CurrentValue.TableUri));
             IAsyncEnumerable<DeploymentEntity> entityQuery = tableClient.QueryAsync<DeploymentEntity>(
                 filter: filter,
                 cancellationToken: cancellationToken);
