@@ -18,45 +18,12 @@ namespace DotNet.Status.Web.Tests
     [TestFixture]
     public class AnnotationsControllerTests
     {
-        private HttpClient _client;
-
-        [SetUp]
-        public void Setup()
-        {
-            var factory = new TestAppFactory();
-
-            factory.ConfigureServices(services =>
-            {
-                services.AddControllers()
-                    .AddApplicationPart(typeof(AnnotationsController).Assembly);
-
-                services.Configure<AnnotationsOptions>(options =>
-                {
-                    options.DeploymentsTableConnectionString = "https://127.0.0.1:10002/devstoreaccount1/deployments";
-                });
-
-                services.AddLogging();
-            });
-            factory.ConfigureBuilder(app =>
-            {
-                app.UseRouting();
-                app.UseEndpoints(e => e.MapControllers());
-            });
-
-            _client = factory.CreateClient();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _client?.Dispose();
-        }
-
         [Test]
         public async Task StatusOkayTest()
         {
             // This endpoint is required by Grafana
-            using HttpResponseMessage responseMessage = await _client.GetAsync("/api/annotations");
+            using TestData testData = new TestData();
+            using HttpResponseMessage responseMessage = await testData.Client.GetAsync("/api/annotations");
 
             responseMessage.IsSuccessStatusCode.Should().BeTrue();
         }
@@ -64,6 +31,8 @@ namespace DotNet.Status.Web.Tests
         [Test]
         public async Task TooManyServicesRefusedTest()
         {
+            using TestData testData = new TestData();
+
             // Do not process more than 10 elements in query
             string body = "" +
                 "{" +
@@ -95,7 +64,7 @@ namespace DotNet.Status.Web.Tests
                     ContentLength = body.Length
                 }
             };
-            using HttpResponseMessage response = await _client.PostAsync("/api/annotations/annotations", stringContent);
+            using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
 
             // The query parses and returns anything
             response.IsSuccessStatusCode.Should().BeFalse();
@@ -105,6 +74,8 @@ namespace DotNet.Status.Web.Tests
         [Ignore("Not configured for CI; requires storage account or emulator")]
         public async Task QueryTest()
         {
+            using TestData testData = new TestData();
+
             // Real traffic
             string body = "" +
                 "{" +
@@ -135,10 +106,45 @@ namespace DotNet.Status.Web.Tests
                     ContentLength = body.Length
                 } 
             };
-            using HttpResponseMessage response = await _client.PostAsync("/api/annotations/annotations", stringContent);
+            using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
 
             // The query parses and returns anything
             response.IsSuccessStatusCode.Should().BeTrue();
+        }
+
+        public sealed class TestData : IDisposable
+        {
+            public HttpClient Client { get; }
+
+            public TestData()
+            {
+                var factory = new TestAppFactory();
+
+                factory.ConfigureServices(services =>
+                {
+                    services.AddControllers()
+                        .AddApplicationPart(typeof(AnnotationsController).Assembly);
+
+                    services.Configure<AnnotationsOptions>(options =>
+                    {
+                        options.DeploymentsTableConnectionString = "https://127.0.0.1:10002/devstoreaccount1/deployments";
+                    });
+
+                    services.AddLogging();
+                });
+                factory.ConfigureBuilder(app =>
+                {
+                    app.UseRouting();
+                    app.UseEndpoints(e => e.MapControllers());
+                });
+
+                Client = factory.CreateClient();
+            }
+
+            public void Dispose()
+            {
+                Client?.Dispose();
+            }
         }
     }
 }
