@@ -56,14 +56,16 @@ namespace DotNet.Status.Web.Controllers
 
         [HttpPost]
         [Route("annotations")]
-        public async IAsyncEnumerable<AnnotationEntry> Post(AnnotationQueryBody annotationQuery, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async Task<ActionResult<IEnumerable<AnnotationEntry>>> Post(AnnotationQueryBody annotationQuery, CancellationToken cancellationToken)
         {
-            TableClient tableClient = new TableClient(new Uri(_options.CurrentValue.DeploymentsTableConnectionString));
-
             IEnumerable<string> services = (annotationQuery.Annotation.Query?.Split(',') ?? Array.Empty<string>())
-               .Take(_maximumServerCount)
                .Where(s => !string.IsNullOrWhiteSpace(s))
                .Select(s => s.Trim());
+
+            if (services.Count() > _maximumServerCount)
+            {
+                return BadRequest();
+            }
 
             StringBuilder filterBuilder = new StringBuilder();
             filterBuilder.Append($"Started gt datetime'{annotationQuery.Range.From:O}' and Ended lt datetime'{annotationQuery.Range.To:O}'");
@@ -77,10 +79,12 @@ namespace DotNet.Status.Web.Controllers
             string filter = filterBuilder.ToString();
             _logger.LogTrace("Compiled filter query: {Query}", filter);
 
+            TableClient tableClient = new TableClient(new Uri(_options.CurrentValue.DeploymentsTableConnectionString));
             IAsyncEnumerable<DeploymentEntity> entityQuery = tableClient.QueryAsync<DeploymentEntity>(
                 filter: filter,
                 cancellationToken: cancellationToken);
 
+            List<AnnotationEntry> annotationEntries = new List<AnnotationEntry>();
             await foreach (DeploymentEntity entity in entityQuery)
             {
                 AnnotationEntry entry;
@@ -110,8 +114,10 @@ namespace DotNet.Status.Web.Controllers
 
                 entry.Tags = new[] { "deploy", $"deploy-{entity.Service}", entity.Service };
 
-                yield return entry;
+                annotationEntries.Add(entry);
             }
+
+            return annotationEntries;
         }
     }
 }

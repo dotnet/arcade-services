@@ -62,6 +62,46 @@ namespace DotNet.Status.Web.Tests
         }
 
         [Test]
+        public async Task TooManyServicesRefusedTest()
+        {
+            // Do not process more than 10 elements in query
+            string body = "" +
+                "{" +
+                    "\"range\": {" +
+                        "\"from\": \"2021-09-22T00:16:51.657Z\"," +
+                        "\"to\": \"2021-09-29T00:16:51.657Z\"," +
+                        "\"raw\": {" +
+                            "\"from\": \"now-7d\"," +
+                            "\"to\": \"now\"" +
+                        "}" +
+                    "}," +
+                    "\"annotation\": {" +
+                        "\"name\": \"New annotation\"," +
+                        "\"datasource\": \"Rollout Annotations - Prod\"," +
+                        "\"enable\": true," +
+                        "\"iconColor\": \"red\"," +
+                        "\"query\": \"s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11\"" +
+                    "}," +
+                    "\"rangeRaw\": {" +
+                        "\"from\": \"now-7d\"," +
+                        "\"to\": \"now\"" +
+                    "}" +
+                "}";
+
+            using StringContent stringContent = new StringContent(body)
+            {
+                Headers = {
+                    ContentType = new MediaTypeHeaderValue("application/json"),
+                    ContentLength = body.Length
+                }
+            };
+            using HttpResponseMessage response = await _client.PostAsync("/api/annotations/annotations", stringContent);
+
+            // The query parses and returns anything
+            response.IsSuccessStatusCode.Should().BeFalse();
+        }
+
+        [Test]
         [Ignore("Not configured for CI; requires storage account or emulator")]
         public async Task QueryTest()
         {
