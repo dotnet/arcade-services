@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -162,7 +163,49 @@ namespace Microsoft.DotNet.Kusto
             if (string.IsNullOrWhiteSpace(ingestConnectionString))
                 throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.IngestConnectionString)} is not configured in settings or related KeyVault");
 
-            return _clients.GetOrAdd(ingestConnectionString, _ => KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString));
+            return _clients.GetOrAdd(ingestConnectionString, _ =>
+                // Since we will hand this out to multiple callers, it's important we don't let it get disposed.
+                new NonDisposable(KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString))
+            );
+        }
+
+        private class NonDisposable : IKustoIngestClient
+        {
+            private readonly IKustoIngestClient _inner;
+
+            public NonDisposable(IKustoIngestClient inner)
+            {
+                _inner = inner;
+            }
+
+            public void Dispose()
+            {
+                // This is non-disposable
+            }
+
+            public Task<IKustoIngestionResult> IngestFromDataReaderAsync(
+                IDataReader dataReader,
+                KustoIngestionProperties ingestionProperties,
+                DataReaderSourceOptions sourceOptions = null)
+            {
+                return _inner.IngestFromDataReaderAsync(dataReader, ingestionProperties, sourceOptions);
+            }
+
+            public Task<IKustoIngestionResult> IngestFromStorageAsync(
+                string uri,
+                KustoIngestionProperties ingestionProperties,
+                StorageSourceOptions sourceOptions = null)
+            {
+                return _inner.IngestFromStorageAsync(uri, ingestionProperties, sourceOptions);
+            }
+
+            public Task<IKustoIngestionResult> IngestFromStreamAsync(
+                Stream stream,
+                KustoIngestionProperties ingestionProperties,
+                StreamSourceOptions sourceOptions = null)
+            {
+                return _inner.IngestFromStreamAsync(stream, ingestionProperties, sourceOptions);
+            }
         }
     }
 
