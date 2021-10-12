@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="GitHubJwt" />
+    <PackageReference Include="Azure.Data.Tables" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.Storage.Queues" />
     <PackageReference Include="JetBrains.Annotations" />
@@ -27,7 +28,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Octokit" />
-    <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="WindowsAzure.Storage" /> 
   </ItemGroup>
 
