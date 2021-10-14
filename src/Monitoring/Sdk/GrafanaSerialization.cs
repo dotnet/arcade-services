@@ -151,7 +151,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     }
 
                     Parameter p = parameters
-                        .Where(p => p.Values.ContainsKey(activeEnvironment) && p.Values[activeEnvironment] == value)
+                        .Where(p => p.Values.TryGetValue(activeEnvironment, out var v) && v == value)
                         .FirstOrDefault();
 
                     if (p == null)
