@@ -60,6 +60,8 @@
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
     <Error Text="DashboardId is required" Condition=" '$(DashboardId)' == '' "/>
     <Error Text="GrafanaEnvironments is required" Condition=" '@(GrafanaEnvironments)' == '' "/>
+    <Error Text="ParametersFile is required" Condition=" '$(ParametersFile)' == '' " />
+    <Error Text="Environment is required" Condition=" '$(Environment)' == '' " />
 
     <MonitoringImport
       DashboardDirectory="$(DashboardDirectory)"
@@ -70,6 +72,8 @@
       AccessToken="$(GrafanaAccessToken)"
       Tag="$(GrafanaDashboardTag)"
       Environments="@(GrafanaEnvironments)"
+      ParametersFile="$(ParametersFile)"
+      Environment="$(Environment)"
     />
   </Target>
 </Project>
