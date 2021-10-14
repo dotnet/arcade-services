@@ -161,17 +161,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                         p = new Parameter()
                         {
                             Name = name,
-                            Values = environments.Select(env =>
-                            {
-                                if (env == activeEnvironment)
-                                {
-                                    return (env, value);
-                                }
-                                else
-                                {
-                                    return (env, "PLACEHOLDER");
-                                }
-                            }).ToDictionary(e => e.env, e => e.Item2)
+                            Values = environments.ToDictionary(
+                                env => env, 
+                                env => env == activeEnvironment ? value : "PLACEHOLDER")
                         };
 
                         parameters.Add(p);
