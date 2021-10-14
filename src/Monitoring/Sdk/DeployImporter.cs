@@ -76,7 +76,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 using (var sr = new StreamReader(_parametersFilePath))
                 using (var jr = new JsonTextReader(sr))
                 {
-                    parameters = _serializer.Deserialize<List<Parameter>>(jr) ?? new List<Parameter>();
+                    parameters = _serializer.Deserialize<List<Parameter>>(jr);
                 }
             }
             else
