@@ -12,130 +12,64 @@ namespace Microsoft.DotNet.Monitoring.Sdk.Tests
         /*
          *  {
          *    "dashboard": {
-         *      "panels": [
-         *        {
-         *          "targets": [
-         *            {
+         *      "panels": [{
+         *        "targets": [{
          *              "azureMonitor": {
-         *              "resourceGroup": "value1",
-         *              "resourceName": "value2",
-         *              "duplicateTest": "value1"
-         *            }
-         *          }
-         *        ]
-         *      },
-         *      {
-         *        "targets": [
-         *          {
+         *                "resourceGroup": "value1",
+         *                "resourceName": "value2",
+         *                "duplicateTest": "value1"
+         *            }}]}, {
+         *        "targets": [{
          *            "azureLogAnalytics": {
          *              "resource": "value1"
-         *            }
-         *          }
-         *        ]
-         *      }
-         *    ]
+         *            }}]}]}
          *  }
-         *}
          */
         readonly JObject _valueReplacementDashboard = new JObject
         {
             {
-                "dashboard", new JObject
-                {
-                    {
-                        "panels", new JArray
-                        {
-                            new JObject
-                            {
-                                {
-                                    "targets", new JArray
-                                    {
-                                        new JObject
-                                        {
-                                            {
-                                                "azureMonitor", new JObject
-                                                {
-                                                    { "resourceGroup", "value1" },
-                                                    { "resourceName", "value2" },
-                                                    { "duplicateTest", "value1" }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            new JObject
-                            {
-                                {
-                                    "targets", new JArray
-                                    {
-                                        new JObject
-                                        {
-                                            {
-                                                "azureLogAnalytics", new JObject
-                                                {
-                                                    { "resource", "value1" },
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                        }
-                    }
-                }
+                "dashboard", new JObject { {
+                    "panels", new JArray {
+                        new JObject { {
+                            "targets", new JArray {
+                                new JObject { {
+                                    "azureMonitor", new JObject {
+                                        { "resourceGroup", "value1" },
+                                        { "resourceName", "value2" },
+                                        { "duplicateTest", "value1" }
+                            }}}}}},
+                            new JObject { {
+                                "targets", new JArray {
+                                    new JObject { {
+                                        "azureLogAnalytics", new JObject {
+                                            { "resource", "value1" },
+                            }}}}}},
+                }}}
             }
         };
 
         private readonly JObject _dashboardWithParameters = new JObject
+        {
             {
-                {
-                    "dashboard", new JObject
-                    {
-                        {
-                            "panels", new JArray
-                            {
-                                new JObject
-                                {
-                                    {
-                                        "targets", new JArray
-                                        {
-                                            new JObject
-                                            {
-                                                {
-                                                    "azureMonitor", new JObject
-                                                    {
-                                                        { "resourceGroup", "[Parameter(MyNamedValue1Parameter)]" },
-                                                        { "resourceName", "[Parameter(MyNamedValue2Parameter)]" },
-                                                        { "duplicateTest", "[Parameter(MyNamedValue1Parameter)]" }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                new JObject
-                                {
-                                    {
-                                        "targets", new JArray
-                                        {
-                                            new JObject
-                                            {
-                                                {
-                                                    "azureLogAnalytics", new JObject
-                                                    {
-                                                        { "resource", "[Parameter(MyNamedValue1Parameter)]" },
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                            }
-                        }
-                    }
-                }
-            };
+                "dashboard", new JObject { {
+                    "panels", new JArray {
+                        new JObject { {
+                            "targets", new JArray {
+                                new JObject { {
+                                    "azureMonitor", new JObject {
+                                        { "resourceGroup", "[Parameter(MyNamedValue1Parameter)]" },
+                                        { "resourceName", "[Parameter(MyNamedValue2Parameter)]" },
+                                        { "duplicateTest", "[Parameter(MyNamedValue1Parameter)]" }
+                        }}}}}},
+                        new JObject { {
+                            "targets", new JArray {
+                                new JObject { {
+                                    "azureLogAnalytics", new JObject {
+                                        { "resource", "[Parameter(MyNamedValue1Parameter)]" },
+                        }}}}}},
+                }}}
+            }
+        };
 
         private readonly List<Parameter> _parameters = new List<Parameter>() {
             new Parameter()
