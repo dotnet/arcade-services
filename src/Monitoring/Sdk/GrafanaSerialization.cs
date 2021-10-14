@@ -188,10 +188,10 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         {
             JObject deparameterizedDashboard = new JObject(dashboard);
 
-            IEnumerable<JToken> tokens = deparameterizedDashboard.SelectTokens("$..*")
+            List<JToken> tokens = deparameterizedDashboard.SelectTokens("$..*")
                 .Where(token => token.Type == JTokenType.String)
                 .Where(token => TryGetParameterName(token.Value<string>(), out string _))
-                .ToList(); // For some reason .SelectTokens throws if enumeration happens in the foreach
+                .ToList(); // Force enumeration so the JObject may be modified as we go
 
             foreach (JToken token in tokens)
             {
