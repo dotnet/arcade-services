@@ -182,12 +182,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             List<JToken> tokens = deparameterizedDashboard.SelectTokens("$..*")
                 .Where(token => token.Type == JTokenType.String)
-                .Where(token => TryGetParameterName(token.Value<string>(), out string _))
                 .ToList(); // Force enumeration so the JObject may be modified as we go
 
             foreach (JToken token in tokens)
             {
-                TryGetParameterName(token.Value<string>(), out string parameterName);
+                if (!TryGetParameterName(token.Value<string>(), out string parameterName))
+                {
+                    continue;
+                }
 
                 Parameter parameter = parameters.FirstOrDefault(param => param.Name == parameterName);
 
