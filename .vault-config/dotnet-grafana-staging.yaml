@@ -1,0 +1,35 @@
+storageLocation:
+  type: azure-key-vault
+  parameters:
+    subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+    name: dotnet-grafana-staging
+
+keys:
+  dotnet-status-data-protection:
+    type: RSA
+    size: 2048
+
+secrets:
+  dnc-eng-app-insights-api-key:
+    type: 
+
+  dotnet-build-bot-dotnet-eng-status-token:
+    type: github-account
+    parameters:
+      name: 
+
+  fr-bot-notifications-teams-notification-url:
+    type:
+
+  grafana-admin-api-key:
+    type: grafana-api-key
+    parameters:
+      environment: dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
+
+  helix-client-app-insights-api-key:
+    type: helix-access-token
+    parameters:
+      environment: helix.int-dot.net
+
+  key-vault-app-secret:
+    type: 

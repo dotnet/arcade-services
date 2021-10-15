@@ -1,0 +1,73 @@
+storageLocation:
+  type: azure-key-vault
+  parameters:
+    subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+    name: dotnet-grafana
+
+keys:
+  dotnet-status-data-protection:
+    type: RSA
+    size: 2048
+
+secrets:
+  dnc-eng-app-insights-api-key:
+    type: 
+
+  dotnet-build-bot-dotnet-eng-status-token:
+    type: github-account
+    parameters:
+      name: 
+
+  dotnet-eng-app-insights-api-key:
+    type:
+
+  dotnetgrafana-storage-account-key:
+    type: azure-storage-key
+    parameters:
+      account: 
+      subscription: 
+
+  fr-bot-notifications-teams-notification-url:
+    type:
+
+  grafana-admin-api-key:
+    type: grafana-api-key
+    parameters:
+      environment: dotnet-eng-grafana.westus2.cloudapp.azure.com
+
+  grafana-aes-256-secret-key:
+    type: grafana-api-key
+    parameters:
+      environment: dotnet-eng-grafana.westus2.cloudapp.azure.com
+
+  grafana-app-insights-api-key:
+    type:
+
+  helix-app-insights-api-key:
+    type: helix-access-token
+    parameters:
+      environment: helix.dot.net
+
+  helix-autoscale-app-insights-api-key:
+    type: helix-access-token
+    parameters:
+      environment: helix.dot.net
+
+  helix-client-app-insights-api-key:
+    type: helix-access-token
+    parameters:
+      environment: helix.dot.net
+
+  key-vault-app-secret:
+    type: 
+
+  maestro-app-insights-api-key:
+    type: maestro-access-token
+    parameters:
+      environment: 
+
+  pool-provider-internal-app-insights-api-key:
+    type: 
+
+  pool-provider-public-app-insights-api-key:
+    type: 
