@@ -352,6 +352,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/templating", (coreRepoCategory, "templating") },
             { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
             { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
+            { $"{githubRepoPrefix}dotnet/roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -361,6 +362,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-templating", (coreRepoCategory, "templating") },
             { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
             { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
+            { $"{azdoRepoPrefix}dotnet-roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
 
             // ASPNET
 
