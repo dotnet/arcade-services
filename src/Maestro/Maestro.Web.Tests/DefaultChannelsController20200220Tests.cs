@@ -25,7 +25,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using static Maestro.Web.Api.v2020_02_20.Models.DefaultChannel;
-using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
 
 namespace Maestro.Web.Tests
 {
