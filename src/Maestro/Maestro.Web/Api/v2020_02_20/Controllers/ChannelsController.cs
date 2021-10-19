@@ -25,6 +25,13 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     /// <summary>
     ///   Exposes methods to Create/Read/Edit/Delete <see cref="Channel"/>s.
     /// </summary>
+    /// <remarks>
+    ///   Note that below there are several implementations of the channels controller that are overridden
+    ///   from the base class, yet their implementations are identical. This is becaue the <see cref="Channel"/> type varies
+    ///   between the v2018_07_16 and v2020_02_20 APIs, specifically around the removal of the <see cref="Maestro.Web.Api.v2018_07_16.Models.Channel.ReleasePipelines"/>
+    ///   member. Don't remove them.
+    /// </remarks>
+    /// <seealso cref="Maestro.Web.Api.v2018_07_16.Controllers.ChannelsController"/>
     [Route("channels")]
     [ApiVersion("2020-02-20")]
     public class ChannelsController : v2018_07_16.Controllers.ChannelsController
@@ -41,10 +48,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             _remoteFactory = factory;
         }
 
-        /// <summary>
-        ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
-        /// </summary>
-        /// <param name="classification">The <see cref="Channel.Classification"/> of <see cref="Channel"/> to get</param>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Channel>), Description = "The list of Channels")]
         [ValidateModelState]
@@ -60,19 +63,44 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return Ok(results);
         }
 
+        /// <summary>
+        ///     Gets a list of repositories that have had builds applied to the specified channel.
+        /// </summary>
+        /// <param name="id">Channel id</param>
+        /// <param name="withBuildsInDays">If specified, lists only repositories that have had builds assigned to the channel in the last N days. Must be > 0</param>
+        /// <returns></returns>
         [HttpGet("{id}/repositories")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in Channel")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in a Channel, optionally restricting to repositories with builds in last N days.")]
         [ValidateModelState]
-        public override async Task<IActionResult> ListRepositories(int id)
+        public override async Task<IActionResult> ListRepositories(int id, int? withBuildsInDays = null)
         {
-            List<string> list = await _context.BuildChannels
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+
+            var buildChannelList = await _context.BuildChannels
                     .Include(b => b.Build)
                     .Where(bc => bc.ChannelId == id)
+                    .ToListAsync();
+
+            if (withBuildsInDays != null)
+            {
+                if (withBuildsInDays <= 0)
+                {
+                    return BadRequest(
+                        new ApiError($"withBuildsInDays should be greater than 0."));
+                }
+
+                buildChannelList = buildChannelList
+                    .Where(bc => now.Subtract(bc.Build.DateProduced).TotalDays < withBuildsInDays)
+                    .ToList();
+            }
+
+            List<string> repositoryList = buildChannelList
                     .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
                     .Where(b => !String.IsNullOrEmpty(b))
                     .Distinct()
-                    .ToListAsync();
-            return Ok(list);
+                    .ToList();
+
+            return Ok(repositoryList);
         }
 
         /// <summary>
