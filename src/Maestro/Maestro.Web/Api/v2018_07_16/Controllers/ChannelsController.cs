@@ -63,44 +63,19 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(results);
         }
 
-        /// <summary>
-        ///     Gets a list of repositories that have had builds applied to the specified channel.
-        /// </summary>
-        /// <param name="id">Channel id</param>
-        /// <param name="withBuildsInDays">If specified, lists only repositories that have had builds assigned to the channel in the last N days. Must be > 0</param>
-        /// <returns></returns>
         [HttpGet("{id}/repositories")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in a Channel, optionally restricting to repositories with builds in last N days.")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in Channel")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> ListRepositories(int id, int? withBuildsInDays = null)
+        public virtual async Task<IActionResult> ListRepositories(int id)
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-
-            var buildChannelList = await _context.BuildChannels
+            List<string> list = await _context.BuildChannels
                     .Include(b => b.Build)
                     .Where(bc => bc.ChannelId == id)
-                    .ToListAsync();
-
-            if (withBuildsInDays != null)
-            {
-                if (withBuildsInDays <= 0)
-                {
-                    return BadRequest(
-                        new ApiError($"withBuildsInDays should be greater than 0."));
-                }
-
-                buildChannelList = buildChannelList
-                    .Where(bc => now.Subtract(bc.Build.DateProduced).TotalDays < withBuildsInDays)
-                    .ToList();
-            }
-
-            List<string> repositoryList = buildChannelList
                     .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
                     .Where(b => !String.IsNullOrEmpty(b))
                     .Distinct()
-                    .ToList();
-
-            return Ok(repositoryList);
+                    .ToListAsync();
+            return Ok(list);
         }
 
         /// <summary>
