@@ -39,7 +39,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string datasourceDirectory,
             string notificationDirectory,
             string environment,
-            string parameterFile,
+            string parametersFile,
             TaskLoggingHelper log) : base(
             grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             _keyVaultConnectionString = keyVaultConnectionString;
             _environment = environment;
             _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
-            _parameterFile = parameterFile;
+            _parameterFile = parametersFile;
         }
         
         private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);

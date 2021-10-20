@@ -42,6 +42,7 @@
     <Error Text="GrafanaKeyVaultName is required" Condition=" '$(GrafanaKeyVaultName)' == '' "/>
     <Error Text="GrafanaKeyVaultConnectionString is required" Condition=" '$(GrafanaKeyVaultConnectionString)' == '' "/>
     <Error Text="GrafanaEnvironment is required" Condition=" '$(GrafanaEnvironment)' == '' "/>
+    <Error Text="ParametersFile is required" Condition=" '$(ParametersFile)' == '' "/>
 
     <MonitoringPublish
       DashboardDirectory="$(DashboardDirectory)"
@@ -53,6 +54,7 @@
       KeyVaultConnectionString="$(GrafanaKeyVaultConnectionString)"
       Tag="$(GrafanaDashboardTag)"
       Environment="$(GrafanaEnvironment)"
+      ParametersFile="$(ParametersFile)"
     />
   </Target>
   <Target Name="ImportGrafana">

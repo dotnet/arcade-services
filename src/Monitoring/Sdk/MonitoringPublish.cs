@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public string Environment { get; set; }
 
         [Required]
-        public string ParameterFile { get; set; }
+        public string ParametersFile { get; set; }
 
         public sealed override bool Execute()
         {
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 datasourceDirectory: DataSourceDirectory,
                 notificationDirectory: NotificationDirectory,
                 environment: Environment, 
-                parameterFile: ParameterFile,
+                parametersFile: ParametersFile,
                 log: Log))
             {
                 try
