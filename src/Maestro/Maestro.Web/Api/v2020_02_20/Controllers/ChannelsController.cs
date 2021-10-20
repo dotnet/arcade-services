@@ -76,10 +76,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
 
-            var buildChannelList = await _context.BuildChannels
+            var buildChannelList = _context.BuildChannels
                     .Include(b => b.Build)
-                    .Where(bc => bc.ChannelId == id)
-                    .ToListAsync();
+                    .Where(bc => bc.ChannelId == id);
 
             if (withBuildsInDays != null)
             {
@@ -90,15 +89,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 }
 
                 buildChannelList = buildChannelList
-                    .Where(bc => now.Subtract(bc.Build.DateProduced).TotalDays < withBuildsInDays)
-                    .ToList();
+                    .Where(bc => now.Subtract(bc.Build.DateProduced).TotalDays < withBuildsInDays);
             }
 
-            List<string> repositoryList = buildChannelList
+            List<string> repositoryList = await buildChannelList
                     .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
                     .Where(b => !String.IsNullOrEmpty(b))
                     .Distinct()
-                    .ToList();
+                    .ToListAsync();
 
             return Ok(repositoryList);
         }
