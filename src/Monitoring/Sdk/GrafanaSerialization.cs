@@ -35,12 +35,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             slimmedDashboard.Remove("id");
             slimmedDashboard.Remove("uid");
             slimmedDashboard.Remove("version");
-            var allTargets = slimmedDashboard.SelectTokens("panels.[*].targets.[*]");
-            foreach (JToken jToken in allTargets)
-            {
-                var target = (JObject) jToken;
-                target.Remove("subscription");
-            }
             return slimmedDashboard;
         }
 
@@ -129,7 +123,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 "$.dashboard.panels[*].targets[*].azureMonitor.resourceGroup",
                 "$.dashboard.panels[*].targets[*].azureMonitor.resourceName",
                 "$.dashboard.panels[*].targets[*].azureLogAnalytics.resource",
-                "$.dashboard.panels[*].targets[*].azureLogAnalytics.workspace"
+                "$.dashboard.panels[*].targets[*].azureLogAnalytics.workspace",
+                "$.dashboard.panels[*].targets[*].subscription"
             };
 
             foreach (string path in paths)
