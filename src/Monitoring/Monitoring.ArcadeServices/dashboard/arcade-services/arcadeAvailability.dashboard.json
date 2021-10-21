@@ -236,7 +236,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "37f5d3cf2baa47058dfa9d1bf0097b45"
+          "NotificationId": "3c2b57a066d744e88c3ec06910de0d59"
         },
         "conditions": [
           {
@@ -270,7 +270,11 @@
         "message": "Public Pool Provider Average Response Time is high",
         "name": "Pool Provider Public Average Response Time alert",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -569,7 +573,11 @@
         "message": "source.dot.net availability is low!",
         "name": "source.dot.net Availability",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "description": "Availability tests for the site source.dot.net.",
@@ -876,7 +884,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "72b7ffa08f1d499798dd4d434590516e"
+          "NotificationId": "7d6ec51ee9274a01925388aa55e8e96e"
         },
         "conditions": [
           {
@@ -910,7 +918,11 @@
         "message": "Internal Pool Provider Average Response Time is high",
         "name": "Internal Pool Provider Average Response Time",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -1306,7 +1318,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "49c3713378f1465688cd874eba9fe3c3"
+          "NotificationId": "6179576701874a7abc440a574cf636d0"
         },
         "conditions": [
           {
@@ -1340,7 +1352,11 @@
         "message": "Helix API availability alert!",
         "name": "Helix API availability",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -1514,7 +1530,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "a5cbeac7ece644a3b7f3250a999c630c"
+          "NotificationId": "24cae10d9eca44079e7cf3d47f148497"
         },
         "conditions": [
           {
@@ -1548,7 +1564,11 @@
         "message": "Helix API Average Response Time is high!",
         "name": "Helix API Average Response Time",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -1821,7 +1841,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "608fcdc32620411cb1996daa0a75020c"
+          "NotificationId": "733a0451120b477d87f73a551cbe91a1"
         },
         "conditions": [
           {
@@ -1855,7 +1875,11 @@
         "message": "Certificate has expired.",
         "name": "Pool Provider (Internal) AuthenticationException",
         "noDataState": "ok",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "description": "Sends an alert when the service tries to use an expired certificate ",
@@ -2024,7 +2048,11 @@
         "handler": 1,
         "name": "Maestro / BarViz alert",
         "noDataState": "no_data",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -2310,7 +2338,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "3e8c54a7b90d452b904a39174529e604"
+          "NotificationId": "b87805b575d141e4b2b6d258f5e3a79e"
         },
         "conditions": [
           {
@@ -2344,7 +2372,11 @@
         "message": "The number of failed Maestro requests per hour is above 10. This may indicate a deployment in progress or a systemic problem that needs to be investigated.",
         "name": "Maestro Failed Requests/Hour alert",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -2481,7 +2513,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "b7b920804f4e4ce6bf5ce24eb48baf84"
+          "NotificationId": "5732dcb30634428ca33fc56f811391b8"
         },
         "conditions": [
           {
@@ -2515,7 +2547,11 @@
         "message": "Certificate has expired.",
         "name": "Pool Provider (Public) AuthenticationException",
         "noDataState": "ok",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -2637,7 +2673,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "6f3fc19a6b0c4ad68651ce1060bf9dd3"
+          "NotificationId": "d2dd705a6c724ed68fcf6955561c06dd"
         },
         "conditions": [
           {
@@ -2671,7 +2707,11 @@
         "message": "The number of failed DotNetEng Status requests per hour is above 20. This may indicate a systemic problem that needs to be investigated.",
         "name": "DotNetEng Status Failed Requests/Hour alert",
         "noDataState": "ok",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
@@ -2793,7 +2833,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "1e327abdfe534891be21aa8fa9cd1cd2"
+          "NotificationId": "6213d3c5ce9a46278343bf075798e46f"
         },
         "conditions": [
           {
@@ -2826,7 +2866,11 @@
         "handler": 1,
         "name": "Helix AutoScaler Service Stopped Running",
         "noDataState": "alerting",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "datasource": "Azure Monitor",
       "fieldConfig": {
