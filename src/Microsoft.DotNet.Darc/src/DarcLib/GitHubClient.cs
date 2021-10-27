@@ -678,9 +678,14 @@ namespace Microsoft.DotNet.DarcLib
                                             blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
                                             break;
                                         }
-                                        catch (AbuseException e) when (attempts < maxAttempts)
+                                        catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
                                         {
-                                            int retryAfterSeconds = e.RetryAfterSeconds ?? 60;
+                                            // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
+                                            int retryAfterSeconds = 60;
+                                            if (e is AbuseException abuseException && abuseException.RetryAfterSeconds.HasValue)
+                                            {
+                                                retryAfterSeconds = abuseException.RetryAfterSeconds.Value;
+                                            }
 
                                             _logger.LogInformation($"Triggered GitHub abuse mechanism. Retrying after {retryAfterSeconds} seconds..");
                                             await Task.Delay(retryAfterSeconds * 1000);
