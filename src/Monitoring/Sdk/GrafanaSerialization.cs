@@ -60,7 +60,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 .Where(x => x != "-- Mixed --" && x != "-- Grafana --")
                 .Distinct();
         }
-        
+
         /// <summary>
         /// Modify a Data Source JSON object as retrieved from the Grafana API into
         /// something suitable to post back to the API
@@ -151,13 +151,13 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
                     if (p == null)
                     {
-                        string name = Guid.NewGuid().ToString();
+                        string name = $"PLACEHOLDER:{Guid.NewGuid()}";
 
                         p = new Parameter()
                         {
                             Name = name,
                             Values = environments.ToDictionary(
-                                env => env, 
+                                env => env,
                                 env => env == activeEnvironment ? value : "PLACEHOLDER")
                         };
 
@@ -174,6 +174,11 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public static JObject DeparameterizeDashboard(JObject dashboard, IEnumerable<Parameter> parameters, string environment)
         {
             JObject deparameterizedDashboard = new JObject(dashboard);
+
+            if (parameters.Any(p => p.Name.Contains("PLACEHOLDER")))
+            {
+                throw new ArgumentException($"Found parameter containing PLACEHOLDER; this indicates parameters file is incomplete. Verify file contents and remove all references to PLACEHOLDER.");
+            }
 
             List<JToken> tokens = deparameterizedDashboard.SelectTokens("$..*")
                 .Where(token => token.Type == JTokenType.String)

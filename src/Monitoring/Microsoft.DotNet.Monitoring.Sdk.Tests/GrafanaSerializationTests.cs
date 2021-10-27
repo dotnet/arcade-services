@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk.Tests
             }
         };
 
-        private readonly List<Parameter> _parameters = new List<Parameter>() {
+        private readonly Parameter[] _parameters = new Parameter[] {
             new Parameter()
             {
                 Name = "MyNamedValue1Parameter",
@@ -123,11 +123,12 @@ namespace Microsoft.DotNet.Monitoring.Sdk.Tests
         public void ExtantParametersTest()
         {
             string environment = "Staging";
+            List<Parameter> parameters = new List<Parameter>(_parameters);
 
-            JObject parameterizedDashboard = GrafanaSerialization.ParameterizeDashboard(_valueReplacementDashboard, _parameters, _environments, environment);
+            JObject parameterizedDashboard = GrafanaSerialization.ParameterizeDashboard(_valueReplacementDashboard, parameters, _environments, environment);
 
             // Expect that the parameters list has not changed
-            _parameters.Select(p => p.Values[environment]).Should()
+            parameters.Select(p => p.Values[environment]).Should()
                 .BeEquivalentTo(_parameters
                     .SelectMany(p => p.Values
                         .Where(kvp => kvp.Key == environment)
@@ -186,5 +187,22 @@ namespace Microsoft.DotNet.Monitoring.Sdk.Tests
             act.Should().Throw<ArgumentException>();
         }
 
+        [Test]
+        public void Deparameterize_ThrowIfPlaceholderPresentTest()
+        {
+            // Cause exception by specifying a parameter with the placeholder string in it.
+            string environment = _environments[0];
+            List<Parameter> parameters = new List<Parameter>(_parameters);
+            parameters.Add(new Parameter() { 
+                Name = "PLACEHOLDER:12345678-1234-1234-1234-1234567890AB", 
+                Values = new Dictionary<string, string>() {
+                    { environment, "MadeUpValue" } 
+                } 
+            });
+
+            Action act = () => GrafanaSerialization.DeparameterizeDashboard(_dashboardWithParameters, parameters, environment);
+
+            act.Should().Throw<ArgumentException>();
+        }
     }
 }
