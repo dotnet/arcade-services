@@ -67,7 +67,7 @@ stages:
 - stage: predeploy
   displayName: Pre-Deployment
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - build
   - Validate
@@ -88,7 +88,7 @@ stages:
 - stage: deploy
   displayName: Deploy
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - predeploy
   - approval
@@ -251,7 +251,7 @@ stages:
 - stage: postdeploy
   displayName: Post-Deployment
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - deploy
   condition: always()
@@ -291,7 +291,7 @@ stages:
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
-    vmImage: vs2017-win2016
+    vmImage: windows-2019
   dependsOn:
   - deploy
   variables:

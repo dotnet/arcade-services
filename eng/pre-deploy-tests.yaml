@@ -7,13 +7,13 @@ stages:
 - stage: ${{ parameters.stageName }}
   displayName: Pre-Deployment Validation
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - Build
   jobs:
   - job: Validate_Existing_Services
     pool:
-      name: Hosted VS2017
+      vmImage: windows-2019
     steps:
     - download: current
       artifact: ValidationScripts
