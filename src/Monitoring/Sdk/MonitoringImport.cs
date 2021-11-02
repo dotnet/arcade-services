@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -37,6 +37,12 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         [Required]
         public ITaskItem[] Environments { get; set; }
 
+        [Required]
+        public string ParametersFile { get; set; }
+
+        [Required]
+        public string Environment { get; set; }
+
         public sealed override bool Execute()
         {
             return ExecuteAsync().GetAwaiter().GetResult();
@@ -47,13 +53,15 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             using (var client = new GrafanaClient(Host, AccessToken))
             {
                 var deploy = new DeployImporter(
-                    client,
-                    Tag,
-                    DashboardDirectory,
-                    DataSourceDirectory,
-                    NotificationDirectory,
-                    Environments.Select(e => e.ItemSpec).ToArray(),
-                    Log);
+                    grafanaClient: client,
+                    sourceTagValue: Tag,
+                    dashboardDirectory: DashboardDirectory,
+                    datasourceDirectory: DataSourceDirectory,
+                    notificationDirectory: NotificationDirectory,
+                    environments: Environments.Select(e => e.ItemSpec).ToArray(),
+                    parametersFilePath: ParametersFile,
+                    environment: Environment,
+                    log: Log);
 
                 try
                 {

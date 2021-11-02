@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
+# Replace all environment values of the form [vault(secret-name)] with 
+# the value of secret-name as found in the supplied Azure Keyvault.
+
 import os
 import re
 import sys
 import subprocess
 
-from azure.keyvault import KeyVaultClient
-from msrestazure.azure_active_directory import MSIAuthentication
+from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
 
-credentials = MSIAuthentication(resource='https://vault.azure.net')
-kv = KeyVaultClient(credentials)
-
+credentials = DefaultAzureCredential()
 
 def get_secret(vault: str, name: str) -> str:
-    bundle = kv.get_secret('https://{}.vault.azure.net'.format(vault), name, '')
+    kv = SecretClient('https://{}.vault.azure.net'.format(vault), credentials)
+    bundle = kv.get_secret(name)
     return bundle.value
 
 
