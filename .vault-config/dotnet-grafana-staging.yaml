@@ -4,32 +4,49 @@ storageLocation:
     subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
     name: dotnet-grafana-staging
 
-keys:
-  dotnet-status-data-protection:
-    type: RSA
-    size: 2048
-
 secrets:
-  dnc-eng-app-insights-api-key:
-    type: 
-
+  # API token from https://dotneteng-status-staging.azurewebsites.net/
   dotnet-build-bot-dotnet-eng-status-token:
-    type: github-account
-    parameters:
-      name: 
+    type: text
 
+  dotnetgrafana-storage-account-key:
+    type: azure-storage-key
+    parameters:
+      account: dotnetgrafana
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+
+  # Fixed value set by Teams Incoming Hook plugin; no rotation, but should be kept secret.
   fr-bot-notifications-teams-notification-url:
-    type:
+    type: text
 
   grafana-admin-api-key:
     type: grafana-api-key
     parameters:
       environment: dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
 
-  helix-client-app-insights-api-key:
-    type: helix-access-token
-    parameters:
-      environment: helix.int-dot.net
+  # Used by Grafana to encrypt data-at-rest; do not rotate lest data become un-decryptable.
+  grafana-aes-256-secret-key:
+    type: text
 
+  # Used by deployment
   key-vault-app-secret:
-    type: 
+    type: text
+
+  # Was: dotnet-grafana-github-oauth-app-secret
+  dotnet-grafana-github-oauth-app-secret:
+    type: github-app-secret
+    parameters:
+      hasPrivateKey: false
+      hasWebHookSecret: false
+      hasAppSecret: true
+
+  # Composite value with dotnet-build-bot-dotnet-eng-status-token 
+  dotneteng-status-auth-header:
+    type: text
+
+  # Grafana Admin password
+  grafana-admin-password:
+    type: text
+
+  helix-grafana-ad-client-secret:
+    type: text
