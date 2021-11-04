@@ -18,6 +18,7 @@ secrets:
       subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
       account: dotnetengstatusprod
 
+  # Grafana API key with admin privileges
   grafana-api-token:
     type: grafana-api-key
     parameters:
