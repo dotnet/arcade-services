@@ -23,7 +23,3 @@ secrets:
     parameters:
       account: dotnetgrafana
       subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
-
-  # Fixed value set by Teams Incoming Hook plugin; no rotation, but should be kept secret.
-  teams-notification-url:
-    type: text
