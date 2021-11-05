@@ -7,24 +7,6 @@ storageLocation:
 importSecretsFrom: shared/dotnet-grafana-secrets.yaml
 
 secrets:
-  # Was: dotnet-grafana-github-production-oauth-app-secret
-  # The "Dotnet Engineering Grafana Monitoring" owned by dotnet-gh-app-bot
-  dotnet-grafana-github-production-oauth-app-secret:
-    type: github-oauth-secret
-    parameters:
-      hasPrivateKey: false
-      hasWebHookSecret: false
-      hasAppSecret: true
-
-  # Was: dotnet-grafana-github-staging-oauth-app-secret
-  # The "Dotnet Engineering Grafana Monitoring (staging)" owned by dotnet-gh-app-bot
-  dotnet-grafana-github-staging-oauth-app-secret:
-    type: github-oauth-secret
-    parameters:
-      hasPrivateKey: false
-      hasWebHookSecret: false
-      hasAppSecret: true
-
   # Used by machine setup scripts during deployment and for the alert system for image storage
   dotnetgrafana-storage-account-key:
     type: azure-storage-key
