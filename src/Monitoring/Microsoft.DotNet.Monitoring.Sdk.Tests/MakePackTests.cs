@@ -59,7 +59,7 @@ namespace DotNet.Grafana.Tests
             {
                 {"id", "removed"},
                 {"orgId", "removed"},
-                {"url", "removed"},
+                {"url", ""},
                 {"name", "datasource name"},
                 {
                     "jsonData",

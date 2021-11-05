@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Monitoring.Sdk
@@ -34,12 +35,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             slimmedDashboard.Remove("id");
             slimmedDashboard.Remove("uid");
             slimmedDashboard.Remove("version");
-            var allTargets = slimmedDashboard.SelectTokens("panels.[*].targets.[*]");
-            foreach (JToken jToken in allTargets)
-            {
-                var target = (JObject) jToken;
-                target.Remove("subscription");
-            }
             return slimmedDashboard;
         }
 
@@ -50,17 +45,22 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         /// <returns></returns>
         public static IEnumerable<string> ExtractDataSourceNames(JObject dashboard)
         {
-            // Data sources live in panel[*].datasource, unless the "Mixed Data source" feature
-            // is used. Then, get names from panel[*].target.datasource. 
+            // Panel data sources live in panel[*].datasource, unless the "Mixed Data source" 
+            // feature is used. Then, get names from panel[*].target.datasource. 
+            // Annotation data sources live in annotation.list[*].datasource. The 
+            // data source "-- Grafana --" is the build-in source and should be ignored.
+
+            // A datasource field will be null if it is depending on the "default"
+            // datasource. This is an unsupported configuration.
 
             return dashboard
-                .SelectTokens("$.dashboard.panels[*]..datasource")
+                .SelectTokens("$..datasource")
                 .Values<string>()
                 .Where(x => !String.IsNullOrEmpty(x))
-                .Where(x => x != "-- Mixed --")
+                .Where(x => x != "-- Mixed --" && x != "-- Grafana --")
                 .Distinct();
         }
-        
+
         /// <summary>
         /// Modify a Data Source JSON object as retrieved from the Grafana API into
         /// something suitable to post back to the API
@@ -72,9 +72,13 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             var slimmedDatasource = new JObject(datasource);
             slimmedDatasource.Remove("id");
             slimmedDatasource.Remove("orgId");
-            slimmedDatasource.Remove("url");
             slimmedDatasource.Remove("version");
             slimmedDatasource.Remove("name");
+
+            if (string.IsNullOrEmpty(slimmedDatasource.Value<string>("url")))
+            {
+                slimmedDatasource.Remove("url");
+            }
 
             // Add an entry in secureJsonData for each secureJsonField and decorate as a KeyVault insert.
             var secureFields = datasource.Value<JObject>("secureJsonFields");
@@ -108,6 +112,118 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             notificationChannel.Remove("updated");
             return notificationChannel;
         }
+
+        public static JObject ParameterizeDashboard(JObject dashboard, ICollection<Parameter> parameters, IEnumerable<string> environments, string activeEnvironment)
+        {
+            JObject parameterizedDashboard = new JObject(dashboard);
+
+            // These paths may be parameterized
+            string[] paths = new[]
+            {
+                "$.dashboard.panels[*].targets[*].azureMonitor.resourceGroup",
+                "$.dashboard.panels[*].targets[*].azureMonitor.resourceName",
+                "$.dashboard.panels[*].targets[*].azureLogAnalytics.resource",
+                "$.dashboard.panels[*].targets[*].azureLogAnalytics.workspace",
+                "$.dashboard.panels[*].targets[*].subscription"
+            };
+
+            foreach (string path in paths)
+            {
+                IEnumerable<JToken> tokens = parameterizedDashboard.SelectTokens(path);
+
+                foreach (JToken token in tokens)
+                {
+                    string value = token.Value<string>();
+
+                    // Value Can technically be other JSON types (but the paths specified above
+                    // will always be strings). Because the object must be a "string" to store the
+                    // parameter info, supporting anything other than a string will require also
+                    // keeping type info. So only support strings for now.
+
+                    if (value == null)
+                    {
+                        throw new Exception("Unexpected token type. Value must be a string.");
+                    }
+
+                    Parameter p = parameters
+                        .Where(p => p.Values.TryGetValue(activeEnvironment, out var v) && v == value)
+                        .FirstOrDefault();
+
+                    if (p == null)
+                    {
+                        string name = $"PLACEHOLDER:{Guid.NewGuid()}";
+
+                        p = new Parameter()
+                        {
+                            Name = name,
+                            Values = environments.ToDictionary(
+                                env => env,
+                                env => env == activeEnvironment ? value : "PLACEHOLDER")
+                        };
+
+                        parameters.Add(p);
+                    }
+
+                    token.Replace(new JValue($"[parameter({p.Name})]"));
+                }
+            }
+
+            return parameterizedDashboard;
+        }
+
+        public static JObject DeparameterizeDashboard(JObject dashboard, IEnumerable<Parameter> parameters, string environment)
+        {
+            JObject deparameterizedDashboard = new JObject(dashboard);
+
+            if (parameters.Any(p => p.Name.Contains("PLACEHOLDER")))
+            {
+                throw new ArgumentException($"Found parameter containing PLACEHOLDER; this indicates parameters file is incomplete. Verify file contents and remove all references to PLACEHOLDER.");
+            }
+
+            List<JToken> tokens = deparameterizedDashboard.SelectTokens("$..*")
+                .Where(token => token.Type == JTokenType.String)
+                .ToList(); // Force enumeration so the JObject may be modified as we go
+
+            foreach (JToken token in tokens)
+            {
+                if (!TryGetParameterName(token.Value<string>(), out string parameterName))
+                {
+                    continue;
+                }
+
+                Parameter parameter = parameters.FirstOrDefault(param => param.Name == parameterName);
+
+                if (parameter == null)
+                {
+                    throw new ArgumentException($"Dashboard contains parameter \"{parameterName}\" but no definition found.");
+                }
+
+                if (!parameter.Values.TryGetValue(environment, out string value))
+                {
+                    throw new ArgumentException($"Dashboard contains parameter \"{parameterName}\" but definition does not contain value for environment \"{environment}\".");
+                }
+
+                JToken newToken = new JValue(value);
+                token.Replace(newToken);
+            }
+
+            return deparameterizedDashboard;
+        }
+
+        private static bool TryGetParameterName(string data, out string parameterName)
+        {
+            var r = new Regex(@"\[[pP]arameter\((.*)\)\]");
+            Match match = r.Match(data);
+
+            if (!match.Success)
+            {
+                parameterName = null;
+                return false;
+            }
+
+            parameterName = match.Groups[1].Value;
+            return true;
+        }
     }
 
     public class FolderData
@@ -122,5 +238,11 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public string Title { get; }
 
         public int? Id { get; set; }
+    }
+
+    public class Parameter
+    {
+        public string Name { get; set; }
+        public IDictionary<string, string> Values { get; set; }
     }
 }

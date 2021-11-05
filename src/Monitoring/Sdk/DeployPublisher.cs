@@ -26,6 +26,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private readonly string _keyVaultConnectionString;
         private readonly Lazy<KeyVaultClient> _keyVault;
         private readonly string _environment;
+        private readonly string _parameterFile;
 
         private KeyVaultClient KeyVault => _keyVault.Value;
 
@@ -38,6 +39,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string datasourceDirectory,
             string notificationDirectory,
             string environment,
+            string parametersFile,
             TaskLoggingHelper log) : base(
             grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
@@ -45,6 +47,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             _keyVaultConnectionString = keyVaultConnectionString;
             _environment = environment;
             _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
+            _parameterFile = parametersFile;
         }
         
         private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);
@@ -122,6 +125,16 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             List<FolderData> folders = folderArray.Select(f => new FolderData(f.Value<string>("uid"), f.Value<string>("title")))
                 .ToList();
             var knownUids = new HashSet<string>();
+
+            List<Parameter> parameters;
+
+            using (StreamReader sr = new StreamReader(_parameterFile))
+            using (JsonReader jr = new JsonTextReader(sr))
+            {
+                JsonSerializer jsonSerializer = new JsonSerializer();
+                parameters = jsonSerializer.Deserialize<List<Parameter>>(jr);
+            }
+
             foreach (string dashboardPath in GetAllDashboardPaths())
             {
                 string folderName = Path.GetFileName(Path.GetDirectoryName(dashboardPath));
@@ -176,6 +189,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 tagArray.Add(SourceTag);
                 data["tags"] = newTags;
                 data["uid"] = uid;
+
+                data = GrafanaSerialization.DeparameterizeDashboard(data, parameters, _environment);
 
                 Log.LogMessage(MessageImportance.Normal, "Posting dashboard {0}...", uid);
 

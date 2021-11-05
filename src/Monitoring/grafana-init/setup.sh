@@ -103,7 +103,7 @@ apt-get update
 apt-get -y install python3-pip "grafana=$GRAFANA_VERSION"
 
 # These are needed for vault-env.py
-python3 -m pip install azure-keyvault==1.1.0 msrestazure==0.6.2
+python3 -m pip install azure-keyvault-secrets==4.1.0 azure-identity==1.6.1
 
 # Plop this wherever so that we can access (and execute) it to replace environment
 cp "$DIR/vault-env.py" /usr/local/bin/vault-env.py
@@ -131,13 +131,15 @@ Environment=GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
 Environment=GF_SECURITY_SECRET_KEY=[vault(dotnet-grafana/grafana-aes-256-secret-key)]
 Environment=GF_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_APP_ID}
 Environment=GF_AUTH_GITHUB_CLIENT_SECRET=[vault(dotnet-grafana/dotnet-grafana-${ENVIRONMENT}-github-oauth-app-secret)]
+Environment=GF_AUTH_AZUREAD_CLIENT_SECRET=feature_not_used
 Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_KEY=[vault(dotnet-grafana/dotnetgrafana-storage-account-key)]
 EOT
 
 # Reset grafana-server and start it up again (or the first time)
 systemctl stop grafana-server
 
-grafana-cli plugins install grafana-azure-data-explorer-datasource 2.0.0
+grafana-cli plugins install grafana-azure-data-explorer-datasource 3.5.0
+grafana-cli plugins install grafana-simple-json-datasource 1.4.2
 # update any plugins while it's stopped
 grafana-cli plugins update-all
 

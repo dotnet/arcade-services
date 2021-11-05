@@ -67,7 +67,7 @@ stages:
 - stage: predeploy
   displayName: Pre-Deployment
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - build
   - Validate
@@ -88,7 +88,7 @@ stages:
 - stage: deploy
   displayName: Deploy
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - predeploy
   - approval
@@ -251,7 +251,7 @@ stages:
 - stage: postdeploy
   displayName: Post-Deployment
   pool:
-    name: Hosted VS2017
+    vmImage: windows-2019
   dependsOn:
   - deploy
   condition: always()
@@ -286,12 +286,12 @@ stages:
       inputs:
         useGlobalJson: true
     - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp3.1
-    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -v:normal
+    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -p:ParametersFile=parameters.json -v:normal
 
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
-    vmImage: vs2017-win2016
+    vmImage: windows-2019
   dependsOn:
   - deploy
   variables:

@@ -27,6 +27,12 @@ namespace Microsoft.DotNet.Darc.Tests
         [TestCase("AddFeedsToNuGetConfigWithoutManagedFeeds", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
+        [TestCase("MatchMoreFeedPatterns", new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json",
+            // Both forms of the internal feeds (org and internal project)
+            "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-runtime-5a18de8a/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/internal/_packaging/darc-int-dotnet-aspnetcore-10cdf3ba/nuget/v3/index.json" })]
         [TestCase("ReplaceExistingFeedsWithNewOnes", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json" })]
         [TestCase("PreserveCommentsInRightLocationsWhenReplacing", new string[] {

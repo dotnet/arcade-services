@@ -42,6 +42,7 @@
     <Error Text="GrafanaKeyVaultName is required" Condition=" '$(GrafanaKeyVaultName)' == '' "/>
     <Error Text="GrafanaKeyVaultConnectionString is required" Condition=" '$(GrafanaKeyVaultConnectionString)' == '' "/>
     <Error Text="GrafanaEnvironment is required" Condition=" '$(GrafanaEnvironment)' == '' "/>
+    <Error Text="ParametersFile is required" Condition=" '$(ParametersFile)' == '' "/>
 
     <MonitoringPublish
       DashboardDirectory="$(DashboardDirectory)"
@@ -53,6 +54,7 @@
       KeyVaultConnectionString="$(GrafanaKeyVaultConnectionString)"
       Tag="$(GrafanaDashboardTag)"
       Environment="$(GrafanaEnvironment)"
+      ParametersFile="$(ParametersFile)"
     />
   </Target>
   <Target Name="ImportGrafana">
@@ -60,6 +62,8 @@
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
     <Error Text="DashboardId is required" Condition=" '$(DashboardId)' == '' "/>
     <Error Text="GrafanaEnvironments is required" Condition=" '@(GrafanaEnvironments)' == '' "/>
+    <Error Text="ParametersFile is required" Condition=" '$(ParametersFile)' == '' " />
+    <Error Text="Environment is required" Condition=" '$(Environment)' == '' " />
 
     <MonitoringImport
       DashboardDirectory="$(DashboardDirectory)"
@@ -70,6 +74,8 @@
       AccessToken="$(GrafanaAccessToken)"
       Tag="$(GrafanaDashboardTag)"
       Environments="@(GrafanaEnvironments)"
+      ParametersFile="$(ParametersFile)"
+      Environment="$(Environment)"
     />
   </Target>
 </Project>
