@@ -7,28 +7,19 @@ storageLocation:
 importSecretsFrom: shared/dotnet-grafana-secrets.yaml
 
 secrets:
-  # TODO: Only storing app-secret, should instead use Secret Manager to store everything?
-  # Was: dotnet-grafana-github-oauth-app-secret
-  dotnet-grafana-github-oauth-app-secret:
-    type: github-app-secret
-    parameters:
-      hasPrivateKey: false
-      hasWebHookSecret: false
-      hasAppSecret: true
-
-  # TODO: Only storing app-secret, should instead use Secret Manager to store everything?
   # Was: dotnet-grafana-github-production-oauth-app-secret
+  # The "Dotnet Engineering Grafana Monitoring" owned by dotnet-gh-app-bot
   dotnet-grafana-github-production-oauth-app-secret:
-    type: github-app-secret
+    type: github-oauth-secret
     parameters:
       hasPrivateKey: false
       hasWebHookSecret: false
       hasAppSecret: true
 
-  # TODO: Only storing app-secret, should instead use Secret Manager to store everything?
   # Was: dotnet-grafana-github-staging-oauth-app-secret
+  # The "Dotnet Engineering Grafana Monitoring (staging)" owned by dotnet-gh-app-bot
   dotnet-grafana-github-staging-oauth-app-secret:
-    type: github-app-secret
+    type: github-oauth-secret
     parameters:
       hasPrivateKey: false
       hasWebHookSecret: false
@@ -46,11 +37,3 @@ secrets:
     type: grafana-api-key
     parameters:
       environment: dotnet-eng-grafana.westus2.cloudapp.azure.com
-
-  # Grafana Admin user password
-  grafana-admin-password:
-    type: text
-
-  # Used by Grafana to encrypt data-at-rest; do not rotate lest data become un-decryptable.
-  grafana-aes-256-secret-key:
-    type: text
