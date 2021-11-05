@@ -80,6 +80,7 @@ stages:
           displayName: Ensure variables defined
         
         - task: ArchiveFiles@2
+          displayName: Create grafana-init archive
           inputs:
             rootFolderOrFile: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
             includeRootFolder: false
