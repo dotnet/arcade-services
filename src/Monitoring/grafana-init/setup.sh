@@ -69,10 +69,12 @@ fi
 
 case "${ENVIRONMENT}" in
   staging)
-    GRAFANA_GITHUB_APP_ID="528abab479c866d69a70"
+    VAULT_NAME="dotnet-grafana-staging"
+    STORAGE_ACCOUNT_NAME="dotnetgrafanastaging"
     ;;
   production)
-    GRAFANA_GITHUB_APP_ID="283f62c4810d6fcb0dc4"
+    VAULT_NAME="dotnet-grafana"
+    STORAGE_ACCOUNT_NAME="dotnetgrafana"
     ;;
   *)
     echo "Invalid environment"
@@ -124,15 +126,17 @@ cp "$DIR/grafana.env" /etc/grafana/grafana.env
 # external configuration (secrets) ready to go
 mkdir -p /etc/systemd/system/grafana-server.service.d
 cp "$DIR/grafana-override.conf" /etc/systemd/system/grafana-server.service.d/override.conf
+
 cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 [Service]
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
 Environment=GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
-Environment=GF_SECURITY_SECRET_KEY=[vault(dotnet-grafana/grafana-aes-256-secret-key)]
-Environment=GF_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_APP_ID}
-Environment=GF_AUTH_GITHUB_CLIENT_SECRET=[vault(dotnet-grafana/dotnet-grafana-${ENVIRONMENT}-github-oauth-app-secret)]
-Environment=GF_AUTH_AZUREAD_CLIENT_SECRET=feature_not_used
-Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_KEY=[vault(dotnet-grafana/dotnetgrafana-storage-account-key)]
+Environment=GF_SECURITY_ADMIN_PASSWORD=[vault(${VAULT_NAME}/grafana-admin-password)]
+Environment=GF_SECURITY_SECRET_KEY=[vault(${VAULT_NAME}/grafana-aes-256-secret-key)]
+Environment=GF_AUTH_GITHUB_CLIENT_ID=[vault(${VAULT_NAME}/dotnet-grafana-github-client-id)]
+Environment=GF_AUTH_GITHUB_CLIENT_SECRET=[vault(${VAULT_NAME}/dotnet-grafana-github-client-secret)]
+Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}
+Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_KEY=[vault(${VAULT_NAME}/dotnetgrafana-storage-account-key)]
 EOT
 
 # Reset grafana-server and start it up again (or the first time)
