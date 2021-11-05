@@ -372,6 +372,7 @@ parameters:
 ```
 
 ### Azure Active Directory Application
+Produces `<name>-app-id` and `<name>-app-secret`
 ```yaml
 type: ad-application
 ```
