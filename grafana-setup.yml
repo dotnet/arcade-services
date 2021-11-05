@@ -37,9 +37,11 @@ stages:
         version: 3.1.x
 
     - script: dotnet build
+      displayName: Build SecretManager
       workingDirectory: src/Microsoft.DncEng.SecretManager
 
     - task: AzureCLI@2
+      displayName: Synchronize Grafana secrets
       inputs:
         azureSubscription: DotNet Eng Services Secret Manager
         scriptType: ps
