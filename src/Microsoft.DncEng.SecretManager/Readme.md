@@ -103,6 +103,15 @@ This step runs the `synchronize` command. This compares every secret specified i
 ## Rotating Secrets On-Demand
 Secrets can be rotated on-demand with the synchronize command. Just pass `--force` to rotate all secrets in the manifest, or `--force-secret=<secretName>` one or more times to rotate a specific secret or secrets.
 
+## Examples
+These must be run in a context that can resolve the .net cli tool secret-manager, any repo that is onboarded to secret manager will have this set up. The tool can also be installed globally if that is prefered.
+
+### Rotate Every Secret in a manifest
+    dotnet secret-manager synchronize --force <manifest.yaml>
+
+### Rotate a single secret
+    dotnet secret-manager synchronize --force-secret=<secret-name> <manifest.yaml>
+
 ## Onboarding a new Repo
 - If .config/dotnet-tools.json doesn't exist, run `dotnet new tool manifest`
 - Run `dotnet tool install microsoft.dnceng.secretmanager --version 1.1.0-*`
