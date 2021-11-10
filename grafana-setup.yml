@@ -19,6 +19,36 @@ variables:
   # TargetResourceGroup: monitoring
 
 stages:
+- stage: SynchronizeSecrets
+  jobs:
+  - job: Synchronize
+    pool:
+      vmImage: windows-2019
+    steps:
+    - task: UseDotNet@2
+      displayName: Install Correct .NET Version
+      inputs:
+        useGlobalJson: true
+
+    - task: UseDotNet@2
+      displayName: Install .NET 3.1 runtime
+      inputs:
+        packageType: runtime
+        version: 3.1.x
+
+    - script: dotnet build
+      displayName: Build SecretManager
+      workingDirectory: src/Microsoft.DncEng.SecretManager
+
+    - task: AzureCLI@2
+      displayName: Synchronize Grafana secrets
+      inputs:
+        azureSubscription: DotNet Eng Services Secret Manager
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize .vault-config/dotnet-grafana-staging.yaml
+
 - stage: deploy
   displayName: Deploy grafana server
   jobs:
@@ -50,6 +80,7 @@ stages:
           displayName: Ensure variables defined
         
         - task: ArchiveFiles@2
+          displayName: Create grafana-init archive
           inputs:
             rootFolderOrFile: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
             includeRootFolder: false
