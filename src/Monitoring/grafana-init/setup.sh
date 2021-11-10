@@ -102,6 +102,9 @@ add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
 apt-get update
 apt-get -y install python3-pip "grafana=$GRAFANA_VERSION"
 
+# These are needed for the grafana-image-renderer plugin
+apt-get -y install libxcomposite1 libnss3 libatk-bridge2.0-0 libgtk-3-0 libgbm1 libxshmfence1
+
 # These are needed for vault-env.py
 python3 -m pip install azure-keyvault-secrets==4.1.0 azure-identity==1.6.1
 
@@ -140,6 +143,7 @@ systemctl stop grafana-server
 
 grafana-cli plugins install grafana-azure-data-explorer-datasource 3.5.0
 grafana-cli plugins install grafana-simple-json-datasource 1.4.2
+grafana-cli plugins install grafana-image-renderer 3.2.1
 # update any plugins while it's stopped
 grafana-cli plugins update-all
 
