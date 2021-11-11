@@ -375,6 +375,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/efcore", (aspnetCategory, "efcore") },
             { $"{githubRepoPrefix}dotnet/ef6", (aspnetCategory, "ef6") },
             { $"{githubRepoPrefix}dotnet/blazor", (aspnetCategory, "blazor") },
+            { $"{githubRepoPrefix}dotnet/razor-tooling", (aspnetCategory, "razor-tooling") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-extensions", (aspnetCategory, "extensions") },
             { $"{azdoRepoPrefix}dotnet-aspnetcore", (aspnetCategory, "aspnetcore") },
@@ -382,6 +383,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-efcore", (aspnetCategory, "efcore") },
             { $"{azdoRepoPrefix}dotnet-ef6", (aspnetCategory, "ef6") },
             { $"{azdoRepoPrefix}dotnet-blazor", (aspnetCategory, "blazor") },
+            { $"{azdoRepoPrefix}dotnet-razor-tooling", (aspnetCategory, "razor-tooling") },
 
             // WCF
 
