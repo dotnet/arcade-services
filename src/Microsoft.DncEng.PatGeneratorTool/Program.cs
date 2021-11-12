@@ -26,7 +26,7 @@ namespace Microsoft.DncEng.PatGeneratorTool
             {
                 new Option<List<AzureDevOpsPATScopes>>("--scopes",
                     parseArgument: arg => ParsePATScopes(arg),
-                    description: $"PAT scopes. Valid values are: {possibleEnumScopes}.")
+                    description: $"PAT scopes. Valid values are:{Environment.NewLine}{possibleEnumScopes}.")
                 {
                     IsRequired = true,
                     Arity = ArgumentArity.OneOrMore,
@@ -59,7 +59,7 @@ namespace Microsoft.DncEng.PatGeneratorTool
             var azdoScopeType = typeof(AzureDevOpsPATScopes);
             var enumScopesBuilder = new StringBuilder();
             var shortHandType = typeof(ScopeDescriptionAttribute);
-            var possibleEnumScopes = string.Join("\n", Enum.GetNames(azdoScopeType).Select(scope =>
+            var possibleEnumScopes = string.Join(Environment.NewLine, Enum.GetNames(azdoScopeType).Select(scope =>
             {
                 var memberInfo = azdoScopeType.GetMember(scope.ToString());
                 var attribute = Attribute.GetCustomAttribute(memberInfo[0], shortHandType);
