@@ -86,7 +86,7 @@ namespace Microsoft.DncEng.PatGenerator
             var availableValues = (int[])Enum.GetValues(typeof(AzureDevOpsPATScopes));
 
             // To figure out a minimal set, rely on the flags setup that means that more permissive scopes
-            // scopes include the the less permissive ones.
+            // include the less permissive ones.
             //
             // We walk the list of avaiable values, checking whether the bit is set. If it is, check whether
             // any existing scopes in the list are contained within this scope. If they are, remove them.
