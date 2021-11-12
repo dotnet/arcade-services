@@ -32,13 +32,13 @@ namespace Microsoft.DncEng.PatGenerator
         }
 
         /// <summary>
-        /// 
+        ///     Generate an azure devops PAT with a given name, target organization set, and scopes.
         /// </summary>
         /// <param name="name"></param>
         /// <param name="targetScopes"></param>
         /// <param name="targetOrganizationNames"></param>
         /// <param name="validTo"></param>
-        /// <returns></returns>
+        /// <returns>New PAT</returns>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="Exception"></exception>
         public async Task<SessionToken> GeneratePATAsync(

@@ -10,15 +10,17 @@ using System.Text;
 namespace Microsoft.DncEng.PatGenerator
 {
     [AttributeUsage(AttributeTargets.Field)]
-    public class ScopeShortHandAttribute : Attribute
+    public class ScopeDescriptionAttribute : Attribute
     {
-        public string Category { get; }
+        public string Resource { get; }
         public string Permissions { get; }
+        public string Description { get; set; }
 
-        public ScopeShortHandAttribute(string category, string shortName)
+        public ScopeDescriptionAttribute(string category, string shortName, string description)
         {
-            Category = category;
+            Resource = category;
             Permissions = shortName;
+            Description = description;
         }
     }
 
@@ -30,45 +32,81 @@ namespace Microsoft.DncEng.PatGenerator
     /// A flags enumeration is used to coalesce different permissions levels. For example,
     /// if 'build' and 'build_execute' were supplied together, 'build' is not useful since it's
     /// implied in build_execute.
+    /// 
+    /// Note that this is not the full set. Additional scopes can be added if necessary.
     /// </summary>
     [Flags]
     public enum AzureDevOpsPATScopes
     {
         // Build - Bits 0x3
 
-        [ScopeShortHand("build", "r")]
+        [ScopeDescription("build", "r", "Build (read)")]
         build = 0x1,
-        [ScopeShortHand("build", "re")]
+        [ScopeDescription("build", "re", "Build (read and execute)")]
         build_execute = 0x2 | build,
 
         // Code - Bits 0x3C
 
-        [ScopeShortHand("code", "r")]
+        [ScopeDescription("code", "r", "Code (read)")]
         code = 0x4,
-        [ScopeShortHand("code", "s")]
+        [ScopeDescription("code", "s", "Code (update commit status)")]
         code_status = 0x8,
-        [ScopeShortHand("code", "rw")]
+        [ScopeDescription("code", "rw", "Code (read and write)")]
         code_write = 0x10 | code | code_status,
-        [ScopeShortHand("code", "m")]
+        [ScopeDescription("code", "m", "Code (read, write, and manage)")]
         code_manage = 0x20 | code_write,
 
         // Packaging - Bits 0x1C0
 
-        [ScopeShortHand("package", "r")]
+        [ScopeDescription("package", "r", "Packaging (read)")]
         packaging = 0x40,
-        [ScopeShortHand("package", "rw")]
+        [ScopeDescription("package", "rw", "Packaging (read and write)")]
         packaging_write = 0x80 | packaging,
-        [ScopeShortHand("package", "m")]
+        [ScopeDescription("package", "m", "Packaging (read, write, and manage)")]
         packaging_manage = 0x100 | packaging_write,
 
         // Symbols - Bits 0xE00
 
-        [ScopeShortHand("symbols", "r")]
+        [ScopeDescription("symbols", "r", "Symbols (read)")]
         symbols = 0x200,
-        [ScopeShortHand("symbols", "rw")]
+        [ScopeDescription("symbols", "rw", "Symbols (read and write)")]
         symbols_write = 0x400 | symbols,
-        [ScopeShortHand("symbols", "m")]
+        [ScopeDescription("symbols", "m", "Symbols (read, write and manage)")]
         symbols_manage = 0x800 | symbols_write,
+
+        // Release - Bits 0x7000
+
+        [ScopeDescription("release", "r", "Release (read)")]
+        release = 0x1000,
+        [ScopeDescription("release", "rw", "Release (read, write and execute)")]
+        release_execute = 0x2000 | release,
+        [ScopeDescription("release", "m", "Release (read, write, execute and manage)")]
+        release_manage = 0x4000 | release_execute,
+
+        // User Profile - Bits 0x18000 - Note that write does not appear to include read
+
+        [ScopeDescription("profile", "r", "User profile (read)")]
+        profile = 0x8000,
+        [ScopeDescription("profile", "w", "User profile (write)")]
+        profile_write = 0x10000,
+
+        // Variable Groups - Bits 0xE0000
+
+        [ScopeDescription("variablegroups", "r", "Variable Groups (read)")]
+        variablegroups_read = 0x20000,
+        [ScopeDescription("variablegroups", "rw", "Variable Groups (read, create)")]
+        variablegroups_write = 0x40000 | variablegroups_read,
+        [ScopeDescription("variablegroups", "m", "Variable Groups (read, create and manage)")]
+        variablegroups_manage = 0x80000 | variablegroups_write,
+
+        // Work items - Bits 0x700000
+
+        [ScopeDescription("work", "r", "Work items (read)")]
+        work = 0x100000,
+        [ScopeDescription("work", "rw", "Work items (read and write)")]
+        work_write = 0x200000 | work,
+        [ScopeDescription("work", "f", "Work items (full)")]
+        work_full = 0x400000 | work_write,
     }
 
     public static class AzureDevOpsPATScopesExtensions
@@ -125,7 +163,7 @@ namespace Microsoft.DncEng.PatGenerator
             var minimalScopes = scopes.GetMinimizedScopeList();
 
             var azdoScopeType = typeof(AzureDevOpsPATScopes);
-            var shortHandType = typeof(ScopeShortHandAttribute);
+            var shortHandType = typeof(ScopeDescriptionAttribute);
 
             Dictionary<string, string> minimalScopesStrings = new Dictionary<string, string>();
 
@@ -133,20 +171,21 @@ namespace Microsoft.DncEng.PatGenerator
             foreach (var scope in minimalScopes)
             {
                 var memberInfo = azdoScopeType.GetMember(scope.ToString());
-                var attributes = memberInfo[0].GetCustomAttributes(shortHandType, false);
-                if (attributes.Length == 0)
+                var attribute = Attribute.GetCustomAttribute(memberInfo[0], shortHandType);
+                if (attribute == null)
                 {
                     throw new Exception($"{scope.ToString()} should have a 'ScopeShortHand' attribute.");
                 }
 
-                var attribute = (ScopeShortHandAttribute)attributes[0];
-                if (minimalScopesStrings.ContainsKey(attribute.Category))
+                var shortHandTypeAttribute = (ScopeDescriptionAttribute)attribute;
+
+                if (minimalScopesStrings.ContainsKey(shortHandTypeAttribute.Resource))
                 {
-                    minimalScopesStrings[attribute.Category] += attribute.Permissions;
+                    minimalScopesStrings[shortHandTypeAttribute.Resource] += shortHandTypeAttribute.Permissions;
                 }
                 else
                 {
-                    minimalScopesStrings.Add(attribute.Category, attribute.Permissions);
+                    minimalScopesStrings.Add(shortHandTypeAttribute.Resource, shortHandTypeAttribute.Permissions);
                 }
             }
 

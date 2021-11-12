@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DncEng.PatGeneratorTool
@@ -18,7 +20,8 @@ namespace Microsoft.DncEng.PatGeneratorTool
 
         static int Main(string[] args)
         {
-            var possibleEnumScopes = string.Join(", ", Enum.GetNames(typeof(AzureDevOpsPATScopes)));
+            string possibleEnumScopes = GetScopesHelpString();
+
             var cmd = new RootCommand
             {
                 new Option<List<AzureDevOpsPATScopes>>("--scopes",
@@ -45,6 +48,30 @@ namespace Microsoft.DncEng.PatGeneratorTool
             cmd.Handler = CommandHandler.Create<List<AzureDevOpsPATScopes>, string[], string, int?, DateTime?, string, string, IConsole>(Go);
 
             return cmd.Invoke(args);
+        }
+
+        /// <summary>
+        /// Generate a string for printing command line help.
+        /// </summary>
+        /// <exception cref="Exception">Throws if one of the scope attributes is missing an expected attribute</exception>
+        private static string GetScopesHelpString()
+        {
+            var azdoScopeType = typeof(AzureDevOpsPATScopes);
+            var enumScopesBuilder = new StringBuilder();
+            var shortHandType = typeof(ScopeDescriptionAttribute);
+            var possibleEnumScopes = string.Join("\n", Enum.GetNames(azdoScopeType).Select(scope =>
+            {
+                var memberInfo = azdoScopeType.GetMember(scope.ToString());
+                var attribute = Attribute.GetCustomAttribute(memberInfo[0], shortHandType);
+                if (attribute == null)
+                {
+                    throw new Exception($"{scope.ToString()} should have a 'ScopeShortHand' attribute.");
+                }
+
+                var shortHandTypeAttribute = (ScopeDescriptionAttribute)attribute;
+                return $"'{scope}' - {shortHandTypeAttribute.Description}";
+            }));
+            return possibleEnumScopes;
         }
 
         /// <summary>
@@ -152,6 +179,10 @@ namespace Microsoft.DncEng.PatGeneratorTool
             return finalExpiration;
         }
 
+        /// <summary>
+        /// The GUID here refers to the Azure DevOps resource:
+        /// https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/manage-personal-access-tokens-via-api?view=azure-devops#configure-a-quickstart-application
+        /// </summary>
         readonly static string[] AzureDevOpsAuthScopes = new string[] { "499b84ac-1321-427f-aa17-267ca6975798/user_impersonation" };
 
         /// <summary>
