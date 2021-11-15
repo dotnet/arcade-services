@@ -45,7 +45,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     {
                         Name = asset.Name,
                         Version = asset.Version,
-                        Locations = locationsList.ToImmutableList<AssetLocationData>()
+                        Locations = locationsList.ToImmutableList<AssetLocationData>(),
+                        Category = asset.Category
                     });
                 }
 

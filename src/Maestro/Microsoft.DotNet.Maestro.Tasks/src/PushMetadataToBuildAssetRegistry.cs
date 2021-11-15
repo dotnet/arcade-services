@@ -42,6 +42,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string AssetVersion { get; set; }
 
+        public string AssetCategory { get; set; }
+
         [Output]
         public int BuildId { get; set; }
 
@@ -359,7 +361,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         version,
                         manifest.InitialAssetsLocation ?? manifest.Location,
                         LocationType.Container,
-                        blob.NonShipping);
+                        blob.NonShipping,
+                        blob.Category);
 
                     blobSet.Add(blob.Id);
                 }
@@ -461,7 +464,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
+        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping, string category=null)
         {
             assets.Add(new AssetData(nonShipping)
             {
@@ -471,6 +474,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }),
                 Name = assetName,
                 Version = version,
+                Category = category
             });
         }
 
@@ -650,6 +654,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     AssetVersion = asset.Version;
                 }
+                if(asset.Category != null)
+                {
+                    AssetCategory = asset.Category;
+                }
             }
 
             AssetData assetData = new AssetData(true)
@@ -660,6 +668,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }),
                 Name = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}",
                 Version = AssetVersion,
+                Category = AssetCategory
             };
 
             blobSet.Add(assetData.Name);
@@ -692,7 +701,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Attributes = new Dictionary<string, string>
                                 {
-                                    { "NonShipping", data.NonShipping.ToString().ToLower() }
+                                    { "NonShipping", data.NonShipping.ToString().ToLower() },
+                                    { "Category", !string.IsNullOrEmpty(data.Category)? data.Category.ToString().ToUpper(): ""}
                                 },
                         Id = data.Name
                     };

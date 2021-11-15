@@ -39,6 +39,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private readonly AssetData assetDataWithoutVersion = new AssetData(true)
         { Name = "noVersionData" };
 
+        private readonly AssetData nonShippingAssetDataForBlob = new AssetData(true)
+        {
+            Name = "NonShippingAssetData",
+            Version = "nonShippingAsssetVersion",
+            Category = "OTHER"
+        };
+
         private readonly AssetData nonShippingAssetData = new AssetData(true)
         {
             Name = "NonShippingAssetData",
@@ -163,12 +170,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
+            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetDataForBlob), "thisIsALocation", "thisIsTheManifestFileName");
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", "true" }
+                    { "NonShipping", "true" },
+                    { "Category", "OTHER" }
                 },
                 Id = dataInBlobSet.Name
             };
@@ -196,7 +204,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", "false" },
+                        { "NonShipping", "false" }
                     },
                 Id = shippingAssetData.Name,
                 Version = shippingAssetData.Version
@@ -206,7 +214,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", "true" }
+                    { "NonShipping", "true" },
+                    { "Category", "" }
                 },
                 Id = dataInBlobSet.Name
             };
