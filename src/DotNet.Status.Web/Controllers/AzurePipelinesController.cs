@@ -177,6 +177,12 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
+                List<int> validatingBarIds = new List<int>();
+                if(TryGetValidatingBarIds(build.Tags, out validatingBarIds))
+                {
+
+                }
+
                 string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"{string.Join(", ", build.Tags)}" : "";
 
                 _logger.LogInformation(
@@ -427,6 +433,24 @@ namespace DotNet.Status.Web.Controllers
 
                 PopulateIssuesUnder(child, timeline, issues);
             }
+        }
+
+        private bool TryGetValidatingBarIds(string[] tags, out List<int> barIds)
+        {
+            barIds = new List<int>();
+
+            int validatingBarIdsCount = tags.Count(x => x.Contains("ValidatingBarIds "));
+
+            // more than one or zero?
+            if (validatingBarIdsCount > 1 || validatingBarIdsCount == 0)
+            {
+                return false;
+            }
+
+            // found it
+            string tag = tags.First(x => x.Contains("ValidatingBarIds ")).Split("ValidatingBarIds ")[1];
+            barIds.AddRange(tag.Split(",").Select(int.Parse).ToList());
+            return true;
         }
 
 
