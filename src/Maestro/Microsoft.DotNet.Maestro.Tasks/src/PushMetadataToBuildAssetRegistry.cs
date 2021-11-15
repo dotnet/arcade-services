@@ -654,7 +654,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     AssetVersion = asset.Version;
                 }
-                if(asset.Category != null)
+                if (asset != null && !String.IsNullOrEmpty(asset.Category))
                 {
                     AssetCategory = asset.Category;
                 }
@@ -668,7 +668,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }),
                 Name = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}",
                 Version = AssetVersion,
-                Category = AssetCategory
+                Category = !String.IsNullOrEmpty(AssetCategory) ? AssetCategory : null
             };
 
             blobSet.Add(assetData.Name);
