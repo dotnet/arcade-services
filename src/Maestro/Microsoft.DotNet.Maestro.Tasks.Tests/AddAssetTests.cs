@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             List<AssetData> assetData = new List<AssetData>();
             AssetData expectedAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-            pushMetadata.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
+            pushMetadata.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true, null);
             assetData.Count.Should().Be(1);
             assetData.Should().BeEquivalentTo(expectedAssetData);
         }
@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             AssetData newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
+            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true, null);
             assetData.Count.Should().Be(2);
             assetData[0].Should().BeEquivalentTo(existingAssetData);
             assetData[1].Should().BeEquivalentTo(newAssetData);
@@ -53,7 +53,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry();
 
             Action act = () =>
-                pushMetadata.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true);
+                pushMetadata.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true, null);
             act.Should().Throw<NullReferenceException>();
         }
     }

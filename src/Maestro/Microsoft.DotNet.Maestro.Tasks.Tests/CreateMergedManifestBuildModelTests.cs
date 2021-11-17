@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
@@ -42,8 +43,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private readonly AssetData nonShippingAssetDataForBlob = new AssetData(true)
         {
             Name = "NonShippingAssetData",
-            Version = "nonShippingAsssetVersion",
-            Category = "OTHER"
+            Version = "nonShippingAsssetVersion"
         };
 
         private readonly AssetData nonShippingAssetData = new AssetData(true)
@@ -169,6 +169,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
+            ConditionalWeakTable<AssetData, string> assetWithCategory = new ConditionalWeakTable<AssetData, string>();
 
             AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetDataForBlob), "thisIsALocation", "thisIsTheManifestFileName");
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
@@ -176,10 +177,11 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 Attributes = new Dictionary<string, string>
                 {
                     { "NonShipping", "true" },
-                    { "Category", "OTHER" }
+                    { "Category", "" }
                 },
                 Id = dataInBlobSet.Name
             };
+
 
             expectedBuildModel.Artifacts =
                 new ArtifactSet

@@ -8,6 +8,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,6 +44,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string AssetVersion { get; set; }
 
         public string AssetCategory { get; set; }
+
+        public ConditionalWeakTable<AssetData, string> assetWithCategory = new ConditionalWeakTable<AssetData, string>();
 
         [Output]
         public int BuildId { get; set; }
@@ -301,7 +304,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
                 using FileStream stream = new FileStream(manifestPath, FileMode.Open);
-                Manifest manifest = (Manifest) xmlSerializer.Deserialize(stream);
+                Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
                 parsedManifests.Add(manifest);
             }
 
@@ -342,7 +345,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         package.Version,
                         manifest.InitialAssetsLocation ?? manifest.Location,
                         (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
-                        package.NonShipping);
+                        package.NonShipping,
+                        assetWithCategory);
+
                 }
 
                 foreach (Blob blob in manifest.Blobs)
@@ -362,6 +367,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         manifest.InitialAssetsLocation ?? manifest.Location,
                         LocationType.Container,
                         blob.NonShipping,
+                        assetWithCategory,
                         blob.Category);
 
                     blobSet.Add(blob.Id);
@@ -464,18 +470,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping, string category=null)
+        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping, ConditionalWeakTable<AssetData, string> assetWithCategory, string category = null)
         {
-            assets.Add(new AssetData(nonShipping)
+            var asset = new AssetData(nonShipping)
             {
                 Locations = (location == null) ? null : ImmutableList.Create(new AssetLocationData(locationType)
                 {
                     Location = location,
                 }),
                 Name = assetName,
-                Version = version,
-                Category = category
-            });
+                Version = version
+            };
+            assets.Add(asset);
+            if (!string.IsNullOrEmpty(category))
+            {
+                assetWithCategory.Add(asset, category);
+            }
         }
 
         internal BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
@@ -654,10 +664,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     AssetVersion = asset.Version;
                 }
-                if (asset != null && !string.IsNullOrEmpty(asset.Category))
-                {
-                    AssetCategory = asset.Category;
-                }
             }
 
             AssetData assetData = new AssetData(true)
@@ -667,8 +673,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Location = location,
                 }),
                 Name = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}",
-                Version = AssetVersion,
-                Category = !string.IsNullOrEmpty(AssetCategory) ? AssetCategory : null
+                Version = AssetVersion
             };
 
             blobSet.Add(assetData.Name);
@@ -688,7 +693,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild,
-                            PublishingVersion = (PublishingInfraVersion) manifestBuildData.PublishingVersion,
+                            PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
                             IsReleaseOnlyPackageVersion = bool.Parse(manifestBuildData.IsReleaseOnlyPackageVersion)
 
                         });
@@ -697,17 +702,21 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 if (blobSet.Contains(data.Name))
                 {
+                    if (assetWithCategory.TryGetValue(data, out string assetCategory))
+                    {
+                        AssetCategory = assetCategory;
+                    }
                     BlobArtifactModel blobArtifactModel = new BlobArtifactModel
                     {
                         Attributes = new Dictionary<string, string>
                                 {
                                     { "NonShipping", data.NonShipping.ToString().ToLower() },
-                                    { "Category", !string.IsNullOrEmpty(data.Category)? data.Category.ToString().ToUpper(): ""}
-                                },
+                                    { "Category", !string.IsNullOrEmpty(AssetCategory)? AssetCategory.ToString().ToUpper(): ""}},
                         Id = data.Name
                     };
                     buildModel.Artifacts.Blobs.Add(blobArtifactModel);
                 }
+
                 else
                 {
                     PackageArtifactModel packageArtifactModel = new PackageArtifactModel
@@ -721,10 +730,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     };
                     buildModel.Artifacts.Packages.Add(packageArtifactModel);
                 }
-            }
 
+            }
             return buildModel;
         }
+
 
         private void PushMergedManifest(BuildModel buildModel, SigningInformation finalSigningInfo)
         {

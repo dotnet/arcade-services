@@ -22,8 +22,5 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("locations")]
         public IImmutableList<Models.AssetLocationData> Locations { get; set; }
-
-        [JsonProperty("category")]
-        public string Category { get; set; }
     }
 }
