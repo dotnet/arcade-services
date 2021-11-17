@@ -40,12 +40,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private readonly AssetData assetDataWithoutVersion = new AssetData(true)
         { Name = "noVersionData" };
 
-        private readonly AssetData nonShippingAssetDataForBlob = new AssetData(true)
-        {
-            Name = "NonShippingAssetData",
-            Version = "nonShippingAsssetVersion"
-        };
-
         private readonly AssetData nonShippingAssetData = new AssetData(true)
         {
             Name = "NonShippingAssetData",
@@ -171,7 +165,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
             ConditionalWeakTable<AssetData, string> assetWithCategory = new ConditionalWeakTable<AssetData, string>();
 
-            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetDataForBlob), "thisIsALocation", "thisIsTheManifestFileName");
+            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
