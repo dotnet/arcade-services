@@ -353,6 +353,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
             { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
             { $"{githubRepoPrefix}dotnet/roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
+            { $"{githubRepoPrefix}dotnet/fsharp", (coreRepoCategory, "dotnet-fsharp") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -363,6 +364,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
             { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
             { $"{azdoRepoPrefix}dotnet-roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
+            { $"{azdoRepoPrefix}dotnet-fsharp", (coreRepoCategory, "dotnet-fsharp") },
 
             // ASPNET
 
@@ -373,6 +375,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/efcore", (aspnetCategory, "efcore") },
             { $"{githubRepoPrefix}dotnet/ef6", (aspnetCategory, "ef6") },
             { $"{githubRepoPrefix}dotnet/blazor", (aspnetCategory, "blazor") },
+            { $"{githubRepoPrefix}dotnet/razor-tooling", (aspnetCategory, "razor-tooling") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-extensions", (aspnetCategory, "extensions") },
             { $"{azdoRepoPrefix}dotnet-aspnetcore", (aspnetCategory, "aspnetcore") },
@@ -380,6 +383,7 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-efcore", (aspnetCategory, "efcore") },
             { $"{azdoRepoPrefix}dotnet-ef6", (aspnetCategory, "ef6") },
             { $"{azdoRepoPrefix}dotnet-blazor", (aspnetCategory, "blazor") },
+            { $"{azdoRepoPrefix}dotnet-razor-tooling", (aspnetCategory, "razor-tooling") },
 
             // WCF
 
