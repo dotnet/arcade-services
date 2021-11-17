@@ -177,7 +177,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 Attributes = new Dictionary<string, string>
                 {
                     { "NonShipping", "true" },
-                    { "Category", "" }
+                    { "Category", "NONE" }
                 },
                 Id = dataInBlobSet.Name
             };
@@ -217,7 +217,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 Attributes = new Dictionary<string, string>
                 {
                     { "NonShipping", "true" },
-                    { "Category", "" }
+                    { "Category", "NONE" }
                 },
                 Id = dataInBlobSet.Name
             };

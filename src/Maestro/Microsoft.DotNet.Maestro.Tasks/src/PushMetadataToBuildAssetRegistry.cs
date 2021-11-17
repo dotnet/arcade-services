@@ -711,7 +711,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         Attributes = new Dictionary<string, string>
                                 {
                                     { "NonShipping", data.NonShipping.ToString().ToLower() },
-                                    { "Category", !string.IsNullOrEmpty(AssetCategory)? AssetCategory.ToString().ToUpper(): ""}},
+                                    { "Category", !string.IsNullOrEmpty(AssetCategory)? AssetCategory.ToString().ToUpper(): "NONE"}},
                         Id = data.Name
                     };
                     buildModel.Artifacts.Blobs.Add(blobArtifactModel);
