@@ -109,7 +109,7 @@ namespace SubscriptionActorService
                 }
 
                 subscriptionSection.AppendLine();
-                for (int i = 1; i <= changesLinks.Count; i++)
+                for (int i = 0; i < changesLinks.Count; i++)
                 {
                     subscriptionSection.AppendLine($"[{i + startingReferenceId}]: {changesLinks[i]}");
                 }
@@ -144,7 +144,7 @@ namespace SubscriptionActorService
             return description.Length;
         }
 
-        private string GetChangesURI(string repoURI, string from, string to)
+        public static string GetChangesURI(string repoURI, string from, string to)
         {
             if (repoURI == null)
             {
