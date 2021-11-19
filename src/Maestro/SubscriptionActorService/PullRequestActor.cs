@@ -887,7 +887,7 @@ namespace SubscriptionActorService
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, build, startingReferenceId);
+                startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, description, build, startingReferenceId);
             }
 
             // If the coherency update wasn't combined, then
