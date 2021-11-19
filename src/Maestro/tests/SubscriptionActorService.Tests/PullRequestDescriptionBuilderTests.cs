@@ -105,7 +105,7 @@ namespace SubscriptionActorService.Tests
         [Test]
         public void ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
         {
-            UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "");
+            UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
             List<DependencyUpdate> deps = CreateDependencyUpdates('a');
             StringBuilder description = new StringBuilder();
 
