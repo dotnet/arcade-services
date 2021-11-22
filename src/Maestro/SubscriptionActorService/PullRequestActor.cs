@@ -869,7 +869,6 @@ namespace SubscriptionActorService
             // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
-            int startingReferenceId = 1;
             PullRequestDescriptionBuilder PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(LoggerFactory, description);
 
 
