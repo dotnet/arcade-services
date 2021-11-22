@@ -198,11 +198,12 @@ namespace SubscriptionActorService
             DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
+            LoggerFactory = loggerFactory;
             Logger = loggerFactory.CreateLogger(GetType());
-            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(loggerFactory);
         }
 
         public ILogger Logger { get; }
+        public ILoggerFactory LoggerFactory { get; }
         public ActorId Id { get; }
         public IReminderManager Reminders { get; }
         public IActorStateManager StateManager { get; }
@@ -211,7 +212,6 @@ namespace SubscriptionActorService
         public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
         public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
-        public PullRequestDescriptionBuilder PullRequestDescriptionBuilder { get; }
 
         public async Task TrackSuccessfulAction(string action, string result)
         {
@@ -870,7 +870,9 @@ namespace SubscriptionActorService
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
             int startingReferenceId = 1;
-          
+            PullRequestDescriptionBuilder PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(LoggerFactory, description);
+
+
             foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
                 var message = new StringBuilder();
@@ -881,13 +883,13 @@ namespace SubscriptionActorService
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, build, startingReferenceId);
+                    PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, description, build, startingReferenceId);
+                PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, build);
             }
 
             // If the coherency update wasn't combined, then
@@ -897,7 +899,7 @@ namespace SubscriptionActorService
                 var message = new StringBuilder();
                 Build build = await GetBuildAsync(coherencyUpdate.update.BuildId);
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, build, startingReferenceId);
+                PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
 
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());

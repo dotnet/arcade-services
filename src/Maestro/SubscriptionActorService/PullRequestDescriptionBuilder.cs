@@ -11,25 +11,30 @@ namespace SubscriptionActorService
 {
     public class PullRequestDescriptionBuilder
     {
-        public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory)
+        public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, StringBuilder description)
         {
             Logger = loggerFactory.CreateLogger(GetType());
+            _startingReferenceId = 1;
+            _description = description;
         }
 
         public ILogger Logger { get; }
+
+        private StringBuilder _description;
+
+        private int _startingReferenceId;
 
         /// <summary>
         ///     Calculate the PR description for an update.
         /// </summary>
         /// <param name="update">Update</param>
         /// <param name="deps">Dependencies updated</param>
-        /// <param name="description">PR description string builder.</param>
         /// <returns>Task</returns>
         /// <remarks>
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        public int CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description, Build build, int startingReferenceId)
+        public void CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, Build build)
         {
             var changesLinks = new List<string>();
 
@@ -38,7 +43,7 @@ namespace SubscriptionActorService
             {
                 string sectionStartMarker = $"[marker]: <> (Begin:Coherency Updates)";
                 string sectionEndMarker = $"[marker]: <> (End:Coherency Updates)";
-                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker, ref description);
+                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker);
 
                 var coherencySection = new StringBuilder();
                 coherencySection.AppendLine(sectionStartMarker);
@@ -59,7 +64,7 @@ namespace SubscriptionActorService
                 coherencySection.AppendLine(DependencyUpdateEnd);
                 coherencySection.AppendLine();
                 coherencySection.AppendLine(sectionEndMarker);
-                description.Insert(sectionStartIndex, coherencySection.ToString());
+                _description.Insert(sectionStartIndex, coherencySection.ToString());
             }
             else
             {
@@ -67,7 +72,7 @@ namespace SubscriptionActorService
                 Guid updateSubscriptionId = update.SubscriptionId;
                 string sectionStartMarker = $"[marker]: <> (Begin:{updateSubscriptionId})";
                 string sectionEndMarker = $"[marker]: <> (End:{updateSubscriptionId})";
-                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker, ref description);
+                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker);
 
                 var subscriptionSection = new StringBuilder();
                 subscriptionSection.AppendLine(sectionStartMarker);
@@ -102,7 +107,7 @@ namespace SubscriptionActorService
                         {
                             Logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
                         }
-                        shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), startingReferenceId + changesLinks.Count);
+                        shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), _startingReferenceId + changesLinks.Count);
                         changesLinks.Add(changesUri);
                     }
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{shaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
@@ -111,7 +116,7 @@ namespace SubscriptionActorService
                 subscriptionSection.AppendLine();
                 for (int i = 0; i < changesLinks.Count; i++)
                 {
-                    subscriptionSection.AppendLine($"[{i + startingReferenceId}]: {changesLinks[i]}");
+                    subscriptionSection.AppendLine($"[{i + _startingReferenceId}]: {changesLinks[i]}");
                 }
 
                 subscriptionSection.AppendLine();
@@ -121,27 +126,27 @@ namespace SubscriptionActorService
 
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(sectionEndMarker);
-                description.Insert(sectionStartIndex, subscriptionSection.ToString());
+                _description.Insert(sectionStartIndex, subscriptionSection.ToString());
 
             }
-            description.AppendLine();
-            return changesLinks.Count;
+            _description.AppendLine();
+            _startingReferenceId += changesLinks.Count;
         }
 
-        private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker, ref StringBuilder description)
+        private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker)
         {
-            int sectionStartIndex = description.ToString().IndexOf(sectionStartMarker);
-            int sectionEndIndex = description.ToString().IndexOf(sectionEndMarker);
+            int sectionStartIndex = _description.ToString().IndexOf(sectionStartMarker);
+            int sectionEndIndex = _description.ToString().IndexOf(sectionEndMarker);
 
             if (sectionStartIndex != -1 && sectionEndIndex != -1)
             {
                 sectionEndIndex += sectionEndMarker.Length;
-                description.Remove(sectionStartIndex, sectionEndIndex - sectionStartIndex);
+                _description.Remove(sectionStartIndex, sectionEndIndex - sectionStartIndex);
                 return sectionStartIndex;
             }
             // if either marker is missing, just append at end and don't remove anything
             // from the description
-            return description.Length;
+            return _description.Length;
         }
 
         public static string GetChangesURI(string repoURI, string from, string to)

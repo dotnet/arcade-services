@@ -14,12 +14,15 @@ namespace SubscriptionActorService.Tests
     [TestFixture]
     public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     {
-        public PullRequestDescriptionBuilder PullRequestDescriptionBuilder; 
+        public PullRequestDescriptionBuilder PullRequestDescriptionBuilder;
+
+        public StringBuilder StringBuilder;
 
         [SetUp]
         public void PullRequestDescriptionBuilderTests_SetUp()
         {
-            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new Mock<ILoggerFactory>().Object);
+            StringBuilder = new StringBuilder();
+            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new Mock<ILoggerFactory>().Object, StringBuilder);
         }
 
         private List<DependencyUpdate> CreateDependencyUpdates(char version)
@@ -107,10 +110,9 @@ namespace SubscriptionActorService.Tests
         {
             UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
             List<DependencyUpdate> deps = CreateDependencyUpdates('a');
-            StringBuilder description = new StringBuilder();
 
-            PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, description, null, 0);
-            description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
+            PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, null);
+            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
         }
 
         [Test]
@@ -121,13 +123,11 @@ namespace SubscriptionActorService.Tests
             List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
             List<DependencyUpdate> deps2 = CreateDependencyUpdates('b');
             Build build = GivenANewBuild(true);
-            StringBuilder description = new StringBuilder();
-
-            int startingReferenceId = 0;
-            startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, description, build, startingReferenceId);
-            startingReferenceId += PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, description, build, startingReferenceId);
-            description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 0));
-            description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 2));
+            
+            PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
+            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
+            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
         }
     }
 }
