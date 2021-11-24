@@ -13,7 +13,7 @@
   "withCredentials": false,
   "isDefault": false,
   "jsonData": {
-    "azureAuthType": "clientsecret",
+    "azureAuthType": "msi",
     "clientId": "a2541735-8225-40af-9c8a-2ae233203739",
     "cloudName": "azuremonitor",
     "logAnalyticsClientId": "a2541735-8225-40af-9c8a-2ae233203739",
@@ -23,7 +23,7 @@
   },
   "readOnly": false,
   "secureJsonData": {
-    "clientSecret": "[vault(helix-grafana-app-secret)]",
-    "logAnalyticsClientSecret": "[vault(helix-grafana-app-secret)]"
+    "clientSecret": "",
+    "logAnalyticsClientSecret": ""
   }
 }
