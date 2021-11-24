@@ -869,8 +869,7 @@ namespace SubscriptionActorService
             // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
-            PullRequestDescriptionBuilder PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(LoggerFactory, description);
-
+            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(LoggerFactory, description);
 
             foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
@@ -882,13 +881,13 @@ namespace SubscriptionActorService
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                    pullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, build);
+                pullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, build);
             }
 
             // If the coherency update wasn't combined, then
@@ -898,7 +897,7 @@ namespace SubscriptionActorService
                 var message = new StringBuilder();
                 Build build = await GetBuildAsync(coherencyUpdate.update.BuildId);
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                PullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                pullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
 
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());

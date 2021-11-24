@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static SubscriptionActorService.PullRequestActorImplementation;
 
@@ -13,12 +14,12 @@ namespace SubscriptionActorService
     {
         public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, StringBuilder description)
         {
-            Logger = loggerFactory.CreateLogger(GetType());
-            _startingReferenceId = 1;
+            _logger = loggerFactory.CreateLogger(GetType());
             _description = description;
+            _startingReferenceId = GetStartingReferenceId();
         }
 
-        public ILogger Logger { get; }
+        private ILogger _logger;
 
         private StringBuilder _description;
 
@@ -105,7 +106,7 @@ namespace SubscriptionActorService
                         }
                         catch (ArgumentNullException e)
                         {
-                            Logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
+                            _logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
                         }
                         shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), _startingReferenceId + changesLinks.Count);
                         changesLinks.Add(changesUri);
@@ -135,8 +136,9 @@ namespace SubscriptionActorService
 
         private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker)
         {
-            int sectionStartIndex = _description.ToString().IndexOf(sectionStartMarker);
-            int sectionEndIndex = _description.ToString().IndexOf(sectionEndMarker);
+            string descriptionString = _description.ToString();
+            int sectionStartIndex = descriptionString.IndexOf(sectionStartMarker);
+            int sectionEndIndex = descriptionString.IndexOf(sectionEndMarker);
 
             if (sectionStartIndex != -1 && sectionEndIndex != -1)
             {
@@ -147,6 +149,24 @@ namespace SubscriptionActorService
             // if either marker is missing, just append at end and don't remove anything
             // from the description
             return _description.Length;
+        }
+
+        /// <summary>
+        /// Goes through the description and finds the biggest reference id. This is needed when updating an exsiting PR.
+        /// </summary>
+        /// <returns></returns>
+        private int GetStartingReferenceId()
+        {
+            Regex regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
+            int maxIndex = 0;
+
+            foreach(var match in regex.Matches(_description.ToString()))
+            {
+                int currentIndex = Int32.Parse(match.ToString());
+                maxIndex = (currentIndex > maxIndex) ? currentIndex : maxIndex;
+            }
+
+            return maxIndex + 1;
         }
 
         public static string GetChangesURI(string repoURI, string from, string to)

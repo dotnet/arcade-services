@@ -8,6 +8,7 @@ using System.Text;
 using static SubscriptionActorService.PullRequestActorImplementation;
 using FluentAssertions;
 using Maestro.Data.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {
@@ -22,7 +23,7 @@ namespace SubscriptionActorService.Tests
         public void PullRequestDescriptionBuilderTests_SetUp()
         {
             StringBuilder = new StringBuilder();
-            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new Mock<ILoggerFactory>().Object, StringBuilder);
+            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), StringBuilder);
         }
 
         private List<DependencyUpdate> CreateDependencyUpdates(char version)
@@ -112,6 +113,7 @@ namespace SubscriptionActorService.Tests
             List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
             PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, null);
+
             StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
         }
 
@@ -126,8 +128,44 @@ namespace SubscriptionActorService.Tests
             
             PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
             PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
-            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
-            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+
+            String descriptionString = StringBuilder.ToString();
+
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+        }
+
+        [Test]
+        public void ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
+        {
+            UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
+            UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
+            UpdateAssetsParameters update3 = CreateUpdateAssetsParameters(false, "33333333-3333-3333-3333-333333333333");
+            List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
+            List<DependencyUpdate> deps2 = CreateDependencyUpdates('b');
+            List<DependencyUpdate> deps3 = CreateDependencyUpdates('c');
+            Build build = GivenANewBuild(true);
+
+            PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
+            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
+            PullRequestDescriptionBuilder.CalculatePRDescription(update3, deps3, null, build);
+
+            String descriptionString = StringBuilder.ToString();
+
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
+
+            List<DependencyUpdate> deps22 = CreateDependencyUpdates('d');
+
+            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps22, null, build);
+
+            descriptionString = StringBuilder.ToString();
+
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
+            descriptionString.Should().NotContain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps22, 7));
         }
     }
 }
