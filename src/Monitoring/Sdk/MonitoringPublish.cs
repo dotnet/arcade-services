@@ -43,6 +43,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         [Required]
         public string ParametersFile { get; set; }
 
+        public string CommitMessage { get; set; } = string.Empty;
+
         public sealed override bool Execute()
         {
             var s = Assembly.GetExecutingAssembly();
@@ -62,6 +64,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 notificationDirectory: NotificationDirectory,
                 environment: Environment, 
                 parametersFile: ParametersFile,
+                commitMessage: CommitMessage,
                 log: Log))
             {
                 try

@@ -27,6 +27,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private readonly Lazy<KeyVaultClient> _keyVault;
         private readonly string _environment;
         private readonly string _parameterFile;
+        private readonly string _commitMessage;
 
         private KeyVaultClient KeyVault => _keyVault.Value;
 
@@ -40,6 +41,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string notificationDirectory,
             string environment,
             string parametersFile,
+            string commitMessage,
             TaskLoggingHelper log) : base(
             grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
@@ -48,6 +50,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             _environment = environment;
             _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
             _parameterFile = parametersFile;
+            _commitMessage = commitMessage;
         }
         
         private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);
@@ -194,7 +197,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
                 Log.LogMessage(MessageImportance.Normal, "Posting dashboard {0}...", uid);
 
-                await GrafanaClient.CreateDashboardAsync(data, folderId).ConfigureAwait(false);
+                await GrafanaClient.CreateDashboardAsync(data, folderId, _commitMessage).ConfigureAwait(false);
             }
 
             await ClearExtraneousDashboardsAsync(knownUids);

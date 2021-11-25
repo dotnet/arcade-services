@@ -227,7 +227,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             }
         }
 
-        public Task CreateDashboardAsync(JObject dashboard, int folderId)
+        public Task CreateDashboardAsync(JObject dashboard, int folderId, string commitMessage)
         {
             var dashboardBody = new JObject
             {
@@ -235,6 +235,11 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 {"folderId", folderId},
                 {"overwrite", true},
             };
+
+            if (!string.IsNullOrEmpty(commitMessage))
+            {
+                dashboardBody.Add("message", commitMessage);
+            }
 
             return CreateOrUpdateAsync(
                 dashboardBody,
