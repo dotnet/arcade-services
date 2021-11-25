@@ -15,15 +15,12 @@ namespace SubscriptionActorService.Tests
     [TestFixture]
     public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     {
-        public PullRequestDescriptionBuilder PullRequestDescriptionBuilder;
-
-        public StringBuilder StringBuilder;
+        private PullRequestDescriptionBuilder _pullRequestDescriptionBuilder;
 
         [SetUp]
         public void PullRequestDescriptionBuilderTests_SetUp()
         {
-            StringBuilder = new StringBuilder();
-            PullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), StringBuilder);
+            _pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         }
 
         private List<DependencyUpdate> CreateDependencyUpdates(char version)
@@ -112,9 +109,9 @@ namespace SubscriptionActorService.Tests
             UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
             List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
-            PullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, null);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, null);
 
-            StringBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
+            _pullRequestDescriptionBuilder.GetPRDescription().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
         }
 
         [Test]
@@ -126,13 +123,13 @@ namespace SubscriptionActorService.Tests
             List<DependencyUpdate> deps2 = CreateDependencyUpdates('b');
             Build build = GivenANewBuild(true);
             
-            PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
-            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
 
-            String descriptionString = StringBuilder.ToString();
+            String description = _pullRequestDescriptionBuilder.GetPRDescription();
 
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
         }
 
         [Test]
@@ -146,26 +143,26 @@ namespace SubscriptionActorService.Tests
             List<DependencyUpdate> deps3 = CreateDependencyUpdates('c');
             Build build = GivenANewBuild(true);
 
-            PullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
-            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
-            PullRequestDescriptionBuilder.CalculatePRDescription(update3, deps3, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update3, deps3, null, build);
 
-            String descriptionString = StringBuilder.ToString();
+            String description = _pullRequestDescriptionBuilder.GetPRDescription();
 
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
 
             List<DependencyUpdate> deps22 = CreateDependencyUpdates('d');
 
-            PullRequestDescriptionBuilder.CalculatePRDescription(update2, deps22, null, build);
+            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps22, null, build);
 
-            descriptionString = StringBuilder.ToString();
+            description = _pullRequestDescriptionBuilder.GetPRDescription();
 
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
-            descriptionString.Should().NotContain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
-            descriptionString.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps22, 7));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
+            description.Should().NotContain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
+            description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps22, 7));
         }
     }
 }

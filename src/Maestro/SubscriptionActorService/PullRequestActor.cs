@@ -754,11 +754,11 @@ namespace SubscriptionActorService
 
             try
             {
-                var description = new StringBuilder();
-                description.AppendLine("This pull request updates the following dependencies");
-                description.AppendLine();
+                var descriptionBuilder = new StringBuilder();
+                descriptionBuilder.AppendLine("This pull request updates the following dependencies");
+                descriptionBuilder.AppendLine();
 
-                await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, newBranchName);
+                string description = await CommitUpdatesAsync(requiredUpdates, descriptionBuilder.ToString(), DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
                 {
@@ -790,7 +790,7 @@ namespace SubscriptionActorService
                     new PullRequest
                     {
                         Title = await ComputePullRequestTitleAsync(inProgressPr, targetBranch),
-                        Description = description.ToString(),
+                        Description = description,
                         BaseBranch = targetBranch,
                         HeadBranch = newBranchName
                     });
@@ -848,9 +848,9 @@ namespace SubscriptionActorService
         /// <param name="targetRepository">Target repository that the updates should be applied to</param>
         /// <param name="newBranchName">Target branch the updates should be to</param>
         /// <returns></returns>
-        private async Task CommitUpdatesAsync(
+        private async Task<string> CommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
-            StringBuilder description,
+            string description,
             IRemoteFactory remoteFactory,
             string targetRepository,
             string newBranchName)
@@ -902,6 +902,8 @@ namespace SubscriptionActorService
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
+
+            return pullRequestDescriptionBuilder.GetPRDescription();
         }
 
         public static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
@@ -1014,10 +1016,7 @@ namespace SubscriptionActorService
                 MergePolicyCheckResult.PendingPolicies,
                 pr.Url);
 
-            var description = new StringBuilder(pullRequest.Description);
-            await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, headBranch);
-
-            pullRequest.Description = description.ToString();
+            pullRequest.Description = await CommitUpdatesAsync(requiredUpdates, pullRequest.Description, DarcRemoteFactory, targetRepository, headBranch);
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
             await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
 

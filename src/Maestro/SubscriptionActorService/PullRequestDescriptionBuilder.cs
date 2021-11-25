@@ -3,6 +3,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -12,10 +13,10 @@ namespace SubscriptionActorService
 {
     public class PullRequestDescriptionBuilder
     {
-        public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, StringBuilder description)
+        public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, string description)
         {
             _logger = loggerFactory.CreateLogger(GetType());
-            _description = description;
+            _description = new StringBuilder(description);
             _startingReferenceId = GetStartingReferenceId();
         }
 
@@ -30,6 +31,8 @@ namespace SubscriptionActorService
         /// </summary>
         /// <param name="update">Update</param>
         /// <param name="deps">Dependencies updated</param>
+        /// <param name="committedFiles">List of commited files</param>
+        /// <param name="build">Build</param>
         /// <returns>Task</returns>
         /// <remarks>
         ///     Because PRs tend to be live for short periods of time, we can put more information
@@ -157,16 +160,12 @@ namespace SubscriptionActorService
         /// <returns></returns>
         private int GetStartingReferenceId()
         {
+            //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
+            //The regex captures these numbers
+            //example: [23]:sometext
             Regex regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
-            int maxIndex = 0;
 
-            foreach(var match in regex.Matches(_description.ToString()))
-            {
-                int currentIndex = Int32.Parse(match.ToString());
-                maxIndex = (currentIndex > maxIndex) ? currentIndex : maxIndex;
-            }
-
-            return maxIndex + 1;
+            return regex.Matches(_description.ToString()).Select(m => Int32.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
         }
 
         public static string GetChangesURI(string repoURI, string from, string to)
@@ -192,6 +191,11 @@ namespace SubscriptionActorService
                 return $"{repoURI}/compare/{fromSha}...{toSha}";
             }
             return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
+        }
+
+        public string GetPRDescription()
+        {
+            return _description.ToString();
         }
     }
 }
