@@ -164,5 +164,21 @@ namespace SubscriptionActorService.Tests
             description.Should().NotContain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps22, 7));
         }
+
+        [Test]
+        public void ShouldReturnCorrectMaximumIndex()
+        {
+            string str = @"
+[2]:qqqq
+qqqqq
+qqqq
+[42]:qq
+[2q]:qq
+[123]
+";
+
+            var prBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
+            prBuilder.GetStartingReferenceId().Should().Be(43);
+        }
     }
 }

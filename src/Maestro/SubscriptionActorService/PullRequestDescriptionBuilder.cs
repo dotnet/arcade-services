@@ -13,6 +13,9 @@ namespace SubscriptionActorService
 {
     public class PullRequestDescriptionBuilder
     {
+        /// <param name="loggerFactory">Logger factory</param>
+        /// <param name="description">A string containing initialized PR description in case of a new PR, and an existing PR description
+        /// in case of a PR that is to be updated</param>
         public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, string description)
         {
             _logger = loggerFactory.CreateLogger(GetType());
@@ -158,11 +161,11 @@ namespace SubscriptionActorService
         /// Goes through the description and finds the biggest reference id. This is needed when updating an exsiting PR.
         /// </summary>
         /// <returns></returns>
-        private int GetStartingReferenceId()
+        public int GetStartingReferenceId()
         {
             //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
             //The regex captures these numbers
-            //example: [23]:sometext
+            //example: given [23]:sometext as input, it will attempt to capture "23"
             Regex regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
 
             return regex.Matches(_description.ToString()).Select(m => Int32.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
