@@ -24,9 +24,9 @@ namespace SubscriptionActorService
             _startingReferenceId = GetStartingReferenceId();
         }
 
-        private ILogger _logger;
+        private readonly ILogger _logger;
 
-        private StringBuilder _description;
+        private readonly StringBuilder _description;
 
         private int _startingReferenceId;
 
