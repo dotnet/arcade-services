@@ -1,3 +1,4 @@
+using Castle.Core.Internal;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
@@ -14,12 +15,12 @@ namespace SubscriptionActorService
     public class PullRequestDescriptionBuilder
     {
         /// <param name="loggerFactory">Logger factory</param>
-        /// <param name="description">A string containing initialized PR description in case of a new PR, and an existing PR description
+        /// <param name="description">An empty or null string in case of a new PR, or an existing PR description in case of an update
         /// in case of a PR that is to be updated</param>
         public PullRequestDescriptionBuilder(ILoggerFactory loggerFactory, string description)
         {
             _logger = loggerFactory.CreateLogger(GetType());
-            _description = new StringBuilder(description);
+            _description = GetDescriptionStringBuilder(description);
             _startingReferenceId = GetStartingReferenceId();
         }
 
@@ -30,7 +31,7 @@ namespace SubscriptionActorService
         private int _startingReferenceId;
 
         /// <summary>
-        ///     Calculate the PR description for an update.
+        ///     Append build description to the PR description
         /// </summary>
         /// <param name="update">Update</param>
         /// <param name="deps">Dependencies updated</param>
@@ -41,7 +42,7 @@ namespace SubscriptionActorService
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        public void CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, Build build)
+        public void AppendBuildDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, Build build)
         {
             var changesLinks = new List<string>();
 
@@ -196,9 +197,18 @@ namespace SubscriptionActorService
             return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
         }
 
-        public string GetPRDescription()
+        public override string ToString()
         {
             return _description.ToString();
+        }
+
+        private StringBuilder GetDescriptionStringBuilder(string description)
+        {
+            if(description.IsNullOrEmpty())
+            {
+                return new StringBuilder().AppendLine("This pull request updates the following dependencies").AppendLine();
+            }
+            return new StringBuilder(description);
         }
     }
 }

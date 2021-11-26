@@ -9,20 +9,13 @@ using static SubscriptionActorService.PullRequestActorImplementation;
 using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Castle.Core.Internal;
 
 namespace SubscriptionActorService.Tests
 {
     [TestFixture]
     public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     {
-        private PullRequestDescriptionBuilder _pullRequestDescriptionBuilder;
-
-        [SetUp]
-        public void PullRequestDescriptionBuilderTests_SetUp()
-        {
-            _pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
-        }
-
         private List<DependencyUpdate> CreateDependencyUpdates(char version)
         {
             return new List<DependencyUpdate>
@@ -106,27 +99,29 @@ namespace SubscriptionActorService.Tests
         [Test]
         public void ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
         {
+            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
             UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
             List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update, deps, null, null);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, null, null);
 
-            _pullRequestDescriptionBuilder.GetPRDescription().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
+            pullRequestDescriptionBuilder.ToString().Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps));
         }
 
         [Test]
         public void ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
         {
+            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
             UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
             UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
             List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
             List<DependencyUpdate> deps2 = CreateDependencyUpdates('b');
             Build build = GivenANewBuild(true);
             
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update1, deps1, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
 
-            String description = _pullRequestDescriptionBuilder.GetPRDescription();
+            String description = pullRequestDescriptionBuilder.ToString();
 
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -135,6 +130,7 @@ namespace SubscriptionActorService.Tests
         [Test]
         public void ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
         {
+            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
             UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
             UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
             UpdateAssetsParameters update3 = CreateUpdateAssetsParameters(false, "33333333-3333-3333-3333-333333333333");
@@ -143,11 +139,11 @@ namespace SubscriptionActorService.Tests
             List<DependencyUpdate> deps3 = CreateDependencyUpdates('c');
             Build build = GivenANewBuild(true);
 
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update1, deps1, null, build);
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps2, null, build);
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update3, deps3, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update1, deps1, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update3, deps3, null, build);
 
-            String description = _pullRequestDescriptionBuilder.GetPRDescription();
+            String description = pullRequestDescriptionBuilder.ToString();
 
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -155,9 +151,9 @@ namespace SubscriptionActorService.Tests
 
             List<DependencyUpdate> deps22 = CreateDependencyUpdates('d');
 
-            _pullRequestDescriptionBuilder.CalculatePRDescription(update2, deps22, null, build);
+            pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps22, null, build);
 
-            description = _pullRequestDescriptionBuilder.GetPRDescription();
+            description = pullRequestDescriptionBuilder.ToString();
 
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps3, 5));
@@ -165,20 +161,46 @@ namespace SubscriptionActorService.Tests
             description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps22, 7));
         }
 
-        [Test]
-        public void ShouldReturnCorrectMaximumIndex()
+        [TestCaseSource(nameof(RegexTestCases))]
+        public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
         {
-            string str = @"
+            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
+
+            pullRequestDescriptionBuilder.GetStartingReferenceId().Should().Be(expectedResult);
+        }
+
+        private const string regexTestString1 = @"
 [2]:qqqq
 qqqqq
 qqqq
 [42]:qq
 [2q]:qq
 [123]
+qq[234]:qq
+ [345]:qq
+";
+        private const string regexTestString2 = "";
+        private const string regexTestString3 = @"
+this
+string
+shouldn't
+have
+any
+matches
+";
+        private const string regexTestString4 = @"
+[1]:q
+[2]:1
+[3]:q
+[4]:q
 ";
 
-            var prBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
-            prBuilder.GetStartingReferenceId().Should().Be(43);
-        }
+        static object[] RegexTestCases =
+        {
+            new object[] { regexTestString1, 43},
+            new object[] { regexTestString2, 1},
+            new object[] { regexTestString3, 1},
+            new object [] { regexTestString4, 5},
+        };
     }
 }

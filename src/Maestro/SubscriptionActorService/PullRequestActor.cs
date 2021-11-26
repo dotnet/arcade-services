@@ -754,11 +754,7 @@ namespace SubscriptionActorService
 
             try
             {
-                var descriptionBuilder = new StringBuilder();
-                descriptionBuilder.AppendLine("This pull request updates the following dependencies");
-                descriptionBuilder.AppendLine();
-
-                string description = await CommitUpdatesAsync(requiredUpdates, descriptionBuilder.ToString(), DarcRemoteFactory, targetRepository, newBranchName);
+                string description = await CalculatePRDescriptionAndCommitUpdatesAsync(requiredUpdates, null, DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
                 {
@@ -837,7 +833,7 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        /// Commit a dependency update to a target branch 
+        /// Commit a dependency update to a target branch  and calculate the PR description
         /// </summary>
         /// <param name="requiredUpdates">Version updates to apply</param>
         /// <param name="description">
@@ -848,7 +844,7 @@ namespace SubscriptionActorService
         /// <param name="targetRepository">Target repository that the updates should be applied to</param>
         /// <param name="newBranchName">Target branch the updates should be to</param>
         /// <returns></returns>
-        private async Task<string> CommitUpdatesAsync(
+        private async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
             string description,
             IRemoteFactory remoteFactory,
@@ -881,13 +877,13 @@ namespace SubscriptionActorService
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    pullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                    pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                pullRequestDescriptionBuilder.CalculatePRDescription(update, deps, committedFiles, build);
+                pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
             }
 
             // If the coherency update wasn't combined, then
@@ -897,13 +893,13 @@ namespace SubscriptionActorService
                 var message = new StringBuilder();
                 Build build = await GetBuildAsync(coherencyUpdate.update.BuildId);
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                pullRequestDescriptionBuilder.CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
+                pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
 
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
 
-            return pullRequestDescriptionBuilder.GetPRDescription();
+            return pullRequestDescriptionBuilder.ToString();
         }
 
         public static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
@@ -1016,7 +1012,7 @@ namespace SubscriptionActorService
                 MergePolicyCheckResult.PendingPolicies,
                 pr.Url);
 
-            pullRequest.Description = await CommitUpdatesAsync(requiredUpdates, pullRequest.Description, DarcRemoteFactory, targetRepository, headBranch);
+            pullRequest.Description = await CalculatePRDescriptionAndCommitUpdatesAsync(requiredUpdates, pullRequest.Description, DarcRemoteFactory, targetRepository, headBranch);
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
             await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
 
