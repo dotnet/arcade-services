@@ -1208,7 +1208,18 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Construct the source uri.
                 string name = asset.Name.ToLowerInvariant();
                 string version = asset.Version.ToLowerInvariant();
-                string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
+                string finalUri = assetLocation.Location;
+                
+                if (finalUri.EndsWith("index.json"))
+                {
+                    finalUri = finalUri.Substring(0, finalUri.Length - "index.json".Length);
+                }
+
+                if (!finalUri.EndsWith("/"))
+                {
+                    finalUri += "/";
+                }
+
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
                 using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
@@ -1326,7 +1337,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return false;
             }
 
-            return locationUri.Host.EndsWith("blob.core.windows.net") && location.EndsWith("/index.json");
+            return locationUri.Host.EndsWith("blob.core.windows.net");
         }
 
         /// <summary>
@@ -1425,7 +1436,19 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (IsBlobFeedUrl(assetLocation.Location))
             {
-                string finalBaseUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
+
+                string finalBaseUri = assetLocation.Location;
+
+                if (finalBaseUri.EndsWith("index.json"))
+                {
+                    finalBaseUri = finalBaseUri.Substring(0, finalBaseUri.Length - "index.json".Length);
+                }
+
+                if (!finalBaseUri.EndsWith("/"))
+                {
+                    finalBaseUri += "/";
+                }
+
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
 
