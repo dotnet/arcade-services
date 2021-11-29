@@ -1208,17 +1208,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Construct the source uri.
                 string name = asset.Name.ToLowerInvariant();
                 string version = asset.Version.ToLowerInvariant();
-                string finalUri = assetLocation.Location;
-                
-                if (finalUri.EndsWith("index.json"))
-                {
-                    finalUri = finalUri.Substring(0, finalUri.Length - "index.json".Length);
-                }
-
-                if (!finalUri.EndsWith("/"))
-                {
-                    finalUri += "/";
-                }
+                string finalUri = GetBlobBaseUri(assetLocation.Location);
 
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
@@ -1386,6 +1376,31 @@ namespace Microsoft.DotNet.Darc.Operations
             return locationUri.Host.Equals("dev.azure.com") && location.EndsWith("/artifacts");
         }
 
+        /// <summary>
+        ///     Gets the base uri of a blob uri
+        /// </summary>
+        /// <param name="blobUri">Uri of the blob</param>
+        /// <returns>The blob uri with index.json removed, ending in a trailing slash</returns>
+        /// <remarks>
+        ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+        /// </remarks>
+        private static string GetBlobBaseUri(string blobUri)
+        {
+            string baseUri = blobUri;
+
+            if (baseUri.EndsWith("index.json"))
+            {
+                baseUri = baseUri.Substring(0, baseUri.Length - "index.json".Length);
+            }
+
+            if (!baseUri.EndsWith("/"))
+            {
+                baseUri += "/";
+            }
+
+            return baseUri;
+        }
+
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
                                                             Asset asset,
                                                             AssetLocation assetLocation,
@@ -1437,17 +1452,7 @@ namespace Microsoft.DotNet.Darc.Operations
             if (IsBlobFeedUrl(assetLocation.Location))
             {
 
-                string finalBaseUri = assetLocation.Location;
-
-                if (finalBaseUri.EndsWith("index.json"))
-                {
-                    finalBaseUri = finalBaseUri.Substring(0, finalBaseUri.Length - "index.json".Length);
-                }
-
-                if (!finalBaseUri.EndsWith("/"))
-                {
-                    finalBaseUri += "/";
-                }
+                string finalBaseUri = GetBlobBaseUri(assetLocation.Location);
 
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
