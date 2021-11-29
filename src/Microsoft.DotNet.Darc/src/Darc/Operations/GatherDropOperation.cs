@@ -1451,9 +1451,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (IsBlobFeedUrl(assetLocation.Location))
             {
-
                 string finalBaseUri = GetBlobBaseUri(assetLocation.Location);
-
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
 
