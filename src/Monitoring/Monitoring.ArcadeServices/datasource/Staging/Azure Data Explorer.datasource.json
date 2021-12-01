@@ -22,6 +22,6 @@
   },
   "readOnly": false,
   "secureJsonData": {
-    "clientSecret": "[vault(helix-grafana-ad-client-secret)]"
+    "clientSecret": "[vault(helix-grafana-app-secret)]"
   }
 }
