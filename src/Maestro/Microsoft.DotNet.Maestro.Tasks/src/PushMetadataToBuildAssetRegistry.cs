@@ -19,6 +19,7 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using NuGet.Packaging;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -85,8 +86,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 else
                 {
                     (List<BuildData> buildsManifestMetadata,
-                     List<SigningInformation> signingInformation,
-                     ManifestBuildData manifestBuildData) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
+                        List<SigningInformation> signingInformation,
+                        ManifestBuildData manifestBuildData, 
+                        List<Manifest> parsedManifest) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
                     {
@@ -95,6 +97,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
+                    (List<PackageArtifactModel> packages,
+                        List<BlobArtifactModel> blobs) = MergeManifests(parsedManifest);
+
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
@@ -127,7 +132,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
 
-                        BuildModel modelForManifest = CreateMergedManifestBuildModel(finalBuild.Assets, manifestBuildData);
+                        BuildModel modelForManifest = CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
                         PushMergedManifest(modelForManifest, finalSigningInfo);
                     }
 
@@ -287,7 +292,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return versionIdentifier.GetVersion(assetId);
         }
 
-        internal (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
+        internal (List<BuildData>, 
+            List<SigningInformation>, 
+            ManifestBuildData, 
+            List<Manifest>) GetBuildManifestsMetadata(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
@@ -306,7 +314,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return ParseBuildManifestsMetadata(parsedManifests, cancellationToken);
         }
 
-        internal (List<BuildData> buildData, List<SigningInformation> signingInformation, ManifestBuildData manifestBuildData) ParseBuildManifestsMetadata(
+        internal (List<BuildData> buildData,
+            List<SigningInformation> signingInformation,
+            ManifestBuildData manifestBuildData,
+            List<Manifest> parsedManifest) ParseBuildManifestsMetadata(
             List<Manifest> parsedManifests,
             CancellationToken cancellationToken)
         {
@@ -393,7 +404,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return (buildsManifestMetadata, signingInfo, manifestBuildData);
+            return (buildsManifestMetadata, signingInfo, manifestBuildData, parsedManifests);
         }
 
         private string GetAzDevAccount()
@@ -474,6 +485,49 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
+        internal (List<PackageArtifactModel>,
+            List<BlobArtifactModel>) MergeManifests(List<Manifest> parsedManifest)
+        {
+            List<PackageArtifactModel> packageArtifacts = new List<PackageArtifactModel>();
+            List<BlobArtifactModel> blobArtifacts = new List<BlobArtifactModel>();
+
+            for (int i = 0; i < parsedManifest.Count; i++)
+            {
+                Manifest manifest = parsedManifest[i];
+                foreach (var package in manifest.Packages)
+                {
+                    PackageArtifactModel packageArtifact = new PackageArtifactModel()
+                    {
+                        Attributes = new Dictionary<string, string>
+                    {
+                        { "NonShipping", package.NonShipping.ToString().ToLower() },
+                    },
+                        Id = package.Id,
+                        Version = package.Version
+                    };
+
+                    packageArtifacts.Add(packageArtifact);
+                }
+
+                foreach (var blob in manifest.Blobs)
+                {
+                    BlobArtifactModel blobArtifact = new BlobArtifactModel()
+                    {
+                        Attributes = new Dictionary<string, string>
+                    {
+                        { "NonShipping", blob.NonShipping.ToString().ToLower() },
+                        { "Category" , !string.IsNullOrEmpty(blob.Category)? blob.Category.ToString().ToUpper() : "NONE" }
+                    },
+                        Id = blob.Id,
+                    };
+
+                    blobArtifacts.Add(blobArtifact);
+                }
+
+            }
+            return (packageArtifacts, blobArtifacts);
+
+        }
         internal BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
         {
             // Use a deep copy constructor to avoid modifying the argument objects
@@ -667,7 +721,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         internal BuildModel CreateMergedManifestBuildModel(
-            IImmutableList<AssetData> assets,
+            List<PackageArtifactModel> packages,
+            List<BlobArtifactModel> blobs,
             ManifestBuildData manifestBuildData)
         {
             BuildModel buildModel = new BuildModel(
@@ -684,35 +739,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         });
 
-            foreach (AssetData data in assets)
-            {
-                if (blobSet.Contains(data.Name))
-                {
-                    BlobArtifactModel blobArtifactModel = new BlobArtifactModel
-                    {
-                        Attributes = new Dictionary<string, string>
-                                {
-                                    { "NonShipping", data.NonShipping.ToString().ToLower() }
-                                },
-                        Id = data.Name
-                    };
-                    buildModel.Artifacts.Blobs.Add(blobArtifactModel);
-                }
-                else
-                {
-                    PackageArtifactModel packageArtifactModel = new PackageArtifactModel
-                    {
-                        Attributes = new Dictionary<string, string>
-                                {
-                                    { "NonShipping", data.NonShipping.ToString().ToLower() }
-                                },
-                        Id = data.Name,
-                        Version = data.Version
-                    };
-                    buildModel.Artifacts.Packages.Add(packageArtifactModel);
-                }
-            }
-
+            buildModel.Artifacts.Blobs.AddRange(blobs);
+            buildModel.Artifacts.Packages.AddRange(packages);
             return buildModel;
         }
 
