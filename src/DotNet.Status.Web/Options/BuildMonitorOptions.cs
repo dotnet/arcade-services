@@ -36,6 +36,7 @@ namespace DotNet.Status.Web.Options
             public string Name { get; set; }
             public string[] Labels { get; set; }
             public bool UpdateExisting { get; set; }
+            public bool MentionAuthors { get; set; }
         }
     }
 }

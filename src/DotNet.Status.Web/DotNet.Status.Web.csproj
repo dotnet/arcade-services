@@ -40,5 +40,6 @@
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
     <ProjectReference Include="..\Telemetry\AzureDevOpsClient\AzureDevOpsClient.csproj" />
+    <ProjectReference Include="..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
   </ItemGroup>
 </Project>

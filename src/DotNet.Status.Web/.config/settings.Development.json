@@ -48,5 +48,8 @@
   },
   "IssueMentionForwarding": {
     "TeamsWebHookUri": ""
+  },
+  "Maestro": {
+    "ApiToken": ""
   }
 }

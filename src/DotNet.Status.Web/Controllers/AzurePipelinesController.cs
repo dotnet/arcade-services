@@ -13,10 +13,13 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 using Issue = Octokit.Issue;
+using Build = Microsoft.DotNet.Internal.AzureDevOps.Build;
+using MaestroBuild = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace DotNet.Status.Web.Controllers
 {
@@ -27,25 +30,32 @@ namespace DotNet.Status.Web.Controllers
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
+        private readonly IOptions<MaestroOptions> _maestroOptions;
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<IAzureDevOpsClient> _clientLazy;
+        private readonly Lazy<IMaestroApi> _maestroApiLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptions<BuildMonitorOptions> options,
+            IOptions<MaestroOptions> maestroOptions,
             ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _options = options;
+            _maestroOptions = maestroOptions;
             _logger = logger;
             _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
+            _maestroApiLazy = new Lazy<IMaestroApi>(ApiFactory.GetAuthenticated(_maestroOptions.Value.ApiToken, _maestroOptions.Value.BaseUrl));
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
         private IAzureDevOpsClient Client => _clientLazy.Value;
+
+        private IMaestroApi MaestroApi => _maestroApiLazy.Value;
 
         private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
@@ -165,7 +175,9 @@ namespace DotNet.Status.Web.Controllers
                     continue;
                 }
 
-                if (monitor.Tags != null && monitor.Tags.Any() && !(monitor.Tags.Intersect(build.Tags).Any()))
+                bool monitorHasTags = monitor.Tags != null && monitor.Tags.Any();
+
+                if (monitorHasTags && !(monitor.Tags.Intersect(build.Tags).Any()))
                 {
                     // We should only skip processing if tags were specified in the monitor, and none of those tags were found in the build
                     continue;
@@ -177,13 +189,8 @@ namespace DotNet.Status.Web.Controllers
                     prettyBranch = prettyBranch.Substring(fullBranchPrefix.Length);
                 }
 
-                List<int> validatingBarIds = new List<int>();
-                if(TryGetValidatingBarIds(build.Tags, out validatingBarIds))
-                {
-
-                }
-
-                string prettyTags = (monitor.Tags != null && monitor.Tags.Any()) ? $"{string.Join(", ", build.Tags)}" : "";
+                // Pretty tags will be the list of all of the tags, not including the ValidatingBarIds tag.
+                string prettyTags = monitorHasTags ? $"{string.Join(", ", build.Tags.Where(t => !t.Contains("ValidatingBarIds")))}" : "";
 
                 _logger.LogInformation(
                     "Build '{buildNumber}' in project '{projectName}' with definition '{definitionPath}', tags '{prettyTags}', and branch '{branch}' matches monitoring criteria, sending notification",
@@ -200,6 +207,68 @@ namespace DotNet.Status.Web.Controllers
                 string changesMessage = await BuildChangesMessage(build);
 
                 BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
+
+                string repoChangesMessage = "";
+
+                if(TryGetValidatingBarIds(build.Tags, out List<int> validatingBarIds))
+                {
+                    // We are interested in looking at the diff in the repo of interest, so:
+                    // 1) Figure out what repo the bar id corresponds to
+                    // 2) Find the last successful build of this pipeline that corresponds to that repo and get its ValidatingBarIds tags
+                    // 3) Get the commit sha of the two bar ids, and get the commit diff between those two builds
+
+                    // Get the previous day's builds
+                    DateTimeOffset minTime = DateTimeOffset.Parse(build.QueueTime).AddDays(-1);
+                    Build[] previousBuilds = await Client.ListBuilds(build.Project.Name, CancellationToken.None, minTime: minTime, maxTime: DateTimeOffset.Parse(build.QueueTime));
+                    List<Build> matchingBuilds = new List<Build>();
+
+                    // For monitors that have tags, only get the builds with matching tags. For all other monitors, use the full list
+                    if (monitorHasTags)
+                    {
+                        matchingBuilds = previousBuilds
+                            .Where(b => 
+                                monitor.Tags.Intersect(b.Tags).SequenceEqual(monitor.Tags) 
+                                && DateTimeOffset.Parse(b.StartTime) < DateTimeOffset.Parse(build.StartTime))
+                            .OrderByDescending(b => b.StartTime)
+                            .ToList();
+                    }
+                    else
+                    {
+                        matchingBuilds = previousBuilds.OrderByDescending(b => b.StartTime).ToList();
+                    }
+
+                    // If there are any builds from the day before that were successful, use that, otherwise, just get the most recent previous build
+                    Build compareBuild = matchingBuilds.FirstOrDefault(b => b.Result == "succeeded");
+
+                    if (compareBuild == null)
+                    {
+                        compareBuild = matchingBuilds.FirstOrDefault();
+                    }
+
+                    // Get the build information for the build that was being validated, so that we can get the change history
+                    MaestroBuild barBuild = await GetBuildAsync(validatingBarIds.First());
+                    
+                    // If the compare build has a validating bar id tag, then we will use it. Otherwise, just get the change messages
+                    // corresponding to the most recent change
+                    if (compareBuild != null && TryGetValidatingBarIds(compareBuild.Tags, out List<int> compareValidatingBarIds))
+                    {
+                        MaestroBuild compareBarBuild = await GetBuildAsync(compareValidatingBarIds.First());
+
+                        // We have a build and a compare build. We need to get the commit diff between the two
+                        repoChangesMessage = await BuildChangesMessage(
+                            barBuild.AzureDevOpsProject, 
+                            barBuild.AzureDevOpsBuildId.Value, 
+                            compareBarBuild.AzureDevOpsBuildId.Value, 
+                            repo.MentionAuthors);
+                    }
+                    else if (barBuild.AzureDevOpsBuildId != null)
+                    {
+                        repoChangesMessage = await BuildChangesMessage(
+                            barBuild.AzureDevOpsProject, 
+                            barBuild.AzureDevOpsBuildId.Value, 
+                            repo.MentionAuthors);
+                    }
+                }
 
                 if (repo != null)
                 {
@@ -239,6 +308,14 @@ namespace DotNet.Status.Web.Controllers
 
 {changesMessage}
 ";
+
+                    if (!string.IsNullOrEmpty(repoChangesMessage))
+                    {
+                        body += @$"### Repository Changes
+{repoChangesMessage}
+";
+                    }
+
                     string issueTitlePrefix = $"Build failed: {build.Definition.Name}/{prettyBranch} {prettyTags}";
 
                     if (repo.UpdateExisting)
@@ -320,9 +397,8 @@ namespace DotNet.Status.Web.Controllers
             }
         }
 
-        private async Task<string> BuildChangesMessage(Build build)
+        private async Task<string> BuildChangesMessage(BuildChange[] changes, int truncatedChangeCount, bool mentionAuthors = false)
         {
-            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
             StringBuilder b = new StringBuilder();
             foreach (BuildChange change in changes.OrEmpty())
             {
@@ -352,6 +428,12 @@ namespace DotNet.Status.Web.Controllers
                     b.Append(" - ");
                 }
 
+                // If it is a github change, mention the user whose change this is
+                if (mentionAuthors && change.Type.Equals("github", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    b.Append("@");
+                }
+
                 b.Append(change.Author.DisplayName);
                 b.Append(" - ");
                 b.AppendLine(change.Message);
@@ -365,6 +447,23 @@ namespace DotNet.Status.Web.Controllers
             }
 
             return b.ToString();
+        }
+
+        private async Task<string> BuildChangesMessage(string projectName, int buildId, bool mentionAuthors = false)
+        {
+            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(projectName, buildId, CancellationToken.None);
+            return await BuildChangesMessage(changes, truncatedChangeCount, mentionAuthors);
+        }
+
+        private async Task<string> BuildChangesMessage(string projectName, int buildId, int compareBuildId, bool mentionAuthors = false)
+        {
+            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(projectName, buildId, compareBuildId, CancellationToken.None);
+            return await BuildChangesMessage(changes, truncatedChangeCount, mentionAuthors);
+        }
+
+        private async Task<string> BuildChangesMessage(Build build)
+        {
+            return await BuildChangesMessage(build.Project.Name, build.Id);
         }
 
         private async Task<string> BuildTimelineMessage(Build build)
@@ -451,6 +550,11 @@ namespace DotNet.Status.Web.Controllers
             string tag = tags.First(x => x.Contains("ValidatingBarIds ")).Split("ValidatingBarIds ")[1];
             barIds.AddRange(tag.Split(",").Select(int.Parse).ToList());
             return true;
+        }
+
+        public async Task<MaestroBuild> GetBuildAsync(int id)
+        {
+            return await MaestroApi.Builds.GetBuildAsync(id, CancellationToken.None);
         }
 
 

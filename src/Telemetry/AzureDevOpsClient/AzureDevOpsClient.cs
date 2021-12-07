@@ -50,6 +50,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             string project,
             string continuationToken,
             DateTimeOffset? minTime,
+            DateTimeOffset? maxTime,
             int? limit,
             CancellationToken cancellationToken)
         {
@@ -61,6 +62,11 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             if (minTime.HasValue)
             {
                 builder.Append($"minTime={minTime.Value.UtcDateTime:O}&");
+            }
+
+            if (maxTime.HasValue)
+            {
+                builder.Append($"maxTime={maxTime.Value.UtcDateTime:O}&");
             }
 
             if (limit.HasValue)
@@ -80,13 +86,14 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             string project,
             CancellationToken cancellationToken,
             DateTimeOffset? minTime = default,
+            DateTimeOffset? maxTime = default,
             int? limit = default)
         {
             var buildList = new List<Build>();
             string continuationToken = null;
             do
             {
-                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, limit, cancellationToken);
+                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, maxTime, limit, cancellationToken);
                 continuationToken = result.ContinuationToken;
                 JObject root = JObject.Parse(result.Body);
                 var array = (JArray) root["value"];
@@ -115,6 +122,15 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
             builder.Append($"/build/builds/{buildId}/changes?$top=10&api-version=5.1");
+            JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
+            var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
+            return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);
+        }
+
+        public async Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, long compareBuildId, CancellationToken cancellationToken = default)
+        {
+            StringBuilder builder = GetProjectApiRootBuilder(project);
+            builder.Append($"/build/changes?fromBuildId={compareBuildId}&toBuildId={buildId}&$top=10&api-version=5.1");
             JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
             var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
             return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);

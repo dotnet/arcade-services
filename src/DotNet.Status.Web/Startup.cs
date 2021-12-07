@@ -93,6 +93,7 @@ namespace DotNet.Status.Web
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub"));
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor"));
             services.Configure<KustoOptions>(Configuration.GetSection("Kusto"));
+            services.Configure<MaestroOptions>(Configuration.GetSection("Maestro"));
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
