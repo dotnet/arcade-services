@@ -2,11 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using Moq;
@@ -32,23 +29,81 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly string buildNumber = "azDevBuildNumber";
         private static readonly string sourceBranch = "thisIsASourceBranch";
         private static readonly string commitSourceVersion = "thisIsASourceVersion";
+        private static readonly string id = "1234";
+        private static readonly string version = "thisIsVersion";
+        private static readonly string noVersion = "thisIsNoVersion";
 
-        private readonly AssetData assetDataWithoutName = new AssetData(true)
-        { Version = "noNameVersion" };
-
-        private readonly AssetData assetDataWithoutVersion = new AssetData(true)
-        { Name = "noVersionData" };
-
-        private readonly AssetData nonShippingAssetData = new AssetData(true)
+        private PackageArtifactModel package1 = new PackageArtifactModel
         {
-            Name = "NonShippingAssetData",
-            Version = "nonShippingAsssetVersion"
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" }
+                },
+            Id = id,
+            Version = version
         };
 
-        private readonly AssetData shippingAssetData = new AssetData(false)
+        private PackageArtifactModel package2 = new PackageArtifactModel
         {
-            Name = "ShippingAssetData",
-            Version = "shippingAssetVersion"
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" }
+                },
+            Id = id ,
+            Version = noVersion
+        };
+
+        private PackageArtifactModel packageWithNoVersion = new PackageArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" }
+                },
+            Id = id,
+            Version = null
+        };
+
+        private PackageArtifactModel packageNonShipping = new PackageArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "false" }
+                },
+            Id = id,
+            Version = null
+        }; 
+
+        List<PackageArtifactModel> packages;
+        List<BlobArtifactModel> blobs;
+
+        private BlobArtifactModel blob1 = new BlobArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" },
+                    { "Category", "other" }
+                },
+            Id = id
+        };
+
+        private BlobArtifactModel blob2 = new BlobArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" },
+                    { "Category", "none" }
+                },
+            Id = id
+        };
+
+        private BlobArtifactModel blob3 = new BlobArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "false" },
+                    { "Category", "none" }
+                },
+            Id = id
         };
 
         private readonly ManifestBuildData manifestBuildData = new ManifestBuildData(
@@ -102,35 +157,72 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         }
 
         [Test]
-        public void GivenAssetDataWithoutName()
+        public void CheckMergedBuildModelData()
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-            PackageArtifactModel packageArtifact = new PackageArtifactModel
+            PackageArtifactModel testPackage1 = new PackageArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
                     { "NonShipping", "true" }
                 },
-                Id = null,
-                Version = assetDataWithoutName.Version
+                Id = id,
+                Version = version
+            };
+
+            PackageArtifactModel testPackage2 = new PackageArtifactModel
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" }
+                },
+                Id = id,
+                Version = noVersion
+            };
+
+            BlobArtifactModel testBlob1 = new BlobArtifactModel
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" },
+                    { "Category", "other" }
+                },
+                Id = id,
+            };
+
+            BlobArtifactModel testBlob2 = new BlobArtifactModel
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "true" },
+                    { "Category", "none" }
+                },
+                Id = id,
             };
 
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
-                    Packages = new List<PackageArtifactModel> { packageArtifact }
+                    Packages = new List<PackageArtifactModel> { testPackage1, testPackage2 },
+                    Blobs = new List<BlobArtifactModel> { testBlob1, testBlob2 }
                 };
 
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-              //  ImmutableList.Create(assetDataWithoutName), manifestBuildData);
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
+            packages.Add(package1);
+            packages.Add(package2);
+            blobs.Add(blob1);
+            blobs.Add(blob2);
 
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
-        public void GivenAssetWithoutVersion()
+        public void CheckPackagesInMergedBuildModel()
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
@@ -140,9 +232,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 Attributes = new Dictionary<string, string>
                     {
                         { "NonShipping", "true" },
-                        { "Id", assetDataWithoutVersion.Name },
-                        { "Version", null }
-                    }
+                    },
+                Id= id,
+                Version = null
             };
 
             expectedBuildModel.Artifacts =
@@ -151,46 +243,51 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     Packages = new List<PackageArtifactModel> { packageArtifact }
                 };
 
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-               // ImmutableList.Create(assetDataWithoutVersion), manifestBuildData);
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
+            packages.Add(packageWithNoVersion);
 
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
-        public void GivenAssetsInBlobSet()
+        public void CheckBlobsInMergedBuildModel()
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", "true" }
+                    { "NonShipping", "true" },
+                    { "Category", "other" }
+
                 },
-                Id = dataInBlobSet.Name
+                Id = id
             };
+
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
+            blobs.Add(blob1);
 
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
                     Blobs = new List<BlobArtifactModel> { blobArtifactModel }
                 };
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-                //ImmutableList.Create(dataInBlobSet), manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
 
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
-        public void GivenSomeAssetsInBlobSetAndSomeNot()
+        public void CheckShippingAndNonShippingPackages()
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
-
-            AssetData dataInBlobSet = pushMetadata.GetManifestAsAsset(ImmutableList.Create(nonShippingAssetData), "thisIsALocation", "thisIsTheManifestFileName");
 
             PackageArtifactModel shippingPackageArtifact = new PackageArtifactModel
             {
@@ -198,30 +295,45 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     {
                         { "NonShipping", "false" },
                     },
-                Id = shippingAssetData.Name,
-                Version = shippingAssetData.Version
+                Id = id,
+                Version = null
+            };
+
+            PackageArtifactModel nonShippingPackage = new PackageArtifactModel
+            {
+                Attributes = new Dictionary<string, string>
+                    {
+                        { "NonShipping", "true" },
+                    },
+                Id = id,
+                Version = null
             };
 
             BlobArtifactModel blobArtifactModel = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
                 {
-                    { "NonShipping", "true" }
+                    { "NonShipping", "true" },
+                    { "Category", "other" }
                 },
-                Id = dataInBlobSet.Name
+                Id = id
             };
 
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
-                    Packages = new List<PackageArtifactModel> { shippingPackageArtifact },
+                    Packages = new List<PackageArtifactModel> { shippingPackageArtifact, nonShippingPackage },
                     Blobs = new List<BlobArtifactModel> { blobArtifactModel }
                 };
 
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-                //ImmutableList.Create(dataInBlobSet, shippingAssetData), manifestBuildData);
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
+            packages.Add(packageNonShipping);
+            packages.Add(packageWithNoVersion);
+            blobs.Add(blob1);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
 
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
@@ -230,66 +342,54 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-            PackageArtifactModel packageArtifact = new PackageArtifactModel
+            BlobArtifactModel NonShippingBlob = new BlobArtifactModel
             {
                 Attributes = new Dictionary<string, string>
-                    {
-                        { "NonShipping", "true" },
-                    },
-                Id = nonShippingAssetData.Name,
-                Version = nonShippingAssetData.Version
+                {
+                    { "NonShipping", "true" },
+                    { "Category", "other" }
+                },
+                Id = id
+            };
+
+            BlobArtifactModel ShippingBlob = new BlobArtifactModel
+            {
+                Attributes = new Dictionary<string, string>
+                {
+                    { "NonShipping", "false" },
+                    { "Category", "none" }
+                },
+                Id = id
             };
 
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
-                    Packages = new List<PackageArtifactModel> { packageArtifact }
+                    Blobs = new List<BlobArtifactModel> { ShippingBlob, NonShippingBlob }
                 };
 
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-                //ImmutableList.Create(nonShippingAssetData), manifestBuildData);
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
+            blobs.Add(blob3);
+            blobs.Add(blob1);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
 
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
 
         [Test]
-        public void GivenShippingAssets()
+        public void GivenEmptyPackagesAndBlobsList()
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-            PackageArtifactModel packageArtifact = new PackageArtifactModel
-            {
-                Attributes = new Dictionary<string, string>
-                    {
-                        { "NonShipping", "false" },
-                    },
-                Id = shippingAssetData.Name,
-                Version = shippingAssetData.Version
-            };
+            packages = new List<PackageArtifactModel>();
+            blobs = new List<BlobArtifactModel>();
 
-            expectedBuildModel.Artifacts =
-                new ArtifactSet
-                {
-                    Packages = new List<PackageArtifactModel> { packageArtifact }
-                };
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            expectedBuildModel.Artifacts = new ArtifactSet { };
 
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(
-                //ImmutableList.Create(shippingAssetData), manifestBuildData);
-
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
-        }
-
-        [Test]
-        public void GivenEmptyAssetsList()
-        {
-            BuildModel expectedBuildModel = GetBuildModel();
-            PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
-
-            //BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(ImmutableList.Create<AssetData>(), manifestBuildData);
-            //expectedBuildModel.Artifacts = new ArtifactSet { };
-
-            //actualModel.Should().BeEquivalentTo(expectedBuildModel);
+            actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
     }
 }

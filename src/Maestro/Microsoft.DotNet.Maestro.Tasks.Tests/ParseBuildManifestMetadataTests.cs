@@ -413,27 +413,29 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             buildData.Should().BeEmpty();
             signingInformation.Should().BeEmpty();
             manifestBuildData.Should().BeNull();
-            //parsedManifest.Should().BeNull();
+            parsedManifest.Should().BeEmpty();
         }
 
         [Test]
         public void ParseBasicManifest()
         {
             List<Manifest> manifests = new List<Manifest>() { manifest1 };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualManifest) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualParsedManifest ) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(buildData1);
             actualSigningInformation.Should().BeEquivalentTo(ExpectedSigningInfo);
             actualManifestBuildData.Should().BeEquivalentTo(manifest1BuildData);
+            actualParsedManifest.Should().BeEquivalentTo(manifests);
         }
 
         [Test]
         public void ParseTwoManifests()
         {
             List<Manifest> manifests = new List<Manifest>() { manifest1, manifest2 };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualManifest) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualParsedManifest) = pushMetadata.ParseBuildManifestsMetadata(manifests, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(buildData1.Concat(buildData2));
             actualSigningInformation.Should().BeEquivalentTo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2));
             actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
+            actualParsedManifest.Should().BeEquivalentTo(manifests);
 
         }
 
@@ -449,7 +451,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithoutPackages = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithoutPackages.Blobs = new List<Blob> { blob1 };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutPackages }, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualParsedManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutPackages }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(noPackagesManifestBuildData);
             actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
@@ -459,7 +461,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithUnversionedPackage = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithUnversionedPackage.Packages = new List<Package> { unversionedPackage };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedPackage }, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData, parsedManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedPackage }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(unversionedPackagedManifestBuildData);
             actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
@@ -469,7 +471,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithoutBlobs = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithoutBlobs.Packages = new List<Package> { package1 };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData, actualManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutBlobs }, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData, parsedManifest) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutBlobs }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(noBlobManifestBuildData);
             actualManifestBuildData.Should().BeEquivalentTo(baseManifestBuildData);
         }
