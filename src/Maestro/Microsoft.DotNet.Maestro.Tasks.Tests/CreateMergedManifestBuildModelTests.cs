@@ -106,8 +106,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Id = id
         };
 
-        private readonly ManifestBuildData manifestBuildData = new ManifestBuildData(
-            new Manifest
+        private readonly Manifest manifest = new Manifest
             {
                 InitialAssetsLocation = initialAssetsLocation,
                 AzureDevOpsBuildId = azDoBuildId,
@@ -119,7 +118,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 AzureDevOpsBranch = azDoBranch,
                 PublishingVersion = publishingVersion,
                 IsReleaseOnlyPackageVersion = isReleasePackage
-            });
+            };
 
         private PushMetadataToBuildAssetRegistry GetPushMetadata()
         {
@@ -143,13 +142,24 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             BuildModel expectedBuildModel = new BuildModel(
                 new BuildIdentity
                 {
-                    Attributes = manifestBuildData.ToDictionary(),
+                    Attributes = new Dictionary< string, string>()
+                    {
+                        { "InitialAssetsLocation", manifest.InitialAssetsLocation },
+                        { "AzureDevOpsBuildId", manifest.BuildId },
+                        { "AzureDevOpsBuildDefinitionId", manifest.AzureDevOpsBuildDefinitionIdString },
+                        { "AzureDevOpsAccount", manifest.AzureDevOpsAccount },
+                        { "AzureDevOpsProject", manifest.AzureDevOpsProject },
+                        { "AzureDevOpsBuildNumber", manifest.AzureDevOpsBuildNumber },
+                        { "AzureDevOpsRepository", manifest.AzureDevOpsRepository},
+                        { "AzureDevOpsBranch", manifest.AzureDevOpsBranch }
+
+                    },
                     Name = buildRepoName,
                     BuildId = buildNumber,
                     Branch = sourceBranch,
                     Commit = commitSourceVersion,
                     IsStable = false,
-                    PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
+                    PublishingVersion = (PublishingInfraVersion)manifest.PublishingVersion,
                     IsReleaseOnlyPackageVersion = bool.Parse(isReleasePackage)
                 });
 
@@ -216,7 +226,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             blobs.Add(blob1);
             blobs.Add(blob2);
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -247,7 +257,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             blobs = new List<BlobArtifactModel>();
             packages.Add(packageWithNoVersion);
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -278,7 +288,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 {
                     Blobs = new List<BlobArtifactModel> { blobArtifactModel }
                 };
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -331,7 +341,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             packages.Add(packageNonShipping);
             packages.Add(packageWithNoVersion);
             blobs.Add(blob1);
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -372,7 +382,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             blobs = new List<BlobArtifactModel>();
             blobs.Add(blob3);
             blobs.Add(blob1);
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -386,7 +396,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             packages = new List<PackageArtifactModel>();
             blobs = new List<BlobArtifactModel>();
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifestBuildData);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
             expectedBuildModel.Artifacts = new ArtifactSet { };
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
