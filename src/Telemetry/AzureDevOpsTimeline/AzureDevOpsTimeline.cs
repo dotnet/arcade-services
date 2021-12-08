@@ -317,7 +317,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             int limit,
             CancellationToken cancellationToken)
         {
-            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit: limit);
         }
     }
 }
