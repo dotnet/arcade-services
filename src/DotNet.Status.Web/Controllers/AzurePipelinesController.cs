@@ -208,67 +208,8 @@ namespace DotNet.Status.Web.Controllers
 
                 BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
 
-                string repoChangesMessage = "";
-
-                if(TryGetValidatingBarIds(build.Tags, out List<int> validatingBarIds))
-                {
-                    // We are interested in looking at the diff in the repo of interest, so:
-                    // 1) Figure out what repo the bar id corresponds to
-                    // 2) Find the last successful build of this pipeline that corresponds to that repo and get its ValidatingBarIds tags
-                    // 3) Get the commit sha of the two bar ids, and get the commit diff between those two builds
-
-                    // Get the previous day's builds
-                    DateTimeOffset minTime = DateTimeOffset.Parse(build.QueueTime).AddDays(-1);
-                    Build[] previousBuilds = await Client.ListBuilds(build.Project.Name, CancellationToken.None, minTime: minTime, maxTime: DateTimeOffset.Parse(build.QueueTime));
-                    List<Build> matchingBuilds = new List<Build>();
-
-                    // For monitors that have tags, only get the builds with matching tags. For all other monitors, use the full list
-                    if (monitorHasTags)
-                    {
-                        matchingBuilds = previousBuilds
-                            .Where(b => 
-                                monitor.Tags.Intersect(b.Tags).SequenceEqual(monitor.Tags) 
-                                && DateTimeOffset.Parse(b.StartTime) < DateTimeOffset.Parse(build.StartTime))
-                            .OrderByDescending(b => b.StartTime)
-                            .ToList();
-                    }
-                    else
-                    {
-                        matchingBuilds = previousBuilds.OrderByDescending(b => b.StartTime).ToList();
-                    }
-
-                    // If there are any builds from the day before that were successful, use that, otherwise, just get the most recent previous build
-                    Build compareBuild = matchingBuilds.FirstOrDefault(b => b.Result == "succeeded");
-
-                    if (compareBuild == null)
-                    {
-                        compareBuild = matchingBuilds.FirstOrDefault();
-                    }
-
-                    // Get the build information for the build that was being validated, so that we can get the change history
-                    MaestroBuild barBuild = await GetBuildAsync(validatingBarIds.First());
-                    
-                    // If the compare build has a validating bar id tag, then we will use it. Otherwise, just get the change messages
-                    // corresponding to the most recent change
-                    if (compareBuild != null && TryGetValidatingBarIds(compareBuild.Tags, out List<int> compareValidatingBarIds))
-                    {
-                        MaestroBuild compareBarBuild = await GetBuildAsync(compareValidatingBarIds.First());
-
-                        // We have a build and a compare build. We need to get the commit diff between the two
-                        repoChangesMessage = await BuildChangesMessage(
-                            barBuild.AzureDevOpsProject, 
-                            barBuild.AzureDevOpsBuildId.Value, 
-                            compareBarBuild.AzureDevOpsBuildId.Value, 
-                            repo.MentionAuthors);
-                    }
-                    else if (barBuild.AzureDevOpsBuildId != null)
-                    {
-                        repoChangesMessage = await BuildChangesMessage(
-                            barBuild.AzureDevOpsProject, 
-                            barBuild.AzureDevOpsBuildId.Value, 
-                            repo.MentionAuthors);
-                    }
-                }
+                _logger.LogInformation("Fetching repository changes messages...");
+                string repoChangesMessage = await BuildRepoChangesMessage(build, repo, monitor, monitorHasTags);
 
                 if (repo != null)
                 {
@@ -464,6 +405,77 @@ namespace DotNet.Status.Web.Controllers
         private async Task<string> BuildChangesMessage(Build build)
         {
             return await BuildChangesMessage(build.Project.Name, build.Id);
+        }
+
+        private async Task<string> BuildRepoChangesMessage(
+            Build build, 
+            BuildMonitorOptions.IssuesOptions repo, 
+            BuildMonitorOptions.AzurePipelinesOptions.BuildDescription monitor, 
+            bool monitorHasTags)
+        {
+            string repoChangesMessage = "";
+
+            if(TryGetValidatingBarIds(build.Tags, out List<int> validatingBarIds))
+            {
+                // We are interested in looking at the diff in the repo of interest, so:
+                // 1) Figure out what repo the bar id corresponds to
+                // 2) Find the last successful build of this pipeline that corresponds to that repo and get its ValidatingBarIds tags
+                // 3) Get the commit sha of the two bar ids, and get the commit diff between those two builds
+
+                // Get the previous day's builds
+                DateTimeOffset minTime = DateTimeOffset.Parse(build.QueueTime).AddDays(-1);
+                Build[] previousBuilds = await Client.ListBuilds(build.Project.Name, CancellationToken.None, minTime: minTime, maxTime: DateTimeOffset.Parse(build.QueueTime));
+                List<Build> matchingBuilds = new List<Build>();
+
+                // For monitors that have tags, only get the builds with matching tags. For all other monitors, use the full list
+                if (monitorHasTags)
+                {
+                    matchingBuilds = previousBuilds
+                        .Where(b => 
+                            monitor.Tags.Intersect(b.Tags).SequenceEqual(monitor.Tags) 
+                            && DateTimeOffset.Parse(b.StartTime) < DateTimeOffset.Parse(build.StartTime))
+                        .OrderByDescending(b => b.StartTime)
+                        .ToList();
+                }
+                else
+                {
+                    matchingBuilds = previousBuilds.OrderByDescending(b => b.StartTime).ToList();
+                }
+
+                // If there are any builds from the day before that were successful, use that, otherwise, just get the most recent previous build
+                Build compareBuild = matchingBuilds.FirstOrDefault(b => b.Result == "succeeded");
+
+                if (compareBuild == null)
+                {
+                    compareBuild = matchingBuilds.FirstOrDefault();
+                }
+
+                // Get the build information for the build that was being validated, so that we can get the change history
+                MaestroBuild barBuild = await GetBuildAsync(validatingBarIds.First());
+                
+                // If the compare build has a validating bar id tag, then we will use it. Otherwise, just get the change messages
+                // corresponding to the most recent change
+                if (compareBuild != null && TryGetValidatingBarIds(compareBuild.Tags, out List<int> compareValidatingBarIds))
+                {
+                    MaestroBuild compareBarBuild = await GetBuildAsync(compareValidatingBarIds.First());
+
+                    // We have a build and a compare build. We need to get the commit diff between the two
+                    repoChangesMessage = await BuildChangesMessage(
+                        barBuild.AzureDevOpsProject, 
+                        barBuild.AzureDevOpsBuildId.Value, 
+                        compareBarBuild.AzureDevOpsBuildId.Value, 
+                        repo.MentionAuthors);
+                }
+                else if (barBuild.AzureDevOpsBuildId != null)
+                {
+                    repoChangesMessage = await BuildChangesMessage(
+                        barBuild.AzureDevOpsProject, 
+                        barBuild.AzureDevOpsBuildId.Value, 
+                        repo.MentionAuthors);
+                }
+            }
+
+            return repoChangesMessage;
         }
 
         private async Task<string> BuildTimelineMessage(Build build)
