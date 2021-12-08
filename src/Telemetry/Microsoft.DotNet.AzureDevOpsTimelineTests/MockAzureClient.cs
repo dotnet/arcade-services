@@ -33,6 +33,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             return Task.FromResult(Builds.Keys.ToArray());
         }
 
+        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, DateTimeOffset? maxTime = null, int? limit = null)
+        {
+            return Task.FromResult(Builds.Keys.ToArray());
+        }
+
         public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
         {
             return Task.FromResult(Builds
@@ -53,6 +58,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         }
 
         public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, long compareBuildId, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
