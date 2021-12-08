@@ -6,6 +6,7 @@ using DotNet.Status.Web.Options;
 using DotNet.Status.Web.Controllers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.Maestro;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Octokit;
+using Microsoft.DotNet.Maestro.Client;
+
+using MaestroBuild = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace DotNet.Status.Web.Tests
 {
@@ -564,8 +568,40 @@ namespace DotNet.Status.Web.Tests
                     )
                     .Returns(mockAzureDevOpsClient.Object);
 
+                MaestroBuild mockMaestroBuild = new MaestroBuild(654321, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
+                {
+                    AzureDevOpsBuildId = 234567,
+                    AzureDevOpsProject = "test-project-name"
+                };
+
+                var mockMaestroApiBuilds = new Mock<IBuilds>();
+                mockMaestroApiBuilds
+                    .Setup(
+                        m => m.GetBuildAsync(
+                            654321, 
+                            CancellationToken.None
+                        )
+                    )
+                    .Returns(Task.FromResult(mockMaestroBuild));
+
+                var mockMaestroApi = new Mock<IMaestroApi>();
+                mockMaestroApi
+                    .SetupGet(m => m.Builds)
+                    .Returns(mockMaestroApiBuilds.Object);
+
+                var mockMaestroApiClientFactory = new Mock<IMaestroApiClientFactory>();
+                mockMaestroApiClientFactory
+                    .Setup(
+                        m => m.CreateMaestroClient(
+                            It.IsAny<string>(),
+                            It.IsAny<string>()
+                        )
+                    )
+                    .Returns(mockMaestroApi.Object);
+
                 collection.AddSingleton(mockGithubClientFactory.Object);
                 collection.AddSingleton(mockAzureClientFactory.Object);
+                collection.AddSingleton(mockMaestroApiClientFactory.Object);
 
                 return _ => (issueNames, issueOwners, commentNames, commentOwners);
             }

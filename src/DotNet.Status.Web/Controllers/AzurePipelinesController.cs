@@ -13,6 +13,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.Maestro;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,6 +30,7 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
+        private readonly IMaestroApiClientFactory _maestroClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
         private readonly IOptions<MaestroOptions> _maestroOptions;
         private readonly ILogger<AzurePipelinesController> _logger;
@@ -39,17 +41,19 @@ namespace DotNet.Status.Web.Controllers
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
+            IMaestroApiClientFactory maestroApiClientFactory,
             IOptions<BuildMonitorOptions> options,
             IOptions<MaestroOptions> maestroOptions,
             ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
+            _maestroClientFactory = maestroApiClientFactory;
             _options = options;
             _maestroOptions = maestroOptions;
             _logger = logger;
             _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
-            _maestroApiLazy = new Lazy<IMaestroApi>(ApiFactory.GetAuthenticated(_maestroOptions.Value.ApiToken, _maestroOptions.Value.BaseUrl));
+            _maestroApiLazy = new Lazy<IMaestroApi>(BuildMaestroClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
@@ -61,6 +65,11 @@ namespace DotNet.Status.Web.Controllers
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
             return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
+        }
+
+        private IMaestroApi BuildMaestroClient()
+        {
+            return _maestroClientFactory.CreateMaestroClient(_maestroOptions.Value.ApiToken, _maestroOptions.Value.BaseUrl);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
@@ -549,6 +558,11 @@ namespace DotNet.Status.Web.Controllers
         private bool TryGetValidatingBarIds(string[] tags, out List<int> barIds)
         {
             barIds = new List<int>();
+
+            if (tags == null || tags.Length == 0)
+            {
+                return false;
+            }
 
             int validatingBarIdsCount = tags.Count(x => x.Contains("ValidatingBarIds "));
 

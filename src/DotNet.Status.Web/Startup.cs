@@ -36,6 +36,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.Maestro;
 using Microsoft.DotNet.Kusto;
 using Octokit;
 
@@ -269,6 +270,7 @@ namespace DotNet.Status.Web
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IAzureDevOpsClientFactory, AzureDevOpsClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            services.AddSingleton<IMaestroApiClientFactory, MaestroApiClientFactory>();
             services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();
             services.AddSingleton<ISystemClock, SystemClock>();

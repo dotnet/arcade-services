@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Microsoft.DotNet.Internal.Maestro</RootNamespace>
+    <AssemblyName>Microsoft.DotNet.Internal.Maestro</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
+  </ItemGroup>
+
+</Project>
