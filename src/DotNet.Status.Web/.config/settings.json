@@ -138,7 +138,7 @@
   },
   "Maestro": {
     "BaseUrl": "https://maestro-prod.westus2.cloudapp.azure.com/",
-    "ApiToken": "[vault(maestro-access-token)]"
+    "ApiToken": "[vault(prod-maestro-token)]"
   },
   "WebHooks": {
     "github": {
