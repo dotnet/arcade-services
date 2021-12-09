@@ -94,8 +94,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         return !Log.HasLoggedErrors;
                     }
 
+                    Manifest manifest;
                     //check if the manifest have any duplicate packages and blobs
-                    Manifest manifest = CheckIfManifestCanBeMerged(parsedManifest);
+                    if (parsedManifest.Count > 1)
+                    {
+                        manifest = CheckIfManifestCanBeMerged(parsedManifest);
+                    }
+                    else
+                    {
+                        manifest = parsedManifest[0];
+                    }
 
                     //get packages blobs and signing info 
                     (List<PackageArtifactModel> packages,
@@ -138,11 +146,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             location = assetLocationData.Location;
                         }
 
-                        buildData.Assets = buildData.Assets.Add(GetManifestAsAsset(buildData.Assets, location, MergedManifestFileName));
-                        buildData.GitHubBranch = GitHubBranch;
-                        buildData.GitHubRepository = GitHubRepository;
-
                     }
+                    buildData.Assets = buildData.Assets.Add(GetManifestAsAsset(buildData.Assets, location, MergedManifestFileName));
+                    buildData.GitHubBranch = GitHubBranch;
+                    buildData.GitHubRepository = GitHubRepository;
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
@@ -384,6 +391,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 signingInfo.Add(manifest.SigningInformation);
             }
+
             return buildInfo;
         }
 
