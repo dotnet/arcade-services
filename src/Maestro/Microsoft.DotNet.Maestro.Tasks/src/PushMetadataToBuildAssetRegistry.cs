@@ -97,21 +97,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     //check if the manifest have any duplicate packages and blobs
                     Manifest manifest = CheckIfManifestCanBeMerged(parsedManifest);
 
-                    // get packages blobs and signing info 
+                    //get packages blobs and signing info 
                     (List<PackageArtifactModel> packages,
                         List<BlobArtifactModel> blobs,
                         List<SigningInformation> signingInformation) = GetPackagesBlobsAndSigningInfo(parsedManifest);
 
-                    // create merged manifest 
-                    if (manifest.PublishingVersion >= 3)
-                    {
+                    //create merged manifest 
+                    //if (manifest.PublishingVersion >= 3)
+                    //{
                         SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
                         BuildModel modelForManifest = CreateMergedManifestBuildModel(packages, blobs, manifest);
                         PushMergedManifest(modelForManifest, finalSigningInfo);
 
-                    }
+                    //}
 
                     LookupForMatchingGitHubRepository(manifest);
+
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = UpdateBuildDataFromMergedManifest(manifest, cancellationToken);
 
