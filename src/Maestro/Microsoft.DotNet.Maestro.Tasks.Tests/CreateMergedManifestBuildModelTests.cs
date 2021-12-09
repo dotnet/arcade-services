@@ -144,14 +144,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 {
                     Attributes = new Dictionary< string, string>()
                     {
-                        { "InitialAssetsLocation", manifest.InitialAssetsLocation },
-                        { "AzureDevOpsBuildId", manifest.BuildId },
-                        { "AzureDevOpsBuildDefinitionId", manifest.AzureDevOpsBuildDefinitionIdString },
-                        { "AzureDevOpsAccount", manifest.AzureDevOpsAccount },
-                        { "AzureDevOpsProject", manifest.AzureDevOpsProject },
-                        { "AzureDevOpsBuildNumber", manifest.AzureDevOpsBuildNumber },
-                        { "AzureDevOpsRepository", manifest.AzureDevOpsRepository},
-                        { "AzureDevOpsBranch", manifest.AzureDevOpsBranch }
+                        { "InitialAssetsLocation", initialAssetsLocation },
+                        { "AzureDevOpsBuildId", azDoBuildId.ToString() },
+                        { "AzureDevOpsBuildDefinitionId", azDoBuildDefId.ToString() },
+                        { "AzureDevOpsAccount", azDoAccount },
+                        { "AzureDevOpsProject", azDoProject },
+                        { "AzureDevOpsBuildNumber",azDoBuildNumber },
+                        { "AzureDevOpsRepository", azDoRepo},
+                        { "AzureDevOpsBranch", azDoBranch }
 
                     },
                     Name = buildRepoName,
