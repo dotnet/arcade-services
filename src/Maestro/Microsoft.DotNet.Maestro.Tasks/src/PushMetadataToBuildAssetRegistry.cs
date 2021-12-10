@@ -19,7 +19,6 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
-using Microsoft.VisualStudio.Services.Common;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -140,7 +139,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Log.LogMessage(MessageImportance.High, $"    {dep.BuildId}, IsProduct: {dep.IsProduct}");
                     }
-                    buildData.Dependencies = deps;
+                    buildData.Dependencies = deps;             
 
                     string location = null;
                     AssetData assetData = buildData.Assets.FirstOrDefault();
@@ -154,8 +153,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             location = assetLocationData.Location;
                         }
 
-                    }
-                    buildData.Assets = buildData.Assets.Add(GetManifestAsAsset(buildData.Assets, location, MergedManifestFileName));
+                    } 
+                    //buildData.Assets = buildData.Assets.Add(GetManifestAsAsset(buildData.Assets, location, MergedManifestFileName));
                     buildData.GitHubBranch = GitHubBranch;
                     buildData.GitHubRepository = GitHubRepository;
 
@@ -339,8 +338,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            var signingInfo = new List<SigningInformation>();
             var assets = new List<AssetData>();
 
             IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
@@ -394,11 +391,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             buildInfo.Assets.AddRange(assets);
-
-            if (manifest.SigningInformation != null)
-            {
-                signingInfo.Add(manifest.SigningInformation);
-            }
 
             return buildInfo;
         }
