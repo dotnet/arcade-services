@@ -19,6 +19,7 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using Microsoft.VisualStudio.Services.Common;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -105,10 +106,18 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         manifest = parsedManifest[0];
                     }
 
+                    List<SigningInformation> signingInformation = new List<SigningInformation>();
+                    foreach (var m in parsedManifest)
+                    {
+                        if (m.SigningInformation != null)
+                        {
+                            signingInformation.Add(m.SigningInformation);
+                        }
+                    }
+
                     //get packages blobs and signing info 
                     (List<PackageArtifactModel> packages,
-                        List<BlobArtifactModel> blobs,
-                        List<SigningInformation> signingInformation) = GetPackagesBlobsAndSigningInfo(parsedManifest);
+                        List<BlobArtifactModel> blobs) = GetPackagesAndBlobsInfo(manifest);
 
                     //create merged manifest 
                     //if (manifest.PublishingVersion >= 3)
@@ -116,7 +125,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
                         BuildModel modelForManifest = CreateMergedManifestBuildModel(packages, blobs, manifest);
                         PushMergedManifest(modelForManifest, finalSigningInfo);
-
                     //}
 
                     LookupForMatchingGitHubRepository(manifest);
@@ -474,55 +482,45 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         internal (List<PackageArtifactModel>,
-            List<BlobArtifactModel>,
-            List<SigningInformation>) GetPackagesBlobsAndSigningInfo(List<Manifest> parsedManifest)
+            List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
         {
             List<PackageArtifactModel> packageArtifacts = new List<PackageArtifactModel>();
             List<BlobArtifactModel> blobArtifacts = new List<BlobArtifactModel>();
-            List<SigningInformation> signingInformation = new List<SigningInformation>();
 
-            for (int i = 0; i < parsedManifest.Count; i++)
+            foreach (var package in manifest.Packages)
             {
-                Manifest manifest = parsedManifest[i];
-                foreach (var package in manifest.Packages)
+                PackageArtifactModel packageArtifact = new PackageArtifactModel()
                 {
-                    PackageArtifactModel packageArtifact = new PackageArtifactModel()
-                    {
-                        Attributes = new Dictionary<string, string>
+                    Attributes = new Dictionary<string, string>
                     {
                         { "NonShipping", package.NonShipping.ToString().ToLower() },
                     },
-                        Id = package.Id,
-                        Version = package.Version
-                    };
+                    Id = package.Id,
+                    Version = package.Version
+                };
 
-                    packageArtifacts.Add(packageArtifact);
-                }
+                packageArtifacts.Add(packageArtifact);
+            }
 
-                foreach (var blob in manifest.Blobs)
+            foreach (var blob in manifest.Blobs)
+            {
+                BlobArtifactModel blobArtifact = new BlobArtifactModel()
                 {
-                    BlobArtifactModel blobArtifact = new BlobArtifactModel()
-                    {
-                        Attributes = new Dictionary<string, string>
+                    Attributes = new Dictionary<string, string>
                     {
                         { "NonShipping", blob.NonShipping.ToString().ToLower() },
-                        { "Category" , !string.IsNullOrEmpty(blob.Category)? blob.Category.ToString().ToUpper() : "NONE" }
+                        { "Category", !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : "NONE" }
                     },
-                        Id = blob.Id,
-                    };
+                    Id = blob.Id,
+                };
 
-                    blobArtifacts.Add(blobArtifact);
-                }
-
-                if (manifest.SigningInformation != null)
-                {
-                    signingInformation.Add(manifest.SigningInformation);
-                }
-
+                blobArtifacts.Add(blobArtifact);
             }
-            return (packageArtifacts, blobArtifacts, signingInformation);
+
+            return (packageArtifacts, blobArtifacts);
 
         }
+
         internal Manifest CheckIfManifestCanBeMerged(List<Manifest> parsedManifest)
         {
             Manifest manifest = parsedManifest[0];
