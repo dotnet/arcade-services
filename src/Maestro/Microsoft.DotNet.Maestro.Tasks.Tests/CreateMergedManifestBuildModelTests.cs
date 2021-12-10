@@ -32,6 +32,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly string id = "1234";
         private static readonly string version = "thisIsVersion";
         private static readonly string noVersion = "thisIsNoVersion";
+        private static string mergedManifestName = "MergedManifest.xml";
 
         private PackageArtifactModel package1 = new PackageArtifactModel
         {
@@ -84,6 +85,15 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     { "Category", "other" }
                 },
             Id = id
+        };
+
+        private BlobArtifactModel mergedManifest = new BlobArtifactModel
+        {
+            Attributes = new Dictionary<string, string>
+            {
+                { "NonShipping", "true" }
+            },
+            Id = $"assets/manifests/{buildRepoName}/{id}/{mergedManifestName}"
         };
 
         private BlobArtifactModel blob2 = new BlobArtifactModel
@@ -216,17 +226,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 new ArtifactSet
                 {
                     Packages = new List<PackageArtifactModel> { testPackage1, testPackage2 },
-                    Blobs = new List<BlobArtifactModel> { testBlob1, testBlob2 }
+                    Blobs = new List<BlobArtifactModel> { testBlob1, testBlob2, mergedManifest }
                 };
 
-            packages = new List<PackageArtifactModel>();
-            blobs = new List<BlobArtifactModel>();
-            packages.Add(package1);
-            packages.Add(package2);
-            blobs.Add(blob1);
-            blobs.Add(blob2);
+            packages = new List<PackageArtifactModel>(){ package1 , package2};
+            blobs = new List<BlobArtifactModel>() { blob1, blob2};
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -257,7 +263,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             blobs = new List<BlobArtifactModel>();
             packages.Add(packageWithNoVersion);
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -286,9 +292,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
-                    Blobs = new List<BlobArtifactModel> { blobArtifactModel }
+                    Blobs = new List<BlobArtifactModel> { blobArtifactModel , mergedManifest}
                 };
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -333,7 +339,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 new ArtifactSet
                 {
                     Packages = new List<PackageArtifactModel> { shippingPackageArtifact, nonShippingPackage },
-                    Blobs = new List<BlobArtifactModel> { blobArtifactModel }
+                    Blobs = new List<BlobArtifactModel> { blobArtifactModel, mergedManifest }
                 };
 
             packages = new List<PackageArtifactModel>();
@@ -341,7 +347,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             packages.Add(packageNonShipping);
             packages.Add(packageWithNoVersion);
             blobs.Add(blob1);
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -375,14 +381,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
-                    Blobs = new List<BlobArtifactModel> { ShippingBlob, NonShippingBlob }
+                    Blobs = new List<BlobArtifactModel> { ShippingBlob, NonShippingBlob, mergedManifest }
                 };
 
             packages = new List<PackageArtifactModel>();
             blobs = new List<BlobArtifactModel>();
             blobs.Add(blob3);
             blobs.Add(blob1);
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
 
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
@@ -396,9 +402,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             packages = new List<PackageArtifactModel>();
             blobs = new List<BlobArtifactModel>();
 
-            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+            
+            BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest, mergedManifestName);
             expectedBuildModel.Artifacts = new ArtifactSet { };
-
             actualModel.Should().BeEquivalentTo(expectedBuildModel);
         }
     }

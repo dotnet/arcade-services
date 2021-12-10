@@ -122,7 +122,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     //if (manifest.PublishingVersion >= 3)
                     //{
                         SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
-                        BuildModel modelForManifest = CreateMergedManifestBuildModel(packages, blobs, manifest);
+                        BuildModel modelForManifest = CreateMergedManifestBuildModel(packages, blobs, manifest, MergedManifestFileName);
                         PushMergedManifest(modelForManifest, finalSigningInfo);
                     //}
 
@@ -139,22 +139,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Log.LogMessage(MessageImportance.High, $"    {dep.BuildId}, IsProduct: {dep.IsProduct}");
                     }
-                    buildData.Dependencies = deps;             
-
-                    string location = null;
-                    AssetData assetData = buildData.Assets.FirstOrDefault();
-
-                    if (assetData != null)
-                    {
-                        AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
-
-                        if (assetLocationData != null)
-                        {
-                            location = assetLocationData.Location;
-                        }
-
-                    } 
-                    //buildData.Assets = buildData.Assets.Add(GetManifestAsAsset(buildData.Assets, location, MergedManifestFileName));
+                    buildData.Dependencies = deps;
                     buildData.GitHubBranch = GitHubBranch;
                     buildData.GitHubRepository = GitHubRepository;
 
@@ -719,7 +704,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         internal BuildModel CreateMergedManifestBuildModel(
             List<PackageArtifactModel> packages,
             List<BlobArtifactModel> blobs,
-            Manifest manifest)
+            Manifest manifest,
+            String manifestFileName)
         {
             BuildModel buildModel = new BuildModel(
                         new BuildIdentity
@@ -748,6 +734,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             buildModel.Artifacts.Blobs.AddRange(blobs);
             buildModel.Artifacts.Packages.AddRange(packages);
+
+            string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
+            if (blobs.Count() > 0)
+            {
+                var mergedManifest = new BlobArtifactModel()
+                {
+                    Attributes = new Dictionary<string, string>()
+                    {
+                        { "NonShipping", "true" }
+                    },
+                    Id = $"assets/manifests/{repoName}/{blobs[0].Id}/{manifestFileName}"
+                };
+
+                buildModel.Artifacts.Blobs.Add(mergedManifest);
+            }
+
             return buildModel;
         }
 
