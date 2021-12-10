@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public interface IAzureDevOpsClient
     {
-        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = default, DateTimeOffset? maxTime = default, int? limit = default);
+        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = default, DateTimeOffset? maxTime = default, int? limit = default, string definitions = null);
         public Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default);
         public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default);
         public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default);

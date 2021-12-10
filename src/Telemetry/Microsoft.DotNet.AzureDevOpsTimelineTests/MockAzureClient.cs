@@ -33,7 +33,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             return Task.FromResult(Builds.Keys.ToArray());
         }
 
-        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, DateTimeOffset? maxTime = null, int? limit = null)
+        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, DateTimeOffset? maxTime = null, int? limit = null, string definitions = null)
         {
             return Task.FromResult(Builds.Keys.ToArray());
         }

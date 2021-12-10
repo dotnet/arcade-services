@@ -52,6 +52,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             DateTimeOffset? minTime,
             DateTimeOffset? maxTime,
             int? limit,
+            string definitions,
             CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
@@ -67,6 +68,11 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             if (maxTime.HasValue)
             {
                 builder.Append($"maxTime={maxTime.Value.UtcDateTime:O}&");
+            }
+
+            if (!string.IsNullOrEmpty(definitions))
+            {
+                builder.Append($"definitions={definitions}&");
             }
 
             if (limit.HasValue)
@@ -87,13 +93,14 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             CancellationToken cancellationToken,
             DateTimeOffset? minTime = default,
             DateTimeOffset? maxTime = default,
-            int? limit = default)
+            int? limit = default,
+            string definitions = null)
         {
             var buildList = new List<Build>();
             string continuationToken = null;
             do
             {
-                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, maxTime, limit, cancellationToken);
+                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, maxTime, limit, definitions, cancellationToken);
                 continuationToken = result.ContinuationToken;
                 JObject root = JObject.Parse(result.Body);
                 var array = (JArray) root["value"];

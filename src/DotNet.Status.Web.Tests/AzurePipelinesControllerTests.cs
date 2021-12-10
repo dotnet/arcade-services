@@ -19,6 +19,7 @@ using NUnit.Framework;
 using Octokit;
 using Microsoft.DotNet.Maestro.Client;
 
+using Build = Microsoft.DotNet.Internal.AzureDevOps.Build;
 using MaestroBuild = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace DotNet.Status.Web.Tests
@@ -403,6 +404,87 @@ namespace DotNet.Status.Web.Tests
             VerifyGitHubCalls(testData, expectedIssueOwners, expectedIssueNames, expectedCommentOwners, expectedCommentNames);
         }
 
+        [Test]
+        public async Task BuildCompleteBuildHasValidatingBarIdsTagsNoCompareBuilds()
+        {
+            var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
+            {
+                Resource = new AzurePipelinesController.AzureDevOpsMinimalBuildResource
+                {
+                    Id = 123456,
+                    Url = "test-build-url"
+                },
+                ResourceContainers = new AzurePipelinesController.AzureDevOpsResourceContainers
+                {
+                    Collection = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-collection-id"
+                    },
+                    Account = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-account-id"
+                    },
+                    Project = new AzurePipelinesController.HasId
+                    {
+                        Id = "test-project-id"
+                    }
+                }
+            };
+
+            var build = new JObject
+            {
+                ["_links"] = new JObject
+                {
+                    ["web"] = new JObject
+                    {
+                        ["href"] = "href"
+                    }
+                },
+                ["buildNumber"] = "123456",
+                ["definition"] = new JObject
+                {
+                    ["id"] = 123,
+                    ["name"] = "path",
+                    ["path"] = "\\test\\definition"
+                },
+                ["queueTime"] = "05/01/2008 5:00:00",
+                ["finishTime"] = "05/01/2008 6:00:00",
+                ["id"] = "123",
+                ["project"] = new JObject
+                {
+                    ["name"] = "test-project-name"
+                },
+                ["reason"] = "batchedCI",
+                ["requestedFor"] = new JObject
+                {
+                    ["displayName"] = "requested-for"
+                },
+                ["result"] = "failed",
+                ["sourceBranch"] = "refs/heads/sourceBranch",
+                ["startTime"] = "05/01/2008 5:00:00",
+                ["tags"] = new JArray
+                {
+                    "ValidatingBarIds 654321"
+                }
+            };
+
+            var expectedOwners = new List<string>
+            {
+                "dotnet"
+            };
+
+            var expectedNames = new List<string>
+            {
+                "repo"
+            };
+            var expectedCommentOwners = new List<string>();
+            var expectedCommentNames = new List<string>();
+
+            await using TestData testData = await TestData.Default.WithBuildData(build).WithExpectMatchingTitle(false).BuildAsync();
+            var response = await testData.Controller.BuildComplete(buildEvent);
+            VerifyGitHubCalls(testData, expectedOwners, expectedNames, expectedCommentOwners, expectedCommentNames);
+        }
+
         [TestDependencyInjectionSetup]
         public static class TestDataConfiguration
         {
@@ -534,9 +616,38 @@ namespace DotNet.Status.Web.Tests
                     new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
                 };
 
+                Build[] mockBuilds = new Build[]
+                {
+                    new Build()
+                    {
+                        StartTime = "05/01/2008 4:00:00",
+                        Tags = new string[] { "ValidatingBarIds 212345" },
+                        Result = "succeeded",
+                        Reason = "schedule"
+                    },
+                    new Build()
+                    {
+                        StartTime = "05/01/2008 4:00:01",
+                        Tags = new string[] { "tag1", "ValidatingBarIds 212344" },
+                        Result = "succeeded",
+                        Reason = "schedule"
+                    }
+                };
+
                 var mockAzureDevOpsClient = new Mock<IAzureDevOpsClient>();
                 mockAzureDevOpsClient.Setup(m => m.ListProjectsAsync(It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(project));
+                mockAzureDevOpsClient
+                    .Setup(
+                        m => m.ListBuilds(
+                            It.IsAny<string>(),
+                            It.IsAny<CancellationToken>(),
+                            It.IsAny<DateTimeOffset>(),
+                            It.IsAny<DateTimeOffset>(),
+                            default,
+                            It.IsAny<string>())
+                    )
+                    .Returns(Task.FromResult(mockBuilds));
                 if (buildData != null)
                 {
                     var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
@@ -550,6 +661,11 @@ namespace DotNet.Status.Web.Tests
                 mockAzureDevOpsClient
                     .Setup(
                         m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
+                    )
+                    .Returns(Task.FromResult((new BuildChange[0], 0)));
+                mockAzureDevOpsClient
+                    .Setup(
+                        m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
                     )
                     .Returns(Task.FromResult((new BuildChange[0], 0)));
                 mockAzureDevOpsClient
@@ -571,7 +687,24 @@ namespace DotNet.Status.Web.Tests
                 MaestroBuild mockMaestroBuild = new MaestroBuild(654321, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
                 {
                     AzureDevOpsBuildId = 234567,
-                    AzureDevOpsProject = "test-project-name"
+                    AzureDevOpsProject = "test-project-name",
+                    AzureDevOpsBranch = "refs/head/sourceBranch",
+                    AzureDevOpsRepository = "repo"
+                };
+
+                MaestroBuild mockMaestroCompareBuild1 = new MaestroBuild(212344, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
+                {
+                    AzureDevOpsBuildId = 234565,
+                    AzureDevOpsProject = "test-project-name",
+                    AzureDevOpsBranch = "refs/head/sourceBranch",
+                    AzureDevOpsRepository = "repo"
+                };
+                MaestroBuild mockMaestroCompareBuild2 = new MaestroBuild(212345, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
+                {
+                    AzureDevOpsBuildId = 234566,
+                    AzureDevOpsProject = "test-project-name",
+                    AzureDevOpsBranch = "refs/head/sourceBranch",
+                    AzureDevOpsRepository = "repo"
                 };
 
                 var mockMaestroApiBuilds = new Mock<IBuilds>();
@@ -583,6 +716,22 @@ namespace DotNet.Status.Web.Tests
                         )
                     )
                     .Returns(Task.FromResult(mockMaestroBuild));
+                mockMaestroApiBuilds
+                    .Setup(
+                        m => m.GetBuildAsync(
+                            212344, 
+                            CancellationToken.None
+                        )
+                    )
+                    .Returns(Task.FromResult(mockMaestroCompareBuild1));
+                mockMaestroApiBuilds
+                    .Setup(
+                        m => m.GetBuildAsync(
+                            212345, 
+                            CancellationToken.None
+                        )
+                    )
+                    .Returns(Task.FromResult(mockMaestroCompareBuild2));
 
                 var mockMaestroApi = new Mock<IMaestroApi>();
                 mockMaestroApi
