@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
+using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using Moq;
 using NUnit.Framework;
@@ -29,7 +30,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly string buildNumber = "azDevBuildNumber";
         private static readonly string sourceBranch = "thisIsASourceBranch";
         private static readonly string commitSourceVersion = "thisIsASourceVersion";
-        private static readonly string id = "1234";
+        private static readonly string id = "12345";
         private static readonly string version = "thisIsVersion";
         private static readonly string noVersion = "thisIsNoVersion";
         private static string mergedManifestName = "MergedManifest.xml";
@@ -143,7 +144,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 getEnvProxy = getEnvMock.Object
             };
-
+            pushMetadata.versionIdentifier = new VersionIdentifierMock();
             return pushMetadata;
         }
 

@@ -705,7 +705,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             List<PackageArtifactModel> packages,
             List<BlobArtifactModel> blobs,
             Manifest manifest,
-            String manifestFileName)
+            string manifestFileName)
         {
             BuildModel buildModel = new BuildModel(
                         new BuildIdentity
@@ -738,13 +738,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
             string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
             if (blobs.Count() > 0)
             {
+                string assetVersion = GetVersion(blobs[0].Id);
                 var mergedManifest = new BlobArtifactModel()
                 {
                     Attributes = new Dictionary<string, string>()
                     {
                         { "NonShipping", "true" }
                     },
-                    Id = $"assets/manifests/{repoName}/{blobs[0].Id}/{manifestFileName}"
+                    Id = $"assets/manifests/{repoName}/{assetVersion}/{manifestFileName}"
                 };
 
                 buildModel.Artifacts.Blobs.Add(mergedManifest);
