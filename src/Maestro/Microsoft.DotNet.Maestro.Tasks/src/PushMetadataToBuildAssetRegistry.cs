@@ -19,6 +19,7 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using Microsoft.TeamFoundation.Build.WebApi;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -123,6 +124,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         CreateMergedManifestBuildModel(packages, blobs, manifest, MergedManifestFileName);
 
                     //}
+                    if (packages.Count == 0)
+                    {
+                        Log.LogError("No packages");
+                    }
+                    if (blobs.Count == 0)
+                    {
+                        Log.LogError("No blobs");
+                    }
 
                     LookupForMatchingGitHubRepository(manifest);
 
@@ -356,16 +365,26 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 GitHubRepository = manifest.Name,
                 GitHubBranch = manifest.Branch,
             };
-
+            Log.LogMessage($"Total number of packages = {buildModel.Artifacts.Packages.Count}" );
+            Log.LogMessage($"Total number of blobs = {buildModel.Artifacts.Blobs.Count}");
             foreach (var package in buildModel.Artifacts.Packages)
             {
-                AddAsset(
-                    assets,
-                    package.Id,
-                    package.Version,
-                    manifest.InitialAssetsLocation ?? manifest.Location,
-                    (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
-                    package.NonShipping);
+                var location = manifest.InitialAssetsLocation ?? manifest.Location;
+                var locationType = (manifest.InitialAssetsLocation == null)
+                    ? LocationType.NugetFeed
+                    : LocationType.Container;
+                Log.LogMessage($"Adding package {package.Id} to the buildData");
+                buildInfo.Assets.Add(new AssetData(package.NonShipping)
+                {
+                    Locations = (location == null)
+                        ? null
+                        : ImmutableList.Create(new AssetLocationData(locationType)
+                        {
+                            Location = location,
+                        }),
+                    Name = package.Id,
+                    Version = package.Version,
+                });
             }
 
             foreach (var blob in buildModel.Artifacts.Blobs)
@@ -378,16 +397,20 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     version = string.Empty;
                 }
 
-                AddAsset(
-                    assets,
-                    blob.Id,
-                    version,
-                    manifest.InitialAssetsLocation ?? manifest.Location,
-                    LocationType.Container,
-                    blob.NonShipping);
+                var location = manifest.InitialAssetsLocation ?? manifest.Location;
+                Log.LogMessage($"Adding blob {blob.Id} to the buildData");
+                buildInfo.Assets.Add(new AssetData(blob.NonShipping)
+                {
+                    Locations = (location == null)
+                        ? null
+                        : ImmutableList.Create(new AssetLocationData(LocationType.Container)
+                        {
+                            Location = location,
+                        }),
+                    Name = blob.Id,
+                    Version = version,
+                });
             }
-
-            buildInfo.Assets.AddRange(assets);
 
             return buildInfo;
         }
