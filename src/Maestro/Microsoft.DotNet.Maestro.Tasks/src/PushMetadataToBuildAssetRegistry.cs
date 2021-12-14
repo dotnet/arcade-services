@@ -344,7 +344,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
             CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var assets = new List<AssetData>();
 
             IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
@@ -358,8 +357,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
                 stable: IsStableBuild,
                 released: false)
-            {
-                Assets = assets.ToImmutableList(),
+            { 
+                Assets = new ImmutableArray<AssetData>(),
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
