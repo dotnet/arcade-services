@@ -345,6 +345,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+
             IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
             // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
@@ -358,25 +359,25 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 stable: IsStableBuild,
                 released: false)
             { 
-                Assets = new ImmutableArray<AssetData>(),
+                Assets = new List<AssetData>().ToImmutableList(),
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
                 GitHubBranch = manifest.Branch,
             };
-            Log.LogMessage($"Total number of packages = {buildModel.Artifacts.Packages.Count}" );
-            Log.LogMessage($"Total number of blobs = {buildModel.Artifacts.Blobs.Count}");
+            //Log.LogMessage($"Total number of packages = {buildModel.Artifacts.Packages.Count}" );
+            //Log.LogMessage($"Total number of blobs = {buildModel.Artifacts.Blobs.Count}");
+            buildInfo.Assets = new List<AssetData>().ToImmutableList();
             foreach (var package in buildModel.Artifacts.Packages)
             {
                 var location = manifest.InitialAssetsLocation ?? manifest.Location;
                 var locationType = (manifest.InitialAssetsLocation == null)
                     ? LocationType.NugetFeed
                     : LocationType.Container;
-                Log.LogMessage($"Adding package {package.Id} to the buildData");
-                buildInfo.Assets.Add(new AssetData(package.NonShipping)
+                //Log.LogMessage($"Adding package {package.Id} to the buildData");
+                buildInfo.Assets = buildInfo.Assets.Add(new AssetData(package.NonShipping)
                 {
-                    Locations = (location == null)
-                        ? null
+                    Locations = (location == null) ? null
                         : ImmutableList.Create(new AssetLocationData(locationType)
                         {
                             Location = location,
@@ -397,8 +398,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
 
                 var location = manifest.InitialAssetsLocation ?? manifest.Location;
-                Log.LogMessage($"Adding blob {blob.Id} to the buildData");
-                buildInfo.Assets.Add(new AssetData(blob.NonShipping)
+                //Log.LogMessage($"Adding blob {blob.Id} to the buildData");
+                buildInfo.Assets = buildInfo.Assets.Add(new AssetData(blob.NonShipping)
                 {
                     Locations = (location == null)
                         ? null
