@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    //get parsedManifest
+                    //get the list of manifests
                     List<Manifest> parsedManifest = GetParsedManifest(ManifestsPath, cancellationToken);
 
                     if (parsedManifest.Count == 0)
@@ -116,24 +116,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     (List<PackageArtifactModel> packages,
                         List<BlobArtifactModel> blobs) = GetPackagesAndBlobsInfo(manifest);
 
-                    //create merged manifest 
-                    //if (manifest.PublishingVersion >= 3)
-                    //{
-                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+                    //create merged buildModel to create the merged manifest
                     BuildModel modelForManifest =
                         CreateMergedManifestBuildModel(packages, blobs, manifest, MergedManifestFileName);
 
-                    //}
-                    if (packages.Count == 0)
-                    {
-                        Log.LogError("No packages");
-                    }
-                    if (blobs.Count == 0)
-                    {
-                        Log.LogError("No blobs");
-                    }
 
-                    LookupForMatchingGitHubRepository(manifest);
+                    //add manifest as an asset 
+                    var mergedManifestAsset = GetManifestAsAsset(blobs, MergedManifestFileName);
+                    modelForManifest.Artifacts.Blobs.Add(mergedManifestAsset);
+                    
+                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+
+                    // push the merged manifest, this is required for only publishingVersion 3 and above
+                    if (manifest.PublishingVersion >= 3)
+                    {
+                        PushMergedManifest(modelForManifest, finalSigningInfo);
+                    }
 
                     // populate buildData and assetData using merged manifest data 
                     BuildData buildData = UpdateBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
@@ -148,9 +146,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     buildData.Dependencies = deps;
+                    LookupForMatchingGitHubRepository(manifest);
                     buildData.GitHubBranch = GitHubBranch;
                     buildData.GitHubRepository = GitHubRepository;
-                    PushMergedManifest(modelForManifest, finalSigningInfo);
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
@@ -345,6 +343,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            var assets = new List<AssetData>();
 
             IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
@@ -358,33 +357,23 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
                 stable: IsStableBuild,
                 released: false)
-            { 
-                Assets = new List<AssetData>().ToImmutableList(),
+            {
+                Assets = assets.ToImmutableList(),
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
                 GitHubBranch = manifest.Branch,
             };
-            //Log.LogMessage($"Total number of packages = {buildModel.Artifacts.Packages.Count}" );
-            //Log.LogMessage($"Total number of blobs = {buildModel.Artifacts.Blobs.Count}");
-            buildInfo.Assets = new List<AssetData>().ToImmutableList();
+
             foreach (var package in buildModel.Artifacts.Packages)
             {
-                var location = manifest.InitialAssetsLocation ?? manifest.Location;
-                var locationType = (manifest.InitialAssetsLocation == null)
-                    ? LocationType.NugetFeed
-                    : LocationType.Container;
-                //Log.LogMessage($"Adding package {package.Id} to the buildData");
-                buildInfo.Assets = buildInfo.Assets.Add(new AssetData(package.NonShipping)
-                {
-                    Locations = (location == null) ? null
-                        : ImmutableList.Create(new AssetLocationData(locationType)
-                        {
-                            Location = location,
-                        }),
-                    Name = package.Id,
-                    Version = package.Version,
-                });
+                AddAsset(
+                    assets,
+                    package.Id,
+                    package.Version,
+                    manifest.InitialAssetsLocation ?? manifest.Location,
+                    (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
+                    package.NonShipping);
             }
 
             foreach (var blob in buildModel.Artifacts.Blobs)
@@ -397,20 +386,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     version = string.Empty;
                 }
 
-                var location = manifest.InitialAssetsLocation ?? manifest.Location;
-                //Log.LogMessage($"Adding blob {blob.Id} to the buildData");
-                buildInfo.Assets = buildInfo.Assets.Add(new AssetData(blob.NonShipping)
-                {
-                    Locations = (location == null)
-                        ? null
-                        : ImmutableList.Create(new AssetLocationData(LocationType.Container)
-                        {
-                            Location = location,
-                        }),
-                    Name = blob.Id,
-                    Version = version,
-                });
+                AddAsset(
+                    assets,
+                    blob.Id,
+                    version,
+                    manifest.InitialAssetsLocation ?? manifest.Location,
+                    LocationType.Container,
+                    blob.NonShipping);
             }
+
+            buildInfo.Assets = buildInfo.Assets.AddRange(assets);
 
             return buildInfo;
         }
@@ -730,34 +715,28 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Initial location for the merged manifest entry</param>
         /// <param name="manifestFileName">Merged manifest file name</param>
         /// <returns>An AssetData with data about the merged manifest</returns>
-        internal AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location,
-            string manifestFileName)
+        internal BlobArtifactModel GetManifestAsAsset(List<BlobArtifactModel> blobs, string manifestFileName)
         {
             string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
-
-            if (string.IsNullOrEmpty(AssetVersion))
+            if (string.IsNullOrEmpty(AssetVersion) && blobs != null)
             {
-                AssetData asset = assets.Where(a => a.NonShipping).FirstOrDefault();
-
-                if (asset != null)
+                var blob = blobs.Where(a => a.NonShipping).FirstOrDefault();
+                if (blob != null)
                 {
-                    AssetVersion = asset.Version;
+                    AssetVersion = blob.Id;
                 }
             }
 
-            AssetData assetData = new AssetData(true)
+            var mergedManifest = new BlobArtifactModel()
             {
-                Locations = (location == null)
-                    ? null
-                    : ImmutableList.Create(new AssetLocationData(LocationType.Container)
-                    {
-                        Location = location,
-                    }),
-                Name = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}",
-                Version = AssetVersion,
+                Attributes = new Dictionary<string, string>()
+                {
+                    { "NonShipping", "true" }
+                },
+                Id = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}"
             };
-
-            return assetData;
+            
+            return mergedManifest;
         }
 
         internal BuildModel CreateMergedManifestBuildModel(
