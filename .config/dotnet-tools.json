@@ -7,6 +7,12 @@
       "commands": [
         "dotnet-swaggergen"
       ]
+    },
+    "microsoft.dnceng.secretmanager": {
+      "version": "1.1.0-beta.21609.1",
+      "commands": [
+        "secret-manager"
+      ]
     }
   }
 }
