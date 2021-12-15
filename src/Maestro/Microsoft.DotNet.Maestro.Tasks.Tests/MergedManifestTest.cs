@@ -6,7 +6,6 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
 {

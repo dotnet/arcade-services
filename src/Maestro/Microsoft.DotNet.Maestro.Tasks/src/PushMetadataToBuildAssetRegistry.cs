@@ -2,6 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Build.Framework;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Maestro.Tasks.Proxies;
+using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -13,13 +19,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.Serialization;
-using Microsoft.Build.Framework;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Maestro.Tasks.Proxies;
-using Microsoft.DotNet.VersionTools.BuildManifest.Model;
-using Microsoft.TeamFoundation.Build.WebApi;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks

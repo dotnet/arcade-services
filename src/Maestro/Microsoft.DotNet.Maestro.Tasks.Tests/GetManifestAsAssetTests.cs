@@ -2,16 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using FluentAssertions;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Maestro.Tasks.Proxies;
-using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using Moq;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
 {
