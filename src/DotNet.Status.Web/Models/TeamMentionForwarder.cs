@@ -48,7 +48,7 @@ namespace DotNet.Status.Web.Models
                 shouldSend = false;
             }
 
-            if (!newBody.Contains(team))
+            if (string.IsNullOrEmpty(newBody) || !newBody.Contains(team))
             {
                 shouldSend = false;
             }
