@@ -28,30 +28,34 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public const string AzureDevOpsBuildNumber1 = "20201016.5";
         public const string AzureDevOpsProject1 = "internal";
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
-        public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
+
+        public const string LocationString =
+            "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
+
         private const string GitHubRepositoryName = "dotnet-arcade";
         private const string GitHubBranch = "refs/heads/main";
-        //private const string InitialAssetLocation = "https://dev.azure.com/dnceng/internal/_apis/build/builds/1511139/artifacts";
         private const string RepoName = "dotnet-arcade";
         private const string SystemTeamCollectionUri = "https://dev.azure.com/dnceng/";
+        private const string version = "6.0.0-beta.20516.5";
 
     #region Assets
+
         internal static readonly AssetData PackageAsset1 =
-           new AssetData(true)
-           {
-               Locations = ImmutableList.Create(
-                   new AssetLocationData(LocationType.Container)
-                   { Location = LocationString }),
-               Name = "Microsoft.Cci.Extensions",
-               Version = "6.0.0-beta.20516.5"
-           };
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                        { Location = LocationString }),
+                Name = "Microsoft.Cci.Extensions",
+                Version = "6.0.0-beta.20516.5"
+            };
 
         internal static readonly AssetData BlobAsset1 =
             new AssetData(true)
             {
                 Locations = ImmutableList.Create(
                     new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+                        { Location = LocationString }),
                 Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
                 Version = "6.0.0-beta.20516.5"
             };
@@ -61,7 +65,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Locations = ImmutableList.Create(
                     new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+                        { Location = LocationString }),
                 Name = "Microsoft.DotNet.ApiCompat",
                 Version = "6.0.0-beta.20516.5"
             };
@@ -71,7 +75,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Locations = ImmutableList.Create(
                     new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+                        { Location = LocationString }),
                 Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
                 Version = "6.0.0-beta.20516.5"
             };
@@ -81,7 +85,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Locations = ImmutableList.Create(
                     new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+                        { Location = LocationString }),
                 Name = "Microsoft.Cci.Extensions",
                 Version = null
             };
@@ -91,26 +95,27 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 Locations = ImmutableList.Create(
                     new AssetLocationData(LocationType.Container)
-                    { Location = LocationString }),
+                        { Location = LocationString }),
                 Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
                 Version = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
             };
 
-        #endregion
+    #endregion
 
-        #region Individual Assets
+    #region Individual Assets
+
         private static readonly Package package1 = new Package()
         {
             Id = "Microsoft.Cci.Extensions",
             NonShipping = true,
-            Version = "6.0.0-beta.20516.5"
+            Version = version
         };
 
         private static readonly Package package2 = new Package()
         {
             Id = "Microsoft.DotNet.ApiCompat",
             NonShipping = true,
-            Version = "6.0.0-beta.20516.5"
+            Version = version
         };
 
         private static readonly PackageArtifactModel packageArtifactModel1 = new PackageArtifactModel()
@@ -120,7 +125,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 { "NonShipping", "true" }
             },
             Id = "Microsoft.Cci.Extensions",
-            Version = "6.0.0-beta.20516.5"
+            Version = version
         };
 
         private static readonly PackageArtifactModel packageArtifactModel2 = new PackageArtifactModel()
@@ -130,7 +135,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 { "NonShipping", "true" }
             },
             Id = "Microsoft.DotNet.ApiCompat",
-            Version = "6.0.0-beta.20516.5"
+            Version = version
         };
 
         private static readonly PackageArtifactModel unversionedPackageArtifactModel = new PackageArtifactModel()
@@ -158,7 +163,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly Blob blob2 = new Blob()
         {
             Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
-            NonShipping = true, 
+            NonShipping = true,
             Category = "Other"
         };
 
@@ -167,7 +172,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Attributes = new Dictionary<string, string>()
             {
                 { "NonShipping", "true" },
-                { "Category", "NONE"}
+                { "Category", "NONE" }
             },
             Id = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml"
         };
@@ -177,7 +182,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Attributes = new Dictionary<string, string>()
             {
                 { "NonShipping", "true" },
-                { "Category", "OTHER"}
+                { "Category", "OTHER" }
             },
             Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
         };
@@ -187,62 +192,62 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             Attributes = new Dictionary<string, string>()
             {
                 { "NonShipping", "true" },
-                { "Category", "NONE"}
+                { "Category", "NONE" }
             },
-            Id = "noVersionForThisBlob"
+            Id = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
         };
 
         private static readonly Blob unversionedBlob = new Blob()
         {
-            Id = "noVersionForThisBlob",
+            Id = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
             NonShipping = true
         };
 
         private static readonly SigningInformation signingInfo1 = new SigningInformation()
         {
             CertificatesSignInfo = new List<CertificatesSignInfo>()
-                    {
-                        new CertificatesSignInfo()
-                        {
-                            DualSigningAllowed = true,
-                            Include = "ThisIsACert"
-                        }
-                    },
+            {
+                new CertificatesSignInfo()
+                {
+                    DualSigningAllowed = true,
+                    Include = "ThisIsACert"
+                }
+            },
 
             FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-                    {
-                        new FileExtensionSignInfo()
-                        {
-                            CertificateName = "ThisIsACert",
-                            Include = ".dll"
-                        }
-                    },
+            {
+                new FileExtensionSignInfo()
+                {
+                    CertificateName = "ThisIsACert",
+                    Include = ".dll"
+                }
+            },
 
             FileSignInfos = new List<FileSignInfo>()
-                    {
-                        new FileSignInfo()
-                        {
-                            CertificateName = "ThisIsACert",
-                             Include = "ALibrary.dll"
-                        },
-                        new FileSignInfo()
-                        {
-                            CertificateName = "ThisIsACertWithPKTAndTFM",
-                            Include = "ASecondLibrary.dll",
-                            PublicKeyToken = "4258675309abcdef",
-                            TargetFramework = ".NETFramework,Version=v2.0"
-                        }
-                    },
+            {
+                new FileSignInfo()
+                {
+                    CertificateName = "ThisIsACert",
+                    Include = "ALibrary.dll"
+                },
+                new FileSignInfo()
+                {
+                    CertificateName = "ThisIsACertWithPKTAndTFM",
+                    Include = "ASecondLibrary.dll",
+                    PublicKeyToken = "4258675309abcdef",
+                    TargetFramework = ".NETFramework,Version=v2.0"
+                }
+            },
 
             StrongNameSignInfos = new List<StrongNameSignInfo>()
-                    {
-                        new StrongNameSignInfo()
-                        {
-                            CertificateName = "ThisIsACert",
-                            Include = "IncludeMe",
-                            PublicKeyToken = "123456789abcde12"
-                        }
-                    },
+            {
+                new StrongNameSignInfo()
+                {
+                    CertificateName = "ThisIsACert",
+                    Include = "IncludeMe",
+                    PublicKeyToken = "123456789abcde12"
+                }
+            },
             ItemsToSign = new List<ItemsToSign>()
         };
 
@@ -294,9 +299,11 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 },
                 ItemsToSign = new List<ItemsToSign>()
             };
-        #endregion
 
-        #region Manifests
+    #endregion
+
+    #region Manifests
+
         private static readonly Manifest baseManifest = new Manifest()
         {
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -373,8 +380,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 IsStable = false,
                 PublishingVersion = (PublishingInfraVersion)3,
                 IsReleaseOnlyPackageVersion = false
-                
+
             });
+
     #endregion
 
         [SetUp]
@@ -388,7 +396,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             getEnvMock.Setup(d => d.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI")).Returns(SystemTeamCollectionUri);
             getEnvMock.Setup(d => d.GetEnv("BUILD_BUILDID")).Returns(AzureDevOpsBuildId1.ToString());
             getEnvMock.SetReturnsDefault("MissingEnvVariableCheck!");
-            
+
             pushMetadata = new PushMetadataToBuildAssetRegistry
             {
                 getEnvProxy = getEnvMock.Object
@@ -401,9 +409,11 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             List<PackageArtifactModel> expectedPackageArtifactModel = new List<PackageArtifactModel>()
                 { packageArtifactModel1, packageArtifactModel2 };
 
-            List<BlobArtifactModel> expectedBlobArtifactModel = new List<BlobArtifactModel>(){ manifestAsBlobArtifactModel, blobArtifactModel2};
+            List<BlobArtifactModel> expectedBlobArtifactModel = new List<BlobArtifactModel>()
+                { manifestAsBlobArtifactModel, blobArtifactModel2 };
 
-            (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) = pushMetadata.GetPackagesAndBlobsInfo(manifest1);
+            (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
+                pushMetadata.GetPackagesAndBlobsInfo(manifest1);
             packages.Should().BeEquivalentTo(expectedPackageArtifactModel);
             blobs.Should().BeEquivalentTo(expectedBlobArtifactModel);
         }
@@ -411,7 +421,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void EmptyManifestShouldReturnEmptyObjects()
         {
-            (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) = pushMetadata.GetPackagesAndBlobsInfo(baseManifest);
+            (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
+                pushMetadata.GetPackagesAndBlobsInfo(baseManifest);
             packages.Should().BeEmpty();
             blobs.Should().BeEmpty();
         }
@@ -455,12 +466,11 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithUnversionedBlob = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithUnversionedBlob.Blobs = new List<Blob> { unversionedBlob };
-            
+
             var expectedBlobs = new List<BlobArtifactModel>() { unversionedBlobArtifactModel };
-            var(actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);
+            var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);
             actualBlobs.Should().BeEquivalentTo(expectedBlobs);
             actualPackages.Should().BeEmpty();
-            
         }
 
         [Test]
@@ -486,11 +496,12 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 GitHubRepository = GitHubRepositoryName,
                 GitHubBranch = GitHubBranch,
             };
-            
+
             expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
             expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
 
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None); 
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
 
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
@@ -518,7 +529,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 GitHubBranch = GitHubBranch,
             };
             expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, baseManifest, CancellationToken.None);
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, baseManifest, CancellationToken.None);
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
         }
@@ -546,7 +558,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             };
 
             expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
         }
@@ -582,7 +595,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
             expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset2);
 
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
         }
@@ -609,7 +623,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 GitHubBranch = GitHubBranch,
             };
 
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
         }
@@ -639,11 +654,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             };
             expectedBuildData.Assets = expectedBuildData.Assets.Add(unversionedPackageAsset);
 
-            var buildData = pushMetadata.UpdateBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            var buildData =
+                pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
             buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             buildData.Should().BeEquivalentTo(expectedBuildData);
         }
-
-
     }
 }

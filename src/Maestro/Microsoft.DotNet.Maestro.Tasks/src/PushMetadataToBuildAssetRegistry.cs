@@ -25,11 +25,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
 {
     public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
-        [Required] public string ManifestsPath { get; set; }
+        [Required] 
+        public string ManifestsPath { get; set; }
 
-        [Required] public string BuildAssetRegistryToken { get; set; }
+        [Required] 
+        public string BuildAssetRegistryToken { get; set; }
 
-        [Required] public string MaestroApiEndpoint { get; set; }
+        [Required] 
+        public string MaestroApiEndpoint { get; set; }
 
         private bool IsStableBuild { get; set; } = false;
 
@@ -39,7 +42,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string AssetVersion { get; set; }
 
-        [Output] public int BuildId { get; set; }
+        [Output] 
+        public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
         private const string MergedManifestFileName = "MergedManifest.xml";
@@ -83,9 +87,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 else
                 {
                     //get the list of manifests
-                    List<Manifest> parsedManifest = GetParsedManifest(ManifestsPath, cancellationToken);
+                    List<Manifest> parsedManifests = GetParsedManifests(ManifestsPath, cancellationToken);
 
-                    if (parsedManifest.Count == 0)
+                    if (parsedManifests.Count == 0)
                     {
                         Log.LogError(
                             $"No manifests found matching the search pattern {SearchPattern} in {ManifestsPath}");
@@ -94,17 +98,17 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     Manifest manifest;
                     //check if the manifest have any duplicate packages and blobs
-                    if (parsedManifest.Count > 1)
+                    if (parsedManifests.Count > 1)
                     {
-                        manifest = CheckIfManifestCanBeMerged(parsedManifest);
+                        manifest = MergeManifests(parsedManifests);
                     }
                     else
                     {
-                        manifest = parsedManifest[0];
+                        manifest = parsedManifests[0];
                     }
 
                     List<SigningInformation> signingInformation = new List<SigningInformation>();
-                    foreach (var m in parsedManifest)
+                    foreach (var m in parsedManifests)
                     {
                         if (m.SigningInformation != null)
                         {
@@ -134,7 +138,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     // populate buildData and assetData using merged manifest data 
-                    BuildData buildData = UpdateBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
+                    BuildData buildData = GetMaestroBuildDataFromMergedManifest(modelForManifest, manifest, cancellationToken);
 
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
@@ -315,7 +319,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return versionIdentifier.GetVersion(assetId);
         }
 
-        internal List<Manifest> GetParsedManifest(
+        internal List<Manifest> GetParsedManifests(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
@@ -336,7 +340,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
 
-        internal BuildData UpdateBuildDataFromMergedManifest(
+        internal BuildData GetMaestroBuildDataFromMergedManifest(
             BuildModel buildModel,
             Manifest manifest,
             CancellationToken cancellationToken)
@@ -524,13 +528,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         }
 
-        internal Manifest CheckIfManifestCanBeMerged(List<Manifest> parsedManifest)
+        internal Manifest MergeManifests(List<Manifest> parsedManifests)
         {
-            Manifest manifest = parsedManifest[0];
+            Manifest manifest = parsedManifests[0];
 
-            for (int i = 1; i < parsedManifest.Count; i++)
+            for (int i = 1; i < parsedManifests.Count; i++)
             {
-                Manifest nextManifest = parsedManifest[i];
+                Manifest nextManifest = parsedManifests[i];
 
                 if (manifest.AzureDevOpsBranch != nextManifest.AzureDevOpsBranch ||
                     manifest.AzureDevOpsBuildNumber != nextManifest.AzureDevOpsBuildNumber ||

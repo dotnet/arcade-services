@@ -17,8 +17,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private PushMetadataToBuildAssetRegistry pushMetadata;
         private const string newManifestName = "NewManifest";
         public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
-        public const string repoName = "dotnet-arcade";
-        public const string pathToManifest = "pathToMergedManifest";
+        public const string repoName ="thisIsARepo";
         public const string assetVersion = "6.0.0-beta.20516.5";
 
         internal BlobArtifactModel blob = new BlobArtifactModel()
@@ -28,10 +27,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 {"NonShipping", "true"},
                 {"Category", "NONE"}
             },
-            Id = $"{pathToManifest}"
+            Id = $"assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
         };
 
-        internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNotNull =new BlobArtifactModel()
+        internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNotNull = new BlobArtifactModel()
         {
             Attributes = new Dictionary<string, string>()
             {
@@ -48,7 +47,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 {"NonShipping", "true"},
                 {"Category", "NONE"}
             },
-            Id = $"{pathToManifest}"
+            Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
         };
 
         public PushMetadataToBuildAssetRegistry SetupGetManifestAsAssetTests()
@@ -58,9 +57,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             pushMetadata = new PushMetadataToBuildAssetRegistry
             {
-                getEnvProxy = getEnvMock.Object,
+                getEnvProxy = getEnvMock.Object
             };
-
             return pushMetadata;
         }
 

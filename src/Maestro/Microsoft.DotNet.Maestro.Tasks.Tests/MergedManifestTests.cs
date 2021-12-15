@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
 {
-    internal class MergedManifestTest
+    internal class MergedManifestTests
     {
         [TestFixture]
         public class MergeBuildManifestsTests
@@ -129,7 +129,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             {
                 List<Manifest> manifests = new List<Manifest>() { manifest1, manifest2 };
 
-                Action act = () => pushMetadata.CheckIfManifestCanBeMerged(manifests);
+                Action act = () => pushMetadata.MergeManifests(manifests);
                 act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
 
             }
@@ -145,7 +145,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 manifest.Packages = new List<Package>() { package1, package2 };
                 manifest.Blobs = new List<Blob>() { blob1, blob2 };
                 List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
-                Manifest expectedManifest =  pushMetadata.CheckIfManifestCanBeMerged(manifests);
+                Manifest expectedManifest =  pushMetadata.MergeManifests(manifests);
                 expectedManifest.Should().BeEquivalentTo(manifest);
             }
 
@@ -164,7 +164,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 manifest.Blobs.Add(blob2);
 
                 List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3, manifest4 };
-                Manifest expectedManifest = pushMetadata.CheckIfManifestCanBeMerged(manifests);
+                Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
                 expectedManifest.Should().BeEquivalentTo(manifest);
             }
 
@@ -172,7 +172,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             public void ManifestWithPartiallyEmptyAssets()
             {
                 List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
-                Manifest expectedManifest = pushMetadata.CheckIfManifestCanBeMerged(manifests);
+                Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
                 expectedManifest.Should().BeEquivalentTo(manifest);
 
             }
