@@ -6,6 +6,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
 {
@@ -137,7 +138,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             [Test]
             public void TwoCompatibleManifest()
             {
-                
                 manifest1.Packages = new List<Package>() { package1 };
                 manifest3.Packages = new List<Package>() { package2 };
                 manifest1.Blobs = new List<Blob>() { blob1 };
@@ -163,6 +163,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 manifest.Packages.Add(package2);
                 manifest.Blobs.Add(blob1);
                 manifest.Blobs.Add(blob2);
+
                 List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3, manifest4 };
                 Manifest expectedManifest = pushMetadata.CheckIfManifestCanBeMerged(manifests);
                 expectedManifest.Should().BeEquivalentTo(manifest);

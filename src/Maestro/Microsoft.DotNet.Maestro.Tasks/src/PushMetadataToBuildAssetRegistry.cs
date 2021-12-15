@@ -44,6 +44,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private const string SearchPattern = "*.xml";
         private const string MergedManifestFileName = "MergedManifest.xml";
+        private const string NoCategory = "NONE";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private string GitHubRepository = "";
         private string GitHubBranch = "";
@@ -118,10 +119,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     //create merged buildModel to create the merged manifest
                     BuildModel modelForManifest =
-                        CreateMergedManifestBuildModel(packages, blobs, manifest, MergedManifestFileName);
+                        CreateMergedManifestBuildModel(packages, blobs, manifest);
 
 
-                    //add manifest as an asset 
+                    //add manifest as an asset to the buildModel
                     var mergedManifestAsset = GetManifestAsAsset(blobs, MergedManifestFileName);
                     modelForManifest.Artifacts.Blobs.Add(mergedManifestAsset);
                     
@@ -511,7 +512,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         { "NonShipping", blob.NonShipping.ToString().ToLower() },
                         {
                             "Category",
-                            !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : "NONE"
+                            !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : NoCategory
                         }
                     },
                     Id = blob.Id,
@@ -545,7 +546,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 manifest.Blobs.AddRange(nextManifest.Blobs);
             }
 
-            // Error out for any duplicated assets based on the top level properties of the asset.
+            // Error out for any duplicated packages based on the top level properties of the package.
             var distinctPackages = manifest.Packages.Distinct();
             if (distinctPackages.Count() < manifest.Packages.Count())
             {
@@ -563,6 +564,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     "Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
             }
 
+            // Error out for any duplicated blob based on the top level properties of the blob.
             var distinctBlobs = manifest.Blobs.Distinct();
             if (distinctBlobs.Count() < manifest.Blobs.Count())
             {
@@ -709,22 +711,27 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         /// <summary>
-        /// Creates an AssetData object for the merged manifest so it can be injected into itself
+        /// Creates a merged manifest blob
         /// </summary>
-        /// <param name="assets">List of assets extracted from the merged manifest</param>
-        /// <param name="location">Initial location for the merged manifest entry</param>
+        /// <param name="blobs">List of blobs extracted from merged manifest</param>
         /// <param name="manifestFileName">Merged manifest file name</param>
-        /// <returns>An AssetData with data about the merged manifest</returns>
+        /// <returns>A blob with data about the merged manifest</returns>
         internal BlobArtifactModel GetManifestAsAsset(List<BlobArtifactModel> blobs, string manifestFileName)
         {
             string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
-            if (string.IsNullOrEmpty(AssetVersion) && blobs != null)
+            string Id = string.Empty;
+            if (string.IsNullOrEmpty(AssetVersion))
             {
                 var blob = blobs.Where(a => a.NonShipping).FirstOrDefault();
                 if (blob != null)
                 {
                     AssetVersion = blob.Id;
+                    Id = AssetVersion;
                 }
+            }
+            else
+            {
+                Id = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}";
             }
 
             var mergedManifest = new BlobArtifactModel()
@@ -733,17 +740,23 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     { "NonShipping", "true" }
                 },
-                Id = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}"
+                Id = $"{Id}"
             };
             
             return mergedManifest;
         }
 
+        /// <summary>
+        /// Creates the build model from the list of packages, list of blobs and merged manifest
+        /// </summary>
+        /// <param name="packages">List of packages for the merged manifest</param>
+        /// <param name="blobs">List of blobs for the merged manifest</param>
+        /// <param name="manifest">Merged manifest</param>
+        /// <returns>A BuildModel with all the assets is returned.</returns>
         internal BuildModel CreateMergedManifestBuildModel(
             List<PackageArtifactModel> packages,
             List<BlobArtifactModel> blobs,
-            Manifest manifest,
-            string manifestFileName)
+            Manifest manifest)
         {
             BuildModel buildModel = new BuildModel(
                 new BuildIdentity
@@ -773,31 +786,14 @@ namespace Microsoft.DotNet.Maestro.Tasks
             buildModel.Artifacts.Blobs.AddRange(blobs);
             buildModel.Artifacts.Packages.AddRange(packages);
 
-            string repoName = GetAzDevRepositoryName().TrimEnd('/').Replace('/', '-');
-            if (string.IsNullOrEmpty(AssetVersion))
-            {
-                BlobArtifactModel blob = blobs.Where(a => a.NonShipping).FirstOrDefault();
-
-                if (blob != null)
-                {
-                    AssetVersion = blob.Id;
-                }
-            }
-
-            var mergedManifest = new BlobArtifactModel()
-            {
-                Attributes = new Dictionary<string, string>()
-                {
-                    { "NonShipping", "true" }
-                },
-                Id = $"assets/manifests/{repoName}/{AssetVersion}/{manifestFileName}"
-            };
-
-            buildModel.Artifacts.Blobs.Add(mergedManifest);
-
             return buildModel;
         }
 
+        /// <summary>
+        /// Pushed the merged manifest
+        /// </summary>
+        /// <param name="buildModel">Build Model that contains all the details about Build and assets</param>
+        /// <param name="finalSigningInfo">Signing information</param>
         private void PushMergedManifest(BuildModel buildModel, SigningInformation finalSigningInfo)
         {
             string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
