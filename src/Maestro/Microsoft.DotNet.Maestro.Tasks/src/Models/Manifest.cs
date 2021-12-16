@@ -111,6 +111,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
+
+        [XmlAttribute(AttributeName = "Category")]
+        public string Category { get; set; }
     }
 
     [XmlRoot(ElementName = "SigningInformation")]
