@@ -37,7 +37,7 @@
     "ApiToken": null
   },
   "DataProtection": {
-    "KeyFileUri": "",
+    "StorageAccountConnectionString": "",
     "KeyIdentifier": ""
   },
   "Grafana": {
