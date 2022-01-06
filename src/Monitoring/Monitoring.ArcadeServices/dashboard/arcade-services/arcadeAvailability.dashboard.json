@@ -2047,7 +2047,7 @@
         "frequency": "1m",
         "handler": 1,
         "name": "Maestro / BarViz alert",
-        "noDataState": "no_data",
+        "noDataState": "keep_state",
         "notifications": [
           {
             "uid": "statusHook"
