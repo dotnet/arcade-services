@@ -1,0 +1,5 @@
+<!-- See https://www.1eswiki.com/wiki/PoliCheck_Build_Task#Excluding_Files_or_folders_from_the_PoliCheck_scan for guidance -->
+<PoliCheckExclusions>
+  <!-- Auto generated swagger specification. If there are any real violations they should be reported in the source code --> 
+  <Exclusion Type="FolderPathStart">SWAGGER</Exclusion>
+</PoliCheckExclusions>
