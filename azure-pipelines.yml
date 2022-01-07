@@ -149,6 +149,135 @@ stages:
           name: Build
           displayName: Build / Publish
           condition: succeeded()
+        
+        - powershell: |
+            $manifestArgs = @()
+            Get-ChildItem .vault-config/*.yaml |% {
+              $manifestArgs += @("-m", $_.FullName)
+            }
+            dotnet run -p src/Microsoft.DncEng.SecretManager -- validate-all -b src @manifestArgs
+          displayName: Verify Secret Usages
+
+        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+
+          - powershell: src\Monitoring\ComponentGovernance\generate-cgmanifest.ps1
+            displayName: Generate cgmanifest.json for Grafana
+
+          - task: ComponentGovernanceComponentDetection@0
+            inputs:
+              # `.packages` directory is used by some tools running during build.
+              # By default ComponentDetection scans this directory and sometimes reports
+              # vulnerabilities for packages that are not part of the published product.
+              # We can ignore this directory because actual vulnerabilities
+              # that we are interested in will be found by the tool
+              # when scanning .csproj and package.json files.
+              ignoreDirectories: '.packages'
+
+        - template: /eng/test.yaml
+
+        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+
+          ## Prepare service fabric artifact
+          - task: ServiceFabricUpdateManifests@2
+            inputs:
+              applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
+
+          - powershell: |
+              robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
+              exit 0
+            displayName: Copy Maestro Project Artifacts
+
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
+            artifact: MaestroApplication
+            displayName: Publish MaestroApplication
+
+          - task: ServiceFabricUpdateManifests@2
+            inputs:
+              applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\applicationpackage
+
+          - powershell: |
+              robocopy src/Telemetry/TelemetryApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\PublishProfiles /S *.xml
+              robocopy src/Telemetry/TelemetryApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Telemetry/TelemetryApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationPackageRoot /S *.xml
+              exit 0
+            displayName: Copy Telemetry Project Artifacts
+
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication
+            artifact: TelemetryApplication
+            displayName: Publish TelemetryApplication
+
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp3.1
+            workingDirectory: src/DotNet.Status.Web
+            displayName: dotnet publish DotNet.Status.Web
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package/DotNetStatus.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package
+            artifact: DotNetStatus
+            displayName: Publish DotNet.Status.Web
+
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
+            workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
+            displayName: dotnet publish RolloutScorerAzureFunction
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/package/RolloutScorer.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/package
+            artifact: RolloutScorer
+            displayName: Publish RolloutScorerAzureFunction
+
+          ## Prepare database update artifact
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
+            workingDirectory: src/Maestro/Maestro.Data
+            displayName: Create Data Package
+
+          - task: CopyFiles@2
+            displayName: Copy update-database.ps1
+            inputs:
+              sourceFolder: $(Build.SourcesDirectory)\src\Maestro
+              contents: update-database.ps1
+              targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Maestro.Data Artifact
+            inputs:
+              PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
+              ArtifactName: Maestro.Data
+              ArtifactType: Container
+
+          ## Prepare release utilities artifact
+          - task: CopyFiles@2
+            displayName: Prepare Release Utilities
+            inputs:
+              sourceFolder: $(Build.SourcesDirectory)\eng
+              contents: '*'
+              targetFolder: $(Build.ArtifactStagingDirectory)\eng
+
+          - publish: $(Build.ArtifactStagingDirectory)\eng
+            artifact: ReleaseUtilities
+            displayName: Publish Release Utilities Artifact
+
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
+            artifact: Maestro.ScenarioTests
+            displayName: Publish Maestro Scenario Tests
+
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DncEng.SecretManager.ScenarioTests\$(_BuildConfig)\netcoreapp3.1
+            artifact: Microsoft.DncEng.SecretManager.ScenarioTests
+            displayName: Publish Secret Manager Scenario Tests
 
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59
