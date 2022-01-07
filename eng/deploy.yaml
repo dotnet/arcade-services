@@ -50,6 +50,8 @@ stages:
           Get-ChildItem .vault-config/*.yaml |% { dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize --verify-only $_}
 
 - stage: approval
+  pool:
+    vmImage: windows-latest
   dependsOn:
   - build
   - Validate
