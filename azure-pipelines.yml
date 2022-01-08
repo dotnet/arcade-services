@@ -293,7 +293,6 @@ stages:
       enableSigningValidation: false
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
-      # Disabled until https://github.com/dotnet/arcade/issues/8265 is fixed
         enable: true
         params: '-SourceToolsList @("policheck","credscan")
         -TsaInstanceURL $(_TsaInstanceURL)
