@@ -3,7 +3,7 @@
     <li>{{summary.dependencyName}}
       <ul>
         <ng-container *ngFor="let detail of summary.incoherencies">
-          <li><a target="_blank" href="{{ detail.repository }}/commit/{{ detail.commit }}">{{ detail.version }} <fa-icon icon="external-link-alt"></fa-icon></a></li>
+          <li><a target="_blank" href="{{ detail.repository }}/commit/{{ detail.commit }}">{{ detail.version }} <fa-icon icon="external-link-alt"></fa-icon></a></li> <!-- lgtm[js/unsafe-external-link] Temporarily add this to test inline code exclusion -->
         </ng-container>
       </ul>
     </li>
