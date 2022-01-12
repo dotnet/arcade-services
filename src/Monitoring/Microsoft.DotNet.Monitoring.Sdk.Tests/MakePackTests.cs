@@ -14,7 +14,7 @@ namespace DotNet.Grafana.Tests
     {
 
         [Test]
-        public void ExtractDataSourceNamesTest()
+        public void ExtractDataSourceUidsTest()
         {
             //$.dashboard.panels[*]..datasource
             var dashboard = new JObject
@@ -28,12 +28,26 @@ namespace DotNet.Grafana.Tests
                             {
                                 new JObject
                                 {
-                                    {"datasource", "Test Datasource 1"},
+                                    {
+                                        "datasource",
+                                        new JObject
+                                        {
+                                            {"type", "Test Datasource 1"},
+                                            {"uid", "1234"}
+                                        }
+                                    },
                                     {"other-property", "IGNORED"},
                                 },
                                 new JObject
                                 {
-                                    {"datasource", "Test Datasource 2"},
+                                    {
+                                        "datasource",
+                                        new JObject
+                                        {
+                                            {"type", "Test Datasource 2"},
+                                            {"uid", "4321"}
+                                        }
+                                    }
                                 },
                             }
                         },
@@ -43,11 +57,11 @@ namespace DotNet.Grafana.Tests
             };
 
             var expected = new List<string> {
-                "Test Datasource 1",
-                "Test Datasource 2",
+                "1234",
+                "4321",
             };
 
-            IEnumerable<string> actual = GrafanaSerialization.ExtractDataSourceNames(dashboard);
+            IEnumerable<string> actual = GrafanaSerialization.ExtractDataSourceUids(dashboard);
 
             actual.Should().Equal(expected);
         }

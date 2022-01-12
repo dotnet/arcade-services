@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Microsoft.Build.Framework;
@@ -113,13 +112,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 FolderData folderData = GrafanaSerialization.SanitizeFolder(folder);
                 
                 // Get datasources used in the dashboard
-                IEnumerable<string> dataSourceNames = GrafanaSerialization.ExtractDataSourceNames(dashboard);
-
-                foreach (string datasourceName in dataSourceNames)
+                IEnumerable<string> dataSourceUids = GrafanaSerialization.ExtractDataSourceUids(dashboard);
+               
+                foreach (string datasourceUid in dataSourceUids)
                 {
-                    JObject datasource = await GrafanaClient.GetDataSourceAsync(datasourceName).ConfigureAwait(false);
-                    datasource = GrafanaSerialization.SanitizeDataSource(datasource);
+                    JObject datasource = await GrafanaClient.GetDataSourceAsync(datasourceUid).ConfigureAwait(false);
+                    string datasourceName = datasource.Value<string>("name") ?? datasourceUid;
 
+                    datasource = GrafanaSerialization.SanitizeDataSource(datasource);
                     // Create the data source for each environment
                     foreach (string env in _environments)
                     {

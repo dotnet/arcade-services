@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         /// </summary>
         /// <param name="dashboard">A JSON definition of a dashboard as delivered by the Grafana API</param>
         /// <returns></returns>
-        public static IEnumerable<string> ExtractDataSourceNames(JObject dashboard)
+        public static IEnumerable<string> ExtractDataSourceUids(JObject dashboard)
         {
             // Panel data sources live in panel[*].datasource, unless the "Mixed Data source" 
             // feature is used. Then, get names from panel[*].target.datasource. 
@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             // datasource. This is an unsupported configuration.
 
             return dashboard
-                .SelectTokens("$..datasource")
+                .SelectTokens("$..datasource.uid")
                 .Values<string>()
                 .Where(x => !String.IsNullOrEmpty(x))
                 .Where(x => x != "-- Mixed --" && x != "-- Grafana --")
