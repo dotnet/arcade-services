@@ -1,0 +1,9 @@
+{
+    "tool": "Credential Scanner",
+    "suppressions": [
+      {
+        "placeholder": "  hasWebHookSecret: boolean",
+        "_justification": "The word secret is not a secret"
+      }
+    ]
+}

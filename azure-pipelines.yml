@@ -293,8 +293,7 @@ stages:
       enableSigningValidation: false
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
-      # Disabled until https://github.com/dotnet/arcade/issues/8265 is fixed
-        enable: false
+        enable: true
         params: '-SourceToolsList @("policheck","credscan")
         -TsaInstanceURL $(_TsaInstanceURL)
         -TsaProjectName $(_TsaProjectName)
@@ -304,7 +303,8 @@ stages:
         -TsaIterationPath $(_TsaIterationPath)
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
-        -TsaPublish $True'
+        -TsaPublish $True
+        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
   - template: eng\deploy.yaml
     parameters:
