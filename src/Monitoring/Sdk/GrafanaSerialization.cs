@@ -253,9 +253,4 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public string Name { get; set; }
         public IDictionary<string, string> Values { get; set; }
     }
-
-    public class DataSource
-    {
-        public IDictionary<string, string> Values { get; set; }
-    }
 }

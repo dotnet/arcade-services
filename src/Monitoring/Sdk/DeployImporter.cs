@@ -118,7 +118,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 {
                     JObject datasource = await GrafanaClient.GetDataSourceByUidAsync(dataSourceIdentifier).ConfigureAwait(false) ??
                                          await GrafanaClient.GetDataSourceByNameAsync(dataSourceIdentifier).ConfigureAwait(false);
-
                     string datasourceName = datasource.Value<string>("name");
 
                     datasource = GrafanaSerialization.SanitizeDataSource(datasource);
