@@ -24,7 +24,7 @@ e.g.
     -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b \
     -p:ParametersFile=parameters.json \
     -p:GrafanaKeyVaultAppSecret=KEY_VAULT_APP_SECRET \
-    -p:GrafanaEnvironments=DEPLOYMENT_ENVIRONMENT
+    -p:GrafanaEnvironment=DEPLOYMENT_ENVIRONMENT
 ```
 
 `GrafanaAccessToken`: An API token with Admin access level

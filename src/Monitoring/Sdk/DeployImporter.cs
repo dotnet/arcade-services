@@ -112,12 +112,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 FolderData folderData = GrafanaSerialization.SanitizeFolder(folder);
                 
                 // Get datasources used in the dashboard
-                IEnumerable<string> dataSourceUids = GrafanaSerialization.ExtractDataSourceUids(dashboard);
-               
-                foreach (string datasourceUid in dataSourceUids)
+                IEnumerable<string> dataSourceIdentifiers = GrafanaSerialization.ExtractDataSourceIdentifiers(dashboard);
+
+                foreach (string dataSourceIdentifier in dataSourceIdentifiers)
                 {
-                    JObject datasource = await GrafanaClient.GetDataSourceAsync(datasourceUid).ConfigureAwait(false);
-                    string datasourceName = datasource.Value<string>("name") ?? datasourceUid;
+                    JObject datasource = await GrafanaClient.GetDataSourceByUidAsync(dataSourceIdentifier).ConfigureAwait(false) ??
+                                         await GrafanaClient.GetDataSourceByNameAsync(dataSourceIdentifier).ConfigureAwait(false);
+
+                    string datasourceName = datasource.Value<string>("name");
 
                     datasource = GrafanaSerialization.SanitizeDataSource(datasource);
                     // Create the data source for each environment
