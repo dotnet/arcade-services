@@ -288,7 +288,7 @@ stages:
       inputs:
         useGlobalJson: true
     - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp3.1
-    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=$(engineering-services-app-id) -p:GrafanaKeyVaultAppSecret=$(engineering-services-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -p:ParametersFile=parameters.json -v:normal
+    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=$(engineering-services-app-id) -p:GrafanaKeyVaultAppSecret=$(engineering-services-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -p:ParametersFile=parameters.json -v:normal -p:CommitMessage="Build $(Build.BuildNumber) from $(Build.Repository.Name), pipeline $(Build.DefinitionName)"
 
 - stage: validateDeployment
   displayName: Validate deployment
