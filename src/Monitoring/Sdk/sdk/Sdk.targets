@@ -55,7 +55,6 @@
       Tag="$(GrafanaDashboardTag)"
       Environment="$(GrafanaEnvironment)"
       ParametersFile="$(ParametersFile)"
-      CommitMessage="$(CommitMessage)"
     />
   </Target>
   <Target Name="ImportGrafana">
