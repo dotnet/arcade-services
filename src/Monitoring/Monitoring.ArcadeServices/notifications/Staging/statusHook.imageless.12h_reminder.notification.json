@@ -1,5 +1,5 @@
 {
-  "name": ".NET Status Alert",
+  "name": ".NET Status Alert (no image, 12h reminder)",
   "type": "webhook",
   "isDefault": false,
   "sendReminder": false,
