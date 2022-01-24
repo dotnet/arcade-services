@@ -20,39 +20,46 @@ namespace Microsoft.DotNet.Internal.Health
     public sealed class AzureTableHealthReportProvider : IHealthReportProvider, IDisposable
     {
         private readonly HttpClient _client;
+        private readonly IOptionsMonitor<AzureTableHealthReportingOptions> _options;
         private readonly ILogger<AzureTableHealthReportProvider> _logger;
         private readonly ExponentialRetry _retry;
-        private bool _isEnabled;
-
-        private readonly string _sasQuery;
-        private readonly string _baseUrl;
+        
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new JsonSerializerOptions {IgnoreNullValues = true};
 
         public AzureTableHealthReportProvider(
-            IOptions<AzureTableHealthReportingOptions> options,
+            IOptionsMonitor<AzureTableHealthReportingOptions> options,
             ILogger<AzureTableHealthReportProvider> logger,
             IHttpClientFactory clientFactory,
             ExponentialRetry retry)
         {
+            _options = options;
             _logger = logger;
             _retry = retry;
-            _isEnabled = !string.IsNullOrEmpty(options.Value.WriteSasUri);
-            if (_isEnabled)
-            {
-                var builder = new UriBuilder(options.Value.WriteSasUri);
-                _sasQuery = builder.Query;
-                builder.Query = null;
-                _baseUrl = builder.ToString();
-
-                _client = clientFactory.CreateClient();
-                _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
-            }
-            else
+            if (string.IsNullOrEmpty(options.CurrentValue.WriteSasUri))
             {
                 _logger.LogWarning("AzureTableHealth WriteSas is not configured, no status will be written to table");
             }
+            _client = clientFactory.CreateClient();
+            _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
         }
-        
+
+        private bool TryGetUrlParts(out string baseUrl, out string sasQuery)
+        {
+            AzureTableHealthReportingOptions options = _options.CurrentValue;
+            if (string.IsNullOrEmpty(options.WriteSasUri))
+            {
+                baseUrl = null;
+                sasQuery = null;
+                return false;
+            }
+
+            var builder = new UriBuilder(options.WriteSasUri);
+            sasQuery = builder.Query;
+            builder.Query = null;
+            baseUrl = builder.ToString();
+            return true;
+        }
+
         private static string GetRowKey(string instance, string subStatus) => EscapeKeyField(instance ?? "") + "|" + EscapeKeyField(subStatus);
         private static (string instance, string subStatus) ParseRowKey(string rowKey)
         {
@@ -83,7 +90,7 @@ namespace Microsoft.DotNet.Internal.Health
 
         public async Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message)
         {
-            if (!_isEnabled)
+            if (!TryGetUrlParts(out string baseUrl, out string sasQuery))
                 return;
 
             string partitionKey = EscapeKeyField(serviceName);
@@ -98,7 +105,7 @@ namespace Microsoft.DotNet.Internal.Health
                 content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
 
                 string requestUri =
-                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){_sasQuery}";
+                    $"{baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){sasQuery}";
                 using HttpResponseMessage response = await _client.PutAsync(requestUri, content).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
             }
@@ -122,7 +129,7 @@ namespace Microsoft.DotNet.Internal.Health
 
         public Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
         {
-            if (!_isEnabled)
+            if (!TryGetUrlParts(out string baseUrl, out string sasQuery))
                 return Task.FromResult<IList<HealthReport>>(Array.Empty<HealthReport>());
 
             string partitionKey = EscapeKeyField(serviceName);
@@ -132,7 +139,7 @@ namespace Microsoft.DotNet.Internal.Health
             {
                 using var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_baseUrl}(){_sasQuery}&$filter={Uri.EscapeDataString(filter)}"
+                    $"{baseUrl}(){sasQuery}&$filter={Uri.EscapeDataString(filter)}"
                 );
 
                 request.Headers.Accept.ParseAdd("application/json;odata=nometadata");
