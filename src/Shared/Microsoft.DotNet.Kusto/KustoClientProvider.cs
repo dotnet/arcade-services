@@ -15,26 +15,52 @@ namespace Microsoft.DotNet.Kusto
 {
     public sealed class KustoClientProvider : IKustoClientProvider, IDisposable
     {
-        private readonly IOptions<KustoClientProviderOptions> _options;
-        public ICslQueryProvider KustoQueryProvider { get; }
-        
-        public KustoClientProvider(IOptions<KustoClientProviderOptions> options)
+        private readonly IOptionsMonitor<KustoClientProviderOptions> _options;
+        private readonly object _updateLock = new object();
+        private ICslQueryProvider _kustoQueryProvider;
+        private readonly IDisposable _monitor;
+
+        public KustoClientProvider(IOptionsMonitor<KustoClientProviderOptions> options)
         {
             _options = options;
-            KustoQueryProvider = KustoClientFactory.CreateCslQueryProvider(options.Value.QueryConnectionString);
+            _monitor = options.OnChange(ClearProviderCache);
         }
 
-        public KustoClientProvider(IOptions<KustoClientProviderOptions> options, ICslQueryProvider provider)
+        public KustoClientProvider(IOptionsMonitor<KustoClientProviderOptions> options, ICslQueryProvider provider)
         {
             _options = options;
-            KustoQueryProvider = provider;
+            _kustoQueryProvider = provider;
         }
 
-        public string DatabaseName => _options.Value.Database;
+        private void ClearProviderCache(KustoClientProviderOptions arg1, string arg2)
+        {
+            lock (_updateLock)
+            {
+                _kustoQueryProvider = null;
+            }
+        }
+
+        public ICslQueryProvider GetProvider()
+        {
+            var value = _kustoQueryProvider;
+            if (value != null)
+                return value;
+            lock (_updateLock)
+            {
+                value = _kustoQueryProvider;
+                if (value != null)
+                    return value;
+
+                _kustoQueryProvider = value = KustoClientFactory.CreateCslQueryProvider(_options.CurrentValue.QueryConnectionString);
+                return value;
+            }
+        }
+
+        private string DatabaseName => _options.CurrentValue.Database;
 
         public async Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query)
         {
-            var client = KustoQueryProvider;
+            var client = GetProvider();
             var properties = new ClientRequestProperties();
             foreach (var parameter in query.Parameters)
             {
@@ -63,7 +89,8 @@ namespace Microsoft.DotNet.Kusto
 
         public void Dispose()
         {
-            KustoQueryProvider.Dispose();
+            _kustoQueryProvider?.Dispose();
+            _monitor?.Dispose();
         }
     }
 }

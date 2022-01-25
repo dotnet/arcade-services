@@ -10,18 +10,17 @@ namespace Maestro.AzureDevOps
 {
     public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
     {
-        private readonly IOptions<AzureDevOpsTokenProviderOptions> _options;
+        private readonly IOptionsMonitor<AzureDevOpsTokenProviderOptions> _options;
 
-        public AzureDevOpsTokenProvider(IOptions<AzureDevOpsTokenProviderOptions> options)
+        public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
         {
             _options = options;
         }
 
-        public AzureDevOpsTokenProviderOptions Options => _options.Value;
-
         public Task<string> GetTokenForAccount(string account)
         {
-            if (!Options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
+            var options = _options.CurrentValue;
+            if (!options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
             {
                 throw new ArgumentOutOfRangeException($"Azure DevOps account {account} does not have a configured PAT. " +
                     $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
