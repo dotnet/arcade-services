@@ -217,6 +217,13 @@ parameters:
   subscription: Azure subscription id
 ```
 
+#### Account Sas Token
+```yaml
+type: azure-storage-account-sas-token
+parameters:
+  connectionString: SecretReference to the connection string for the account
+  permissions: permissions needed for the sas e.g. 'racwd'
+
 #### Container Sas Uri
 ```yaml
 type: azure-storage-container-sas-uri

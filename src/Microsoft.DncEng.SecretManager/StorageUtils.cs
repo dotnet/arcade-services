@@ -49,6 +49,45 @@ namespace Microsoft.DncEng.SecretManager
             return key.Value;
         }
 
+        public static SharedAccessAccountPermissions AccountPermissionsFromString(string input)
+        {
+            var accessAccountPermissions = SharedAccessAccountPermissions.None;
+            foreach (char ch in input)
+            {
+                accessAccountPermissions |= ch switch
+                {
+                    'a' => SharedAccessAccountPermissions.Add,
+                    'c' => SharedAccessAccountPermissions.Create,
+                    'd' => SharedAccessAccountPermissions.Delete,
+                    'l' => SharedAccessAccountPermissions.List,
+                    'r' => SharedAccessAccountPermissions.Read,
+                    'w' => SharedAccessAccountPermissions.Write,
+                    'u' => SharedAccessAccountPermissions.Update,
+                    'p' => SharedAccessAccountPermissions.ProcessMessages,
+                    _ => throw new ArgumentOutOfRangeException(nameof(input))
+                };
+            }
+
+            if (accessAccountPermissions == SharedAccessAccountPermissions.None)
+                accessAccountPermissions |= SharedAccessAccountPermissions.None;
+            return accessAccountPermissions;
+        }
+
+        public static string GenerateBlobAccountSas(string connectionString, string permissions, DateTimeOffset expiryTime)
+        {
+            CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
+            string sas = account.GetSharedAccessSignature(new SharedAccessAccountPolicy
+            {
+                SharedAccessExpiryTime = expiryTime,
+                Permissions = AccountPermissionsFromString(permissions),
+                Services = SharedAccessAccountServices.Blob,
+                ResourceTypes = SharedAccessAccountResourceTypes.Service,
+                Protocols = SharedAccessProtocol.HttpsOnly,
+            });
+
+            return sas;
+        }
+
         public static (string containerUri,string sas) GenerateBlobContainerSas(string connectionString, string containerName, string permissions, DateTimeOffset expiryTime)
         {
             CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
