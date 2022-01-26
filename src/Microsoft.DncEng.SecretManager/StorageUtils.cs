@@ -68,8 +68,6 @@ namespace Microsoft.DncEng.SecretManager
                 };
             }
 
-            if (accessAccountPermissions == SharedAccessAccountPermissions.None)
-                accessAccountPermissions |= SharedAccessAccountPermissions.None;
             return accessAccountPermissions;
         }
 
