@@ -12,6 +12,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
         {
             public SecretReference ConnectionString { get; set; }
             public string Permissions { get; set; }
+            public string Service { get; set; }
         }
 
         private readonly ISystemClock _clock;
@@ -27,7 +28,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             DateTimeOffset nextRotationOn = _clock.UtcNow.AddDays(15);
 
             string connectionString = await context.GetSecretValue(parameters.ConnectionString);
-            string sas = StorageUtils.GenerateBlobAccountSas(connectionString, parameters.Permissions, expiresOn);
+            string sas = StorageUtils.GenerateBlobAccountSas(connectionString, parameters.Permissions, parameters.Service, expiresOn);
 
             return new SecretData(sas, expiresOn, nextRotationOn);
         }

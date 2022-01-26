@@ -64,7 +64,7 @@ namespace Microsoft.DncEng.SecretManager
                     'w' => SharedAccessAccountPermissions.Write,
                     'u' => SharedAccessAccountPermissions.Update,
                     'p' => SharedAccessAccountPermissions.ProcessMessages,
-                    _ => throw new ArgumentOutOfRangeException(nameof(input))
+                    _ => throw new ArgumentOutOfRangeException(nameof(input)),
                 };
             }
 
@@ -73,14 +73,21 @@ namespace Microsoft.DncEng.SecretManager
             return accessAccountPermissions;
         }
 
-        public static string GenerateBlobAccountSas(string connectionString, string permissions, DateTimeOffset expiryTime)
+        public static string GenerateBlobAccountSas(string connectionString, string permissions, string service, DateTimeOffset expiryTime)
         {
             CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
             string sas = account.GetSharedAccessSignature(new SharedAccessAccountPolicy
             {
                 SharedAccessExpiryTime = expiryTime,
                 Permissions = AccountPermissionsFromString(permissions),
-                Services = SharedAccessAccountServices.Blob,
+                Services = service.ToLowerInvariant() switch
+                {
+                    "blob" => SharedAccessAccountServices.Blob,
+                    "table" => SharedAccessAccountServices.Table,
+                    "file" => SharedAccessAccountServices.File,
+                    "queue" => SharedAccessAccountServices.Queue,
+                    _ => throw new ArgumentOutOfRangeException(nameof(service)),
+                },
                 ResourceTypes = SharedAccessAccountResourceTypes.Service,
                 Protocols = SharedAccessProtocol.HttpsOnly,
             });
