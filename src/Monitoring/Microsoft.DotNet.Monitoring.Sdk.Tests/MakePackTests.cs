@@ -12,42 +12,59 @@ namespace DotNet.Grafana.Tests
     [TestFixture]
     public class MakePackTests
     {
-
         [Test]
-        public void ExtractDataSourceNamesTest()
+        public void ExtractDataSourceIdentifiersTest()
         {
-            //$.dashboard.panels[*]..datasource
+            //$.dashboard.[*].datasource
             var dashboard = new JObject
             {
                 {
-                    "dashboard", new JObject
+                    "dashboard", 
+                    new JObject
                     {
-                        {
-                            "panels",
-                            new JArray
+                        {  "annotations",
+                            new JObject
                             {
-                                new JObject
                                 {
-                                    {"datasource", "Test Datasource 1"},
-                                    {"other-property", "IGNORED"},
-                                },
-                                new JObject
-                                {
-                                    {"datasource", "Test Datasource 2"},
-                                },
-                            }
-                        },
-                        {"other-property", "IGNORED"},
+                                    "list", new JArray
+                                    {
+                                        new JObject
+                                        {
+                                            {"datasource", "Test Datasource Name 1"},
+                                        }
+                                    }
+                                }
+                            } 
+                        }
                     }
                 },
+                {
+                    "panels",
+                    new JArray
+                    {
+                        new JObject
+                        {
+                            {
+                                "datasource",
+                                new JObject
+                                {
+                                    {"type", "Test Datasource Type"},
+                                    {"uid", "1234"}
+                                }
+                            },
+                            {"other-property", "IGNORED"},
+                        }
+                    }
+                },
+                {"other-property", "IGNORED"}
             };
 
             var expected = new List<string> {
-                "Test Datasource 1",
-                "Test Datasource 2",
+                "Test Datasource Name 1",
+                "1234"
             };
 
-            IEnumerable<string> actual = GrafanaSerialization.ExtractDataSourceNames(dashboard);
+            IEnumerable<string> actual = GrafanaSerialization.ExtractDataSourceIdentifiers(dashboard);
 
             actual.Should().Equal(expected);
         }
