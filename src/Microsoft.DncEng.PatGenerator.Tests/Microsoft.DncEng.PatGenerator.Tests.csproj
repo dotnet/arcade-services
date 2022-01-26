@@ -2,13 +2,10 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="NUnit" />
   </ItemGroup>
 
   <ItemGroup>
