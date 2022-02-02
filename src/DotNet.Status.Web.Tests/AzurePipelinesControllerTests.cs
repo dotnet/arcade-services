@@ -6,7 +6,6 @@ using DotNet.Status.Web.Options;
 using DotNet.Status.Web.Controllers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
-using Microsoft.DotNet.Internal.Maestro;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,10 +16,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Octokit;
-using Microsoft.DotNet.Maestro.Client;
 
 using Build = Microsoft.DotNet.Internal.AzureDevOps.Build;
-using MaestroBuild = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace DotNet.Status.Web.Tests
 {
@@ -405,7 +402,7 @@ namespace DotNet.Status.Web.Tests
         }
 
         [Test]
-        public async Task BuildCompleteBuildHasValidatingBarIdsTagsNoCompareBuilds()
+        public async Task BuildCompleteBuildHasValidatingAzDOBuildTagsWithCompareBuilds()
         {
             var buildEvent = new AzurePipelinesController.AzureDevOpsEvent<AzurePipelinesController.AzureDevOpsMinimalBuildResource>
             {
@@ -455,6 +452,10 @@ namespace DotNet.Status.Web.Tests
                     ["name"] = "test-project-name"
                 },
                 ["reason"] = "batchedCI",
+                ["repository"] = new JObject
+                {
+                    ["name"] = "repo"
+                },
                 ["requestedFor"] = new JObject
                 {
                     ["displayName"] = "requested-for"
@@ -464,7 +465,7 @@ namespace DotNet.Status.Web.Tests
                 ["startTime"] = "05/01/2008 5:00:00",
                 ["tags"] = new JArray
                 {
-                    "ValidatingBarIds 654321"
+                    "ValidatingAzDOBuild 234567"
                 }
             };
 
@@ -621,14 +622,14 @@ namespace DotNet.Status.Web.Tests
                     new Build()
                     {
                         StartTime = "05/01/2008 4:00:00",
-                        Tags = new string[] { "ValidatingBarIds 212345" },
+                        Tags = new string[] { "ValidatingAzDOBuild 212345" },
                         Result = "succeeded",
                         Reason = "schedule"
                     },
                     new Build()
                     {
                         StartTime = "05/01/2008 4:00:01",
-                        Tags = new string[] { "tag1", "ValidatingBarIds 212344" },
+                        Tags = new string[] { "tag1", "ValidatingAzDOBuild 212344" },
                         Result = "succeeded",
                         Reason = "schedule"
                     }
@@ -684,73 +685,8 @@ namespace DotNet.Status.Web.Tests
                     )
                     .Returns(mockAzureDevOpsClient.Object);
 
-                MaestroBuild mockMaestroBuild = new MaestroBuild(654321, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
-                {
-                    AzureDevOpsBuildId = 234567,
-                    AzureDevOpsProject = "test-project-name",
-                    AzureDevOpsBranch = "refs/head/sourceBranch",
-                    AzureDevOpsRepository = "repo"
-                };
-
-                MaestroBuild mockMaestroCompareBuild1 = new MaestroBuild(212344, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
-                {
-                    AzureDevOpsBuildId = 234565,
-                    AzureDevOpsProject = "test-project-name",
-                    AzureDevOpsBranch = "refs/head/sourceBranch",
-                    AzureDevOpsRepository = "repo"
-                };
-                MaestroBuild mockMaestroCompareBuild2 = new MaestroBuild(212345, DateTimeOffset.MinValue, 0, false, false, "123456abcdef", null, null, null, null)
-                {
-                    AzureDevOpsBuildId = 234566,
-                    AzureDevOpsProject = "test-project-name",
-                    AzureDevOpsBranch = "refs/head/sourceBranch",
-                    AzureDevOpsRepository = "repo"
-                };
-
-                var mockMaestroApiBuilds = new Mock<IBuilds>();
-                mockMaestroApiBuilds
-                    .Setup(
-                        m => m.GetBuildAsync(
-                            654321, 
-                            CancellationToken.None
-                        )
-                    )
-                    .Returns(Task.FromResult(mockMaestroBuild));
-                mockMaestroApiBuilds
-                    .Setup(
-                        m => m.GetBuildAsync(
-                            212344, 
-                            CancellationToken.None
-                        )
-                    )
-                    .Returns(Task.FromResult(mockMaestroCompareBuild1));
-                mockMaestroApiBuilds
-                    .Setup(
-                        m => m.GetBuildAsync(
-                            212345, 
-                            CancellationToken.None
-                        )
-                    )
-                    .Returns(Task.FromResult(mockMaestroCompareBuild2));
-
-                var mockMaestroApi = new Mock<IMaestroApi>();
-                mockMaestroApi
-                    .SetupGet(m => m.Builds)
-                    .Returns(mockMaestroApiBuilds.Object);
-
-                var mockMaestroApiClientFactory = new Mock<IMaestroApiClientFactory>();
-                mockMaestroApiClientFactory
-                    .Setup(
-                        m => m.CreateMaestroClient(
-                            It.IsAny<string>(),
-                            It.IsAny<string>()
-                        )
-                    )
-                    .Returns(mockMaestroApi.Object);
-
                 collection.AddSingleton(mockGithubClientFactory.Object);
                 collection.AddSingleton(mockAzureClientFactory.Object);
-                collection.AddSingleton(mockMaestroApiClientFactory.Object);
 
                 return _ => (issueNames, issueOwners, commentNames, commentOwners);
             }

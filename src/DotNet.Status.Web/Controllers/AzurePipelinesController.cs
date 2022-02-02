@@ -13,14 +13,11 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
-using Microsoft.DotNet.Internal.Maestro;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 using Issue = Octokit.Issue;
 using Build = Microsoft.DotNet.Internal.AzureDevOps.Build;
-using MaestroBuild = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace DotNet.Status.Web.Controllers
 {
@@ -30,46 +27,31 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
-        private readonly IMaestroApiClientFactory _maestroClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
-        private readonly IOptions<MaestroOptions> _maestroOptions;
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<IAzureDevOpsClient> _clientLazy;
-        private readonly Lazy<IMaestroApi> _maestroApiLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
-            IMaestroApiClientFactory maestroApiClientFactory,
             IOptions<BuildMonitorOptions> options,
-            IOptions<MaestroOptions> maestroOptions,
             ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
-            _maestroClientFactory = maestroApiClientFactory;
             _options = options;
-            _maestroOptions = maestroOptions;
             _logger = logger;
             _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
-            _maestroApiLazy = new Lazy<IMaestroApi>(BuildMaestroClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
         private IAzureDevOpsClient Client => _clientLazy.Value;
 
-        private IMaestroApi MaestroApi => _maestroApiLazy.Value;
-
         private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
             return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
-        }
-
-        private IMaestroApi BuildMaestroClient()
-        {
-            return _maestroClientFactory.CreateMaestroClient(_maestroOptions.Value.ApiToken, _maestroOptions.Value.BaseUrl);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
@@ -216,7 +198,6 @@ namespace DotNet.Status.Web.Controllers
                 string changesMessage = await BuildChangesMessage(build);
 
                 BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
-
 
                 if (repo != null)
                 {
@@ -400,21 +381,18 @@ namespace DotNet.Status.Web.Controllers
             return b.ToString();
         }
 
-        private async Task<string> BuildChangesMessage(string projectName, int buildId, bool mentionAuthors = false)
+        // Get the commit messages of a single build
+        private async Task<string> BuildChangesMessage(Build build, bool mentionAuthors = false)
         {
-            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(projectName, buildId, CancellationToken.None);
+            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
             return await BuildChangesMessage(changes, truncatedChangeCount, mentionAuthors);
         }
 
-        private async Task<string> BuildChangesMessage(string projectName, int buildId, int compareBuildId, bool mentionAuthors = false)
+        // Get the commit messages between two given builds
+        private async Task<string> BuildChangesMessage(Build build, Build compareBuild, bool mentionAuthors = false)
         {
-            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(projectName, buildId, compareBuildId, CancellationToken.None);
+            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, compareBuild.Id, CancellationToken.None);
             return await BuildChangesMessage(changes, truncatedChangeCount, mentionAuthors);
-        }
-
-        private async Task<string> BuildChangesMessage(Build build)
-        {
-            return await BuildChangesMessage(build.Project.Name, build.Id);
         }
 
         private async Task<string> BuildRepoChangesMessage(
@@ -425,7 +403,7 @@ namespace DotNet.Status.Web.Controllers
         {
             string repoChangesMessage = "";
 
-            if(TryGetValidatingBarIds(build.Tags, out List<int> validatingBarIds))
+            if(TryGetValidatingAzDOBuilds(build.Tags, out List<int> validatingAzDoBuilds))
             {
                 // We are interested in looking at the diff in the repo of interest, so:
                 // 1) Figure out what repo the bar id corresponds to
@@ -473,45 +451,39 @@ namespace DotNet.Status.Web.Controllers
                 }
 
                 // Get the build information for the build that was being validated, so that we can get the change history
-                MaestroBuild barBuild = await GetBuildAsync(validatingBarIds.First());
+                Build azdoBuild = await Client.GetBuildAsync(build.Project.Name, validatingAzDoBuilds.First());
                 
                 // If the compare build has a validating bar id tag, then we will use it. Otherwise, just get the change messages
                 // corresponding to the most recent change
-                if (compareBuild != null && TryGetValidatingBarIds(compareBuild.Tags, out List<int> compareValidatingBarIds))
+                if (compareBuild != null && TryGetValidatingAzDOBuilds(compareBuild.Tags, out List<int> compareValidatingAzDoBuilds))
                 {
                     _logger.LogInformation($"Found build to compare {compareBuild.Id}");
-                    MaestroBuild compareBarBuild = await GetBuildAsync(compareValidatingBarIds.First());
+                    Build compareRepoBuild = await Client.GetBuildAsync(build.Project.Name, compareValidatingAzDoBuilds.First());
 
                     // Make sure the compareBarBuild is actually for the same repo.
-                    if (barBuild.AzureDevOpsBuildId != null 
-                        && compareBarBuild.AzureDevOpsBuildId != null
-                        && barBuild.AzureDevOpsProject == compareBarBuild.AzureDevOpsProject
-                        && barBuild.AzureDevOpsRepository == compareBarBuild.AzureDevOpsRepository
-                        && barBuild.AzureDevOpsBranch == compareBarBuild.AzureDevOpsBranch)
+                    if (azdoBuild.Repository.Name == compareRepoBuild.Repository.Name
+                        && azdoBuild.SourceBranch == compareRepoBuild.SourceBranch)
                     {
                         _logger.LogInformation($"Compare build is from the same repo and branch, getting changes message...");
                         // We have a build and a compare build. We need to get the commit diff between the two
                         repoChangesMessage = await BuildChangesMessage(
-                            barBuild.AzureDevOpsProject, 
-                            barBuild.AzureDevOpsBuildId.Value, 
-                            compareBarBuild.AzureDevOpsBuildId.Value, 
+                            azdoBuild, 
+                            compareRepoBuild, 
                             repo.MentionAuthors);
                     }
-                    else if (barBuild.AzureDevOpsBuildId != null)
+                    else
                     {
                         _logger.LogInformation($"Compare build is no from the same repo and branch, getting changes message from previous commit...");
                         repoChangesMessage = await BuildChangesMessage(
-                            barBuild.AzureDevOpsProject, 
-                            barBuild.AzureDevOpsBuildId.Value, 
+                            azdoBuild, 
                             repo.MentionAuthors);
                     }
                 }
-                else if (barBuild.AzureDevOpsBuildId != null)
+                else
                 {
                     _logger.LogInformation($"No compare build found, getting changes message from previous commit...");
                     repoChangesMessage = await BuildChangesMessage(
-                        barBuild.AzureDevOpsProject, 
-                        barBuild.AzureDevOpsBuildId.Value, 
+                        azdoBuild, 
                         repo.MentionAuthors);
                 }
             }
@@ -587,34 +559,27 @@ namespace DotNet.Status.Web.Controllers
             }
         }
 
-        private bool TryGetValidatingBarIds(string[] tags, out List<int> barIds)
+        private bool TryGetValidatingAzDOBuilds(string[] tags, out List<int> azdoBuildIds)
         {
-            barIds = new List<int>();
+            azdoBuildIds = new List<int>();
+            string tagName = "ValidatingAzDOBuild ";
 
             if (tags == null || tags.Length == 0)
             {
                 return false;
             }
 
-            int validatingBarIdsCount = tags.Count(x => x.Contains("ValidatingBarIds "));
+            int validatingAzDoBuildCount = tags.Count(x => x.Contains(tagName));
 
-            // more than one or zero?
-            if (validatingBarIdsCount > 1 || validatingBarIdsCount == 0)
+            if (validatingAzDoBuildCount > 1 || validatingAzDoBuildCount == 0)
             {
                 return false;
             }
 
-            // found it
-            string tag = tags.First(x => x.Contains("ValidatingBarIds ")).Split("ValidatingBarIds ")[1];
-            barIds.AddRange(tag.Split(",").Select(int.Parse).ToList());
+            string tag = tags.First(x => x.Contains(tagName)).Split(tagName)[1];
+            azdoBuildIds.AddRange(tag.Split(",").Select(int.Parse).ToList());
             return true;
         }
-
-        public async Task<MaestroBuild> GetBuildAsync(int id)
-        {
-            return await MaestroApi.Builds.GetBuildAsync(id, CancellationToken.None);
-        }
-
 
         /// <summary>
         /// Minimal version of

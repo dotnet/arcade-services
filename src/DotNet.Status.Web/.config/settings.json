@@ -136,10 +136,6 @@
     "ApiToken": "[vault(grafana-api-token)]",
     "TableUri": "[vault(deployment-table-sas-uri)]"
   },
-  "Maestro": {
-    "BaseUrl": "https://maestro-prod.westus2.cloudapp.azure.com/",
-    "ApiToken": "[vault(prod-maestro-token)]"
-  },
   "WebHooks": {
     "github": {
       "SecretKey": {
