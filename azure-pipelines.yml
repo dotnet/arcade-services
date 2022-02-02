@@ -242,8 +242,6 @@ stages:
 
           ## Generate SBOM manifest
           - template: ../../../generate-sbom.yml
-            parameters:
-              PackageName: Arcade-Services
 
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1

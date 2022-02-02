@@ -1,5 +1,5 @@
 parameters:
-  PackageName: $(Build.DefinitionName)
+  PackageName: ".NET"
   BuildDropPath: $(Build.SourcesDirectory)/artifacts
   PackageVersion: $(Build.BuildNumber)
   ArtifactName: $(System.StageName)_$(Agent.JobName)_SBOM
