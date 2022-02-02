@@ -1,0 +1,29 @@
+parameters:
+  PackageName: ".NET"
+  BuildDropPath: $(Build.SourcesDirectory)/artifacts
+  PackageVersion: $(Build.BuildNumber)
+  ArtifactName: $(System.StageName)_$(Agent.JobName)_SBOM
+  ManifestDirPath: $(Build.ArtifactStagingDirectory)\sbom
+
+steps:
+- powershell: |
+    if (!(Test-Path -path ${{parameters.manifestDirPath}}))
+    {
+      New-Item -ItemType Directory -path ${{parameters.manifestDirPath}}
+    }
+  displayName: Create SBOM output folder
+
+- task: AzureArtifacts.manifest-generator-task.manifest-generator-task.ManifestGeneratorTask@0
+  displayName: 'Generate SBOM manifest'
+  inputs:
+      PackageName: ${{parameters.packageName}}
+      BuildDropPath: ${{parameters.buildDropPath}}
+      PackageVersion: ${{parameters.packageVersion}}
+      ManifestDirPath: ${{parameters.manifestDirPath}}
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: ${{parameters.manifestDirPath}}
+    ArtifactName: ${{parameters.artifactName}}
+    ArtifactType: container
+  displayName: Publish generated SBOM
