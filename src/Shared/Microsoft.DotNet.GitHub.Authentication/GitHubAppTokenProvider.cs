@@ -11,16 +11,17 @@ namespace Microsoft.DotNet.GitHub.Authentication
 {
     public class GitHubAppTokenProvider : IGitHubAppTokenProvider
     {
-        private readonly IOptions<GitHubTokenProviderOptions> _options;
+        private readonly IOptionsMonitor<GitHubTokenProviderOptions> _options;
 
-        public GitHubAppTokenProvider(IOptions<GitHubTokenProviderOptions> options = null)
+        public GitHubAppTokenProvider(IOptionsMonitor<GitHubTokenProviderOptions> options = null)
         {
             _options = options;
         }
 
         public string GetAppToken()
         {
-            return GetAppToken(_options.Value.GitHubAppId, new StringPrivateKeySource(_options.Value.PrivateKey));
+            var options = _options.CurrentValue;
+            return GetAppToken(options.GitHubAppId, new StringPrivateKeySource(options.PrivateKey));
         }
 
         public string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName)

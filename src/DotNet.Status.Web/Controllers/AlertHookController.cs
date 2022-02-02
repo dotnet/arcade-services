@@ -148,7 +148,7 @@ namespace DotNet.Status.Web.Controllers
             }
             
             string icon = GetIcon(notification);
-            string image = !string.IsNullOrEmpty(notification.ImageUrl) ? "![Metric Graph]({notification.ImageUrl})" : string.Empty;
+            string image = !string.IsNullOrEmpty(notification.ImageUrl) ? $"![Metric Graph]({notification.ImageUrl})" : string.Empty;
 
             return $@":{icon}: Metric state changed to *{notification.State}*
 
@@ -170,7 +170,7 @@ namespace DotNet.Status.Web.Controllers
             }
 
             string icon = GetIcon(notification);
-            string image = !string.IsNullOrEmpty(notification.ImageUrl) ? "![Metric Graph]({notification.ImageUrl})" : string.Empty;
+            string image = !string.IsNullOrEmpty(notification.ImageUrl) ? $"![Metric Graph]({notification.ImageUrl})" : string.Empty;
 
             string issueTitle = notification.Title;
 

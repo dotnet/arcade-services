@@ -780,7 +780,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     BuildId = GetAzDevBuildNumber(),
                     Branch = GetAzDevBranch(),
                     Commit = GetAzDevCommit(),
-                    IsStable = IsStableBuild,
+                    IsStable = bool.Parse(manifest.IsStable),
                     PublishingVersion = (PublishingInfraVersion)manifest.PublishingVersion,
                     IsReleaseOnlyPackageVersion = bool.Parse(manifest.IsReleaseOnlyPackageVersion)
 

@@ -25,6 +25,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly string azDoBranch = "thisIsAnAzDoBranch";
         private static readonly int publishingVersion = 1234567890;
         private static readonly string isReleasePackage = "false";
+        private static readonly string isStable = "true";
 
         private static readonly string buildRepoName = "thisIsARepo";
         private static readonly string buildNumber = "azDevBuildNumber";
@@ -127,7 +128,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsRepository = azDoRepo,
             AzureDevOpsBranch = azDoBranch,
             PublishingVersion = publishingVersion,
-            IsReleaseOnlyPackageVersion = isReleasePackage
+            IsReleaseOnlyPackageVersion = isReleasePackage,
+            IsStable = isStable
         };
 
         private PushMetadataToBuildAssetRegistry GetPushMetadata()
@@ -168,7 +170,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     BuildId = buildNumber,
                     Branch = sourceBranch,
                     Commit = commitSourceVersion,
-                    IsStable = false,
+                    IsStable = bool.Parse(isStable),
                     PublishingVersion = (PublishingInfraVersion)manifest.PublishingVersion,
                     IsReleaseOnlyPackageVersion = bool.Parse(isReleasePackage)
                 });
@@ -181,13 +183,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             BuildModel expectedBuildModel = GetBuildModel();
             PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
-
             expectedBuildModel.Artifacts =
                 new ArtifactSet
                 {
                     Packages = new List<PackageArtifactModel> { package1, nonShippingPackage },
                     Blobs = new List<BlobArtifactModel> { blob1, nonShippingBlob }
                 };
+            expectedBuildModel.Identity.IsStable = true;
 
             packages = new List<PackageArtifactModel>() { package1, nonShippingPackage };
             blobs = new List<BlobArtifactModel>() { blob1, nonShippingBlob };
