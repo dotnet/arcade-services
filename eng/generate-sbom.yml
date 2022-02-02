@@ -1,6 +1,6 @@
 parameters:
   PackageName: $(Build.DefinitionName)
-  BuildDropPath: $(ArtifactsDir)
+  BuildDropPath: $(Build.SourcesDirectory)/artifacts
   PackageVersion: $(Build.BuildNumber)
   ArtifactName: $(System.StageName)_$(Agent.JobName)_SBOM
   ManifestDirPath: $(Build.ArtifactStagingDirectory)\sbom
