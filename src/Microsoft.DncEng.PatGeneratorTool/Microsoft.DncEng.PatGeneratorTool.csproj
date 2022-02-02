@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
     <IsPackable>true</IsPackable>
     <PackAstool>true</PackAstool>
     <Description>Command line tool for generating Azure DevOps PATs.</Description>

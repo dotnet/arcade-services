@@ -38,6 +38,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Kusto;
 using Octokit;
+using AzureStorage = Microsoft.Azure.Storage;
 
 namespace DotNet.Status.Web
 {
@@ -72,8 +73,10 @@ namespace DotNet.Status.Web
                 string vaultUri = Configuration[ConfigurationConstants.KeyVaultUriConfigurationKey];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
+                AzureStorage.CloudStorageAccount cloudStorageAccount = AzureStorage.CloudStorageAccount.Parse(dpConfig["StorageAccountConnectionString"]);
+
                 services.AddDataProtection()
-                    .PersistKeysToAzureBlobStorage(new Uri(dpConfig["KeyFileUri"]))
+                    .PersistKeysToAzureBlobStorage(cloudStorageAccount, "/site/keys.xml")
                     .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
                     .SetDefaultKeyLifetime(TimeSpan.FromDays(14))
                     .SetApplicationName(typeof(Startup).FullName);

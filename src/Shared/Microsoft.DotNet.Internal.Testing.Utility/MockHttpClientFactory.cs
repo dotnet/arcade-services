@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
             {
                 foreach (CannedResponse response in _responses)
                 {
-                    if (request.RequestUri.AbsoluteUri == response.Uri && request.Method == response.Method)
+                    if (request.RequestUri.AbsoluteUri == response.Uri && request.Method == response.Method && response.Used == false)
                     {
                         response.Used = true;
                         return Task.FromResult(CreateResponse(response));

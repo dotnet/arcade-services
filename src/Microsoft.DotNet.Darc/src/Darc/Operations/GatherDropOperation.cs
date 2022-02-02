@@ -353,7 +353,6 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
             { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
             { $"{githubRepoPrefix}dotnet/roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
-            { $"{githubRepoPrefix}dotnet/fsharp", (coreRepoCategory, "dotnet-fsharp") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -364,7 +363,6 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
             { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
             { $"{azdoRepoPrefix}dotnet-roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
-            { $"{azdoRepoPrefix}dotnet-fsharp", (coreRepoCategory, "dotnet-fsharp") },
 
             // ASPNET
 
@@ -473,8 +471,28 @@ namespace Microsoft.DotNet.Darc.Operations
                 // This goes into the release layout. Walk the downloaded assets
                 foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
                 {
+                    // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
+                    if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
+                    {
+                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix =>
+                            Path.GetFileName(asset.UnifiedLayoutTargetLocation).StartsWith(doNotListPrefix)))
+                        {
+                            continue;
+                        }
+
+                        // Create the target directory
+                        string targetFile = Path.Combine(sympkgsDirectory, shortName,
+                            symPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
+
+                        // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
+                        string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                        sympkgsFileContent.AppendLine(relativeSymPackagePath);
+                    }
                     // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
-                    if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
+                    else if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
                     {
                         // Create the target directory
                         string targetFile = Path.Combine(nupkgDirectory, shortName,
@@ -496,26 +514,6 @@ namespace Microsoft.DotNet.Darc.Operations
                         StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName,
                             () => new StringBuilder());
                         identityStringBuilder.AppendLine($"{asset.Asset.Name},{asset.Asset.Version}");
-                    }
-                    // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
-                    else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
-                    {
-                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix =>
-                            Path.GetFileName(asset.UnifiedLayoutTargetLocation).StartsWith(doNotListPrefix)))
-                        {
-                            continue;
-                        }
-
-                        // Create the target directory
-                        string targetFile = Path.Combine(sympkgsDirectory, shortName,
-                            symPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
-                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
-
-                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
-
-                        // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
-                        string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
-                        sympkgsFileContent.AppendLine(relativeSymPackagePath);
                     }
                 }
             }

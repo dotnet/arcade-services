@@ -111,6 +111,7 @@ namespace Microsoft.DotNet.Darc
                 buildNumber = build.AzureDevOpsBuildNumber,
                 dateProduced = build.DateProduced.ToLocalTime().ToString("g"),
                 buildLink = GetBuildLink(build),
+                azdoBuildId = build.AzureDevOpsBuildId,
                 released = build.Released,
                 channels = build.Channels.Select(channel => channel.Name)
             });
@@ -130,6 +131,7 @@ namespace Microsoft.DotNet.Darc
             builder.AppendLine($"Build Number:  {build.AzureDevOpsBuildNumber}");
             builder.AppendLine($"Date Produced: {build.DateProduced.ToLocalTime().ToString("g")}");
             builder.AppendLine($"Build Link:    {GetBuildLink(build) ?? "N/A"}");
+            builder.AppendLine($"AzDO Build Id: {build.AzureDevOpsBuildId}");
             builder.AppendLine($"BAR Build Id:  {build.Id}");
             builder.AppendLine($"Released:      {build.Released}");
             if (build.Channels != null)

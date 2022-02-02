@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         /// </summary>
         /// <param name="dashboard">A JSON definition of a dashboard as delivered by the Grafana API</param>
         /// <returns></returns>
-        public static IEnumerable<string> ExtractDataSourceNames(JObject dashboard)
+        public static IEnumerable<string> ExtractDataSourceIdentifiers(JObject dashboard)
         {
             // Panel data sources live in panel[*].datasource, unless the "Mixed Data source" 
             // feature is used. Then, get names from panel[*].target.datasource. 
@@ -53,10 +53,18 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             // A datasource field will be null if it is depending on the "default"
             // datasource. This is an unsupported configuration.
 
-            return dashboard
+            IEnumerable<string> dataSourceDefinedByName = dashboard
                 .SelectTokens("$..datasource")
-                .Values<string>()
-                .Where(x => !String.IsNullOrEmpty(x))
+                .Values()
+                .Where(token => token.Type == JTokenType.String)
+                .Values<string>();
+
+            IEnumerable<string> dataSourceDefinedByUid = dashboard
+                .SelectTokens("$..datasource.uid")
+                .Values<string>();
+
+            return dataSourceDefinedByName.Concat(dataSourceDefinedByUid)
+                .Where(x => !string.IsNullOrEmpty(x))
                 .Where(x => x != "-- Mixed --" && x != "-- Grafana --")
                 .Distinct();
         }

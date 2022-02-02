@@ -128,7 +128,7 @@
     "TableUri": "[vault(token-table-sas-uri)]"
   },
   "DataProtection": {
-    "KeyFileUri": "[vault(data-protection-key-file-uri)]",
+    "StorageAccountConnectionString": "[vault(dotnet-status-storage-account)]",
     "KeyIdentifier": "dotnet-status-data-protection"
   },
   "Grafana": {

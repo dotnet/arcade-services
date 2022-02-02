@@ -11,7 +11,6 @@ using FluentAssertions;
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 
@@ -33,10 +32,10 @@ namespace Microsoft.DotNet.Kusto.Tests
             queryProvider.Setup(q =>
                     q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
                 .Returns(Task.FromResult(reader));
-
-            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
-                    {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
-                queryProvider.Object))
+            
+            using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
+                           {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
+                       queryProvider.Object))
             {
                 IDataReader result = await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"));
                 reader.Should().BeSameAs(result);
@@ -59,7 +58,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                     q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
                 .Returns(Task.FromResult(reader));
 
-            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
+            using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
@@ -86,7 +85,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                     q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
                 .Returns(Task.FromResult(reader));
 
-            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
+            using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
@@ -128,7 +127,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                     q.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ClientRequestProperties>()))
                 .Throws(new SemanticException());
 
-            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
+            using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {

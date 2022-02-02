@@ -87,10 +87,33 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         /// </summary>
         /// <param name="name">The data source name</param>
         /// <returns>The Data Source JSON object as defined by the Grafana Data Source API</returns>
-        public async Task<JObject> GetDataSourceAsync(string name)
+        public async Task<JObject> GetDataSourceByNameAsync(string name)
         {
             var uri = new Uri(new Uri(_baseUrl), $"/api/datasources/name/{name}");
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
+            {
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    return null;
 
+                await response.EnsureSuccessWithContentAsync();
+
+                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var streamReader = new StreamReader(stream))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    return await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get a Data Source by its uid
+        /// </summary>
+        /// <param uid="uid">The data source udi</param>
+        /// <returns>The Data Source JSON object as defined by the Grafana Data Source API</returns>
+        public async Task<JObject> GetDataSourceByUidAsync(string uid)
+        {
+            var uri = new Uri(new Uri(_baseUrl), $"/api/datasources/uid/{uid}");
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
                 if (response.StatusCode == HttpStatusCode.NotFound)
