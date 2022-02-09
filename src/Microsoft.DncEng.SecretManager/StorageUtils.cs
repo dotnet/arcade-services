@@ -86,7 +86,7 @@ namespace Microsoft.DncEng.SecretManager
                     "queue" => SharedAccessAccountServices.Queue,
                     _ => throw new ArgumentOutOfRangeException(nameof(service)),
                 },
-                ResourceTypes = SharedAccessAccountResourceTypes.Service,
+                ResourceTypes = SharedAccessAccountResourceTypes.Service | SharedAccessAccountResourceTypes.Container | SharedAccessAccountResourceTypes.Object,
                 Protocols = SharedAccessProtocol.HttpsOnly,
             });
 

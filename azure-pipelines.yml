@@ -240,6 +240,9 @@ stages:
             artifact: RolloutScorer
             displayName: Publish RolloutScorerAzureFunction
 
+          ## Generate SBOM manifest
+          - template: ../../../generate-sbom.yml
+
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
             workingDirectory: src/Maestro/Maestro.Data
