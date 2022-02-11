@@ -145,7 +145,7 @@ EOT
 # Reset grafana-server and start it up again (or the first time)
 systemctl stop grafana-server
 
-grafana-cli plugins install grafana-azure-data-explorer-datasource 3.5.0
+grafana-cli plugins install grafana-azure-data-explorer-datasource 3.5.1
 grafana-cli plugins install grafana-simple-json-datasource 1.4.2
 grafana-cli plugins install grafana-image-renderer 3.2.1
 # update any plugins while it's stopped
