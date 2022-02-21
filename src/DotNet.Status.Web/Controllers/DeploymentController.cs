@@ -58,7 +58,7 @@ namespace DotNet.Status.Web.Controllers
             };
             
             NewGrafanaAnnotationResponse annotation;
-            using (var client = new HttpClient())
+            using (var client = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true }))
             {
                 annotation = await _retry.RetryAsync(async () =>
                     {
@@ -121,7 +121,7 @@ namespace DotNet.Status.Web.Controllers
                 TimeEnd = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             };
 
-            using (var client = new HttpClient())
+            using (var client = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true }))
             {
                 await _retry.RetryAsync(async () =>
                     {

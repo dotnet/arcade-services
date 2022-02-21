@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -32,7 +32,7 @@ namespace DotNet.Status.Web
                 _logger.LogWarning("No ZenHub API token configured, skipping");
             }
 
-            using (var client = new HttpClient())
+            using (var client = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true }))
             {
                 client.DefaultRequestHeaders.Add("X-Authentication-Token", apiToken);
                 string epicUpdateUri = $"https://api.zenhub.com/p1/repositories/{epic.RepositoryId}/epics/{epic.IssueId}/update_issues";
