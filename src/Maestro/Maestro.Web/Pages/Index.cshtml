@@ -83,7 +83,7 @@
     <script type="text/javascript">
         window.applicationData = {
           brand: '@Html.Raw(ViewBag.Brand)',
-          userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))',
+          userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))', // lgtm [cs/inappropriate-encoding]
           authorized: @Html.Raw((await Authorization.AuthorizeAsync(HttpContext.User, Startup.MsftAuthorizationPolicyName)).Succeeded.ToString().ToLower()),
           themes: [
             @foreach (var theme in Model.Themes)
