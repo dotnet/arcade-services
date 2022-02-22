@@ -97,7 +97,7 @@ stages:
             -Language 'csharp' `
             -WorkingDirectory $(Build.SourcesDirectory) `
             -SourceCodeDirectory $(Build.SourcesDirectory)\src `
-            -BuildCommand "$(Build.SourcesDirectory)\build.cmd -configuration Release -prepareMachine /p:Test=false /P:Sign=false" `
+            -BuildCommand "$(Build.SourcesDirectory)\build.cmd -configuration Release -prepareMachine /p:Test=false /P:Sign=false # Remove-Item -Recurse $(Build.SourcesDirectory)\src\Maestro\maestro-angular\dist" `
             -OutputPath $(Build.SourcesDirectory)\.gdn\r\semmle-csharp-configure.gdnconfig
         displayName: 'CodeQL: Create C# configuration'
 
