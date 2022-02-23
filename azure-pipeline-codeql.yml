@@ -137,15 +137,15 @@ stages:
           Publish-GdnTsa -GuardianCliLocation $(GuardianCliLocation) `
             -WorkingDirectory $(Build.SourcesDirectory) `
             -LoggerLevel 'Standard' `
-            -TsaRepositoryName "arcade-services" `
-            -TsaCodebaseName "arcade-services" `
+            -TsaRepositoryName "Arcade-Services" `
+            -TsaCodebaseName "Arcade-Services" `
             -TsaCodebaseAdmin $(_TsaCodebaseAdmin) `
             -TsaNotificationEmail $(_TsaNotificationEmail) `
             -TsaInstanceUrl $(_TsaInstanceURL) `
             -TsaProjectName $(_TsaProjectName) `
             -TsaBugAreaPath $(_TsaBugAreaPath) `
             -TsaIterationPath $(_TsaIterationPath) `
-            -TsaPublish $false
+            -TsaPublish $true
         displayName: Publish results to TSA
 
       - pwsh: |
