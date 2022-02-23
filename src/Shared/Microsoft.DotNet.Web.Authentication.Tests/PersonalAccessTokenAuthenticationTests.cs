@@ -390,7 +390,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
         public static string CalculateHash(TestUser user, string password)
         {
-            return $":HASH:{user.Name}:{password}";
+            return $":HASH:{user.Name}:{password}"; // lgtm [cs/hardcoded-credentials] Part of unit tests
         }
 
         public PasswordVerificationResult VerifyHashedPassword(

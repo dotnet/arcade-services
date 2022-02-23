@@ -38,7 +38,7 @@ namespace RolloutScorer
         public List<ScorecardBuildBreakdown> BuildBreakdowns { get; set; } = new List<ScorecardBuildBreakdown>();
 
         // The AzDO API has some 302s in it that break auth so we have to handle those ourselves
-        private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
+        private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CheckCertificateRevocationList = true });
         private GitHubClient _githubClient;
 
         public ILogger Log { get; set; }

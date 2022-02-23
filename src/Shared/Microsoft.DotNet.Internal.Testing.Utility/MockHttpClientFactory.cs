@@ -145,7 +145,7 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
 
         public HttpClient CreateClient(string name)
         {
-            return new HttpClient(new Handler(_cannedResponses, _unexpectedRequests));
+            return new HttpClient(new Handler(_cannedResponses, _unexpectedRequests)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used in unit testing
         }
 
         public void VerifyAll()

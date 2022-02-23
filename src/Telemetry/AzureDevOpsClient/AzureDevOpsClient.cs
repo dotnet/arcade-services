@@ -30,7 +30,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         {
             _baseUrl = baseUrl;
             _organization = organization;
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _parallelism = new SemaphoreSlim(maxParallelRequests, maxParallelRequests);
 

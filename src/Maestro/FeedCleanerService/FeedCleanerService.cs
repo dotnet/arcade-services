@@ -38,7 +38,7 @@ namespace FeedCleanerService
         {
             Logger = logger;
             Context = context;
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
             _options = options;
             AzureDevOpsClients = new Dictionary<string, IAzureDevOpsClient>();
             foreach (string account in _options.Value.AzdoAccounts)
