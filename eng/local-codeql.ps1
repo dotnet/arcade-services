@@ -19,7 +19,7 @@ Initialize-Gdn `
     -WorkingDirectory $pwd `
     -LoggerLevel $loggerLevel
 
-New-GdnSemmelConfig -GuardianCliLocation $GdnCliPath `
+New-GdnSemmleConfig -GuardianCliLocation $GdnCliPath `
     -LoggerLevel 'Standard' `
     -Language 'csharp' `
     -WorkingDirectory $pwd `

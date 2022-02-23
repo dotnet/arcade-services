@@ -92,7 +92,7 @@ stages:
 
       - pwsh: |
           . $(Build.SourcesDirectory)\eng\codeql.ps1
-          New-GdnSemmelConfig -GuardianCliLocation $(GuardianCliLocation) `
+          New-GdnSemmleConfig -GuardianCliLocation $(GuardianCliLocation) `
             -LoggerLevel 'Standard' `
             -Language 'csharp' `
             -WorkingDirectory $(Build.SourcesDirectory) `
@@ -103,7 +103,7 @@ stages:
 
       - pwsh: |
           . $(Build.SourcesDirectory)\eng\codeql.ps1
-          New-GdnSemmelConfig -GuardianCliLocation $(GuardianCliLocation) `
+          New-GdnSemmleConfig -GuardianCliLocation $(GuardianCliLocation) `
             -LoggerLevel 'Standard' `
             -Language 'javascript' `
             -WorkingDirectory $(Build.SourcesDirectory) `

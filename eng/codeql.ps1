@@ -25,7 +25,7 @@ function Initialize-Gdn {
     & $GuardianCliLocation init --working-directory $WorkingDirectory --logger-level $LoggerLevel
 }
 
-function New-GdnSemmelConfig {
+function New-GdnSemmleConfig {
     param(
         [Parameter(Mandatory)]
         [string]$GuardianCliLocation,
