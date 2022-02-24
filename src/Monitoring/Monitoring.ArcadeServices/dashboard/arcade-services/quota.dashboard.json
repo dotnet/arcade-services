@@ -31,9 +31,9 @@
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "iteration": 1634710085216,
+  "iteration": 1645666936999,
   "links": [
     {
       "asDropdown": false,
@@ -48,9 +48,13 @@
       "url": "https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/quotas"
     }
   ],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -62,7 +66,6 @@
         "alertName": "",
         "dashboardAlerts": true,
         "dashboardTitle": "",
-        "folderId": null,
         "maxItems": 10,
         "showOptions": "current",
         "sortOrder": 1,
@@ -76,7 +79,7 @@
         },
         "tags": []
       },
-      "pluginVersion": "8.1.4",
+      "pluginVersion": "8.3.6",
       "targets": [
         {
           "appInsights": {
@@ -157,7 +160,10 @@
           }
         ]
       },
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -283,7 +289,10 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -338,7 +347,10 @@
           }
         ]
       },
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -478,7 +490,7 @@
             "query": {
               "params": [
                 "A",
-                "5m",
+                "10m",
                 "now"
               ]
             },
@@ -502,7 +514,10 @@
           }
         ]
       },
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -583,7 +598,7 @@
             "timeGrain": "auto"
           },
           "azureLogAnalytics": {
-            "query": "customEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| project\n    timestamp,\n    resource = tostring(customDimensions.name),\n    location = tostring(customDimensions.location),\n    current = toreal(customMeasurements.current),\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\n| where resource != 'NetworkWatchers'\n| where location == 'westus2'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\n| order by timestamp asc, resource",
+            "query": "customEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| project\n    timestamp,\n    resource = tostring(customDimensions.name),\n    location = tostring(customDimensions.location),\n    current = toreal(customMeasurements.current),\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\n| where resource != 'NetworkWatchers' and resource != \"standardDASv4Family\"\n| where location == 'westus2'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\n| order by timestamp asc, resource",
             "resource": "[parameter(dotnet-eng-appinsights-resourcepath)]",
             "resultFormat": "time_series",
             "workspace": "[parameter(default-workspace-resourcepath)]"
@@ -598,6 +613,10 @@
           },
           "azureResourceGraph": {
             "resultFormat": "table"
+          },
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "F2XodEi7z"
           },
           "insightsAnalytics": {
             "query": "",
@@ -666,7 +685,10 @@
           }
         ]
       },
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -789,7 +811,10 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -803,7 +828,10 @@
       "type": "row"
     },
     {
-      "datasource": "Azure Monitor",
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "F2XodEi7z"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -913,14 +941,13 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
-  "schemaVersion": 30,
+  "refresh": "",
+  "schemaVersion": 34,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
-        "allValue": null,
         "current": {
           "selected": true,
           "text": [
@@ -938,8 +965,6 @@
             "StandardSnapshotCount"
           ]
         },
-        "description": null,
-        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Resource",
@@ -985,5 +1010,6 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Azure Quota Limits"
+  "title": "Azure Quota Limits",
+  "weekStart": ""
 }
