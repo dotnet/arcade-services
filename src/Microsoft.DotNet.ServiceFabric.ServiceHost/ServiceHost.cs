@@ -262,6 +262,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
                 });
             services.AddSingleton<ISystemClock, SystemClock>();
+            services.AddSingleton<Lifecycle, AppInsightsFlushLifecycle>();
         }
 
         private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)

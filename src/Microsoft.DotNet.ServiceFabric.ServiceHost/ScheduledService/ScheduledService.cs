@@ -126,7 +126,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
+                    _logger.LogCritical(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
                 }
             }
         }
