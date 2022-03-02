@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.Internal.Health.Tests
 
         public HttpClient CreateClient(string name)
         {
-            return new HttpClient(CreateHandler(name));
+            return new HttpClient(CreateHandler(name)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
         }
 
         public HttpMessageHandler CreateHandler(string name)

@@ -139,7 +139,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         protected void Clone(string repoUri, string commit, string targetDirectory, ILogger logger, string pat, string gitDirectory)
         {
-            string dotnetMaestro = "dotnet-maestro";
+            string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
             LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
             {
                 Checkout = false,

@@ -162,6 +162,15 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                         }
 
                         Log.LogMessage(MessageImportance.Normal, "Importing notification channel {0}...", notificationUid);
+
+                        if (notificationChannel.ContainsKey("password"))
+                        {
+                            var password = notificationChannel.GetValue("password").Value<string>();
+                            if (!password.Contains("vault"))
+                            {
+                                Log.LogWarning($"Please replace the password token with a key vault reference inside {notificationPath}");
+                            }
+                        }
                         
                         Directory.CreateDirectory(Path.GetDirectoryName(notificationPath));
                         using (var datasourceStreamWriter = new StreamWriter(notificationPath))

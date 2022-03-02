@@ -1,4 +1,5 @@
 using System;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -24,7 +25,8 @@ namespace CoreHealthMonitor
 
         public static void Configure(IServiceCollection services)
         {
-            services.Configure("DriveMonitoring", (Action<DriveMonitorOptions, IConfiguration>) ((o, s) => s.Bind(o)));
+            services.AddDefaultJsonConfiguration();
+            services.Configure<DriveMonitorOptions>("DriveMonitoring", ((o, s) => s.Bind(o)));
             services.Configure<MemoryDumpOptions>("MemoryDump", (o, s) => s.Bind(o));
         }
     }

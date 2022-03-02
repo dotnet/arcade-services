@@ -118,7 +118,7 @@ namespace Microsoft.DncEng.PatGenerator
             try
             {
                 using var connection = new VssConnection(new Uri(OAuth2Endpoint), credentials);
-                using var client = new HttpClient(connection.InnerHandler);
+                using var client = new HttpClient(connection.InnerHandler); // lgtm [cs/httpclient-checkcertrevlist-disabled] dependant on client library behavior
                 using var response = await client.GetAsync($"{OAuth2Endpoint}/_apis/accounts");
                 availableOrganizations = await JsonSerializer.DeserializeAsync<List<AzureDevOpsOrganizationModel>>(await response.Content.ReadAsStreamAsync());
             }
