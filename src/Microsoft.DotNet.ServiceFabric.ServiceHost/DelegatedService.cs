@@ -14,16 +14,25 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public static class DelegatedService
     {
-        public static async Task RunServiceLoops<T>(IServiceProvider services, CancellationToken cancellationToken, params Func<CancellationToken, Task>[] loops)
+        public static async Task RunServiceLoops<T>(IServiceProvider services, CancellationToken serviceFabricShutdownToken, params Func<CancellationToken, Task>[] loops)
         {
-            using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            // Services run in a set of "loops". Normally this is the "RunAsync" loop, and the "Scheulded" loop for Cron jobs
+            // Normal expectation is that these loops should never exit before being told to,
+            // since that means the service is no longer servicing
+            // The way we've piped that "being told to" through in our framework
+            // is via the cancellation token (serviceFabricShutdownToken).
+            // So a "good" exit is when every task responds to that token and throws an OperationCancellationException
+            // relaying that information (via token.ThrowIfCancellationRequested)
+            // Any process exiting without that, or with some OTHER exception means something abnormal has happened
+            // and we need to shutdown all the other loops so that we can restart the process to hopefully fix the problem
+            using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(serviceFabricShutdownToken);
             await Lifecycle.OnStartingAsync(services);
             var logger = services.GetRequiredService<ILogger<T>>();
             List<Task> pendingTasks = new List<Task>();
             try
             {
                 await using var _ =
-                    cancellationToken.Register(() => logger.LogInformation("Service abort cancellation requested"));
+                    serviceFabricShutdownToken.Register(() => logger.LogInformation("Service abort cancellation requested"));
                 logger.LogInformation("Entering service 'RunAsync'");
                 pendingTasks = loops.Select(l => l(linkedToken.Token)).ToList();
                 var finished = await Task.WhenAny(pendingTasks);
