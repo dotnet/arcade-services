@@ -17,7 +17,7 @@ namespace Microsoft.DncEng.SecretManager
             byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeSeconds() / 30);
             Array.Reverse((Array)timestampBy30sBytes);
             byte[] hash;
-            using (HMACSHA1 hmacsha1 = new HMACSHA1(_seed))
+            using (HMACSHA1 hmacsha1 = new HMACSHA1(_seed)) // lgtm [cs/weak-hmacs] Algorithm specified by OTP standard
                 hash = hmacsha1.ComputeHash(timestampBy30sBytes);
             Array.Reverse((Array)hash);
             int num = (int)hash[0] & 15;

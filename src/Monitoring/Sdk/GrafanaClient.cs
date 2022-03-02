@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public GrafanaClient(string baseUrl, string apiToken)
         {
             _baseUrl = baseUrl;
-            _client = new HttpClient();
+            _client = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
         }
 

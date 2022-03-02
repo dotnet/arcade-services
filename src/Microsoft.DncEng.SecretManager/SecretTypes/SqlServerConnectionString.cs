@@ -69,11 +69,11 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             switch (currentUserIndex)
             {
                 case "1":
-                    nextUserId = context.SecretName + "-2";
+                    nextUserId = context.SecretName + "-2"; // lgtm [cs/hardcoded-credentials] Value decorates name intentionally and checked elsewhere
                     nextUserIndex = 2;
                     break;
                 case "2":
-                    nextUserId = context.SecretName + "-1";
+                    nextUserId = context.SecretName + "-1"; // lgtm [cs/hardcoded-credentials] Value decorates name intentionally and checked elsewhere
                     nextUserIndex = 1;
                     break;
                 default:

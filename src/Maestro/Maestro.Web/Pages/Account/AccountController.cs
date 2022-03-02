@@ -67,7 +67,7 @@ namespace Maestro.Web.Pages.Account
             }
 
             SignInResult signInResult =
-                await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true);
+                await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true); // lgtm [cs/user-controlled-bypass] Safe in this context, failure will block user from sign-in
             if (signInResult.Succeeded)
             {
                 return RedirectToLocal(returnUrl);

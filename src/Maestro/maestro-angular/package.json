@@ -76,7 +76,7 @@
     "ts-node": "~7.0.0",
     "tslint": "~5.11.0",
     "typescript": "~3.2.2",
-    "url-parse": ">=1.5.2",
+    "url-parse": ">=1.5.8",
     "webpack-bundle-analyzer": "^3.6.0",
     "xmlhttprequest-ssl": ">=1.6.2"
   }
