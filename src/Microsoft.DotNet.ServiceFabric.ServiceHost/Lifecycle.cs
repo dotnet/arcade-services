@@ -45,8 +45,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             var lifecycles = services.GetServices<Lifecycle>();
             if (lifecycles != null)
             {
-                IEnumerable<Lifecycle> lifecycleLIst = lifecycles.ToList();
-                foreach (var lifecycle in lifecycleLIst)
+                IEnumerable<Lifecycle> lifecycleList = lifecycles.ToList();
+                foreach (var lifecycle in lifecycleList)
                 {
                     try
                     {
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
                 try
                 {
-                    await Task.WhenAll(lifecycleLIst.Select(l => l.OnStoppingAsync()));
+                    await Task.WhenAll(lifecycleList.Select(l => l.OnStoppingAsync()));
                 }
                 catch (Exception e)
                 {
