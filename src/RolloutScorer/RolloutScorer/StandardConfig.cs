@@ -59,7 +59,7 @@ namespace RolloutScorer
             {
                 ScorecardsGithubOrg = "dotnet",
                 ScorecardsGithubRepo = "arcade",
-                ScorecardsDirectoryPath = "Documentation/Rollout-Scorecards/",
+                ScorecardsDirectoryPath = "Documentation/TeamProcess/Rollout-Scorecards/",
             },
         };
     }
