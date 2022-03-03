@@ -257,7 +257,7 @@ Please fill out the following root cause analysis, and then close the issue.
 
 Filling it out promptly after resolving an issue ensures things are fresh in your mind.
 
-For help filling out this form, see the [Root Cause Analysis](https://github.com/dotnet/core-eng/wiki/Root-Cause-Analysis).
+For help filling out this form, see the [Root Cause Analysis](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/133/Root-Cause-Analysis).
 
 ## Describe the scope of the problem
 
@@ -268,9 +268,9 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
 
 ### What additional diagnostics would have reduced the time to fix the issue?
 
-### What additional [telemetry](https://github.com/dotnet/core-eng/blob/main/Documentation/Alerting.md) would have allowed us to catch the issue sooner?
+### What additional [telemetry](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/182/Alerting) would have allowed us to catch the issue sooner?
 
-### What additional [testing or validation](https://github.com/dotnet/core-eng/tree/main/Documentation/Validation) would have caught this error before rollout?
+### What additional [testing or validation](https://github.com/dotnet/arcade/tree/main/Documentation/Validation) would have caught this error before rollout?
 
 ",
             };
