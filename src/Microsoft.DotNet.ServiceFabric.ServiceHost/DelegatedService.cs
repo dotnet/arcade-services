@@ -60,7 +60,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             );
                             break;
                         }
+                        // The first await was just to get the task that was no longer running
+                        // now we need to await it to get it's exception/result
                         await completed;
+                        logger.LogWarning("During cancellation, abnormal service exit without cancellation");
                     }
                     catch (OperationCanceledException e2) when (e2.CancellationToken == linkedToken.Token)
                     {
@@ -96,6 +99,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             break;
                         }
                         await completed;
+                        // The first await was just to get the task that was no longer running
+                        // now we need to await it to get it's exception/result
+                        logger.LogWarning("During unhandled exception, abnormal service exit without cancellation");
                     }
                     catch (OperationCanceledException e2) when (e2.CancellationToken == linkedToken.Token)
                     {
