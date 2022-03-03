@@ -51,6 +51,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     try
                     {
                         var completed = await Task.WhenAny(pendingTasks);
+                        pendingTasks.Remove(completed);
                         if (completed == killTimer)
                         {
                             // Times up...
@@ -59,6 +60,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             );
                             break;
                         }
+                        await completed;
                     }
                     catch (OperationCanceledException e2) when (e2.CancellationToken == linkedToken.Token)
                     {
@@ -84,6 +86,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     try
                     {
                         var completed = await Task.WhenAny(pendingTasks);
+                        pendingTasks.Remove(completed);
                         if (completed == killTimer)
                         {
                             // Times up...
@@ -92,6 +95,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             );
                             break;
                         }
+                        await completed;
                     }
                     catch (OperationCanceledException e2) when (e2.CancellationToken == linkedToken.Token)
                     {
