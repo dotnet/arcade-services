@@ -296,6 +296,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+            await Lifecycle.OnStartingAsync(Container);
             var logger = Container.GetRequiredService<ILogger<DelegatedActor>>();
             try
             {
@@ -313,6 +314,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             {
                 logger.LogCritical(e, "Unhandled exception crashing actor execution");
                 throw;
+            }
+            finally
+            {
+                await Lifecycle.OnStoppingAsync(Container);
             }
         }
 

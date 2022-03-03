@@ -90,7 +90,7 @@ namespace CoreHealthMonitor
         private async Task UploadMemoryDumpsAsync(CancellationToken cancellationToken)
         {
             string folder = Registry.GetValue(
-                @"HKKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps",
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps",
                 "DumpFolder",
                 null
             ) as string;
