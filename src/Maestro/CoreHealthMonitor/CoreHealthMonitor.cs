@@ -23,7 +23,7 @@ namespace CoreHealthMonitor
     {
         private readonly IInstanceHealthReporter<CoreHealthMonitorService> _health;
         private readonly IOptions<DriveMonitorOptions> _driveOptions;
-        private readonly IOptions<MemoryDumpOptions> _memoryDumpOptions;
+        private readonly IOptionsMonitor<MemoryDumpOptions> _memoryDumpOptions;
         private readonly ILogger<CoreHealthMonitorService> _logger;
         private readonly ServiceContext _context;
         private readonly ISystemClock _clock;
@@ -32,7 +32,7 @@ namespace CoreHealthMonitor
         public CoreHealthMonitorService(
             IInstanceHealthReporter<CoreHealthMonitorService> health,
             IOptions<DriveMonitorOptions> driveOptions,
-            IOptions<MemoryDumpOptions> memoryDumpOptions,
+            IOptionsMonitor<MemoryDumpOptions> memoryDumpOptions,
             ILogger<CoreHealthMonitorService> logger,
             ServiceContext context,
             ISystemClock clock)
@@ -48,7 +48,7 @@ namespace CoreHealthMonitor
 
         private BlobContainerClient CreateBlobClient()
         {
-            return new BlobContainerClient(new Uri(_memoryDumpOptions.Value.ContainerUri));
+            return new BlobContainerClient(new Uri(_memoryDumpOptions.CurrentValue.ContainerUri));
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -117,7 +117,7 @@ namespace CoreHealthMonitor
                 null
             ) as string;
 
-            string containerUri = _memoryDumpOptions.Value.ContainerUri;
+            string containerUri = _memoryDumpOptions.CurrentValue.ContainerUri;
             if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(containerUri))
             {
                 _logger.LogWarning("Memory dump monitoring settings not specified, skipping");
