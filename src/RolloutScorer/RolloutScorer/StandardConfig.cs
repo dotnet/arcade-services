@@ -58,8 +58,8 @@ namespace RolloutScorer
             GithubConfig = new GithubConfig
             {
                 ScorecardsGithubOrg = "dotnet",
-                ScorecardsGithubRepo = "core-eng",
-                ScorecardsDirectoryPath = "Documentation/Rollout-Scorecards/",
+                ScorecardsGithubRepo = "arcade",
+                ScorecardsDirectoryPath = "Documentation/TeamProcess/Rollout-Scorecards/",
             },
         };
     }

@@ -63,8 +63,30 @@ namespace CoreHealthMonitor
         {
             foreach (DriveInfo drive in DriveInfo.GetDrives())
             {
-                long threshold = _driveOptions.Value.MinimumFreeSpaceBytes;
-                long freeSpace = drive.AvailableFreeSpace;
+                if (drive.DriveType != DriveType.Fixed)
+                {
+                    _logger.LogInformation("Skipping drive {DriveName} of type {DriveType}", drive.Name, drive.DriveType);
+                    continue;
+                }
+
+                if (!drive.IsReady)
+                {
+                    _logger.LogWarning("Drive {DriveName} reports !IsReady", drive.Name);
+                    continue;
+                }
+
+                long threshold;
+                long freeSpace;
+                try
+                {
+                    threshold = _driveOptions.Value.MinimumFreeSpaceBytes;
+                    freeSpace = drive.AvailableFreeSpace;
+                }
+                catch (IOException e)
+                {
+                    _logger.LogError(e, "Failed to get drive space information for drive {DriveName}", drive.Name);
+                    break;
+                }
 
                 if (freeSpace < threshold)
                 {
@@ -90,7 +112,7 @@ namespace CoreHealthMonitor
         private async Task UploadMemoryDumpsAsync(CancellationToken cancellationToken)
         {
             string folder = Registry.GetValue(
-                @"HKKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps",
+                @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps",
                 "DumpFolder",
                 null
             ) as string;

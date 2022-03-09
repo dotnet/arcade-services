@@ -60,7 +60,7 @@
     "jasmine-core": "~2.99.1",
     "jasmine-reporters": "^2.3.2",
     "jasmine-spec-reporter": "~4.2.1",
-    "karma": "^4.4.1",
+    "karma": "^6.3.16",
     "karma-chrome-launcher": "~2.2.0",
     "karma-coverage-istanbul-reporter": "~2.0.6",
     "karma-jasmine": "~1.1.2",
@@ -76,7 +76,7 @@
     "ts-node": "~7.0.0",
     "tslint": "~5.11.0",
     "typescript": "~3.2.2",
-    "url-parse": ">=1.5.8",
+    "url-parse": ">=1.5.9",
     "webpack-bundle-analyzer": "^3.6.0",
     "xmlhttprequest-ssl": ">=1.6.2"
   }
