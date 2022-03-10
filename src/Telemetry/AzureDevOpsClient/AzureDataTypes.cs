@@ -4,6 +4,7 @@
 
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
@@ -305,6 +306,69 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         /// <summary>
         ///     The full http link to the resource
         /// </summary>
+        public string Url { get; set; }
+    }
+
+    /// <summary>
+    ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create?view=azure-devops-rest-6.0#jsonpatchdocument
+    /// </summary>
+    public sealed class JsonPatchDocument
+    {
+        public string From { get; set; }
+        public string Op { get; set; }
+        public string Path { get; set; }
+        public Object Value { get; set; }
+    }
+
+    /// <summary>
+    ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create?view=azure-devops-rest-6.0#workitem
+    /// </summary>
+    public sealed class WorkItem
+    {
+        [JsonProperty("_links")]
+        public ReferenceLinks Links { get; set; }
+        public WorkItemCommentVersionRef CommentVersionRef { get; set; }
+        public Dictionary<string, object> Fields { get; set; }
+        public int Id { get; set; }
+        public List<WorkItemRelation> Relations { get; set; }
+        public int Rev { get; set; }
+        public string Url { get; set; }
+    }
+
+    /// <summary>
+    ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create?view=azure-devops-rest-6.0#referencelinks
+    /// </summary>
+    public sealed class ReferenceLinks
+    {
+        public Badge Self { get; set; }
+        public Badge WorkItemUpdates { get; set; }
+        public Badge WorkItemRevisions { get; set; }
+        public Badge WorkItemHistory { get; set; }
+        public Badge Html { get; set; }
+        public Badge WorkItemType { get; set; }
+        public Badge Fields { get; set; }
+    }
+
+    /// <summary>
+    ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create?view=azure-devops-rest-6.0#workitemcommentversionref
+    /// </summary>
+    public sealed class WorkItemCommentVersionRef
+    {
+        public int CommentId { get; set; }
+        public int CreatedInRevision { get; set; }
+        public bool IsDeleted { get; set; }
+        public string Text { get; set; }
+        public string Url { set; get; }
+        public int Version { get; set; }
+    }
+
+    /// <summary>
+    ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/create?view=azure-devops-rest-6.0#workitemrelation
+    /// </summary>
+    public sealed class WorkItemRelation
+    {
+        public Object Attributes { get; set; }
+        public string Rel { get; set; }
         public string Url { get; set; }
     }
 }

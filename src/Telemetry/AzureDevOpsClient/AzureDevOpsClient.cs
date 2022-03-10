@@ -146,6 +146,39 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return JsonConvert.DeserializeObject<Timeline>(json);
         }
 
+        public async Task<WorkItem> CreateRCAWorkItem(string project, string title, CancellationToken cancellationToken)
+        {
+            Dictionary<string, string> fields = new Dictionary<string, string>();
+            fields.Add("System.Title", title);
+
+            string json = await CreateWorkItem(project, "RCA", fields, cancellationToken);
+            return JsonConvert.DeserializeObject<WorkItem>(json);
+        }
+
+        private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
+        {
+            StringBuilder builder = GetProjectApiRootBuilder(project);
+            builder.Append($"/wit/workitems/${type}?api-version=6.0");
+
+            List<JsonPatchDocument> patchDocuments = new List<JsonPatchDocument>();
+            foreach(var field in fields)
+            {
+                JsonPatchDocument patchDocument = new JsonPatchDocument()
+                {
+                    From = null,
+                    Op = "add",
+                    Path = $"/fields/{field.Key}",
+                    Value = field.Value
+                };
+
+                patchDocuments.Add(patchDocument);
+            }
+
+            string body = JsonConvert.SerializeObject(patchDocuments);
+
+            return (await PostJsonResult(builder.ToString(), body, cancellationToken)).Body;
+        }
+
         private StringBuilder GetProjectApiRootBuilder(string project)
         {
             var builder = new StringBuilder();
@@ -180,6 +213,46 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                         throw;
                     }
                     catch (Exception) when (retry -- > 0)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    }
+                }
+            }
+            finally
+            {
+                _parallelism.Release();
+            }
+        }
+
+        private async Task<JsonResult> PostJsonResult(string uri, string body, CancellationToken cancellationToken)
+        {
+            await _parallelism.WaitAsync(cancellationToken);
+            try
+            {
+                int retry = 5;
+                while (true)
+                {
+                    try
+                    {
+                        var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+                        using (HttpResponseMessage response = await _httpClient.PostAsync(uri, content, cancellationToken))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            string responseBody = await response.Content.ReadAsStringAsync();
+                            response.Headers.TryGetValues("x-ms-continuationtoken",
+                                out IEnumerable<string> continuationTokenHeaders);
+                            string continuationToken = continuationTokenHeaders?.FirstOrDefault();
+                            var result = new JsonResult(responseBody, continuationToken);
+
+                            return result;
+                        }
+                    }
+                    catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+                    {
+                        throw;
+                    }
+                    catch (Exception) when (retry-- > 0)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     }
