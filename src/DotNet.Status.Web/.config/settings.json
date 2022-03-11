@@ -14,6 +14,13 @@
   "ApplicationInsights": {
     "InstrumentationKey": "[vault(app-insights-instrumentation-key)]"
   },
+  "AzureDevOps": {
+    "BaseUrl": "https://dev.azure.com",
+    "Organization": "dnceng",
+    "Project": "internal",
+    "MaxParallelRequests": 10,
+    "AccessToken": "[vault(dn-bot-dnceng-workitem-rw)]",
+  },
   "BuildMonitor": {
     "Monitor": {
       "BaseUrl": "https://dev.azure.com",

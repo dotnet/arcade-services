@@ -14,6 +14,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,14 +29,19 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
+        private readonly IOptions<AzureDevOpsOptions> _azureDevOpsOptions;
         private readonly ITimelineIssueTriage _timelineIssueTriage;
         private readonly ITeamMentionForwarder _teamMentionForwarder;
+        private readonly Lazy<IAzureDevOpsClient> _azureClientLazy;
         private readonly ISystemClock _systemClock;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            IAzureDevOpsClientFactory azureDevOpsClientFactory,
             ITimelineIssueTriage timelineIssueTriage,
+            IOptions<AzureDevOpsOptions> azureDevOpsOptions,
             ILogger<GitHubHookController> logger,
             ITeamMentionForwarder teamMentionForwarder,
             ISystemClock systemClock)
@@ -45,8 +51,22 @@ namespace DotNet.Status.Web.Controllers
             _teamMentionForwarder = teamMentionForwarder;
             _systemClock = systemClock;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _azureDevOpsOptions = azureDevOpsOptions;
+            _azureDevOpsClientFactory = azureDevOpsClientFactory;
+            _azureClientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
+        }
+
+        private IAzureDevOpsClient AzureClient => _azureClientLazy.Value;
+
+        private IAzureDevOpsClient BuildAzureDevOpsClient()
+        {
+            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(
+                _azureDevOpsOptions.Value.BaseUrl,
+                _azureDevOpsOptions.Value.Organization,
+                _azureDevOpsOptions.Value.MaxParallelRequests,
+                _azureDevOpsOptions.Value.AccessToken);
         }
 
         private async Task EnsureLabelsAsync()
@@ -243,6 +263,12 @@ namespace DotNet.Status.Web.Controllers
                 assignee = data.Sender.Login;
             }
 
+            _logger.LogInformation("Opening RCA work item in Azure Boards {org}/{project}", _azureDevOpsOptions.Value.Organization, _azureDevOpsOptions.Value.Project);
+            
+            // The RCA template has all of the sections that we want to be filled out, so we don't need to specify the text here
+            WorkItem workItem = await AzureClient.CreateRCAWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
+            _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
+
             string issueRepo = data.Repository.Name;
             string issueOrg = data.Repository.Owner.Login;
             _logger.LogInformation("Opening connection to open issue to {org}/{repo}", options.Organization, options.Repository);
@@ -253,25 +279,11 @@ namespace DotNet.Status.Web.Controllers
                 Body =
                     $@"An issue, {issueOrg}/{issueRepo}#{issueNumber}, that was marked with the '{triggeringLabel}' label was recently closed.
 
-Please fill out the following root cause analysis, and then close the issue.
+Please fill out the root cause analysis [Azure Boards work item]({workItem.Links.Html.Href}), and then close this issue and the Azure Board work item.
 
 Filling it out promptly after resolving an issue ensures things are fresh in your mind.
 
 For help filling out this form, see the [Root Cause Analysis](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/133/Root-Cause-Analysis).
-
-## Describe the scope of the problem
-
-## Brief description of root cause of the problem
-
-## Diagnostic / Monitoring
-### Links to any queries or metrics used for diagnosis
-
-### What additional diagnostics would have reduced the time to fix the issue?
-
-### What additional [telemetry](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/182/Alerting) would have allowed us to catch the issue sooner?
-
-### What additional [testing or validation](https://github.com/dotnet/arcade/tree/main/Documentation/Validation) would have caught this error before rollout?
-
 ",
             };
 

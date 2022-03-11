@@ -174,6 +174,16 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 patchDocuments.Add(patchDocument);
             }
 
+            JsonPatchDocument areaPath = new JsonPatchDocument()
+            {
+                From = null,
+                Op = "add",
+                Path = "/fields/System.AreaPath",
+                Value = "internal\\Dotnet-Core-Engineering"
+            };
+
+            patchDocuments.Add(areaPath);
+
             string body = JsonConvert.SerializeObject(patchDocuments);
 
             return (await PostJsonResult(builder.ToString(), body, cancellationToken)).Body;
@@ -234,7 +244,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 {
                     try
                     {
-                        var content = new StringContent(body, Encoding.UTF8, "application/json");
+                        var content = new StringContent(body, Encoding.UTF8, "application/json-patch+json");
 
                         using (HttpResponseMessage response = await _httpClient.PostAsync(uri, content, cancellationToken))
                         {

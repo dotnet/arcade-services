@@ -4,6 +4,13 @@ storageLocation:
     subscription: 68672ab8-de0c-40f1-8d1b-ffb20bd62c0f
     name: dotneteng-status-prod
 
+references:
+  helixkv:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: helixkv
+
 keys:
   dotnet-status-data-protection:
     type: RSA
