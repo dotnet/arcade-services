@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Models;
+using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebHooks.Filters;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.Tests;
@@ -45,6 +47,7 @@ namespace DotNet.Status.Web.Tests
     public class GitHubHookControllerTests
     {
         public static string TestTeamsWebHookUri = "https://example.teams/webhook/sha";
+        public static string TestAzdoWebHookUri = "https://example.azdo/webhook/api";
         public static string WatchedTeam = "test-user/watched-team";
         public static string IgnoredRepo = "test-user/ignored";
 
@@ -913,6 +916,15 @@ namespace DotNet.Status.Web.Tests
                 services.AddSingleton<IHttpClientFactory>(mockClientFactory);
 
                 services.AddSingleton(Mock.Of<IGitHubApplicationClientFactory>());
+                services.AddSingleton(Mock.Of<IAzureDevOpsClientFactory>());
+                services.Configure<AzureDevOpsOptions>(o => 
+                {
+                    o.Project = "project";
+                    o.Organization = "organization";
+                    o.BaseUrl = TestAzdoWebHookUri;
+                    o.MaxParallelRequests = 10;
+                    o.AccessToken = "token";
+                });
                 services.AddSingleton(Mock.Of<ITimelineIssueTriage>());
 
 
