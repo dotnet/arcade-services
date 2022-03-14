@@ -19,7 +19,7 @@
     "Organization": "dnceng",
     "Project": "internal",
     "MaxParallelRequests": 10,
-    "AccessToken": "[vault(dn-bot-dnceng-workitem-rw)]",
+    "AccessToken": "[vault(dn-bot-dnceng-workitems-rw)]"
   },
   "BuildMonitor": {
     "Monitor": {
