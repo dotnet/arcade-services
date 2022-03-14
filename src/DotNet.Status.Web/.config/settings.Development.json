@@ -29,9 +29,6 @@
   "GitHub": {
     "TitlePrefix": "LOCAL DEV - ",
   },
-  "ZenHub": {
-    "ApiToken": null
-  },
   "DataProtection": {
     "StorageAccountConnectionString": "",
     "KeyIdentifier": ""

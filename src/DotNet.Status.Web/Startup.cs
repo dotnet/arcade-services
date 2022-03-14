@@ -93,7 +93,6 @@ namespace DotNet.Status.Web
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana"));
             services.Configure<AnnotationsOptions>(Configuration.GetSection("Annotations"));
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth"));
-            services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub"));
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor"));
             services.Configure<KustoOptions>(Configuration.GetSection("Kusto"));
 
@@ -267,7 +266,6 @@ namespace DotNet.Status.Web
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
 
-            services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IAzureDevOpsClientFactory, AzureDevOpsClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();

@@ -139,9 +139,6 @@
       }
     }
   },
-  "ZenHub": {
-    "ApiToken": "[vault(zen-hub-api-token)]"
-  },
   "Kusto": {
     "Database": "engineeringdata",
     "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]"

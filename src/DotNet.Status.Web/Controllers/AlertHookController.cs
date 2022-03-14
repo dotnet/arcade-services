@@ -35,17 +35,14 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly ILogger _logger;
         private readonly IGitHubTokenProvider _tokenProvider;
-        private readonly ZenHubClient _zenHub;
 
         public AlertHookController(
             IGitHubTokenProvider tokenProvider,
-            ZenHubClient zenHub,
             IOptions<GitHubConnectionOptions> githubOptions,
             IOptions<GitHubClientOptions> githubClientOptions,
             ILogger<AlertHookController> logger)
         {
             _tokenProvider = tokenProvider;
-            _zenHub = zenHub;
             _githubOptions = githubOptions;
             _githubClientOptions = githubClientOptions;
             _logger = logger;

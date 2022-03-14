@@ -30,7 +30,6 @@ namespace DotNet.Status.Web
         private readonly IKustoIngestClientFactory _kustoIngestClientFactory;
         private readonly IOptions<KustoOptions> _kustoOptions;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
-        private readonly ZenHubClient _zenHub;
         private readonly TimelineIssueTriageInternal _internal;
 
         public TimelineIssueTriage(
@@ -38,7 +37,6 @@ namespace DotNet.Status.Web
             IKustoIngestClientFactory clientFactory,
             IOptions<KustoOptions> kustoOptions,
             IOptions<GitHubConnectionOptions> githubOptions,
-            ZenHubClient zenHub,
             ILogger<TimelineIssueTriage> logger)
         {
             _logger = logger;
@@ -46,7 +44,6 @@ namespace DotNet.Status.Web
             _kustoIngestClientFactory = clientFactory;
             _kustoOptions = kustoOptions;
             _githubOptions = githubOptions;
-            _zenHub = zenHub;
             _internal = new TimelineIssueTriageInternal();
         }
 
