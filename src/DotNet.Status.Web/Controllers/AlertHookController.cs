@@ -88,25 +88,6 @@ namespace DotNet.Status.Web.Controllers
                     ActiveAlertLabel);
                 issue = await client.Issue.Create(org, repo, GenerateNewIssue(notification));
                 _logger.LogInformation("Github issue {org}/{repo}#{issueNumber} created", org, repo, issue.Number);
-
-                NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
-                if (epic != null)
-                {
-                    (Repository epicRepoData, Repository issueRepoData) = await Task.WhenAll(
-                        client.Repository.Get(org, epic.Repository),
-                        client.Repository.Get(org, repo)
-                    );
-
-                    _logger.LogInformation("Adding new issue to ZenHub...");
-                    await _zenHub.AddIssueToEpicAsync(
-                        new ZenHubClient.IssueIdentifier(issueRepoData.Id, issue.Number),
-                        new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
-                    );
-                }
-                else
-                {
-                    _logger.LogInformation("No ZenHub epic configured, skipping...");
-                }
             }
             else
             {
