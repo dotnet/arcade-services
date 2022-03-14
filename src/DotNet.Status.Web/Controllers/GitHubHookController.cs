@@ -258,7 +258,7 @@ namespace DotNet.Status.Web.Controllers
                 _azureDevOpsOptions.Value.Organization,
                 _azureDevOpsOptions.Value.MaxParallelRequests,
                 _azureDevOpsOptions.Value.AccessToken);
-            WorkItem workItem = await azureDevOpsClient.CreateRCAWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
+            WorkItem workItem = await azureDevOpsClient.CreateRcaWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
             _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
 
             string issueRepo = data.Repository.Name;
