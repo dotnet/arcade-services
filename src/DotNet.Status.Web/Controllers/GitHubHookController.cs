@@ -271,7 +271,7 @@ namespace DotNet.Status.Web.Controllers
                 Body =
                     $@"An issue, {issueOrg}/{issueRepo}#{issueNumber}, that was marked with the '{triggeringLabel}' label was recently closed.
 
-Please fill out the root cause analysis [Azure Boards work item]({workItem.Links.Html.Href}), and then close this issue and the Azure Board work item.
+Please fill out the root cause analysis [Azure Boards work item]({workItem.Links.Html.Href}), and then close this issue and the Azure Boards work item.
 
 Filling it out promptly after resolving an issue ensures things are fresh in your mind.
 
