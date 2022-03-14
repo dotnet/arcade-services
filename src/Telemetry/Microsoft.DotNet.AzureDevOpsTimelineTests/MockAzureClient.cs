@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public Task<WorkItem> CreateRCAWorkItem(string project, string title, CancellationToken cancellationToken)
+        public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

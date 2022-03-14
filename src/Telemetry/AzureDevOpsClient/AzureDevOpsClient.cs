@@ -146,7 +146,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return JsonConvert.DeserializeObject<Timeline>(json);
         }
 
-        public async Task<WorkItem> CreateRCAWorkItem(string project, string title, CancellationToken cancellationToken)
+        public async Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
         {
             Dictionary<string, string> fields = new Dictionary<string, string>();
             fields.Add("System.Title", title);

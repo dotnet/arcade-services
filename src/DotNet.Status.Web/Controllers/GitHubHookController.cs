@@ -33,7 +33,6 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<AzureDevOpsOptions> _azureDevOpsOptions;
         private readonly ITimelineIssueTriage _timelineIssueTriage;
         private readonly ITeamMentionForwarder _teamMentionForwarder;
-        private readonly Lazy<IAzureDevOpsClient> _azureClientLazy;
         private readonly ISystemClock _systemClock;
 
         public GitHubHookController(
@@ -53,20 +52,8 @@ namespace DotNet.Status.Web.Controllers
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsOptions = azureDevOpsOptions;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
-            _azureClientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
-        }
-
-        private IAzureDevOpsClient AzureClient => _azureClientLazy.Value;
-
-        private IAzureDevOpsClient BuildAzureDevOpsClient()
-        {
-            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(
-                _azureDevOpsOptions.Value.BaseUrl,
-                _azureDevOpsOptions.Value.Organization,
-                _azureDevOpsOptions.Value.MaxParallelRequests,
-                _azureDevOpsOptions.Value.AccessToken);
         }
 
         private async Task EnsureLabelsAsync()
@@ -266,7 +253,12 @@ namespace DotNet.Status.Web.Controllers
             _logger.LogInformation("Opening RCA work item in Azure Boards {org}/{project}", _azureDevOpsOptions.Value.Organization, _azureDevOpsOptions.Value.Project);
             
             // The RCA template has all of the sections that we want to be filled out, so we don't need to specify the text here
-            WorkItem workItem = await AzureClient.CreateRCAWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
+            IAzureDevOpsClient azureDevOpsClient = _azureDevOpsClientFactory.CreateAzureDevOpsClient(
+                _azureDevOpsOptions.Value.BaseUrl,
+                _azureDevOpsOptions.Value.Organization,
+                _azureDevOpsOptions.Value.MaxParallelRequests,
+                _azureDevOpsOptions.Value.AccessToken);
+            WorkItem workItem = await azureDevOpsClient.CreateRCAWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
             _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
 
             string issueRepo = data.Repository.Name;
