@@ -3,15 +3,11 @@
   "KeyVaultUri": "https://DotNetEng-Status-Prod.vault.azure.net/",
   "GitHub": {
     "Organization": "dotnet",
-    "Repository": "core-eng",
+    "Repository": "arcade",
     "NotificationTarget": "dotnet/dnceng",
     "AlertLabels": [ "First Responder", "Critical" ],
     "EnvironmentLabels": [ "Production" ],
-    "TitlePrefix": "Production - ",
-    "NotificationEpic": {
-      "Repository": "core-eng",
-      "IssueNumber": 882
-    }
+    "TitlePrefix": "Production - "
   },
   "Grafana": {
     "BaseUrl": "https://dotnet-eng-grafana.westus2.cloudapp.azure.com"

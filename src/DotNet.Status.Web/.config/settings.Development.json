@@ -35,13 +35,6 @@
   },
   "GitHub": {
     "TitlePrefix": "LOCAL DEV - ",
-    "NotificationEpic": {
-      "Repository": "status-test",
-      "IssueNumber": 2
-    }
-  },
-  "ZenHub": {
-    "ApiToken": null
   },
   "DataProtection": {
     "StorageAccountConnectionString": "",

@@ -35,17 +35,14 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly ILogger _logger;
         private readonly IGitHubTokenProvider _tokenProvider;
-        private readonly ZenHubClient _zenHub;
 
         public AlertHookController(
             IGitHubTokenProvider tokenProvider,
-            ZenHubClient zenHub,
             IOptions<GitHubConnectionOptions> githubOptions,
             IOptions<GitHubClientOptions> githubClientOptions,
             ILogger<AlertHookController> logger)
         {
             _tokenProvider = tokenProvider;
-            _zenHub = zenHub;
             _githubOptions = githubOptions;
             _githubClientOptions = githubClientOptions;
             _logger = logger;
@@ -88,25 +85,6 @@ namespace DotNet.Status.Web.Controllers
                     ActiveAlertLabel);
                 issue = await client.Issue.Create(org, repo, GenerateNewIssue(notification));
                 _logger.LogInformation("Github issue {org}/{repo}#{issueNumber} created", org, repo, issue.Number);
-
-                NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
-                if (epic != null)
-                {
-                    (Repository epicRepoData, Repository issueRepoData) = await Task.WhenAll(
-                        client.Repository.Get(org, epic.Repository),
-                        client.Repository.Get(org, repo)
-                    );
-
-                    _logger.LogInformation("Adding new issue to ZenHub...");
-                    await _zenHub.AddIssueToEpicAsync(
-                        new ZenHubClient.IssueIdentifier(issueRepoData.Id, issue.Number),
-                        new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
-                    );
-                }
-                else
-                {
-                    _logger.LogInformation("No ZenHub epic configured, skipping...");
-                }
             }
             else
             {

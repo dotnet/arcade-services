@@ -30,7 +30,6 @@ namespace DotNet.Status.Web
         private readonly IKustoIngestClientFactory _kustoIngestClientFactory;
         private readonly IOptions<KustoOptions> _kustoOptions;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
-        private readonly ZenHubClient _zenHub;
         private readonly TimelineIssueTriageInternal _internal;
 
         public TimelineIssueTriage(
@@ -38,7 +37,6 @@ namespace DotNet.Status.Web
             IKustoIngestClientFactory clientFactory,
             IOptions<KustoOptions> kustoOptions,
             IOptions<GitHubConnectionOptions> githubOptions,
-            ZenHubClient zenHub,
             ILogger<TimelineIssueTriage> logger)
         {
             _logger = logger;
@@ -46,7 +44,6 @@ namespace DotNet.Status.Web
             _kustoIngestClientFactory = clientFactory;
             _kustoOptions = kustoOptions;
             _githubOptions = githubOptions;
-            _zenHub = zenHub;
             _internal = new TimelineIssueTriageInternal();
         }
 
@@ -169,8 +166,6 @@ namespace DotNet.Status.Web
                     update.AddLabel(label);
                 }
                 await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
-
-                await AddToZenHubTopic(issuePayload, gitHubClient, issue);
             }
 
             foreach (var triageItem in triageItems)
@@ -243,27 +238,6 @@ namespace DotNet.Status.Web
         private string UpdateExistingIssueBody(IssuesHookData issuePayload, IList<TriageItem> triageItems, Issue existingIssue, IList<TriageItem> existingIssueItems)
         {
             return _internal.UpdateExistingIssueBody(triageItems, issuePayload.Issue.Body, existingIssueItems, existingIssue.Body);
-        }
-
-        private async Task AddToZenHubTopic(IssuesHookData issuePayload, IGitHubClient gitHubClient, Issue issue)
-        {
-            // add into notification epic -> currently 8/2020 it's First Response epic
-            NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
-
-            if (epic != null)
-            {
-                var epicRepoData = await gitHubClient.Repository.Get(_githubOptions.Value.Organization, epic.Repository);
-
-                _logger.LogInformation("Adding the issue to ZenHub Epic...");
-                await _zenHub.AddIssueToEpicAsync(
-                    new ZenHubClient.IssueIdentifier(issuePayload.Repository.Id, issue.Number),
-                    new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
-                );
-            }
-            else
-            {
-                _logger.LogInformation("No ZenHub epic configured, skipping...");
-            }
         }
 
         private async Task IngestTriageItemsIntoKusto(ICollection<TriageItem> triageItems)
