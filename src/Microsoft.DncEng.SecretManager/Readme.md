@@ -366,11 +366,6 @@ parameters:
   environment: hostname of target maestro++ instance
 ```
 
-### Zen Hub Access Token
-```yaml
-type: zenhub-access-token
-```
-
 ### Text
 This type should be used sparingly, and only for things that aren't actually secret.
 ```yaml
