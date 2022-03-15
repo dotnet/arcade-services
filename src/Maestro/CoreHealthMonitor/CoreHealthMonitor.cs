@@ -131,7 +131,7 @@ namespace CoreHealthMonitor
                 foreach (string file in Directory.GetFiles(folder))
                 {
                     string blobName =
-                        $"{_context.NodeContext.NodeName}/{_clock.UtcNow:YYYY-MM-ddTHH-mm-ss}-{Path.GetFileName(file)}";
+                        $"{_context.NodeContext.NodeName}/{_clock.UtcNow:yyyy-MM-ddTHH-mm-ss}-{Path.GetFileName(file)}";
                     _logger.LogError(
                         "Found crash dump at '{crashDumpPath}', uploading to '{blobName}'",
                         file,
