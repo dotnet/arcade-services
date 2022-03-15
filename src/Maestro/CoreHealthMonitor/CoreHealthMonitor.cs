@@ -139,13 +139,15 @@ namespace CoreHealthMonitor
                     );
                     try
                     {
-                        await using FileStream stream = File.OpenRead(file);
-                        await _blobClient.Value.UploadBlobAsync(
-                                blobName,
-                                stream,
-                                cancellationToken
-                            )
-                            .ConfigureAwait(false);
+                        await using (FileStream stream = File.OpenRead(file))
+                        {
+                            await _blobClient.Value.UploadBlobAsync(
+                                    blobName,
+                                    stream,
+                                    cancellationToken
+                                )
+                                .ConfigureAwait(false);
+                        }
                         File.Delete(file);
                         _logger.LogInformation("Crash dump uploaded and deleted");
                     }
