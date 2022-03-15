@@ -4,8 +4,9 @@
 
 namespace CoreHealthMonitor
 {
-    public class DriveMonitorOptions
+    public class MemoryDumpOptions
     {
-        public long MinimumFreeSpaceBytes { get; set; }
+        public string ContainerUri { get; set; }
+        public string[] IgnoreDumpPatterns { get; set; }
     }
 }

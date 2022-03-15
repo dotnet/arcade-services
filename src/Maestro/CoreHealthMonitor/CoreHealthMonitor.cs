@@ -5,6 +5,8 @@
 using System;
 using System.Fabric;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
@@ -130,8 +132,15 @@ namespace CoreHealthMonitor
             {
                 foreach (string file in Directory.GetFiles(folder))
                 {
+                    string fileName = Path.GetFileName(file);
+                    if (IsIgnoredFile(fileName))
+                    {
+                        continue;
+                    }
+
+                    DateTimeOffset now = _clock.UtcNow;
                     string blobName =
-                        $"{_context.NodeContext.NodeName}/{_clock.UtcNow:yyyy-MM-ddTHH-mm-ss}-{Path.GetFileName(file)}";
+                        $"{_context.NodeContext.NodeName}/{now:yyyy-MM}/{now:dd}/{now:yyyy-MM-ddTHH-mm-ss}-{fileName}";
                     _logger.LogError(
                         "Found crash dump at '{crashDumpPath}', uploading to '{blobName}'",
                         file,
@@ -157,6 +166,17 @@ namespace CoreHealthMonitor
                     }
                 }
             }
+        }
+
+        private bool IsIgnoredFile(string fileName)
+        {
+            string[] patterns = _memoryDumpOptions.CurrentValue.IgnoreDumpPatterns;
+            if (patterns == null)
+            {
+                return false;
+            }
+
+            return patterns.Any(pattern => Regex.IsMatch(fileName, pattern, RegexOptions.IgnoreCase));
         }
     }
 }
