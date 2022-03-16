@@ -6,7 +6,6 @@ using System.Threading;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DncEng.Configuration.Extensions
 {
@@ -52,7 +51,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
                 // This exception, because it's in a System.Threading.Timer
                 // is going to crash the process, if we are reporting to AppInsights, let's send it to the channel
                 // and flush it, so that it gets recorded somewhere
-                var telemetry = _serviceProvider.GetService<TelemetryClient>();
+                var telemetry = _serviceProvider?.GetService<TelemetryClient>();
                 if (telemetry != null)
                 {
                     telemetry.TrackException(e);

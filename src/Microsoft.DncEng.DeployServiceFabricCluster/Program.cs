@@ -52,6 +52,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                 IConfigurationRoot configuration = new ConfigurationBuilder()
                     .SetBasePath(Path.GetDirectoryName(configFile))
                     .AddDefaultJsonConfiguration(new HostEnvironment(environment, configDir!),
+                        serviceProvider: null,
                         configFileName + "{0}" + configExtension)
                     .Build();
 
