@@ -13,8 +13,8 @@ namespace Microsoft.DncEng.Configuration.Extensions
     public class MappedJsonConfigurationProvider : JsonConfigurationProvider
     {
         private readonly Func<string, string> _mapFunc;
+        private readonly IServiceProvider _serviceProvider;
         private readonly Timer _timer;
-        private readonly TelemetryClient _telemetry;
         private IDictionary<string, string> _rawData = new Dictionary<string, string>();
 
         public MappedJsonConfigurationProvider(
@@ -24,8 +24,8 @@ namespace Microsoft.DncEng.Configuration.Extensions
             IServiceProvider serviceProvider) : base(source)
         {
             _mapFunc = mapFunc;
+            _serviceProvider = serviceProvider;
             _timer = new Timer(Reload, null, reloadTime, reloadTime);
-            _telemetry = serviceProvider.GetService<TelemetryClient>();
         }
 
         public override void Load(Stream stream)
@@ -52,8 +52,13 @@ namespace Microsoft.DncEng.Configuration.Extensions
                 // This exception, because it's in a System.Threading.Timer
                 // is going to crash the process, if we are reporting to AppInsights, let's send it to the channel
                 // and flush it, so that it gets recorded somewhere
-                _telemetry?.TrackException(e);
-                _telemetry?.Flush();
+                var telemetry = _serviceProvider.GetService<TelemetryClient>();
+                if (telemetry != null)
+                {
+                    telemetry.TrackException(e);
+                    telemetry.Flush();
+                }
+
                 // Then rethrow it... resume destroying the process
                 throw;
             }
