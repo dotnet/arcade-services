@@ -165,7 +165,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             ICollection<IGenericResource> unexpectedResources,
             IResourceManager resourceManager,
             ServiceFabricNodeType nodeType,
-            ILoadBalancer? lb,
+            ILoadBalancer lb,
             string backendAddressPool,
             ISubnet subnet,
             string clusterEndpoint,
