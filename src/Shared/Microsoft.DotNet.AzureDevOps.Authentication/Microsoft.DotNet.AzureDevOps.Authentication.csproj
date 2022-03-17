@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <RootNamespace>Microsoft.DotNet.AzureDevOps.Authentication</RootNamespace>
+    <AssemblyName>Microsoft.DotNet.AzureDevOps.Authentication</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

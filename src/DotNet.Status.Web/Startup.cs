@@ -35,7 +35,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.AzureDevOps.Authentication;
 using Microsoft.DotNet.Kusto;
 using Octokit;
 using AzureStorage = Microsoft.Azure.Storage;

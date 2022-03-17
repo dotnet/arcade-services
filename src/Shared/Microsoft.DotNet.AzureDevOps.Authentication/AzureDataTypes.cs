@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.Internal.AzureDevOps
+namespace Microsoft.DotNet.AzureDevOps.Authentication
 {
     /// <summary>
     ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0#build

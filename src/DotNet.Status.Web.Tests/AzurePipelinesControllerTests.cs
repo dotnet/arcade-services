@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
 using DotNet.Status.Web.Controllers;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.AzureDevOps.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

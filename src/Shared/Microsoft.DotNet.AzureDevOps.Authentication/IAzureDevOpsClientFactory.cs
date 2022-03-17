@@ -4,7 +4,7 @@
 
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.AzureDevOps
+namespace Microsoft.DotNet.AzureDevOps.Authentication
 {
     public interface IAzureDevOpsClientFactory
     {

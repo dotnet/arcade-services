@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.DotNet.Internal.AzureDevOps
+namespace Microsoft.DotNet.AzureDevOps.Authentication
 {
     public sealed class AzureDevOpsClient : IAzureDevOpsClient
     {

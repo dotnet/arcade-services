@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using FluentAssertions;
-using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.AzureDevOps.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 using System;

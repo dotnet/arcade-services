@@ -14,7 +14,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.AzureDevOps.Authentication;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

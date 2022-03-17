@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DncEng.Configuration.Extensions;
-using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.AzureDevOps.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
