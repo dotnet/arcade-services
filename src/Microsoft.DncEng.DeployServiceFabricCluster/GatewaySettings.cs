@@ -5,7 +5,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
 {
     public class GatewaySettings : ResourceGroupDeployerSettings
     {
-        public Dictionary<string, string>? NeededSecurityGroupRules
+        public Dictionary<string, string> NeededSecurityGroupRules
         {
             get
             {

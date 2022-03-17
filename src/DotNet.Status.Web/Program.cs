@@ -27,7 +27,7 @@ namespace DotNet.Status.Web
                 .ConfigureAppConfiguration((host, config) =>
                 {
                     config
-                        .AddDefaultJsonConfiguration(host.HostingEnvironment)
+                        .AddDefaultJsonConfiguration(host.HostingEnvironment, serviceProvider: null)
                         .AddUserSecrets(Assembly.GetEntryAssembly())
                         .AddEnvironmentVariables()
                         .AddCommandLine(args);
