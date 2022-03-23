@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 await finished;
                 logger.LogWarning("Abnormal service exit without cancellation");
             }
-            catch (OperationCanceledException e) when (e.CancellationToken == linkedToken.Token)
+            catch (OperationCanceledException) when (serviceFabricShutdownToken.IsCancellationRequested)
             {
                 // ONE of the tasks cancelled, but we need to wait for the others
                 var killTimer = Task.Delay(TimeSpan.FromSeconds(15));
@@ -76,6 +76,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
 
                 logger.LogInformation("Normal service shutdown complete");
+                // This should rethrow and exit back to SF
+                serviceFabricShutdownToken.ThrowIfCancellationRequested();
             }
             catch (Exception e)
             {
