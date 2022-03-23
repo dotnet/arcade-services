@@ -20,9 +20,9 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
         {
             try
             {
-                string? configFile = null;
-                string? environment = null;
-                string? deploy = null;
+                string configFile = null;
+                string environment = null;
+                string deploy = null;
                 var options = new OptionSet
                 {
                     {"c|config=", c => configFile = c},
@@ -45,13 +45,14 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                     Fatal(3, $"config file '{configFile}' does not exist.");
                 }
 
-                string? configFileName = Path.GetFileNameWithoutExtension(configFile);
-                string? configExtension = Path.GetExtension(configFile);
-                string? configDir = Path.GetDirectoryName(configFile);
+                string configFileName = Path.GetFileNameWithoutExtension(configFile);
+                string configExtension = Path.GetExtension(configFile);
+                string configDir = Path.GetDirectoryName(configFile);
 
                 IConfigurationRoot configuration = new ConfigurationBuilder()
                     .SetBasePath(Path.GetDirectoryName(configFile))
                     .AddDefaultJsonConfiguration(new HostEnvironment(environment, configDir!),
+                        serviceProvider: null,
                         configFileName + "{0}" + configExtension)
                     .Build();
 
@@ -103,7 +104,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             Console.WriteLine(result);
         }
 
-        private static void RequireParameter([NotNull] string? parameter, string name)
+        private static void RequireParameter([NotNull] string parameter, string name)
         {
             if (string.IsNullOrEmpty(parameter))
             {

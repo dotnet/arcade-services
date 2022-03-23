@@ -3,14 +3,10 @@
   "KeyVaultUri": "https://DotNetEng-Status-Staging.vault.azure.net/",
   "GitHub": {
     "Organization": "dotnet",
-    "Repository": "core-eng",
+    "Repository": "arcade",
     "NotificationTarget": "dotnet/dnceng",
     "AlertLabels": [ "First Responder" ],
     "EnvironmentLabels": [ "Staging" ],
-    "TitlePrefix": "Staging - ",
-    "NotificationEpic": {
-      "Repository": "core-eng",
-      "IssueNumber": 882
-    }
+    "TitlePrefix": "Staging - "
   }
 }

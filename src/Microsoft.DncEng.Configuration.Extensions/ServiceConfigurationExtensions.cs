@@ -21,7 +21,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             {
                 IHostEnvironment env = provider.GetRequiredService<IHostEnvironment>();
                 IConfiguration config = new ConfigurationBuilder()
-                    .AddDefaultJsonConfiguration(env)
+                    .AddDefaultJsonConfiguration(env, provider)
                     .Build();
                 return config;
             });
@@ -38,7 +38,11 @@ namespace Microsoft.DncEng.Configuration.Extensions
         ///   Authentication is handled by either MSI (optionally using the '<see cref="ConfigurationConstants.ManagedIdentityIdConfigurationKey"/>' configuration value for a user-assigned managed identity), or VS/az cli authentication.
         ///   Values will be refreshed every '<see cref="ConfigurationConstants.ReloadTimeSecondsConfigurationKey"/>' seconds.
         /// </summary>
-        public static IConfigurationBuilder AddDefaultJsonConfiguration(this IConfigurationBuilder builder, IHostEnvironment hostEnvironment, string configPathFormat = ".config/settings{0}.json")
+        public static IConfigurationBuilder AddDefaultJsonConfiguration(
+            this IConfigurationBuilder builder,
+            IHostEnvironment hostEnvironment,
+            IServiceProvider serviceProvider,
+            string configPathFormat = ".config/settings{0}.json")
         {
             string rootConfigFile = string.Format(configPathFormat, "");
             string envConfigFile = string.Format(configPathFormat, "." + hostEnvironment.EnvironmentName);
@@ -63,11 +67,17 @@ namespace Microsoft.DncEng.Configuration.Extensions
             string Mapper(string v) => keyVault(appConfiguration(v));
 
             return builder
-                .AddMappedJsonFile(rootConfigFile, reloadTime, Mapper)
-                .AddMappedJsonFile(envConfigFile, reloadTime, Mapper, optional: true);
+                .AddMappedJsonFile(rootConfigFile, reloadTime, Mapper, serviceProvider)
+                .AddMappedJsonFile(envConfigFile, reloadTime, Mapper, serviceProvider, optional: true);
         }
 
-        public static IConfigurationBuilder AddMappedJsonFile(this IConfigurationBuilder builder, string filePath, TimeSpan reloadTime, Func<string, string> mapFunc, bool optional = false)
+        public static IConfigurationBuilder AddMappedJsonFile(
+            this IConfigurationBuilder builder,
+            string filePath,
+            TimeSpan reloadTime,
+            Func<string, string> mapFunc,
+            IServiceProvider serviceProvider,
+            bool optional = false)
         {
             if (builder == null)
             {
@@ -79,7 +89,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
                 throw new ArgumentException("Invalid File Path", nameof(filePath));
             }
 
-            var source = new MappedJsonConfigurationSource(reloadTime, mapFunc)
+            var source = new MappedJsonConfigurationSource(reloadTime, mapFunc, serviceProvider)
             {
                 Path = filePath,
                 Optional = optional,

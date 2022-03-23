@@ -11,6 +11,13 @@
     "DeveloperMode": true,
     "InstrumentationKey": ""
   },
+  "AzureDevOps": {
+    "BaseUrl": "https://dev.azure.com",
+    "Organization": "dnceng",
+    "Project": "internal",
+    "MaxParallelRequests": 10,
+    "AccessToken": ""
+  },
   "BuildMonitor": {
     "Monitor": {
       "AccessToken": "",
@@ -28,13 +35,6 @@
   },
   "GitHub": {
     "TitlePrefix": "LOCAL DEV - ",
-    "NotificationEpic": {
-      "Repository": "status-test",
-      "IssueNumber": 2
-    }
-  },
-  "ZenHub": {
-    "ApiToken": null
   },
   "DataProtection": {
     "StorageAccountConnectionString": "",

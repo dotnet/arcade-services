@@ -4,6 +4,9 @@
     "MinimumFreeSpaceBytes": 10000000000
   },
   "MemoryDump": {
-    "ContainerUri": "[vault(maestro-memory-dumps-container-sas-uri)]"
+    "ContainerUri": "[vault(maestro-memory-dumps-container-sas-uri)]",
+    "IgnoreDumpPatterns": [
+      "MsSense\\.exe"
+    ]
   }
 }

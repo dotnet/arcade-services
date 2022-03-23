@@ -4,6 +4,13 @@ storageLocation:
     subscription: cab65fc3-d077-467d-931f-3932eabf36d3
     name: dotneteng-status-staging
 
+references:
+  helixkv:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: helixkv
+
 keys:
   dotnet-status-data-protection:
     type: RSA
