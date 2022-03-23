@@ -40,7 +40,8 @@ stages:
       - name: AzDOBuildId
         value: $[ dependencies.setupMaestroVars.outputs['setReleaseVars.AzDOBuildId'] ]
     pool:
-      vmImage: 'windows-2019'
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
       - task: DownloadBuildArtifacts@0
         displayName: Download Build Assets
@@ -106,7 +107,8 @@ stages:
         value: ${{ coalesce(variables._DotNetArtifactsCategory, '.NETCore') }}
     condition: contains(dependencies.setupMaestroVars.outputs['setReleaseVars.TargetChannels'], format('[{0}]', ${{ parameters.channelId }} ))
     pool:
-      vmImage: 'windows-2019'
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
       - task: DownloadBuildArtifacts@0
         displayName: Download Build Assets
