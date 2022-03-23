@@ -71,8 +71,9 @@ jobs:
             - ${{ job.job }}
         - ${{ if eq(parameters.runSourceBuild, true) }}:
           - Source_Build_Complete
-        pool:
-          vmImage: windows-2019
+        pool: 
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-windows-2019
         runAsPublic: ${{ parameters.runAsPublic }}
         publishUsingPipelines: ${{ parameters.enablePublishUsingPipelines }}
         enablePublishBuildArtifacts: ${{ parameters.enablePublishBuildArtifacts }}
@@ -84,5 +85,6 @@ jobs:
         includeToolset: ${{ parameters.graphFileGeneration.includeToolset }}
         dependsOn:
           - Asset_Registry_Publish
-        pool:
-          vmImage: windows-2019
+        pool: 
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-windows-2019

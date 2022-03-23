@@ -7,13 +7,15 @@ stages:
 - stage: ${{ parameters.stageName }}
   displayName: Pre-Deployment Validation
   pool:
-    vmImage: windows-2019
+    name: NetCore1ESPool-Internal-NoMSI
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - Build
   jobs:
   - job: Validate_Existing_Services
     pool:
-      vmImage: windows-2019
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - download: current
       artifact: ValidationScripts
