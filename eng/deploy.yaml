@@ -24,8 +24,9 @@ stages:
   - build
   jobs:
   - job: ValidateSecrets
-    pool:
-      vmImage: windows-2019
+    pool: 
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - task: UseDotNet@2
       displayName: Install Correct .NET Version
@@ -50,8 +51,7 @@ stages:
           Get-ChildItem .vault-config/*.yaml |% { dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize --verify-only $_}
 
 - stage: approval
-  pool:
-    vmImage: windows-latest
+  pool: server
   dependsOn:
   - build
   - Validate
@@ -60,16 +60,10 @@ stages:
   - deployment: approval
     displayName: deployment approval (conditional)
     environment: ${{ parameters.DeploymentEnvironment }}
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: none
 
 - stage: predeploy
   displayName: Pre-Deployment
-  pool:
-    vmImage: windows-2019
+  pool: server
   dependsOn:
   - build
   - Validate
@@ -90,7 +84,8 @@ stages:
 - stage: deploy
   displayName: Deploy
   pool:
-    vmImage: windows-2019
+    name: NetCore1ESPool-Internal-NoMSI
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - predeploy
   - approval
@@ -140,6 +135,9 @@ stages:
     displayName: Deploy maestro service fabric application
     dependsOn:
     - updateDatabase
+    pool:
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - download: current
       artifact: MaestroApplication
@@ -172,6 +170,9 @@ stages:
 
   - job: deployTelemetry
     displayName: Deploy telemetry service fabric application
+    pool:
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019    
     dependsOn:
     steps:
     - download: current
@@ -205,6 +206,9 @@ stages:
 
   - job: deployStatus
     displayName: Deploy dotnet-status web app
+    pool:
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019
     dependsOn:
     steps:
     - download: current
@@ -225,6 +229,9 @@ stages:
 
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
+    pool:
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2019
     dependsOn:
     steps:
     - download: current
@@ -253,7 +260,8 @@ stages:
 - stage: postdeploy
   displayName: Post-Deployment
   pool:
-    vmImage: windows-2019
+    name: NetCore1ESPool-Internal-NoMSI
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   condition: always()
@@ -293,7 +301,8 @@ stages:
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
-    vmImage: windows-2019
+    name: NetCore1ESPool-Internal
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   variables:

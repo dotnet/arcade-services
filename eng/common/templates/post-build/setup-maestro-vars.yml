@@ -8,7 +8,8 @@ jobs:
   variables:
     - template: common-variables.yml
   pool:
-    vmImage: 'windows-2019'
+    name: NetCore1ESPool-Internal
+    demands: ImageOverride -equals 1es-windows-2019
   steps:
     - checkout: none
 
