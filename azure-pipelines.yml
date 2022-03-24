@@ -294,6 +294,8 @@ stages:
       # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
       enableSymbolValidation: false
       enableSigningValidation: false
+      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+      symbolsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
         enable: true
