@@ -1,10 +1,10 @@
 {
   "sdk": {
-    "version": "5.0.406",
+    "version": "5.0.303",
     "rollForward": "minor"
   },
   "tools": {
-    "dotnet": "5.0.406",
+    "dotnet": "5.0.303",
     "runtimes": {
       "dotnet": [
         "3.1.18"
