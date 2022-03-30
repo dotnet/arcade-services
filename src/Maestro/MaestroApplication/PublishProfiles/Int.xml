@@ -22,26 +22,9 @@
                                     ServerCertThumbprint="0123456789012345678901234567890123456789" />
   -->
   <ClusterConnectionParameters
-    ConnectionEndpoint="maestro-int.westus2.cloudapp.azure.com:19000"
-    X509Credential="true"
-    FindType="FindBySubjectName"
-    FindValue="maestro.client.westus2.cloudapp.azure.com"
-    StoreLocation="CurrentUser"
-    StoreName="My" />
-  <CertificateSource
-    VaultName="maestroint"
-    CertificateName="maestro-client-westus2-cloudapp-azure-com" />
+    ResourceGroupName="maestro-int-cluster"
+    ClusterName="maestro-int"
+    ApplicationName="MaestroApplication"
+    />
   <ApplicationParameterFile Path="..\ApplicationParameters\Int.xml" />
-  <CopyPackageParameters CompressPackage="true" />
-  <UpgradeDeployment Enabled="true" Mode="Monitored">
-    <Parameters
-      FailureAction="Rollback"
-      UpgradeReplicaSetCheckTimeoutSec="120"
-      HealthCheckWaitDurationSec="0"
-      HealthCheckRetryTimeoutSec="600"
-      HealthCheckStableDurationSec="60"
-      UpgradeDomainTimeoutSec="660"
-      UpgradeTimeoutSec="3600"
-      ForceRestart="true"/>
-  </UpgradeDeployment>
 </PublishProfile>
