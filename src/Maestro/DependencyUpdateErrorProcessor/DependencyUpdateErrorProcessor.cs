@@ -194,7 +194,7 @@ namespace DependencyUpdateErrorProcessor
 
                         if (issueNumber.HasValue)
                         {
-                            _logger.LogInformation($"Found a matching issue for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch}. Issue number: {issueNumber}");
+                            _logger.LogInformation($"Found a matching issue for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch}. Issue number: {issueNumber.Value}");
                             issue = await client.Issue.Get(repo.Id, issueNumber.Value);
                             // check if the issue is open only then update it else create a new issue and update the dictionary.
                             if (issue.State.Equals("Open"))
@@ -203,7 +203,7 @@ namespace DependencyUpdateErrorProcessor
                                 break;
                             }
 
-                            _logger.LogInformation($"Matching issue {issueNumber} for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch} was closed. Creating a new issue.");
+                            _logger.LogInformation($"Matching issue {issueNumber.Value} for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch} was closed. Creating a new issue.");
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
                         _logger.LogInformation($@"Creating a new gitHub issue for dependency Update Error, for the error message : '{repoBranchUpdateHistoryError.ErrorMessage} for the repository : '{repoBranchUpdateHistoryError.Repository}'");
@@ -242,7 +242,7 @@ namespace DependencyUpdateErrorProcessor
                                 break;
                             }
 
-                            _logger.LogInformation($"Matching issue {issueNumber} for subscription {subscriptionUpdateHistoryError.SubscriptionId} was closed. Creating a new issue.");
+                            _logger.LogInformation($"Matching issue {issueNumber.Value} for subscription {subscriptionUpdateHistoryError.SubscriptionId} was closed. Creating a new issue.");
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
                         _logger.LogInformation($@"Creating a new gitHub issue for Subscription Update Error, for the error message : '{subscriptionUpdateHistoryError.ErrorMessage} for subscription : '{subscriptionUpdateHistoryError.SubscriptionId}'");
@@ -266,7 +266,7 @@ namespace DependencyUpdateErrorProcessor
                 // check if the issue is open only then update it. Otherwise, we already created the new issue, so do nothing.
                 if (issue.State.Equals("Open"))
                 {
-                    _logger.LogInformation($@"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}' for {GetPrintableDescription(updateHistoryError)}");
+                    _logger.LogInformation($@"Updating a gitHub issue number : '{issueNumber.Value}' for the error : '{updateHistoryError.ErrorMessage}' for {GetPrintableDescription(updateHistoryError)}");
                     await UpdateIssueAsync(client, updateHistoryError, shouldReplaceDescription, description, issue, repo.Id);
                     return;
                 }

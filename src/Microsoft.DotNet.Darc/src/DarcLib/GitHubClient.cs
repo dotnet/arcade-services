@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task AddIssueComment(string repoUri, int issueNumber, string message)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
-            await Client.Issue.Comment.Create(owner, repo, issueNumber, message);
+            await ExecuteAndLogApiErrors(() => Client.Issue.Comment.Create(owner, repo, issueNumber, message));
         }
 
 
@@ -218,7 +218,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         private async Task DeleteBranchAsync(string owner, string repo, string branch)
         {
-            await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
+            await ExecuteAndLogApiErrors(() => Client.Git.Reference.Delete(owner, repo, $"heads/{branch}"));
         }
 
         /// <summary>
@@ -317,7 +317,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
+            Octokit.PullRequest pr = await ExecuteAndLogApiErrors(() => Client.PullRequest.Get(owner, repo, id));
             return new PullRequest
             {
                 Title = pr.Title,
@@ -341,7 +341,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 Body = pullRequest.Description
             };
-            Octokit.PullRequest createdPullRequest = await Client.PullRequest.Create(owner, repo, pr);
+            Octokit.PullRequest createdPullRequest = await ExecuteAndLogApiErrors(() => Client.PullRequest.Create(owner, repo, pr));
 
             return createdPullRequest.Url;
         }
@@ -356,7 +356,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
 
-            await Client.PullRequest.Update(
+            await ExecuteAndLogApiErrors(() => Client.PullRequest.Update(
                 owner,
                 repo,
                 id,
@@ -364,7 +364,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     Title = pullRequest.Title,
                     Body = pullRequest.Description
-                });
+                }));
         }
 
         /// <summary>
@@ -375,7 +375,9 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            var pullRequestCommits = await Client.PullRequest.Commits(owner, repo, id);
+
+            IReadOnlyList<PullRequestCommit> pullRequestCommits = await ExecuteAndLogApiErrors(() => Client.PullRequest.Commits(owner, repo, id));
+
             IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
             foreach (var commit in pullRequestCommits)
             {
@@ -405,11 +407,11 @@ namespace Microsoft.DotNet.DarcLib
                 MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
             };
 
-            await Client.PullRequest.Merge(owner, repo, id, mergePullRequest);
+            await ExecuteAndLogApiErrors(() => Client.PullRequest.Merge(owner, repo, id, mergePullRequest));
 
             if (parameters.DeleteSourceBranch)
             {
-                await Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
+                await ExecuteAndLogApiErrors(() => Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}"));
             }
         }
 
@@ -422,14 +424,14 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id)).LastOrDefault();
+            IssueComment lastComment = (await ExecuteAndLogApiErrors(() => Client.Issue.Comment.GetAllForIssue(owner, repo, id))).LastOrDefault();
             if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
             {
-                await Client.Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
+                await ExecuteAndLogApiErrors(() => Client.Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker));
             }
             else
             {
-                await Client.Issue.Comment.Create(owner, repo, id, message + CommentMarker);
+                await ExecuteAndLogApiErrors(() => Client.Issue.Comment.Create(owner, repo, id, message + CommentMarker));
             }
         }
 
@@ -455,7 +457,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // Get a list of all the merge policies checks runs for the current PR
             List <CheckRun> existingChecksRuns = 
-                (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
+                (await ExecuteAndLogApiErrors(() => Client.Check.Run.GetAllForReference(owner, repo, prSha)))
                 .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
             var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
@@ -464,17 +466,17 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (var newCheckRunValidation in toBeAdded)
             {
-                await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
+                await ExecuteAndLogApiErrors(() => Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha)));
             }
             foreach (var updatedCheckRun in toBeUpdated)
             {                
                 MergePolicyEvaluationResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
                 CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
-                await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
+                await ExecuteAndLogApiErrors(() => Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation));
             }
             foreach (var deletedCheckRun in toBeDeleted)
             {
-                await Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun));
+                await ExecuteAndLogApiErrors(() => Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun)));
             }
         }
 
@@ -691,6 +693,11 @@ namespace Microsoft.DotNet.DarcLib
                                             await Task.Delay(retryAfterSeconds * 1000);
                                             attempts++;
                                         }
+                                        catch(ApiValidationException ex)
+                                        {
+                                            LogApiErrorDetails(ex);
+                                            throw;
+                                        }
                                     }
 
                                     return blob;
@@ -830,8 +837,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
         {
-            Repository repository = await Client.Repository.Get(owner, repo);
-            Octokit.GitHubCommit commit = await Client.Repository.Commit.Get(repository.Id, sha);
+            Repository repository = await ExecuteAndLogApiErrors(() => Client.Repository.Get(owner, repo));
+            Octokit.GitHubCommit commit = await ExecuteAndLogApiErrors(() => Client.Repository.Commit.Get(repository.Id, sha));
             if (commit == null)
             {
                 return null;
@@ -877,7 +884,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            var commits = await Client.Repository.PullRequest.Commits(owner, repo, id);
+            var commits = await ExecuteAndLogApiErrors(() => Client.Repository.PullRequest.Commits(owner, repo, id));
             var lastCommitSha = commits.Last().Sha;
 
             return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
@@ -897,7 +904,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            var reviews = await Client.Repository.PullRequest.Review.GetAll(owner, repo, id);
+            var reviews = await ExecuteAndLogApiErrors(() => Client.Repository.PullRequest.Review.GetAll(owner, repo, id));
 
             // Filter out comments because they could come after Approved/ChangedRequested, and they don't change the decision.
             reviews = reviews.Where(r => r.State != PullRequestReviewState.Commented).ToImmutableList();
@@ -1282,6 +1289,66 @@ namespace Microsoft.DotNet.DarcLib
             PullRequest pr = await GetPullRequestAsync(pullRequestUri);
             (string owner, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
             await DeleteBranchAsync(prInfo.owner, prInfo.repo, pr.HeadBranch);
+        }
+
+        /// <summary>
+        /// Log extra details from ApiException.
+        /// 
+        /// GitHub returns a GitHub-custom JSON payload on most errors that contains more information than
+        /// the standard exception message. See <see href="https://docs.github.com/en/rest/overview/resources-in-the-rest-api#client-errors">Client Errors</see> 
+        /// for details on the structure.
+        /// </summary>
+        private void LogApiErrorDetails(ApiException apiException)
+        {
+            _logger.LogError(apiException, "Caught ApiException, will rethrow -- StatusCode: {StatusCode}", apiException.StatusCode);
+
+            if (!string.IsNullOrEmpty(apiException.ApiError.DocumentationUrl))
+            {
+                _logger.LogError("Documentation URL: {DocumentationUrl}", apiException.ApiError.DocumentationUrl);
+            }
+
+            IEnumerable<ApiErrorDetail> errorDetails = apiException.ApiError?.Errors ?? Enumerable.Empty<ApiErrorDetail>();
+            foreach (ApiErrorDetail errorDetail in errorDetails)
+            {
+                _logger.LogError("ApiErrorDetail -- Code: {Code}, Field: {Field}, Resource: {Resource}, Message: {Message}",
+                    errorDetail.Code, errorDetail.Field, errorDetail.Resource, errorDetail.Message);
+            }
+        }
+
+        /// <summary>
+        /// Execute the provided function. If the function throws <see cref="ApiException"/>, log those details
+        /// and rethrow the exception.
+        /// </summary>
+        private async Task<T> ExecuteAndLogApiErrors<T>(Func<Task<T>> function)
+        {
+            try
+            {
+                return await function();
+            }
+            catch (ApiException apiException)
+            {
+                LogApiErrorDetails(apiException);
+
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Execute the provided function. If the function throws <see cref="ApiException"/>, log those details
+        /// and rethrow the exception.
+        /// </summary>
+        private async Task ExecuteAndLogApiErrors(Func<Task> function)
+        {
+            try
+            {
+                await function();
+            }
+            catch (ApiException apiException)
+            {
+                LogApiErrorDetails(apiException);
+
+                throw;
+            }
         }
     }
 }
