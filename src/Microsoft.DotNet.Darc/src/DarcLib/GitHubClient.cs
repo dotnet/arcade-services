@@ -1300,18 +1300,15 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         private void LogApiErrorDetails(ApiException apiException)
         {
-            _logger.LogError(apiException, "Caught ApiException, will rethrow -- StatusCode: {StatusCode}", apiException.StatusCode);
-
-            if (!string.IsNullOrEmpty(apiException.ApiError.DocumentationUrl))
+            if (apiException.ApiError != null)
             {
-                _logger.LogError("Documentation URL: {DocumentationUrl}", apiException.ApiError.DocumentationUrl);
+                string logMessage = JsonConvert.SerializeObject(apiException.ApiError);
+
+                _logger.LogError(apiException, "Caught ApiException, will rethrow. ApiError: {ApiError}", logMessage);
             }
-
-            IEnumerable<ApiErrorDetail> errorDetails = apiException.ApiError?.Errors ?? Enumerable.Empty<ApiErrorDetail>();
-            foreach (ApiErrorDetail errorDetail in errorDetails)
+            else
             {
-                _logger.LogError("ApiErrorDetail -- Code: {Code}, Field: {Field}, Resource: {Resource}, Message: {Message}",
-                    errorDetail.Code, errorDetail.Field, errorDetail.Resource, errorDetail.Message);
+                _logger.LogError(apiException, "Caught ApiException, will rethrow. No ApiError included.");
             }
         }
 
