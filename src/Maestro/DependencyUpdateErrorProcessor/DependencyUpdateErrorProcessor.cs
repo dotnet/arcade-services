@@ -94,9 +94,10 @@ namespace DependencyUpdateErrorProcessor
                     }
                     else
                     {
-                        string logMessage = Newtonsoft.Json.JsonConvert.SerializeObject(ex.ApiError);
+                        string errorDetailsSerialized = Newtonsoft.Json.JsonConvert.SerializeObject(ex.ApiError.Errors);
 
-                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. ApiError: {ApiError}", logMessage);
+                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. Message: {Message}, DocumentationUrl: {DocumentationUrl},  ApiError: {ApiErrorDetails}", 
+                            ex.ApiError.Message, ex.ApiError.DocumentationUrl, errorDetailsSerialized);
                     }
                 }
                 catch (Exception ex)
