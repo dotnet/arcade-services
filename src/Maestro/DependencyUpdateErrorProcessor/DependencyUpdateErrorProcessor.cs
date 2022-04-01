@@ -86,6 +86,19 @@ namespace DependencyUpdateErrorProcessor
                 {
                     _logger.LogError(exe, "Unable to connect to reliable services.");
                 }
+                catch (ApiException ex)
+                {
+                    if (ex.ApiError == null)
+                    {
+                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. No ApiError included.");
+                    }
+                    else
+                    {
+                        string logMessage = Newtonsoft.Json.JsonConvert.SerializeObject(ex.ApiError);
+
+                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. ApiError: {ApiError}", logMessage);
+                    }
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unable to create a github issue.");
