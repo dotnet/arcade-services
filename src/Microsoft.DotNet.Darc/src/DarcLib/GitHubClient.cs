@@ -375,7 +375,9 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            var pullRequestCommits = await Client.PullRequest.Commits(owner, repo, id);
+
+            IReadOnlyList<PullRequestCommit> pullRequestCommits = await Client.PullRequest.Commits(owner, repo, id);
+
             IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
             foreach (var commit in pullRequestCommits)
             {

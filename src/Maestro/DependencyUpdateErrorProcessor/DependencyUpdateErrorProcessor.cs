@@ -86,6 +86,20 @@ namespace DependencyUpdateErrorProcessor
                 {
                     _logger.LogError(exe, "Unable to connect to reliable services.");
                 }
+                catch (ApiException ex)
+                {
+                    if (ex.ApiError == null)
+                    {
+                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. No ApiError included.");
+                    }
+                    else
+                    {
+                        string errorDetailsSerialized = Newtonsoft.Json.JsonConvert.SerializeObject(ex.ApiError.Errors);
+
+                        _logger.LogError(ex, "Unable to create GitHub issue. Caught GitHub API-related exception. Message: {Message}, DocumentationUrl: {DocumentationUrl},  ApiError: {ApiErrorDetails}", 
+                            ex.ApiError.Message, ex.ApiError.DocumentationUrl, errorDetailsSerialized);
+                    }
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Unable to create a github issue.");
@@ -123,7 +137,7 @@ namespace DependencyUpdateErrorProcessor
 
             if (!unprocessedHistoryEntries.Any())
             {
-                _logger.LogInformation($"No errors found in the 'RepositoryBranchUpdates' or 'SubscriptionUpdates' tables. The last checkpoint time was : '{checkPoint}'");
+                _logger.LogInformation("No errors found in the 'RepositoryBranchUpdates' or 'SubscriptionUpdates' tables. The last checkpoint time was : '{CheckPoint}'", checkPoint);
                 return;
             }
             foreach (var error in unprocessedHistoryEntries)
@@ -143,11 +157,11 @@ namespace DependencyUpdateErrorProcessor
                 }
                 catch (TimeoutException exe)
                 {
-                    _logger.LogError(exe, $"Unable to update the last processed error timestamp : '{error.Timestamp}");
+                    _logger.LogError(exe, "Unable to update the last processed error timestamp : '{Timestamp}", error.Timestamp);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Unable to create a github issue for error message : '{error.ErrorMessage}' for {GetPrintableDescription(error)}");
+                    _logger.LogError(ex, "Unable to create a github issue for error message : '{ErrorMessage}' for {PrintableDescription}", error.ErrorMessage, GetPrintableDescription(error));
                 }
             }
         }
@@ -178,7 +192,7 @@ namespace DependencyUpdateErrorProcessor
             {
                 case RepositoryBranchUpdateHistoryEntry repoBranchUpdateHistoryError:
                     {
-                        _logger.LogInformation($"Error Message : '{repoBranchUpdateHistoryError.ErrorMessage}' in repository :  '{repoBranchUpdateHistoryError.Repository}'");
+                        _logger.LogInformation("Error Message : '{ErrorMessage}' in repository :  '{Repository}'", repoBranchUpdateHistoryError.ErrorMessage, repoBranchUpdateHistoryError.Repository);
 
                         IReliableDictionary<(string repository, string branch), int> gitHubIssueEvaluator =
                             await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
@@ -194,7 +208,7 @@ namespace DependencyUpdateErrorProcessor
 
                         if (issueNumber.HasValue)
                         {
-                            _logger.LogInformation($"Found a matching issue for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch}. Issue number: {issueNumber}");
+                            _logger.LogInformation("Found a matching issue for {Repository}:{Branch}. Issue number: {Value}", repoBranchUpdateHistoryError.Repository, repoBranchUpdateHistoryError.Branch, issueNumber.Value);
                             issue = await client.Issue.Get(repo.Id, issueNumber.Value);
                             // check if the issue is open only then update it else create a new issue and update the dictionary.
                             if (issue.State.Equals("Open"))
@@ -203,10 +217,10 @@ namespace DependencyUpdateErrorProcessor
                                 break;
                             }
 
-                            _logger.LogInformation($"Matching issue {issueNumber} for {repoBranchUpdateHistoryError.Repository}:{repoBranchUpdateHistoryError.Branch} was closed. Creating a new issue.");
+                            _logger.LogInformation("Matching issue {IssueNumber} for {Repository}:{Branch} was closed. Creating a new issue.", issueNumber.Value, repoBranchUpdateHistoryError.Repository, repoBranchUpdateHistoryError.Branch);
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
-                        _logger.LogInformation($@"Creating a new gitHub issue for dependency Update Error, for the error message : '{repoBranchUpdateHistoryError.ErrorMessage} for the repository : '{repoBranchUpdateHistoryError.Repository}'");
+                        _logger.LogInformation("Creating a new gitHub issue for dependency Update Error, for the error message : '{ErrorMessage} for the repository : '{Repository}'", repoBranchUpdateHistoryError.ErrorMessage, repoBranchUpdateHistoryError.Repository);
                         await CreateDependencyUpdateErrorIssueAsync(
                             client,
                             repoBranchUpdateHistoryError,
@@ -219,7 +233,7 @@ namespace DependencyUpdateErrorProcessor
 
                 case SubscriptionUpdateHistoryEntry subscriptionUpdateHistoryError:
                     {
-                        _logger.LogInformation($"Error Message : '{subscriptionUpdateHistoryError.ErrorMessage}' in subscription :  '{subscriptionUpdateHistoryError.SubscriptionId}'");
+                        _logger.LogInformation("Error Message : '{ErrorMessage}' in subscription :  '{SubscriptionId}'", subscriptionUpdateHistoryError.ErrorMessage, subscriptionUpdateHistoryError.SubscriptionId);
 
                         IReliableDictionary<Guid, int> gitHubIssueEvaluator =
                             await _stateManager.GetOrAddAsync<IReliableDictionary<Guid, int>>("gitHubSubscriptionIssueEvaluator");
@@ -233,7 +247,7 @@ namespace DependencyUpdateErrorProcessor
                         }
                         if (issueNumber.HasValue)
                         {
-                            _logger.LogInformation($"Found a matching issue for subscription {subscriptionUpdateHistoryError.SubscriptionId}. Issue number: {issueNumber}");
+                            _logger.LogInformation("Found a matching issue for subscription {SubscriptionId}. Issue number: {IssueNumber}", subscriptionUpdateHistoryError.SubscriptionId, issueNumber.Value);
                             issue = await client.Issue.Get(repo.Id, issueNumber.Value);
                             // check if the issue is open only then update it else create a new issue and update the dictionary.
                             if (issue.State.Equals("Open"))
@@ -242,10 +256,10 @@ namespace DependencyUpdateErrorProcessor
                                 break;
                             }
 
-                            _logger.LogInformation($"Matching issue {issueNumber} for subscription {subscriptionUpdateHistoryError.SubscriptionId} was closed. Creating a new issue.");
+                            _logger.LogInformation("Matching issue {IssueNumber} for subscription {SubscriptionId} was closed. Creating a new issue.", issueNumber.Value, subscriptionUpdateHistoryError.SubscriptionId);
                         }
                         // Create a new issue for the error if the issue is already closed or the issue does not exist.
-                        _logger.LogInformation($@"Creating a new gitHub issue for Subscription Update Error, for the error message : '{subscriptionUpdateHistoryError.ErrorMessage} for subscription : '{subscriptionUpdateHistoryError.SubscriptionId}'");
+                        _logger.LogInformation("Creating a new gitHub issue for Subscription Update Error, for the error message : '{ErrorMessage} for subscription : '{SubscriptionId}'", subscriptionUpdateHistoryError.ErrorMessage, subscriptionUpdateHistoryError.SubscriptionId);
                         await CreateSubscriptionUpdateErrorIssueAsync(
                             client,
                             subscriptionUpdateHistoryError,
@@ -266,7 +280,7 @@ namespace DependencyUpdateErrorProcessor
                 // check if the issue is open only then update it. Otherwise, we already created the new issue, so do nothing.
                 if (issue.State.Equals("Open"))
                 {
-                    _logger.LogInformation($@"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}' for {GetPrintableDescription(updateHistoryError)}");
+                    _logger.LogInformation("Updating a gitHub issue number : '{IssueNumber}' for the error : '{ErrorMessage}' for {PrintableDescription}", issueNumber.Value, updateHistoryError.ErrorMessage, GetPrintableDescription(updateHistoryError));
                     await UpdateIssueAsync(client, updateHistoryError, shouldReplaceDescription, description, issue, repo.Id);
                     return;
                 }
@@ -330,7 +344,7 @@ namespace DependencyUpdateErrorProcessor
 **/FyiHandle :** {_options.FyiHandle}";
             newIssue.Labels.Add(labelName);
             Issue issue = await client.Issue.Create(repoId, newIssue);
-            _logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
+            _logger.LogInformation("Issue Number '{IssueNumber}' was created in '{IssueRepo}'", issue.Number, issueRepo);
             // add or update the newly generated issue number in the reliable dictionary.
             using (ITransaction tx = _stateManager.CreateTransaction())
             {
@@ -372,7 +386,7 @@ namespace DependencyUpdateErrorProcessor
 **/FyiHandle :** {_options.FyiHandle}";
             newIssue.Labels.Add(labelName);
             Issue issue = await client.Issue.Create(repoId, newIssue);
-            _logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
+            _logger.LogInformation("Issue Number '{IssueNumber}' was created in '{IssueRepo}'", issue.Number, issueRepo);
             // add or update the newly generated issue number in the reliable dictionary.
             using (ITransaction tx = _stateManager.CreateTransaction())
             {
@@ -412,7 +426,7 @@ namespace DependencyUpdateErrorProcessor
 
                 issueUpdate.Body = $@"{bodyTitle}  {description}
 **/FyiHandle :** {_options.FyiHandle}";
-                _logger.LogInformation($"Updating issue body for the issue :  '{issue.Number}'");
+                _logger.LogInformation("Updating issue body for the issue :  '{IssueNumber}'", issue.Number);
                 await client.Issue.Update(
                     repoId,
                     issue.Number,
@@ -426,7 +440,7 @@ namespace DependencyUpdateErrorProcessor
                 if (shouldReplaceDescription(updateHistoryError.Arguments, comment.Body))
                 {
                     // Issue's comment body will be updated
-                    _logger.LogInformation($"Updating comment body for the issue : '{issue.Number}'");
+                    _logger.LogInformation("Updating comment body for the issue : '{IssueNumber}'", issue.Number);
                     await client.Issue.Comment.Update(
                         repoId,
                         comment.Id,
@@ -437,7 +451,7 @@ namespace DependencyUpdateErrorProcessor
             // New error for the same repo-branch combination, so adding a new comment to it. 
             if (!string.IsNullOrEmpty(description))
             {
-                _logger.LogInformation($"Creating a new comment for the issue : '{issue.Number}'");
+                _logger.LogInformation("Creating a new comment for the issue : '{IssueNumber}'", issue.Number);
                 await client.Issue.Comment.Create(
                     repoId,
                     issue.Number,
@@ -585,7 +599,7 @@ $@"{GetGitHubIssueMarkerString(string.Empty, updateHistoryError.Method, updateHi
             // Subscription might be removed, so if the subscription does not exist then the error is no longer valid. So we can skip this error.
             if (subscription == null)
             {
-                _logger.LogInformation($@"SubscriptionId '{subscriptionId}' has been deleted for the repository : ");
+                _logger.LogInformation("SubscriptionId '{SubscriptionId}' has been deleted for the repository : ", subscriptionId);
                 return string.Empty;
             }
             description =
