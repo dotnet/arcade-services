@@ -27,46 +27,7 @@ namespace DependencyUpdateErrorProcessor
                 host =>
                 {
                     host.RegisterStatefulService<DependencyUpdateErrorProcessor>("DependencyUpdateErrorProcessorType");
-                    host.ConfigureServices(Configure);
                 });
-        }
-
-        public static void Configure(IServiceCollection services)
-        {
-            services.AddDefaultJsonConfiguration();
-            services.AddBuildAssetRegistry((provider, options) =>
-            {
-                var config = provider.GetRequiredService<IConfiguration>();
-                options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
-            });
-            services.AddGitHubTokenProvider();
-            services.Configure<GitHubClientOptions>(o =>
-            {
-                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
-                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                    ?.InformationalVersion);
-            });
-            services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
-            services.Configure<DependencyUpdateErrorProcessorOptions>(
-                (options, provider) =>
-                {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
-                    {
-                        var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
-                        // Logging statement is added to track the feature flag returns. 
-                        logger.LogError(
-                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'"
-                        );
-                    }
-
-                    options.IsEnabled = errorProcessorFlag;
-                    options.GithubUrl = config["GithubUrl"];
-                    options.FyiHandle = config["FyiHandle"];
-                }
-            );
-            services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
-            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
     }
 }
