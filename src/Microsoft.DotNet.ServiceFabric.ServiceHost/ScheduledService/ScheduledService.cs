@@ -147,14 +147,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 await scheduler.Start(cancellationToken);
                 await cancellationToken.AsTask();
             }
-            catch (OperationCanceledException)
+            finally
             {
-                //ignore
-            }
-
-            if (scheduler != null)
-            {
-                await scheduler.Shutdown(true, CancellationToken.None);
+                if (scheduler != null)
+                {
+                    await scheduler.Shutdown(true, CancellationToken.None);
+                }
             }
         }
     }
