@@ -56,6 +56,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
                     return token.Token;
                 },
                 ex => _logger.LogError(ex, "Failed to get a github token for installation id {installationId}, retrying", installationId),
+                ex => ex is ApiException exception && exception.StatusCode == HttpStatusCode.InternalServerError);
         }
 
         public string GetTokenForApp()
