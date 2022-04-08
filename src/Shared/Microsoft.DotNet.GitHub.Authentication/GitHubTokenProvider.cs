@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
         {
             if (TryGetCachedToken(installationId, out AccessToken cachedToken))
             {
-                _logger.LogInformation($"Cached token obtained for GitHub installation {installationId}. Expires at {cachedToken.ExpiresAt}.");
+                _logger.LogInformation("Cached token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, cachedToken.ExpiresAt);
                 return cachedToken.Token;
             }
 
@@ -51,12 +51,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
                     string jwt = _tokens.GetAppToken();
                     var appClient = new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
                     AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
-                    _logger.LogInformation($"New token obtained for GitHub installation {installationId}. Expires at {token.ExpiresAt}.");
+                    _logger.LogInformation("New token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, token.ExpiresAt);
                     UpdateTokenCache(installationId, token);
                     return token.Token;
                 },
-                ex => _logger.LogError(ex, $"Failed to get a github token for installation id {installationId}, retrying"),
-                ex => ex is ApiException && ((ApiException)ex).StatusCode == HttpStatusCode.InternalServerError);
+                ex => _logger.LogError(ex, "Failed to get a github token for installation id {installationId}, retrying", installationId),
         }
 
         public string GetTokenForApp()
