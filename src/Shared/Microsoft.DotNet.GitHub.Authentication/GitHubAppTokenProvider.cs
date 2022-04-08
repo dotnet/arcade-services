@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using GitHubJwt;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using System.Text;
 
@@ -29,7 +28,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return GetAppToken(options.GitHubAppId, new StringPrivateKeySource(options.PrivateKey));
         }
 
-        public string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName)
+        public static string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName)
         {
             string encodedKey = System.Environment.GetEnvironmentVariable(environmentVariableName);
             byte[] keydata = System.Convert.FromBase64String(encodedKey);
@@ -38,7 +37,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return GetAppToken(gitHubAppId, new StringPrivateKeySource(privateKey));
         }
 
-        private string GetAppToken(int gitHubAppId, IPrivateKeySource privateKeySource)
+        private static string GetAppToken(int gitHubAppId, IPrivateKeySource privateKeySource)
         {
             var generator = new GitHubJwtFactory(
                 privateKeySource,
