@@ -64,6 +64,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return _tokens.GetAppToken();
         }
 
+        public string GetTokenForApp(string name)
+        {
+            return _tokens.GetAppToken(name);
+        }
+
         public async Task<string> GetTokenForRepository(string repositoryUrl)
         {
             return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));

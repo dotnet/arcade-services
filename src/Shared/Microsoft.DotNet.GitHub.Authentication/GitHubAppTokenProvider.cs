@@ -20,7 +20,12 @@ namespace Microsoft.DotNet.GitHub.Authentication
 
         public string GetAppToken()
         {
-            var options = _options.CurrentValue;
+            return GetAppToken(Options.DefaultName);
+        }
+
+        public string GetAppToken(string name)
+        {
+            var options = _options.Get(name);
             return GetAppToken(options.GitHubAppId, new StringPrivateKeySource(options.PrivateKey));
         }
 
