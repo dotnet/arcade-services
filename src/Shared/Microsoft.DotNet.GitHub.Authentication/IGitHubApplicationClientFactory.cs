@@ -12,8 +12,9 @@ namespace Microsoft.DotNet.GitHub.Authentication
         Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo);
         IGitHubClient CreateGitHubAppClient();
 
-        /// <param name="name">When using <see href="https://docs.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions">named options</see>, 
-        /// the name of the <see cref="GitHubTokenProviderOptions"/> to use when creating the client.</param>
+        /// <summary>
+        /// Creates a GitHub App client configured the configuration that corresponds to the logical name specified by <paramref name="name"/>.
+        /// </summary>
         IGitHubClient CreateGitHubAppClient(string name);
     }
 }

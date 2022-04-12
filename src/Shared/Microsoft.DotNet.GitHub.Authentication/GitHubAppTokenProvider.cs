@@ -22,6 +22,9 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return GetAppToken(Options.DefaultName);
         }
 
+        /// <summary>
+        /// Get an app token using the <see cref="GitHubTokenProviderOptions"/> corresponding to the specified <see href="https://docs.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions">named option</see>.
+        /// </summary>
         public string GetAppToken(string name)
         {
             var options = _options.Get(name);
