@@ -11,5 +11,10 @@ namespace Microsoft.DotNet.GitHub.Authentication
     { 
         Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo);
         IGitHubClient CreateGitHubAppClient();
+
+        /// <summary>
+        /// Creates a GitHub App client configured the configuration that corresponds to the logical name specified by <paramref name="name"/>.
+        /// </summary>
+        IGitHubClient CreateGitHubAppClient(string name);
     }
 }

@@ -7,5 +7,10 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public interface IGitHubAppTokenProvider 
     {
         string GetAppToken();
+
+        /// <summary>
+        /// Get an app token using the configuration that corresponds to the logical name specified by <paramref name="name"/>.
+        /// </summary>
+        string GetAppToken(string name);
     }
 }

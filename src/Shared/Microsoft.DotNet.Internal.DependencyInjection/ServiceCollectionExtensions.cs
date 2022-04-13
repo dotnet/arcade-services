@@ -40,5 +40,26 @@ namespace Microsoft.Extensions.DependencyInjection
                 )
             );
         }
+
+        public static IServiceCollection Configure<TOptions>(
+            this IServiceCollection services,
+            string optionName,
+            string sectionName,
+            Action<TOptions, IConfiguration> configure) where TOptions : class
+        {
+            services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(provider =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>().GetSection(sectionName);
+                return new ConfigurationChangeTokenSource<TOptions>(optionName, config);
+            });
+            return services.AddSingleton<IConfigureOptions<TOptions>>(
+                provider => new ConfigureNamedOptions<TOptions>(
+                    optionName,
+                    options => configure(options,
+                        provider.GetRequiredService<IConfiguration>().GetSection(sectionName)
+                    )
+                )
+            );
+        }
     }
 }
