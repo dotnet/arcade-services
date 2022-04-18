@@ -198,8 +198,7 @@ namespace DotNet.Status.Web.Controllers
                         date);
                     break;
                 case "edited":
-                    await _teamMentionForwarder.HandleMentions(repo, issueEvent.Changes.Body.From,
-                        issueEvent.Issue.Body, title, uri, username, date);
+                    await _teamMentionForwarder.HandleMentions(repo, issueEvent.Changes.Body?.From, issueEvent.Issue.Body, title, uri, username, date);
                     break;
             }
         }
