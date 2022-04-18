@@ -2753,7 +2753,7 @@
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
-        "message": "The number of failed DotNetEng Status requests per hour is above 20. This may indicate a systemic problem that needs to be investigated.",
+        "message": "The number of failed DotNetEng Status requests per hour is above 20. This may indicate a systemic problem that needs to be investigated.\nTo intially investigate prod, run the following query in DotNetEng-Status-Prod, and to investigate staging, run the query in DotNetEng-Status-Staging:\n\n```\nunion exceptions, traces\n| project timestamp, operation_Name, customDimensions, message, problemId, details\n| order by timestamp asc\n```",
         "name": "DotNetEng Status Failed Requests/Hour alert",
         "noDataState": "ok",
         "notifications": [
