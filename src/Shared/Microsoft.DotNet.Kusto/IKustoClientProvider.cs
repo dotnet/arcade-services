@@ -4,11 +4,14 @@
 
 using System.Threading.Tasks;
 using System.Data;
+using Kusto.Data.Results;
 
 namespace Microsoft.DotNet.Kusto
 {
     public interface IKustoClientProvider
     {
         Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query);
+
+        Task<ProgressiveDataSet> ExecuteStreamableKustoQueryAsync(KustoQuery query);
     }
 }

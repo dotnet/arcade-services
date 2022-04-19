@@ -5,6 +5,7 @@
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
+using Kusto.Data.Results;
 using Microsoft.Extensions.Options;
 using System;
 using System.Data;
@@ -61,18 +62,9 @@ namespace Microsoft.DotNet.Kusto
         public async Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query)
         {
             var client = GetProvider();
-            var properties = new ClientRequestProperties();
-            foreach (var parameter in query.Parameters)
-            {
-                properties.SetParameter(parameter.Name, parameter.Value.ToString());
-            }
+            var properties = BuildClientRequestProperties(query);
 
-            string text = query.Text;
-            if (query.Parameters?.Any() == true)
-            {
-                string parameterList = string.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type.CslDataType}"));
-                text = $"declare query_parameters ({parameterList});{query.Text}";
-            }
+            string text = BuildQueryText(query);
 
             try
             {
@@ -85,6 +77,50 @@ namespace Microsoft.DotNet.Kusto
             {
                 return null;
             }
+        }
+
+        public async Task<ProgressiveDataSet> ExecuteStreamableKustoQueryAsync(KustoQuery query)
+        {
+            var client = GetProvider();
+            var properties = BuildClientRequestProperties(query);
+            properties.SetOption(ClientRequestProperties.OptionResultsProgressiveEnabled, true);
+
+            string text = BuildQueryText(query);
+
+            try
+            {
+                return await client.ExecuteQueryV2Async(
+                    DatabaseName,
+                    text,
+                    properties);
+            }
+            catch (SemanticException)
+            {
+                return null;
+            }
+        }
+
+        private ClientRequestProperties BuildClientRequestProperties(KustoQuery query)
+        {
+            var properties = new ClientRequestProperties();
+            foreach (var parameter in query.Parameters)
+            {
+                properties.SetParameter(parameter.Name, parameter.Value.ToString());
+            }
+
+            return properties;
+        }
+
+        private string BuildQueryText(KustoQuery query)
+        {
+            string text = query.Text;
+            if (query.Parameters?.Any() == true)
+            {
+                string parameterList = string.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type.CslDataType}"));
+                text = $"declare query_parameters ({parameterList});{query.Text}";
+            }
+
+            return text;
         }
 
         public void Dispose()
