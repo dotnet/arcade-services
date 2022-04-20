@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Octokit;
+using System;
 
 namespace Microsoft.DotNet.GitHub.Authentication
 {
@@ -21,6 +22,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
 
         public IGitHubClient CreateGitHubClient(string token, AuthenticationType type)
         {
+            if (Options?.ProductHeader == null)
+            {
+                throw new InvalidOperationException($"A {nameof(GitHubClientOptions.ProductHeader)} is required for a GitHub client, but the value in {nameof(GitHubClientOptions)} is null.");
+            }
+
             var client = new GitHubClient(Options.ProductHeader);
 
             if (!string.IsNullOrEmpty(token))
