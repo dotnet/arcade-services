@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <NoWarn>$(NoWarn);NU5125</NoWarn>
     <LangVersion>8.0</LangVersion>
     <IsShipping>false</IsShipping>

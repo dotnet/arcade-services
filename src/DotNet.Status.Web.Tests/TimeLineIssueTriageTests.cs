@@ -5,6 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
+using Microsoft.Data.OData.Query.SemanticAst;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Internal;
+using Octokit;
 
 namespace DotNet.Status.Web.Tests
 {
@@ -152,6 +159,36 @@ namespace DotNet.Status.Web.Tests
 
             _sut.IsDuplicate(a, b).Should().BeFalse();
             _sut.IsDuplicate(b, a).Should().BeFalse();
+        }
+
+        [Test]
+        public async Task DoNotCheckIn()
+        {
+            ServiceCollection collection = new ServiceCollection();
+            collection.AddGitHubTokenProvider();
+            collection.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
+            collection.AddSingleton<ISystemClock, SystemClock>();
+            collection.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
+            collection.AddLogging();
+            collection.AddOptions();
+            collection.AddSingleton<ExponentialRetry>();
+            collection.Configure<GitHubTokenProviderOptions>(o =>
+            {
+                o.GitHubAppId = 65630;
+                o.PrivateKey = @"<<<PLACEHOLDER>>>";
+            });
+            collection.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            collection.Configure<GitHubClientOptions>(o =>
+            {
+                o.ProductHeader = new ProductHeaderValue("Maestro",
+                    Assembly.GetEntryAssembly()
+                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                        ?.InformationalVersion);
+            });
+            using ServiceProvider provider = collection.BuildServiceProvider();
+            var factory = provider.GetRequiredService<IGitHubApplicationClientFactory>();
+            IGitHubClient client = await factory.CreateGitHubClientAsync("dotnet", "arcade");
+            var issue = await client.Issue.Get("dotnet", "arcade", 9131);
         }
 
         [Test]

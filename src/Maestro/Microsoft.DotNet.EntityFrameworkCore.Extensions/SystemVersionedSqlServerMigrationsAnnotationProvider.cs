@@ -7,19 +7,20 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Migrations.Internal;
 
 namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 {
     #pragma warning disable EF1001
-    public class SystemVersionedSqlServerMigrationsAnnotationProvider : SqlServerMigrationsAnnotationProvider
+    public class SystemVersionedSqlServerMigrationsAnnotationProvider : SqlServerAnnotationProvider
     {
         public SystemVersionedSqlServerMigrationsAnnotationProvider(
             [NotNull] MigrationsAnnotationProviderDependencies dependencies) : base(dependencies)
         {
         }
 
-        public override IEnumerable<IAnnotation> For(IIndex index)
+        public override IEnumerable<IAnnotation> For(IIndex index, bool designTime)
         {
             foreach (IAnnotation annotation in base.For(index))
             {
@@ -37,7 +38,7 @@ namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
             }
         }
 
-        public override IEnumerable<IAnnotation> For(IEntityType entityType)
+        public override IEnumerable<IAnnotation> For(IEntityType entityType, bool designTime)
         {
             foreach (IAnnotation annotation in base.For(entityType))
             {
