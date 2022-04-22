@@ -70,34 +70,6 @@
     }
   },
   {
-    "Name": "helixpoolprovider-dncengpublic-appinsights-resourcename",
-    "Values": {
-      "Staging": "helixpoolprovider-dncengpublic-int",
-      "Production": "helixpoolprovider-dncengpublic-prod"
-    }
-  },
-  {
-    "Name": "helixpoolprovider-dncengpublic-appinsights-resourcegroup",
-    "Values": {
-      "Staging": "helixpoolprovider",
-      "Production": "helixpoolprovider-dncengpublic-prod"
-    }
-  },
-  {
-    "Name": "helixpoolprovider-dncenginternal-appinsights-resourcegroup",
-    "Values": {
-      "Staging": "helixpoolprovider",
-      "Production": "helixpoolprovider-dncenginternal-prod"
-    }
-  },
-  {
-    "Name": "helixpoolprovider-dncenginternal-appinsights-resourcename",
-    "Values": {
-      "Staging": "helixpoolprovider-dncenginternal-int",
-      "Production": "helixpoolprovider-dncenginternal-prod"
-    }
-  },
-  {
     "Name": "grafana-appinsights-resourcename",
     "Values": {
       "Staging": "grafana",
@@ -112,24 +84,10 @@
     }
   },
   {
-    "Name": "helixpoolprovider-dncenginternal-appinsights-resourcepath",
-    "Values": {
-      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/helixpoolprovider/providers/microsoft.insights/components/helixpoolprovider-dncenginternal-int",
-      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/helixpoolprovider-dncenginternal-prod/providers/microsoft.insights/components/helixpoolprovider-dncenginternal-prod"
-    }
-  },
-  {
     "Name": "maestro-appinsights-resourcepath",
     "Values": {
       "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro-int-cluster/providers/Microsoft.Insights/components/maestro-int",
       "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/maestro-prod-cluster/providers/Microsoft.Insights/components/maestro-prod"
-    }
-  },
-  {
-    "Name": "helixpoolprovider-dncengpublic-appinsights-resourcepath",
-    "Values": {
-      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/helixpoolprovider/providers/microsoft.insights/components/helixpoolprovider-dncengpublic-int",
-      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/helixpoolprovider-dncengpublic-prod/providers/microsoft.insights/components/helixpoolprovider-dncengpublic-prod"
     }
   },
   {
