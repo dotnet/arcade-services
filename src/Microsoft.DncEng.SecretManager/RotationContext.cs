@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Microsoft.DncEng.SecretManager
 {
@@ -32,6 +33,7 @@ namespace Microsoft.DncEng.SecretManager
             _values[key] = value;
         }
 
+        [ItemCanBeNull]
         public async Task<SecretValue> GetSecret(SecretReference reference)
         {
             SecretValue value;
