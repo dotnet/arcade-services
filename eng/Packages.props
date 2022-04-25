@@ -23,7 +23,7 @@
     <PackageReference Update="FluentAssertions" Version="5.10.3" />
     <PackageReference Update="FluentValidation.AspNetCore" Version="8.6.2" />
     <PackageReference Update="FluentAssertions.Json" Version="5.5.0" />
-    <PackageReference Update="Humanizer.Core" Version="2.4.2" />
+    <PackageReference Update="Humanizer.Core" Version="2.8.26" />
     <PackageReference Update="JetBrains.Annotations" Version="11.1.0" PrivateAssets="All" />
     <PackageReference Update="LibGit2Sharp" Version="0.27.0-preview-0175" />
     <PackageReference Update="Microsoft.ApplicationInsights" Version="2.18.0" />
@@ -84,7 +84,7 @@
     <PackageReference Update="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.FileProviders.Physical" Version="6.0.0" />
-    <PackageReference Update="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.2" />
+    <PackageReference Update="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.Http" Version="6.0.0" />
     <PackageReference Update="Microsoft.Extensions.Identity.Core" Version="$(AspNetCoreVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging" Version="6.0.0" />
@@ -129,7 +129,7 @@
     <PackageReference Update="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
     <PackageReference Update="System.IO.FileSystem.AccessControl" Version="4.3.0" />
     <PackageReference Update="System.Net.Http" Version="4.3.4" />
-    <PackageReference Update="System.Text.Encodings.Web" Version="4.7.2" />
+    <PackageReference Update="System.Text.Encodings.Web" Version="6.0.0" />
     <PackageReference Update="System.ValueTuple" Version="4.5.0" /> 
     <PackageReference Update="WindowsAzure.Storage" Version="9.3.3" />
     <PackageReference Update="YamlDotNet" Version="9.1.4" />

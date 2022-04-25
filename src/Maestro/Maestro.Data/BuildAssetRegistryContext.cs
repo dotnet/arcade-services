@@ -12,7 +12,6 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -116,12 +115,6 @@ FOR SYSTEM_TIME ALL
                 cancellationToken);
         }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.AddDotNetExtensions();
-            base.OnConfiguring(optionsBuilder);
-        }
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -184,13 +177,22 @@ FOR SYSTEM_TIME ALL
                 .IsUnique();
 
             builder.Entity<SubscriptionUpdate>()
+                .ToTable(b =>
+                {
+                    b.IsTemporal(t =>
+                    {
+                        t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
+                        t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
+                        t.UseHistoryTable(nameof(SubscriptionUpdate) + "History");
+                    });
+                })
                 .HasOne(su => su.Subscription)
                 .WithOne()
                 .HasForeignKey<SubscriptionUpdate>(su => su.SubscriptionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.ForSqlServerIsSystemVersioned<SubscriptionUpdate, SubscriptionUpdateHistory>("6 MONTH");
 
+            builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
             builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
             builder.Entity<Repository>().HasKey(r => new {r.RepositoryName});
@@ -217,6 +219,15 @@ FOR SYSTEM_TIME ALL
                     });
 
             builder.Entity<RepositoryBranchUpdate>()
+                .ToTable(b =>
+                {
+                    b.IsTemporal(t =>
+                    {
+                        t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
+                        t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
+                        t.UseHistoryTable(nameof(RepositoryBranchUpdate) + "History");
+                    });
+                })
                 .HasOne(ru => ru.RepositoryBranch)
                 .WithOne()
                 .HasForeignKey<RepositoryBranchUpdate>(
@@ -226,6 +237,16 @@ FOR SYSTEM_TIME ALL
                         ru.BranchName
                     })
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RepositoryBranchUpdateHistory>()
+                .HasKey(ru => new
+                {
+                    ru.RepositoryName,
+                    ru.BranchName
+                });
+
+            builder.Entity<RepositoryBranchUpdateHistory>()
+                .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
             builder.Entity<GoalTime>()
                 .HasKey(
@@ -239,19 +260,6 @@ FOR SYSTEM_TIME ALL
                 .HasOne(gt => gt.Channel)
                 .WithMany()
                 .HasForeignKey(gt => gt.ChannelId);
-
-            builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
-
-            builder.Entity<RepositoryBranchUpdateHistory>()
-            .HasKey(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
-
-            builder.Entity<RepositoryBranchUpdateHistory>()
-                .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
             builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
                 .HasTranslation(args => SqlFunctionExpression.Create("JSON_VALUE", args, typeof(string), null));
