@@ -162,36 +162,6 @@ namespace DotNet.Status.Web.Tests
         }
 
         [Test]
-        public async Task DoNotCheckIn()
-        {
-            ServiceCollection collection = new ServiceCollection();
-            collection.AddGitHubTokenProvider();
-            collection.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
-            collection.AddSingleton<ISystemClock, SystemClock>();
-            collection.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
-            collection.AddLogging();
-            collection.AddOptions();
-            collection.AddSingleton<ExponentialRetry>();
-            collection.Configure<GitHubTokenProviderOptions>(o =>
-            {
-                o.GitHubAppId = 65630;
-                o.PrivateKey = @"<<<PLACEHOLDER>>>";
-            });
-            collection.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-            collection.Configure<GitHubClientOptions>(o =>
-            {
-                o.ProductHeader = new ProductHeaderValue("Maestro",
-                    Assembly.GetEntryAssembly()
-                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                        ?.InformationalVersion);
-            });
-            using ServiceProvider provider = collection.BuildServiceProvider();
-            var factory = provider.GetRequiredService<IGitHubApplicationClientFactory>();
-            IGitHubClient client = await factory.CreateGitHubClientAsync("dotnet", "arcade");
-            var issue = await client.Issue.Get("dotnet", "arcade", 9131);
-        }
-
-        [Test]
         public void NotDetectDuplicateIfNotIntersect()
         {
             var a = new[]
