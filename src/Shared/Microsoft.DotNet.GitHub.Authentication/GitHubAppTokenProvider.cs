@@ -38,8 +38,8 @@ namespace Microsoft.DotNet.GitHub.Authentication
         private string GetAppToken(int gitHubAppId, string privateKey)
         {
             var handler = new JwtSecurityTokenHandler();
-            byte[] key = Encoding.ASCII.GetBytes(privateKey);
             using var rsa = RSA.Create();
+            rsa.ImportFromPem(privateKey);
             var dsc = new SecurityTokenDescriptor
             {
                 IssuedAt = _clock.UtcNow.AddMinutes(-1).UtcDateTime,
