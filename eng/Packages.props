@@ -100,12 +100,12 @@
     <PackageReference Update="Microsoft.Net.Http" Version="2.2.29" />
     <PackageReference Update="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Update="Microsoft.ServiceFabric" Version="6.5.677" />
-    <PackageReference Update="Microsoft.ServiceFabric.Actors" Version="3.4.677" />
-    <PackageReference Update="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="3.4.677" />
-    <PackageReference Update="Microsoft.ServiceFabric.Data" Version="3.4.677" />
-    <PackageReference Update="Microsoft.ServiceFabric.Services" Version="3.4.677" />
-    <PackageReference Update="Microsoft.ServiceFabric.Services.Remoting" Version="3.4.677" />
+    <PackageReference Update="Microsoft.ServiceFabric" Version="8.2.1571" />
+    <PackageReference Update="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
+    <PackageReference Update="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />
+    <PackageReference Update="Microsoft.ServiceFabric.Data" Version="5.2.1571" />
+    <PackageReference Update="Microsoft.ServiceFabric.Services" Version="5.2.1571" />
+    <PackageReference Update="Microsoft.ServiceFabric.Services.Remoting" Version="5.2.1571" />
     <PackageReference Update="Microsoft.TeamFoundationServer.Client" Version="16.153.0" />
     <PackageReference Update="Microsoft.VisualStudio.Services.Client" Version="16.153.0" />
     <PackageReference Update="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.153.0" />

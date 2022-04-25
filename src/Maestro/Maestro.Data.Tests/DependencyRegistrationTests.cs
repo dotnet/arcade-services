@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using FluentAssertions;
-using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
