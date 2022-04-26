@@ -118,7 +118,6 @@ namespace Maestro.Data.Models
 
     public class SubscriptionUpdateHistory
     {
-        [Key]
         public Guid SubscriptionId { get; set; }
 
         /// <summary>

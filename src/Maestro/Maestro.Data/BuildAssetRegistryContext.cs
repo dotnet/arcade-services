@@ -72,10 +72,8 @@ namespace Maestro.Data
         public DbSet<GoalTime> GoalTime { get; set; }
         public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
 
-        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates.FromSqlRaw(@"
-SELECT * FROM [RepositoryBranchUpdates]
-FOR SYSTEM_TIME ALL
-")
+        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates
+            .TemporalAll()
             .Select(
                 u => new RepositoryBranchUpdateHistoryEntry
                 {
@@ -89,10 +87,8 @@ FOR SYSTEM_TIME ALL
                     Timestamp = EF.Property<DateTime>(u, "SysStartTime")
                 });
 
-        public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
-SELECT * FROM [SubscriptionUpdates]
-FOR SYSTEM_TIME ALL
-")
+        public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates
+            .TemporalAll()
             .Select(
                 u => new SubscriptionUpdateHistoryEntry
                 {
@@ -183,7 +179,7 @@ FOR SYSTEM_TIME ALL
                     {
                         t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
                         t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
-                        t.UseHistoryTable(nameof(SubscriptionUpdate) + "History");
+                        t.UseHistoryTable(nameof(SubscriptionUpdateHistory));
                     });
                 })
                 .HasOne(su => su.Subscription)
@@ -192,6 +188,10 @@ FOR SYSTEM_TIME ALL
                 .OnDelete(DeleteBehavior.Restrict);
 
 
+            builder.Entity<SubscriptionUpdateHistory>().ToTable(nameof(SubscriptionUpdateHistory));
+            builder.Entity<SubscriptionUpdateHistory>().HasNoKey();
+            builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
             builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
             builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
@@ -225,7 +225,7 @@ FOR SYSTEM_TIME ALL
                     {
                         t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
                         t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
-                        t.UseHistoryTable(nameof(RepositoryBranchUpdate) + "History");
+                        t.UseHistoryTable(nameof(RepositoryBranchUpdateHistory));
                     });
                 })
                 .HasOne(ru => ru.RepositoryBranch)
@@ -238,13 +238,13 @@ FOR SYSTEM_TIME ALL
                     })
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<RepositoryBranchUpdateHistory>().ToTable(nameof(RepositoryBranchUpdateHistory));
             builder.Entity<RepositoryBranchUpdateHistory>()
-                .HasKey(ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
+                .HasNoKey();
 
+            builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
             builder.Entity<RepositoryBranchUpdateHistory>()
                 .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
