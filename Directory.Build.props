@@ -13,7 +13,6 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <NoWarn>$(NoWarn);NU5125;CA1416</NoWarn>
     <LangVersion>8.0</LangVersion>
     <IsShipping>false</IsShipping>
