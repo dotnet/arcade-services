@@ -19,7 +19,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             var credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(bootstrapConfiguration);
             var client = new SecretClient(new Uri(keyVaultUri), credentials);
 
-            void TrackEvent(string key, Exception? error)
+            void TrackEvent(string key, Exception error)
             {
                 telemetry.TrackEvent("KeyVaultSecretAccess", new Dictionary<string, string>
                 {

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
@@ -262,7 +263,14 @@ namespace Maestro.Data
                 .HasForeignKey(gt => gt.ChannelId);
 
             builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
-                .HasTranslation(args => SqlFunctionExpression.Create("JSON_VALUE", args, typeof(string), null));
+                .HasTranslation(args => new SqlFunctionExpression(
+                    "JSON_VALUE",
+                    args,
+                    nullable: false,
+                    argumentsPropagateNullability: args.Select(_ => false),
+                    typeof(string),
+                    null
+                ));
         }
 
         public virtual Task<long> GetInstallationId(string repositoryUrl)
@@ -275,10 +283,13 @@ namespace Maestro.Data
         public async Task<IList<Build>> GetBuildGraphAsync(int buildId)
         {
             var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
+            // The "new" code is much more complicated and might not return what we need, suppress the warning
+#pragma warning disable CS0618
             var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).GetColumnName();
             var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).GetColumnName();
             var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).GetColumnName();
             var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).GetColumnName();
+#pragma warning restore CS0618
             var edgeTable = dependencyEntity.GetTableName();
 
             var edges = BuildDependencies.FromSqlRaw($@"
