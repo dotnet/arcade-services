@@ -15,7 +15,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <NoWarn>$(NoWarn);NU5125;CA1416</NoWarn>
     <!--
-      We sort of lie and half sort of support macOS, this warning is telling us that we are on the precipice of 
+      We sort of half sort of support macOS in this repo, this warning is telling us that we are on the precipice of 
       failure (because we are depending on win-x64 only assemblies). But darc is basically standing in the middle
       of a thunderstorm and just hasn't been struck by lightning.
       We don't have any validation around this scenario, and we dont' have time to separate out all our dependencies
@@ -24,7 +24,7 @@
       
       The "root" of the problem is that "ServiceHost" is win-x64 only, and "darc.exe" wants to be "any",
       but all the _rest_ of the assemblies in the middle aren't separated or marked correctly to reflect
-      which half of the universe they are intended for/allowed in.
+      which half of the universe they are intended for/allowed in, so the streams get crossed a lot.
     -->   
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <LangVersion>8.0</LangVersion>
