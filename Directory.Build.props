@@ -18,7 +18,7 @@
       We sort of half sort of support macOS in this repo, this warning is telling us that we are on the precipice of 
       failure (because we are depending on win-x64 only assemblies). But darc is basically standing in the middle
       of a thunderstorm and just hasn't been struck by lightning.
-      We don't have any validation around this scenario, and we dont' have time to separate out all our dependencies
+      We don't have any validation around this scenario, and we don't have time to separate out all our dependencies
       to let the compiler help us.
       So the answer is to close our eyes, and tell the compiler to just... let it rain.
       

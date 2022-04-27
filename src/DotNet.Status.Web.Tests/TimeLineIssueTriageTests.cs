@@ -5,13 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Threading.Tasks;
-using Microsoft.Data.OData.Query.SemanticAst;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Internal;
-using Octokit;
 
 namespace DotNet.Status.Web.Tests
 {
