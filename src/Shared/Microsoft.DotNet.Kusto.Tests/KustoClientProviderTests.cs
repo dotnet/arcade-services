@@ -119,13 +119,17 @@ namespace Microsoft.DotNet.Kusto.Tests
             properties[0].Parameters["_name"].Should().Be("TEST-NAME");
         }
 
+        public class FakeSemanticException : SemanticException
+        {
+        }
+
         [Test]
         public async Task SemanticExceptionReturnsNull()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
             queryProvider.Setup(q =>
                     q.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ClientRequestProperties>()))
-                .Throws(new SemanticException());
+                .Throws(new FakeSemanticException());
 
             using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
