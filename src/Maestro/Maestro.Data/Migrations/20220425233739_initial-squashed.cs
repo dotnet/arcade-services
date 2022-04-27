@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -107,8 +107,8 @@ namespace Maestro.Data.Migrations
                 name: "RepositoryBranchUpdateHistory",
                 columns: table => new
                 {
-                    RepositoryName = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    BranchName = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    RepositoryName = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    BranchName = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     Success = table.Column<bool>(type: "bit", nullable: false),
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20220425233739_initial-squashed")]
+    [Migration("20220427230202_initial-squashed")]
     partial class initialsquashed
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -547,6 +547,7 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BranchName")
+                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -557,6 +558,7 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RepositoryName")
+                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 

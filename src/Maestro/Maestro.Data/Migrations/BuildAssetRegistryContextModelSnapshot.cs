@@ -545,6 +545,7 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BranchName")
+                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
@@ -555,6 +556,7 @@ namespace Maestro.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RepositoryName")
+                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 

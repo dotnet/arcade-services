@@ -172,6 +172,9 @@ namespace Maestro.Data
                         dc.ChannelId
                     })
                 .IsUnique();
+            
+            builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
 
             builder.Entity<SubscriptionUpdate>()
                 .ToTable(b =>
@@ -219,6 +222,8 @@ namespace Maestro.Data
                         ru.BranchName
                     });
 
+            builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
             builder.Entity<RepositoryBranchUpdate>()
                 .ToTable(b =>
                 {
