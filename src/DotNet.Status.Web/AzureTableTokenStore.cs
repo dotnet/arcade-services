@@ -23,7 +23,6 @@ namespace DotNet.Status.Web
 {
     public class AzureTableTokenStore : ITokenStore, ITokenRevocationProvider
     {
-        private readonly RNGCryptoServiceProvider _random = new RNGCryptoServiceProvider();
         private readonly IHostEnvironment _env;
         private readonly IOptionsMonitor<AzureTableTokenStoreOptions> _options;
         private readonly ILogger<AzureTableTokenStore> _logger;
@@ -108,7 +107,7 @@ namespace DotNet.Status.Web
             long MakeTokenId()
             {
                 Span<byte> bits = stackalloc byte[sizeof(long)];
-                _random.GetBytes(bits);
+                RandomNumberGenerator.Fill(bits);
                 return BitConverter.ToInt64(bits);
             }
 

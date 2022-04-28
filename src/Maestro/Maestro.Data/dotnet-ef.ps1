@@ -4,7 +4,7 @@
 ## to run `dotnet ef database update`, at the command line, call: 
 ## .\dotnet-ef.ps1 database update
 
-$extPath = [IO.Path]::GetFullPath("..\..\..\artifacts\obj\Maestro.Data")
+$extPath = Resolve-Path "..\..\..\artifacts\obj\Maestro.Data"
 Write-Output "Adding MSBuild Project Extension Path: '$extPath'"
 
 dotnet ef --msbuildprojectextensionspath "$extPath" @args

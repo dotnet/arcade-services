@@ -28,7 +28,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
 
         private static string GetApplicationInsightsKey()
         {
-            string? envVar = Environment.GetEnvironmentVariable("APPLICATION_INSIGHTS_KEY");
+            string envVar = Environment.GetEnvironmentVariable("APPLICATION_INSIGHTS_KEY");
             if (string.IsNullOrEmpty(envVar))
             {
                 return Guid.Empty.ToString("D");

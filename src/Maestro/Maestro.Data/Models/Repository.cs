@@ -55,9 +55,11 @@ namespace Maestro.Data.Models
     public class RepositoryBranchUpdate
     {
         [MaxLength(Repository.RepositoryNameLength)]
+        [Required]
         public string RepositoryName { get; set; }
 
         [MaxLength(Repository.BranchNameLength)]
+        [Required]
         public string BranchName { get; set; }
 
         public RepositoryBranch RepositoryBranch { get; set; }
@@ -92,9 +94,11 @@ namespace Maestro.Data.Models
     public class RepositoryBranchUpdateHistory
     {
         [MaxLength(Repository.RepositoryNameLength)]
+        [Required]
         public string RepositoryName { get; set; }
 
         [MaxLength(Repository.BranchNameLength)]
+        [Required]
         public string BranchName
         {
             get

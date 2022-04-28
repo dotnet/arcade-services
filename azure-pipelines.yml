@@ -112,7 +112,7 @@ stages:
 
         - task: NuGetToolInstaller@0
           inputs:
-            versionSpec: 5.5.x
+            versionSpec: 6.1.x
 
         - task: NodeTool@0
           inputs:

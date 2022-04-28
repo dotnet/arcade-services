@@ -1,4 +1,3 @@
-using Castle.Core.Internal;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
@@ -204,7 +203,7 @@ namespace SubscriptionActorService
 
         private StringBuilder GetDescriptionStringBuilder(string description)
         {
-            if(description.IsNullOrEmpty())
+            if(string.IsNullOrEmpty(description))
             {
                 return new StringBuilder().AppendLine("This pull request updates the following dependencies").AppendLine();
             }

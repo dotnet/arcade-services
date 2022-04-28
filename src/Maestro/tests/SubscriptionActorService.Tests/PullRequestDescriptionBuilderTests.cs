@@ -9,7 +9,6 @@ using static SubscriptionActorService.PullRequestActorImplementation;
 using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.Extensions.Logging.Abstractions;
-using Castle.Core.Internal;
 
 namespace SubscriptionActorService.Tests
 {
