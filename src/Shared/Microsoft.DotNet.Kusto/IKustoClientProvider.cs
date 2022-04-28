@@ -4,7 +4,7 @@
 
 using System.Threading.Tasks;
 using System.Data;
-using Kusto.Data.Results;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Kusto
 {
@@ -12,6 +12,6 @@ namespace Microsoft.DotNet.Kusto
     {
         Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query);
 
-        Task<ProgressiveDataSet> ExecuteStreamableKustoQueryAsync(KustoQuery query);
+        IEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query);
     }
 }

@@ -2,12 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Kusto.Data;
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Kusto.Data.Results;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
@@ -79,7 +81,13 @@ namespace Microsoft.DotNet.Kusto
             }
         }
 
-        public async Task<ProgressiveDataSet> ExecuteStreamableKustoQueryAsync(KustoQuery query)
+        /// <summary>
+        /// Use this method to receive large quantities of data from Kusto in a "stream". 
+        /// This method assumes the query is returning a single schema result set. 
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        public IEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query)
         {
             var client = GetProvider();
             var properties = BuildClientRequestProperties(query);
@@ -87,16 +95,66 @@ namespace Microsoft.DotNet.Kusto
 
             string text = BuildQueryText(query);
 
-            try
+            ProgressiveDataSet pDataSet = client.ExecuteQueryV2Async(
+                DatabaseName,
+                text,
+                properties).GetAwaiter().GetResult();
+
+            int tableCompletionCount = 0;
+
+            using (var frames = pDataSet.GetFrames())
             {
-                return await client.ExecuteQueryV2Async(
-                    DatabaseName,
-                    text,
-                    properties);
+                while (frames.MoveNext())
+                {
+                    var frame = frames.Current;
+
+                    switch (frame.FrameType)
+                    {
+                        case FrameType.TableFragment:
+                            {
+                                var content = frame as ProgressiveDataSetDataTableFragmentFrame;
+                                object[] row;
+                                while(GetNextRow(content, out row))
+                                {
+                                    yield return row;
+                                };
+                            }
+                            break;
+
+                        case FrameType.DataTable:
+                            {
+                                var content = frame as DataTable;
+                                foreach (DataRow dataTableRow in content.Rows)
+                                {
+                                    yield return dataTableRow.ItemArray;
+                                }
+                            }
+                            break;
+
+                        case FrameType.TableCompletion:
+                            tableCompletionCount++;
+                            break;
+
+                        case FrameType.DataSetHeader:
+                        case FrameType.TableHeader:
+                        case FrameType.TableProgress:
+                        case FrameType.DataSetCompletion:
+                        case FrameType.LastInvalid:
+                        default:
+                            break;
+                    }
+
+                    if (tableCompletionCount > 1)
+                    {
+                        throw new ArgumentException("This method does not support multiple data result sets.");
+                    }
+                }
             }
-            catch (SemanticException)
+
+            bool GetNextRow(ProgressiveDataSetDataTableFragmentFrame frame, out object[] row)
             {
-                return null;
+                row = new object[frame.FieldCount];
+                return frame.GetNextRecord(row);
             }
         }
 
