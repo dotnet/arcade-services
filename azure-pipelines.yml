@@ -122,7 +122,8 @@ stages:
           displayName: Restore Packages
           inputs:
             command: restore
-            solution: "**/*.sln"
+            solution: "**/*.sfproj"
+            restoreSolution: arcade-services.sln
             feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
