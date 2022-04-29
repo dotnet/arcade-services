@@ -87,7 +87,7 @@ namespace Microsoft.DotNet.Kusto
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
-        public IEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query)
+        public async IAsyncEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query)
         {
             var client = GetProvider();
             var properties = BuildClientRequestProperties(query);
@@ -95,59 +95,57 @@ namespace Microsoft.DotNet.Kusto
 
             string text = BuildQueryText(query);
 
-            ProgressiveDataSet pDataSet = client.ExecuteQueryV2Async(
+            ProgressiveDataSet pDataSet = await client.ExecuteQueryV2Async(
                 DatabaseName,
                 text,
-                properties).GetAwaiter().GetResult();
+                properties);
 
             int tableCompletionCount = 0;
 
-            using (var frames = pDataSet.GetFrames())
+            using IEnumerator<ProgressiveDataSetFrame> frames = pDataSet.GetFrames();
+            
+            while (frames.MoveNext())
             {
-                while (frames.MoveNext())
+                var frame = frames.Current;
+
+                switch (frame.FrameType)
                 {
-                    var frame = frames.Current;
-
-                    switch (frame.FrameType)
-                    {
-                        case FrameType.TableFragment:
+                    case FrameType.TableFragment:
+                        {
+                            var content = frame as ProgressiveDataSetDataTableFragmentFrame;
+                            while(GetNextRow(content, out object[] row))
                             {
-                                var content = frame as ProgressiveDataSetDataTableFragmentFrame;
-                                object[] row;
-                                while(GetNextRow(content, out row))
-                                {
-                                    yield return row;
-                                };
-                            }
-                            break;
+                                yield return row;
+                            };
+                        }
+                        break;
 
-                        case FrameType.DataTable:
+                    case FrameType.DataTable:
+                        {
+                            var content = frame as DataTable;
+                            foreach (DataRow dataTableRow in content.Rows)
                             {
-                                var content = frame as DataTable;
-                                foreach (DataRow dataTableRow in content.Rows)
-                                {
-                                    yield return dataTableRow.ItemArray;
-                                }
+                                yield return dataTableRow.ItemArray;
                             }
-                            break;
+                        }
+                        break;
 
-                        case FrameType.TableCompletion:
-                            tableCompletionCount++;
-                            break;
+                    case FrameType.TableCompletion:
+                        tableCompletionCount++;
+                        break;
 
-                        case FrameType.DataSetHeader:
-                        case FrameType.TableHeader:
-                        case FrameType.TableProgress:
-                        case FrameType.DataSetCompletion:
-                        case FrameType.LastInvalid:
-                        default:
-                            break;
-                    }
+                    case FrameType.DataSetHeader:
+                    case FrameType.TableHeader:
+                    case FrameType.TableProgress:
+                    case FrameType.DataSetCompletion:
+                    case FrameType.LastInvalid:
+                    default:
+                        break;
+                }
 
-                    if (tableCompletionCount > 1)
-                    {
-                        throw new ArgumentException("This method does not support multiple data result sets.");
-                    }
+                if (tableCompletionCount > 1)
+                {
+                    throw new ArgumentException("This method does not support multiple data result sets.");
                 }
             }
 

@@ -12,6 +12,6 @@ namespace Microsoft.DotNet.Kusto
     {
         Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query);
 
-        IEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query);
+        IAsyncEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query);
     }
 }

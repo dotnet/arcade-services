@@ -8,7 +8,6 @@ using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
 using FluentAssertions;
 using Kusto.Cloud.Platform.Utils;
 using Kusto.Data.Common;
@@ -140,7 +139,7 @@ namespace Microsoft.DotNet.Kusto.Tests
         }
 
         [Test]
-        public void ExecuteStreamableKustoQueryReturnsCorrectData()
+        public async Task ExecuteStreamableKustoQueryReturnsCorrectData()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
             var dbNames = new List<string>();
@@ -193,7 +192,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                 var query = new KustoQuery("basicQuery | where Id = _id and Name = _name",
                     new KustoParameter("_id", 9274, KustoDataType.Int));
                 query.AddParameter("_name", "TEST-NAME", KustoDataType.String);
-                List<object[]> resultList = client.ExecuteStreamableKustoQuery(query).ToList();
+                List<object[]> resultList = await client.ExecuteStreamableKustoQuery(query).ToListAsync();
 
                 resultList.Should().NotBeEmpty()
                     .And.HaveCount(4)
@@ -255,7 +254,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                     new KustoParameter("_id", 9274, KustoDataType.Int));
                 query.AddParameter("_name", "TEST-NAME", KustoDataType.String);
 
-                Action act = () => client.ExecuteStreamableKustoQuery(query).ToList();
+                Func<Task> act = async () => await client.ExecuteStreamableKustoQuery(query).ToListAsync();
                 act.Should().Throw<ArgumentException>();
             }
         }
