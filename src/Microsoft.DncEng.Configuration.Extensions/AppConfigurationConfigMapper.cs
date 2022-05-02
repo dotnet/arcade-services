@@ -26,7 +26,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             TokenCredential credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(bootstrapConfiguration);
             var client = new ConfigurationClient(new Uri(appConfigurationUri), credentials);
 
-            void TrackEvent(string name, string key, Exception? error)
+            void TrackEvent(string name, string key, Exception error)
             {
                 telemetry.TrackEvent(name, new Dictionary<string, string>
                 {
@@ -59,10 +59,10 @@ namespace Microsoft.DncEng.Configuration.Extensions
             });
         }
 
-        private static (string, Exception?) GetConfigurationSetting(ConfigurationClient client, string key)
+        private static (string, Exception) GetConfigurationSetting(ConfigurationClient client, string key)
         {
             string result = "";
-            Exception? error = null;
+            Exception error = null;
             try
             {
                 result = client.GetConfigurationSetting(key).Value.Value;
@@ -75,10 +75,10 @@ namespace Microsoft.DncEng.Configuration.Extensions
             return (result, error);
         }
 
-        private static (string, Exception?) GetFeatureFlagValue(ConfigurationClient client, string key)
+        private static (string, Exception) GetFeatureFlagValue(ConfigurationClient client, string key)
         {
             string result = "false";
-            Exception? error = null;
+            Exception error = null;
             try
             {
                 var featureFlagData =

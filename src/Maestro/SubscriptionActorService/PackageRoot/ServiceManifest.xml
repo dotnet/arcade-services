@@ -9,7 +9,6 @@
             <ReplicatorEndpoint Name="SubscriptionActorServiceReplicatorEndpoint" />
             <ReplicatorConfigSection Name="SubscriptionActorServiceReplicatorConfig" />
             <ReplicatorSecurityConfigSection Name="SubscriptionActorServiceReplicatorSecurityConfig" />
-            <StoreConfigSection Name="SubscriptionActorServiceLocalStoreConfig" />
             <ServiceEndpointV2 Name="SubscriptionActorServiceEndpointV2" />
           </GeneratedNames>
         </Extension>
@@ -23,7 +22,6 @@
             <ReplicatorEndpoint Name="PullRequestActorServiceReplicatorEndpoint" />
             <ReplicatorConfigSection Name="PullRequestActorServiceReplicatorConfig" />
             <ReplicatorSecurityConfigSection Name="PullRequestActorServiceReplicatorSecurityConfig" />
-            <StoreConfigSection Name="PullRequestActorServiceLocalStoreConfig" />
             <ServiceEndpointV2 Name="PullRequestActorServiceEndpointV2" />
           </GeneratedNames>
         </Extension>

@@ -12,9 +12,9 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
@@ -73,10 +73,8 @@ namespace Maestro.Data
         public DbSet<GoalTime> GoalTime { get; set; }
         public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
 
-        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates.FromSqlRaw(@"
-SELECT * FROM [RepositoryBranchUpdates]
-FOR SYSTEM_TIME ALL
-")
+        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates
+            .TemporalAll()
             .Select(
                 u => new RepositoryBranchUpdateHistoryEntry
                 {
@@ -90,10 +88,8 @@ FOR SYSTEM_TIME ALL
                     Timestamp = EF.Property<DateTime>(u, "SysStartTime")
                 });
 
-        public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
-SELECT * FROM [SubscriptionUpdates]
-FOR SYSTEM_TIME ALL
-")
+        public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates
+            .TemporalAll()
             .Select(
                 u => new SubscriptionUpdateHistoryEntry
                 {
@@ -114,12 +110,6 @@ FOR SYSTEM_TIME ALL
                 base.SaveChangesAsync,
                 acceptAllChangesOnSuccess,
                 cancellationToken);
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.AddDotNetExtensions();
-            base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -182,15 +172,31 @@ FOR SYSTEM_TIME ALL
                         dc.ChannelId
                     })
                 .IsUnique();
+            
+            builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
 
             builder.Entity<SubscriptionUpdate>()
+                .ToTable(b =>
+                {
+                    b.IsTemporal(t =>
+                    {
+                        t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
+                        t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
+                        t.UseHistoryTable(nameof(SubscriptionUpdateHistory));
+                    });
+                })
                 .HasOne(su => su.Subscription)
                 .WithOne()
                 .HasForeignKey<SubscriptionUpdate>(su => su.SubscriptionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.ForSqlServerIsSystemVersioned<SubscriptionUpdate, SubscriptionUpdateHistory>("6 MONTH");
 
+            builder.Entity<SubscriptionUpdateHistory>().ToTable(nameof(SubscriptionUpdateHistory));
+            builder.Entity<SubscriptionUpdateHistory>().HasNoKey();
+            builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+            builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
             builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
             builder.Entity<Repository>().HasKey(r => new {r.RepositoryName});
@@ -216,7 +222,18 @@ FOR SYSTEM_TIME ALL
                         ru.BranchName
                     });
 
+            builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
             builder.Entity<RepositoryBranchUpdate>()
+                .ToTable(b =>
+                {
+                    b.IsTemporal(t =>
+                    {
+                        t.HasPeriodStart("SysStartTime").HasColumnName("SysStartTime");
+                        t.HasPeriodEnd("SysEndTime").HasColumnName("SysEndTime");
+                        t.UseHistoryTable(nameof(RepositoryBranchUpdateHistory));
+                    });
+                })
                 .HasOne(ru => ru.RepositoryBranch)
                 .WithOne()
                 .HasForeignKey<RepositoryBranchUpdate>(
@@ -226,6 +243,16 @@ FOR SYSTEM_TIME ALL
                         ru.BranchName
                     })
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RepositoryBranchUpdateHistory>().ToTable(nameof(RepositoryBranchUpdateHistory));
+            builder.Entity<RepositoryBranchUpdateHistory>()
+                .HasNoKey();
+
+            builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+            builder.Entity<RepositoryBranchUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
+            builder.Entity<RepositoryBranchUpdateHistory>()
+                .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
             builder.Entity<GoalTime>()
                 .HasKey(
@@ -240,21 +267,15 @@ FOR SYSTEM_TIME ALL
                 .WithMany()
                 .HasForeignKey(gt => gt.ChannelId);
 
-            builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
-
-            builder.Entity<RepositoryBranchUpdateHistory>()
-            .HasKey(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
-
-            builder.Entity<RepositoryBranchUpdateHistory>()
-                .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
-
             builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
-                .HasTranslation(args => SqlFunctionExpression.Create("JSON_VALUE", args, typeof(string), null));
+                .HasTranslation(args => new SqlFunctionExpression(
+                    "JSON_VALUE",
+                    args,
+                    nullable: false,
+                    argumentsPropagateNullability: args.Select(_ => false),
+                    typeof(string),
+                    null
+                ));
         }
 
         public virtual Task<long> GetInstallationId(string repositoryUrl)
@@ -267,10 +288,13 @@ FOR SYSTEM_TIME ALL
         public async Task<IList<Build>> GetBuildGraphAsync(int buildId)
         {
             var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
+            // The "new" code is much more complicated and might not return what we need, suppress the warning
+#pragma warning disable CS0618
             var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).GetColumnName();
             var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).GetColumnName();
             var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).GetColumnName();
             var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).GetColumnName();
+#pragma warning restore CS0618
             var edgeTable = dependencyEntity.GetTableName();
 
             var edges = BuildDependencies.FromSqlRaw($@"

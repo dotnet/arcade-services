@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Internal.Health
         private readonly ILogger<AzureTableHealthReportProvider> _logger;
         private readonly ExponentialRetry _retry;
         
-        private static readonly JsonSerializerOptions s_jsonSerializerOptions = new JsonSerializerOptions {IgnoreNullValues = true};
+        private static readonly JsonSerializerOptions s_jsonSerializerOptions = new JsonSerializerOptions {DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull};
 
         public AzureTableHealthReportProvider(
             IOptionsMonitor<AzureTableHealthReportingOptions> options,

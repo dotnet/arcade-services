@@ -193,7 +193,6 @@ namespace Maestro.Web
                     options.Conventions.AllowAnonymousToPage("/Error");
                     options.Conventions.AllowAnonymousToPage("/SwaggerUi");
                 })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                 .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Startup>())
                 .AddGitHubWebHooks()
                 .AddApiPagination()

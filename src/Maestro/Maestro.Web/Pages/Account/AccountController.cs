@@ -35,7 +35,7 @@ namespace Maestro.Web.Pages.Account
 
         [HttpGet("/Account/SignOut")]
         [AllowAnonymous]
-        public async Task<IActionResult> SignOut()
+        public new async Task<IActionResult> SignOut()
         {
             await SignInManager.SignOutAsync();
             return RedirectToPage("/Index");
