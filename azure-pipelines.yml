@@ -213,7 +213,7 @@ stages:
             artifact: TelemetryApplication
             displayName: Publish TelemetryApplication
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f net6.0
             workingDirectory: src/DotNet.Status.Web
             displayName: dotnet publish DotNet.Status.Web
 
@@ -229,7 +229,7 @@ stages:
             artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f net6.0
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
 
@@ -249,7 +249,7 @@ stages:
           - template: ../../../generate-sbom.yml
 
           ## Prepare database update artifact
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
             workingDirectory: src/Maestro/Maestro.Data
             displayName: Create Data Package
 
@@ -279,11 +279,11 @@ stages:
             artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DncEng.SecretManager.ScenarioTests\$(_BuildConfig)\netcoreapp3.1
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DncEng.SecretManager.ScenarioTests\$(_BuildConfig)\net6.0
             artifact: Microsoft.DncEng.SecretManager.ScenarioTests
             displayName: Publish Secret Manager Scenario Tests
 
