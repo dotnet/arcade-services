@@ -3,8 +3,8 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
 
   <PropertyGroup>
-    <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)netcoreapp3.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
-    <MicrosoftDotNetMonitoringSdkTasksAssembly Condition="!Exists('$(MicrosoftDotNetMonitoringSdkTasksAssembly)')">$(MSBuildThisFileDirectory)/../tools/netcoreapp3.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)net6.0/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly Condition="!Exists('$(MicrosoftDotNetMonitoringSdkTasksAssembly)')">$(MSBuildThisFileDirectory)/../tools/net6.0/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
     <GrafanaDashboardTag Condition="'$(GrafanaDashboardTag)' == ''">$(MSBuildProjectName)</GrafanaDashboardTag>
     <GrafanaKeyVaultTenantId Condition="'$(GrafanaKeyVaultTenantId)' == ''">72f988bf-86f1-41af-91ab-2d7cd011db47</GrafanaKeyVaultTenantId>
     <GrafanaKeyVaultConnectionString Condition="'$(GrafanaKeyVaultConnectionString)' == '' AND '$(GrafanaKeyVaultAppId)' != '' AND '$(GrafanaKeyVaultAppSecret)' != ''">RunAs=App;AppId=$(GrafanaKeyVaultAppId);TenantId=$(GrafanaKeyVaultTenantId);AppKey=$(GrafanaKeyVaultAppSecret)</GrafanaKeyVaultConnectionString>

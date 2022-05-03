@@ -101,11 +101,12 @@ stages:
       artifact: ReleaseUtilities
     - download: current
       artifact: Maestro.Data
+
     - task: UseDotNet@2
-      displayName: Use .NET Core SDK
+      displayName: Install Correct .NET Version
       inputs:
-        packageType: sdk
-        version: 3.1.x
+        useGlobalJson: true
+
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Add
       inputs:
