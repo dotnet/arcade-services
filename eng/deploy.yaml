@@ -33,12 +33,6 @@ stages:
       inputs:
         useGlobalJson: true
 
-    - task: UseDotNet@2
-      displayName: Install .NET 3.1 runtime
-      inputs:
-        packageType: runtime
-        version: 3.1.x
-
     - script: dotnet build
       workingDirectory: src/Microsoft.DncEng.SecretManager
 
@@ -318,10 +312,9 @@ stages:
         versionSpec: 5.3.x
 
     - task: UseDotNet@2
-      displayName: Use .NET Core Sdk
+      displayName: Install Correct .NET Version
       inputs:
-        packageType: sdk
-        version: 3.1.x
+        useGlobalJson: true
 
     - task: VSTest@2
       displayName: Secret Manager Scenario Tests
