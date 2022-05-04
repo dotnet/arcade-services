@@ -40,15 +40,27 @@ namespace Microsoft.DotNet.GitHub.Authentication
 
         private string GetAppToken(int gitHubAppId, string privateKey)
         {
-            var handler = new JwtSecurityTokenHandler();
+            var handler = new JwtSecurityTokenHandler
+            {
+                SetDefaultTimesOnTokenCreation = false
+            };
             using var rsa = RSA.Create();
             rsa.ImportFromPem(privateKey);
+            var rsaSecurityKey = new RsaSecurityKey(rsa)
+            {
+                CryptoProviderFactory =
+                {
+                    // Since we control the lifetime of the key, they can't cache it, since we are about to dispose it
+                    CacheSignatureProviders = false
+                }
+            };
+            var signingCredentials = new SigningCredentials(rsaSecurityKey, SecurityAlgorithms.RsaSha256);
             var dsc = new SecurityTokenDescriptor
             {
                 IssuedAt = _clock.UtcNow.AddMinutes(-1).UtcDateTime,
                 Expires = _clock.UtcNow.AddMinutes(9).UtcDateTime,
                 Issuer = gitHubAppId.ToString(),
-                SigningCredentials = new SigningCredentials(new RsaSecurityKey(rsa), SecurityAlgorithms.RsaSha256)
+                SigningCredentials = signingCredentials
             };
             SecurityToken token = handler.CreateToken(dsc);
             return handler.WriteToken(token);
