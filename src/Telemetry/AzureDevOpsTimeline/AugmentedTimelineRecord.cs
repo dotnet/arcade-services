@@ -19,5 +19,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public string TimelineId { get; }
         public TimelineRecord Raw { get; }
         public string AugmentedOrder { get; set; }
+        public string ImageName { get; set; }
     }
 }

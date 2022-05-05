@@ -29,19 +29,22 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
         private readonly IAzureDevOpsClient _azureServer;
         private readonly ISystemClock _systemClock;
+        private readonly IBuildLogScraper _buildLogScraper;
 
         public AzureDevOpsTimeline(
             ILogger<AzureDevOpsTimeline> logger,
             IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
             ITimelineTelemetryRepository timelineTelemetryRepository,
             IAzureDevOpsClient azureDevopsClient,
-            ISystemClock systemClock)
+            ISystemClock systemClock,
+            IBuildLogScraper buildLogScraper)
         {
             _logger = logger;
             _options = options;
             _timelineTelemetryRepository = timelineTelemetryRepository;
             _azureServer = azureDevopsClient;
             _systemClock = systemClock;
+            _buildLogScraper = buildLogScraper;
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -232,6 +235,15 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     }
                 }
             }
+
+            records.ForEach(async record =>
+            {
+                if (record.Raw.Name == "Initialize job") {
+                    record.ImageName =  record.Raw.WorkerName.StartsWith("Azure Pipelines")
+                        ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url)
+                        : await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url);
+                }
+            });
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);

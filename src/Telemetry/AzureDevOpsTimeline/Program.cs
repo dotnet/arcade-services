@@ -61,6 +61,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             });
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
+                            services.AddSingleton<IBuildLogScraper, BuildLogScraper>();
+                            services.Configure<BuildLogScraperOptions>("BuildLogScraper", (o, s) =>
+                            {
+                                s.Bind(o);
+                            });
                         });
                     
                 });

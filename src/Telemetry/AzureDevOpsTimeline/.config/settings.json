@@ -13,7 +13,7 @@
   "ParallelRequests": 4,
 
   "KustoTimelineTelemetry": {
-    "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
+    "IngestConnectionString": "",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]",
     "Database": "engineeringdata"
   }
