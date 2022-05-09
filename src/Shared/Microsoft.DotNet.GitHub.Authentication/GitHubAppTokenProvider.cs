@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
             {
                 SetDefaultTimesOnTokenCreation = false
             };
-            using var rsa = RSA.Create();
+            using var rsa = RSA.Create(4096);
             rsa.ImportFromPem(privateKey);
             var rsaSecurityKey = new RsaSecurityKey(rsa)
             {
