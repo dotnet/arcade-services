@@ -24,7 +24,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
 
         public void Error(VerbosityLevel level, string message, ConsoleColor? color)
         {
-            TestContext.Error.WriteLine($"{level} : {message}");
+            TestContext.Out.WriteLine($"{level} : {message}");
             Errors.Add((level, message, color));
         }
 
