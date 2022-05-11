@@ -35,7 +35,6 @@
     <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds.body.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Moq" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
