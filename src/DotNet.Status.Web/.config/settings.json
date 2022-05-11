@@ -51,6 +51,36 @@
         },
         {
           "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\release\\dotnet-release-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
           "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
           "Branches": [ "main" ],
           "IssuesId": "dotnet-aspnetcore-infra",

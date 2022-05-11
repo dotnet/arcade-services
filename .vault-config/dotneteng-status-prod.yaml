@@ -39,3 +39,8 @@ secrets:
         name: nethelix-prod-kusto-ad-application
       dataSource: https://ingest-engsrvprod.kusto.windows.net:443
       additionalParameters: Streaming=true;Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
+
+  build-monitor-hook-dotnet-eng-status-token:
+    type: text
+    parameters:
+      description: Generate API token from https://dotneteng-status.azurewebsites.net/ and save it to the service hook with ID 439d5934-8e89-4407-8e31-5b04d58b7854
