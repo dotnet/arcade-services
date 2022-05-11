@@ -52,7 +52,7 @@ namespace Microsoft.DncEng.CommandLineLib.Authentication
             var cred = new InteractiveBrowserCredential(
                 new InteractiveBrowserCredentialOptions
                 {
-                    TokenCache = new PersistentTokenCache(false),
+                    TokenCachePersistenceOptions = new TokenCachePersistenceOptions{ Name = GetType().Assembly.GetName().Name },
                     AuthenticationRecord = record,
                 }
             );

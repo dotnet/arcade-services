@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                         error = true;
                     }
                     
-                    if (cls.Modifiers.All(m => m.Kind() != SyntaxKind.StaticKeyword))
+                    if (cls.Modifiers.All(m => !m.IsKind(SyntaxKind.StaticKeyword)))
                     {
                         Diagnostics.Add(Error(DiagnosticIds.StaticClassRequired, $"Class {cls.Identifier.Text} must be declared static to use [TestDependencyInjectionSetupAttribute]", nested));
                         error = true;
@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
                     if (error)
                         return;
 
-                    if (nested.Modifiers.All(m => m.Kind() != SyntaxKind.PartialKeyword))
+                    if (nested.Modifiers.All(m => !m.IsKind(SyntaxKind.PartialKeyword)))
                     {
                         Diagnostics.Add(Error(DiagnosticIds.PartialClassRequired, $"Class {nested.Identifier.Text} must be declared partial to use [TestDependencyInjectionSetupAttribute]", nested));
                         error = true;
