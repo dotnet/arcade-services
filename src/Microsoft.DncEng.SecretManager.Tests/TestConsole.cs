@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
+using NUnit.Framework;
 
 namespace Microsoft.DncEng.SecretManager.Tests
 {
@@ -17,11 +18,13 @@ namespace Microsoft.DncEng.SecretManager.Tests
 
         public void Write(VerbosityLevel level, string message, ConsoleColor? color)
         {
+            TestContext.Out.WriteLine($"{level} : {message}");
             Writes.Add((level, message, color));
         }
 
         public void Error(VerbosityLevel level, string message, ConsoleColor? color)
         {
+            TestContext.Error.WriteLine($"{level} : {message}");
             Errors.Add((level, message, color));
         }
 
@@ -35,6 +38,6 @@ namespace Microsoft.DncEng.SecretManager.Tests
             throw new NotImplementedException();
         }
 
-        public bool IsInteractive { get; set; } = false;
+        public bool IsInteractive => false;
     }
 }

@@ -6,7 +6,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
