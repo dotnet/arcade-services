@@ -17,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
@@ -66,6 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     {build.Build, build.Timelines.ToList()}
                 }));
+                collection.AddSingleton<IBuildLogScraper>(scraper => new MockBuildLogScraper());
             }
         }
 
@@ -142,7 +144,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             /// Test execution
             await testData.Controller.RunProject("public", 1000, CancellationToken.None);
-
+            
             // Test results
             testData.Repository.TimelineRecords
                 .Select(r => r.Raw)

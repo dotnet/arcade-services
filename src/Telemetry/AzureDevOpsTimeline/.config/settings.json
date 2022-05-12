@@ -12,6 +12,8 @@
   "BuildBatchSize": 1000,
   "ParallelRequests": 4,
 
+  "LogScrapingTimeout": 10,
+
   "KustoTimelineTelemetry": {
     "IngestConnectionString": "",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]",

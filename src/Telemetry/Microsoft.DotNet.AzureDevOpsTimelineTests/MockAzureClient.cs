@@ -71,5 +71,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             throw new NotImplementedException();
         }
+
+        public Task<string> TryGetLogContents(string logUri)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

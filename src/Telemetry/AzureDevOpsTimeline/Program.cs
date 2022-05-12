@@ -36,6 +36,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.InitialDelay = c["InitialDelay"];
                                 o.Interval = c["Interval"];
                                 o.BuildBatchSize = c["BuildBatchSize"];
+                                if (!int.TryParse(c["LogScrapingTimeout"], out int timeout) || timeout < 1)
+                                {
+                                    timeout = 10;
+                                }
+                                o.LogScrapingTimeout = timeout;
                             });
 
                             services.Configure<KustoTimelineTelemetryOptions>("KustoTimelineTelemetry", (o, s) =>
@@ -62,10 +67,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
                             services.AddSingleton<IBuildLogScraper, BuildLogScraper>();
-                            services.Configure<BuildLogScraperOptions>("BuildLogScraper", (o, s) =>
-                            {
-                                s.Bind(o);
-                            });
                         });
                     
                 });

@@ -15,5 +15,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public string Interval { get; set; }
         public string ParallelRequests { get; set; }
         public string BuildBatchSize { get; set; }
+        public int LogScrapingTimeout { get; set; }
     }
 }

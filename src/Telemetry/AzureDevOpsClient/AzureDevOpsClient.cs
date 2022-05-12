@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -153,6 +154,20 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
             string json = await CreateWorkItem(project, "RCA", fields, cancellationToken);
             return JsonConvert.DeserializeObject<WorkItem>(json);
+        }
+
+        public async Task<string> TryGetLogContents(string logUri)
+        {
+            using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
+            {
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+
+                var response = await _httpClient.SendAsync(request);
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync();
+            }
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

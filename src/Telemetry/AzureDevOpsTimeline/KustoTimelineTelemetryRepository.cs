@@ -61,6 +61,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
                 else
                 {
+                    if (result.IsDBNull(0))
+                    {
+                        return null;
+                    }
                     return result.GetDateTime(0);
                 }
             }

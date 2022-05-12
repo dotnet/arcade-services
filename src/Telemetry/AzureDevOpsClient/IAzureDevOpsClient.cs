@@ -18,5 +18,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
         public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
         public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
+        public Task<string> TryGetLogContents(string logUri);
     }
 }

@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -113,7 +114,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromHours(1));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
@@ -236,14 +237,29 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }
 
-            records.ForEach(async record =>
+            Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            try
             {
-                if (record.Raw.Name == "Initialize job") {
-                    record.ImageName =  record.Raw.WorkerName.StartsWith("Azure Pipelines")
-                        ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url)
-                        : await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url);
+                Task task = Task.Run(() => GetImageNames(records));
+                if (task.Wait(TimeSpan.FromMinutes(_options.Value.LogScrapingTimeout)))
+                {
+                    stopWatch.Stop();
+                    _logger.LogInformation($"Log scraping took {stopWatch.ElapsedMilliseconds} milliseconds");
                 }
-            });
+                else
+                {
+                    stopWatch.Stop();
+                    _logger.LogError("Log scraping timed out after 10 minutes");
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Exception thrown while getting image names: {e}");
+            }
+
+            var test = records.Where(r => r.Raw.Name == "Initialize job").ToList();
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
@@ -330,6 +346,34 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             CancellationToken cancellationToken)
         {
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+        }
+
+        private async Task GetImageNames(List<AugmentedTimelineRecord> records)
+        {
+            SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
+
+            IEnumerable<Task> tasks = records.Where(r => r.Raw.Log != null && !string.IsNullOrEmpty(r.Raw.Log.Url)).Select(async record =>
+            {
+                if(record.Raw.Name == "Initialize job")
+                {
+                    await throttleSemaphore.WaitAsync();
+
+                    try
+                    {
+                        record.ImageName = (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+                            ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url)
+                            : record.Raw.WorkerName.StartsWith("NetCore1ESPool-")
+                                ? await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url)
+                                : "";
+                    }
+                    finally
+                    {
+                        throttleSemaphore.Release();
+                    }
+                }
+            });
+
+            await Task.WhenAll(tasks);
         }
     }
 }

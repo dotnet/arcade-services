@@ -1,5 +1,7 @@
 using Castle.Core.Logging;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,14 +13,14 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
-    internal class BuildLogScraper : IBuildLogScraper
+    public class BuildLogScraper : IBuildLogScraper
     {
-        private readonly HttpClient _httpClient;
         private readonly ILogger<BuildLogScraper> _logger;
+        private readonly IAzureDevOpsClient _azureDevOpsClient;
 
-        public BuildLogScraper(ILogger<BuildLogScraper> logger)
+        public BuildLogScraper(ILogger<BuildLogScraper> logger, IAzureDevOpsClient client)
         {
-            _httpClient = GetHttpClient(Environment.GetEnvironmentVariable("AzdoToken"));
+            _azureDevOpsClient = client;
             _logger = logger;
         }
 
@@ -35,7 +37,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 throw new ArgumentException("Log URI can't be empty", nameof(logUri));
             }
 
-            string logText = await TryGetLogContents(logUri);
+            string logText;
+            try
+            {
+                logText = await _azureDevOpsClient.TryGetLogContents(logUri);
+            }
+            catch(Exception exception)
+            {
+                _logger.LogWarning($"Exception thrown when trying to get log '{logUri}': {exception}");
+                return string.Empty;
+            }
+
             if (string.IsNullOrEmpty(logText))
             {
                 _logger.LogWarning($"Got empty log file for '{logUri}'");
@@ -54,29 +66,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
         }
 
-        private async Task<string> TryGetLogContents(string logUri)
-        {
-            try
-            {
-                return await _httpClient.GetStringAsync(logUri);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning($"Exception thrown when trying to get log '{logUri}': {exception}");
-                return string.Empty;
-            }
-        }
-
         private static readonly Regex azurePipelinesRegex = new Regex(@"Environment: (\S+)");
         private static readonly Regex oneESRegex = new Regex(@"Image: (\S+)");
-
-        private HttpClient GetHttpClient(string azureDevOpsAccessToken)
-        {
-            var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true });
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                "Basic",
-                Convert.ToBase64String(Encoding.ASCII.GetBytes($":{azureDevOpsAccessToken}")));
-            return httpClient;
-        }
     }
 }
