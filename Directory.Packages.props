@@ -125,6 +125,7 @@
     <PackageVersion Include="Newtonsoft.Json.Bson" Version="1.0.2" />
     <PackageVersion Include="NuGet.Configuration" Version="5.11.0" />
     <PackageVersion Include="NuGet.Packaging" Version="5.11.0" />
+    <PackageVersion Include="NuGet.Versioning" Version="5.11.0" />
     <PackageVersion Include="NUnit" Version="3.12.0" />  
     <PackageVersion Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageVersion Include="Octokit" Version="0.49.0" />
