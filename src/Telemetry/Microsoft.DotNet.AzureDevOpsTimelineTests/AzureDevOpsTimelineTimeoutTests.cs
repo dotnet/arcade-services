@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 });
                 collection.Configure<AzureDevOpsTimelineOptions>((o, p) =>
                 {
-                    o.LogScrapingTimeout = "00:00:100";
+                    o.LogScrapingTimeout = "00:00:00.100";
                 });
             }
 

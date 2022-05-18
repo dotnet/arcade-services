@@ -8,7 +8,6 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,8 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Newtonsoft.Json;
-using Kusto.Cloud.Platform.Utils;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {

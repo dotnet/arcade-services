@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(1));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
@@ -148,7 +148,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             // Identify additional timelines by inspecting each record for a "PreviousAttempt"
             // object, then fetching the "timelineId" field.
             List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
-
             foreach ((Build build, Task<Timeline> timelineTask) in tasks)
             {
                 Timeline timeline = await timelineTask;
@@ -239,35 +238,28 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }      
 
-            TimeSpan cancelationTime; 
-            if(!TimeSpan.TryParseExact(_options.Value.LogScrapingTimeout, @"m\:s\:fff", CultureInfo.CurrentCulture, out cancelationTime)){
-                cancelationTime = TimeSpan.FromMinutes(10);
+            TimeSpan cancellationTime; 
+            if(!TimeSpan.TryParse(_options.Value.LogScrapingTimeout, out cancellationTime)){
+                cancellationTime = TimeSpan.FromMinutes(10);
             }
 
             try
             {
-                Stopwatch stopWatch = new Stopwatch();
-
                 _logger.LogInformation("Starting log scraping");
 
-                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancelationTime);
+                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
                 var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
 
                 var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
                 var combinedCancellationToken = combinedCancellationTokenSource.Token;
 
-                stopWatch.Start();
+                Stopwatch stopWatch = Stopwatch.StartNew();
 
-                var task = Task.Run(async () =>
-                {
-                    await GetImageNames(records, combinedCancellationToken);
-                }, combinedCancellationToken);
-
-                await task;
+                await GetImageNames(records, combinedCancellationToken);
 
                 if (combinedCancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogWarning($"Log scraping timed out after {cancelationTime}");
+                    _logger.LogWarning($"Log scraping timed out after {cancellationTime}");
                 }
 
                 stopWatch.Stop();
@@ -370,11 +362,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
             var bag = new ConcurrentBag<Task>();
-            int canceledTasksNumber = 0;
+            int cancelledTasksCount = 0;
 
-            foreach(var record in records)
+            foreach (var record in records)
             {
-                if(!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
+                if (!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
                 {
                     var childTask = Task.Run(async () =>
                     {
@@ -392,12 +384,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             }
                             else
                             {
-                                Interlocked.Increment(ref canceledTasksNumber);
+                                Interlocked.Increment(ref cancelledTasksCount);
                             }
                         }
                         catch (OperationCanceledException) 
                         {
-                            Interlocked.Increment(ref canceledTasksNumber);
+                            Interlocked.Increment(ref cancelledTasksCount);
                         }
                         catch (Exception exception)
                         {
@@ -413,7 +405,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
 
             await Task.WhenAll(bag.ToArray());
-            _logger.LogInformation($"Log scraping had {canceledTasksNumber} out of {bag.Count} tasks canceled due to timeout");
+            _logger.LogInformation($"Log scraping had {cancelledTasksCount} out of {bag.Count} tasks canceled due to timeout");
         }
     }
 }

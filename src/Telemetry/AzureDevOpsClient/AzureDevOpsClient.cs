@@ -170,7 +170,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 {
                     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                    var response = await _httpClient.SendAsync(request, cancellationToken);
+                    using var response = await _httpClient.SendAsync(request, cancellationToken);
 
                     if (response.StatusCode == HttpStatusCode.TooManyRequests)
                     {
@@ -182,7 +182,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                             {
                                 randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
                             }
-                            await Task.Delay((int)(TimeSpan.FromSeconds(seconds).TotalMilliseconds + randomDelay), cancellationToken);
+                            await Task.Delay(TimeSpan.FromSeconds(seconds).Add(TimeSpan.FromMilliseconds(randomDelay)), cancellationToken);
                             continue;
                         }
                     }
@@ -193,7 +193,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 }
             }
 
-            return string.Empty;
+            throw new InvalidOperationException($"Failed to get logs after getting throttled {_retryNumber} times");
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
