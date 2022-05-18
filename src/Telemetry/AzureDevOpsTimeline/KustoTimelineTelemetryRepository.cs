@@ -158,6 +158,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("TaskName", b.Raw.Task?.Name, KustoDataType.String),
                     new KustoValue("TaskVersion", b.Raw.Task?.Version, KustoDataType.String),
                     new KustoValue("Attempt", b.Raw.Attempt, KustoDataType.Int),
+                    new KustoValue("ImageName", b.ImageName, KustoDataType.String),
                 });
         }
 

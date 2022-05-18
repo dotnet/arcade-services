@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
@@ -24,34 +25,20 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger = logger;
         }
 
-        public Task<string> ExtractMicrosoftHostedPoolImageNameAsync(string logUri)
-            => ExtractImageNameAsync(logUri, azurePipelinesRegex);
+        public Task<string> ExtractMicrosoftHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken)
+            => ExtractImageNameAsync(logUri, azurePipelinesRegex, cancellationToken);
 
-        public Task<string> ExtractOneESHostedPoolImageNameAsync(string logUri)
-            => ExtractImageNameAsync(logUri, oneESRegex);
+        public Task<string> ExtractOneESHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken)
+            => ExtractImageNameAsync(logUri, oneESRegex, cancellationToken);
 
-        private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex)
+        private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(logUri))
-            {
-                throw new ArgumentException("Log URI can't be empty", nameof(logUri));
-            }
-
-            string logText;
-            try
-            {
-                logText = await _azureDevOpsClient.TryGetLogContents(logUri);
-            }
-            catch(Exception exception)
-            {
-                _logger.LogWarning($"Exception thrown when trying to get log '{logUri}': {exception}");
-                return string.Empty;
-            }
+            string logText = await _azureDevOpsClient.TryGetLogContents(logUri, cancellationToken);
 
             if (string.IsNullOrEmpty(logText))
             {
-                _logger.LogWarning($"Got empty log file for '{logUri}'");
-                return string.Empty;
+                _logger.LogInformation($"Got empty log file for '{logUri}'");
+                return null;
             }
 
             Match match = imageNameRegex.Match(logText);
@@ -62,7 +49,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             else
             {
                 _logger.LogWarning($"No matches for regex '{imageNameRegex}' in log {logUri}");
-                return string.Empty;
+                return null;
             }
         }
 

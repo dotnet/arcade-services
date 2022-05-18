@@ -10,9 +10,11 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -114,7 +116,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromHours(1));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
@@ -235,31 +237,46 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         issue.AugmentedIndex = "999." + issue.Index.ToString("D3");
                     }
                 }
-            }
+            }      
 
-            Stopwatch stopWatch = new Stopwatch();
-            stopWatch.Start();
+            TimeSpan cancelationTime; 
+            if(!TimeSpan.TryParseExact(_options.Value.LogScrapingTimeout, @"m\:s\:fff", CultureInfo.CurrentCulture, out cancelationTime)){
+                cancelationTime = TimeSpan.FromMinutes(10);
+            }
 
             try
             {
-                Task task = Task.Run(() => GetImageNames(records));
-                if (task.Wait(TimeSpan.FromMinutes(_options.Value.LogScrapingTimeout)))
+                Stopwatch stopWatch = new Stopwatch();
+
+                _logger.LogInformation("Starting log scraping");
+
+                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancelationTime);
+                var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
+
+                var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
+                var combinedCancellationToken = combinedCancellationTokenSource.Token;
+
+                stopWatch.Start();
+
+                var task = Task.Run(async () =>
                 {
-                    stopWatch.Stop();
-                    _logger.LogInformation($"Log scraping took {stopWatch.ElapsedMilliseconds} milliseconds");
-                }
-                else
+                    await GetImageNames(records, combinedCancellationToken);
+                }, combinedCancellationToken);
+
+                await task;
+
+                if (combinedCancellationToken.IsCancellationRequested)
                 {
-                    stopWatch.Stop();
-                    _logger.LogError("Log scraping timed out after 10 minutes");
+                    _logger.LogWarning($"Log scraping timed out after {cancelationTime}");
                 }
+
+                stopWatch.Stop();
+                _logger.LogInformation($"Log scraping took {stopWatch.ElapsedMilliseconds} milliseconds");                             
             }
             catch (Exception e)
             {
                 _logger.LogError($"Exception thrown while getting image names: {e}");
             }
-
-            var test = records.Where(r => r.Raw.Name == "Initialize job").ToList();
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
@@ -348,32 +365,55 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
         }
 
-        private async Task GetImageNames(List<AugmentedTimelineRecord> records)
+        private async Task GetImageNames(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
         {
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
-            IEnumerable<Task> tasks = records.Where(r => r.Raw.Log != null && !string.IsNullOrEmpty(r.Raw.Log.Url)).Select(async record =>
+            var bag = new ConcurrentBag<Task>();
+            int canceledTasksNumber = 0;
+
+            foreach(var record in records)
             {
-                if(record.Raw.Name == "Initialize job")
+                if(!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
                 {
-                    await throttleSemaphore.WaitAsync();
+                    var childTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await throttleSemaphore.WaitAsync();
 
-                    try
-                    {
-                        record.ImageName = (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
-                            ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url)
-                            : record.Raw.WorkerName.StartsWith("NetCore1ESPool-")
-                                ? await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url)
-                                : "";
-                    }
-                    finally
-                    {
-                        throttleSemaphore.Release();
-                    }
+                            if (!cancellationToken.IsCancellationRequested)
+                            {
+                                record.ImageName = (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+                                ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken)
+                                : record.Raw.WorkerName.StartsWith("NetCore1ESPool-")
+                                    ? await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken)
+                                    : null;
+                            }
+                            else
+                            {
+                                Interlocked.Increment(ref canceledTasksNumber);
+                            }
+                        }
+                        catch (OperationCanceledException) 
+                        {
+                            Interlocked.Increment(ref canceledTasksNumber);
+                        }
+                        catch (Exception exception)
+                        {
+                            _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': {exception}");
+                        }
+                        finally
+                        {
+                            throttleSemaphore.Release();
+                        }
+                    }, cancellationToken);
+                    bag.Add(childTask);
                 }
-            });
+            }
 
-            await Task.WhenAll(tasks);
+            await Task.WhenAll(bag.ToArray());
+            _logger.LogInformation($"Log scraping had {canceledTasksNumber} out of {bag.Count} tasks canceled due to timeout");
         }
     }
 }

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -22,6 +23,11 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly string _baseUrl;
         private readonly string _organization;
         private readonly SemaphoreSlim _parallelism;
+
+        private const int _retryDelayMax = 2500;
+        private const int _retryDelayMin = 1500;
+        private const int _retryNumber = 3;
+        private static readonly Random _randomNumberGenerator = new Random();
 
         public AzureDevOpsClient(
             string baseUrl,
@@ -156,18 +162,38 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return JsonConvert.DeserializeObject<WorkItem>(json);
         }
 
-        public async Task<string> TryGetLogContents(string logUri)
+        public async Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken)
         {
-            using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
+            for (int i = 0; i < _retryNumber; i++)
             {
-                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+                using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
+                {
+                    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                var response = await _httpClient.SendAsync(request);
+                    var response = await _httpClient.SendAsync(request, cancellationToken);
 
-                response.EnsureSuccessStatusCode();
+                    if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        if (response.Headers.TryGetValues("Retry-After", out var values) &&
+                            int.TryParse(values.First(), out var seconds))
+                        {
+                            int randomDelay;
+                            lock (_randomNumberGenerator)
+                            {
+                                randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                            }
+                            await Task.Delay((int)(TimeSpan.FromSeconds(seconds).TotalMilliseconds + randomDelay), cancellationToken);
+                            continue;
+                        }
+                    }
 
-                return await response.Content.ReadAsStringAsync();
+                    response.EnsureSuccessStatusCode();
+
+                    return await response.Content.ReadAsStringAsync(cancellationToken);
+                }
             }
+
+            throw new InvalidOperationException($"Failed to get log after {_retryNumber} retries");
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

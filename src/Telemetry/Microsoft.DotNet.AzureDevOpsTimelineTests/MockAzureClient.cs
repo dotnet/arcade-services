@@ -18,6 +18,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
     {
         public IDictionary<Build, List<Timeline>> Builds { get; }
 
+        public static string oneESImageName = "Build.Ubuntu.1804.Amd64";
+        public static string microsoftHostedAgentImageName = "windows-2019";
+        public static string oneESLogUrl = $"https://www.fakeurl.com/{oneESImageName}";
+        public static string microsoftHostedAgentLogUrl = $"https://www.fakeurl.com/{microsoftHostedAgentImageName}";
+        public static string oneESLog = @$"SKU: Standard_D4_v3
+Image: {oneESImageName}
+Image Version: 2022.0219.013407";
+        public static string microsoftHostedLog = @$"SKU: Standard_D4_v3
+Environment: {microsoftHostedAgentImageName}
+Version: 20220223.1";
+
+        private readonly IDictionary<string, string> _urlDictionary;
+
         public MockAzureClient()
         {
             Builds = new Dictionary<Build, List<Timeline>>();
@@ -26,6 +39,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         public MockAzureClient(Dictionary<Build, List<Timeline>> builds)
         {
             Builds = builds;
+            _urlDictionary = new Dictionary<string, string>()
+            {
+                { oneESLogUrl, oneESLog },
+                { microsoftHostedAgentLogUrl, microsoftHostedLog }
+            };
         }
 
         public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, int? limit = null)
@@ -72,9 +90,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public Task<string> TryGetLogContents(string logUri)
+        public Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(_urlDictionary[logUri]);
         }
     }
 }

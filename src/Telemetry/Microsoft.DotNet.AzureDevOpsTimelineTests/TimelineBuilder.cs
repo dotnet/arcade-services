@@ -77,5 +77,31 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             return this;
         }
+
+        public TimelineBuilder AddRecord(string workerName, string recordName, string logUrl)
+        {
+            int nextId = 1;
+            if (records.Any())
+            {
+                nextId += records.Max(r => int.Parse(r.Id));
+            }
+
+            TimelineRecord record = new TimelineRecord()
+            {
+                Id = nextId.ToString(),
+                Issues = Array.Empty<TimelineIssue>(),
+                WorkerName = workerName,
+                Log = new BuildLogReference()
+                {
+                    Url = logUrl
+                },
+                PreviousAttempts = Array.Empty<TimelineAttempt>(),
+                Name = recordName
+            };
+
+            records.Add(record);
+
+            return this;
+        }
     }
 }

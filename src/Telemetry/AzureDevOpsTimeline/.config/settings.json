@@ -12,10 +12,10 @@
   "BuildBatchSize": 1000,
   "ParallelRequests": 4,
 
-  "LogScrapingTimeout": 10,
+  "LogScrapingTimeout": "10:00:000",
 
   "KustoTimelineTelemetry": {
-    "IngestConnectionString": "",
+    "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]",
     "Database": "engineeringdata"
   }

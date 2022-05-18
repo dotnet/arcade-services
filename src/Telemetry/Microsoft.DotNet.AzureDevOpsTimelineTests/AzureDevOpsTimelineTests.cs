@@ -18,6 +18,7 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json;
+using Kusto.Cloud.Platform.Utils;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
@@ -32,6 +33,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 collection.AddLogging(logging =>
                 {
                     logging.AddProvider(new NUnitLogger());
+                });
+                collection.Configure<AzureDevOpsTimelineOptions>((o, p) =>
+                {
+                    o.LogScrapingTimeout = "00:00:02";
                 });
             }
 
@@ -58,7 +63,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             {
                 Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
                 mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
-                collection.AddSingleton(mockSystemClock.Object);
+                collection.AddSingleton<ISystemClock>(mockSystemClock.Object);
             }
 
             public static void Build(IServiceCollection collection, BuildAndTimeline build)
@@ -67,7 +72,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     {build.Build, build.Timelines.ToList()}
                 }));
-                collection.AddSingleton<IBuildLogScraper>(scraper => new MockBuildLogScraper());
+                collection.AddSingleton<IBuildLogScraper, BuildLogScraper>();
             }
         }
 
@@ -224,6 +229,33 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                     first.Build.Should().BeSameAs(build.Build);
                     first.TargetBranch.Should().Be(string.Empty);
                 });
+        }
+
+        [Test]
+        public async Task BuildLogScraping()
+        {
+            DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
+            string azdoProjectName = "public";
+            string targetBranchName = "theTargetBranch";
+
+            BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
+                .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
+                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", MockAzureClient.oneESLogUrl)
+                    .AddRecord("Azure Pipelines", "Initialize job", MockAzureClient.microsoftHostedAgentLogUrl)
+                    .AddRecord()
+                ).Build();
+
+            // Test setup
+            await using TestData testData = await TestData.Default
+                .WithStaticClock(timeDatum)
+                .WithBuild(build)
+                .BuildAsync();
+
+            /// Test execution
+            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+
+            testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(2);
+            testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
         }
     }
 }
