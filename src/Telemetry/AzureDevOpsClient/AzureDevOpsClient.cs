@@ -193,7 +193,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 }
             }
 
-            throw new InvalidOperationException($"Failed to get log after {_retryNumber} retries");
+            return string.Empty;
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

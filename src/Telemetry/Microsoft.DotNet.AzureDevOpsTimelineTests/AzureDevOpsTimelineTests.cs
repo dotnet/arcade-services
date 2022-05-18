@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             {
                 Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
                 mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
-                collection.AddSingleton<ISystemClock>(mockSystemClock.Object);
+                collection.AddSingleton(mockSystemClock.Object);
             }
 
             public static void Build(IServiceCollection collection, BuildAndTimeline build)
