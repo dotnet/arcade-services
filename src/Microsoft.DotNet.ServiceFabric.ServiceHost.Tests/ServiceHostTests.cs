@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Test]
         public void HttpExceptionsAreAugmentedByRichTelemetry()
         {
-            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUnit");
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUnit");
             ServiceCollection services = new ServiceCollection();
             var channel = new FakeChannel();
             services.AddSingleton<ITelemetryChannel>(channel);
@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Test]
         public void HttpExceptionsContentIsTruncatedByRichTelemetry()
         {
-            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUnit");
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUnit");
             ServiceCollection services = new ServiceCollection();
             var channel = new FakeChannel();
             services.AddSingleton<ITelemetryChannel>(channel);

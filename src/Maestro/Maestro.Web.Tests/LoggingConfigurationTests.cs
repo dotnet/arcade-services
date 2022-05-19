@@ -66,7 +66,7 @@ namespace Maestro.Web.Tests
 
         private static TestData Setup()
         {
-            Environment.SetEnvironmentVariable("ENVIRONMENT", Environments.Development);
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Development);
             var channel = new Mock<ITelemetryChannel>();
             var telemetry = new List<ITelemetry>();
             channel.Setup(s => s.Send(Capture.In(telemetry)));

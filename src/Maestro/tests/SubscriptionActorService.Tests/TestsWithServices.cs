@@ -26,7 +26,7 @@ namespace SubscriptionActorService.Tests
         protected async Task Execute(Func<IServiceProvider, Task> run)
         {
             var services = new ServiceCollection();
-            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
             services.AddLogging(l => l.AddProvider(new NUnitLogger()));
             RegisterServices(services);
