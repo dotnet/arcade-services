@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -161,7 +162,11 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return JsonConvert.DeserializeObject<WorkItem>(json);
         }
 
-        public async Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken)
+        public delegate bool TryParseLine(string line, out string parsedValue);
+
+        public async Task<HttpResponseMessage> TryGetLogContents(
+            string logUri,
+            CancellationToken cancellationToken)
         {
             for (int i = 0; i < _retryNumber; i++)
             {
@@ -171,7 +176,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
                     try
                     {
-                        using var response = await _httpClient.SendAsync(request, cancellationToken);
+                        var response = await _httpClient.SendAsync(request, cancellationToken);
 
                         if (response.StatusCode == HttpStatusCode.TooManyRequests)
                         {
@@ -189,8 +194,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                         }
 
                         response.EnsureSuccessStatusCode();
-
-                        return await response.Content.ReadAsStringAsync(cancellationToken);
+                        return response;
                     }
                     catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
                     {

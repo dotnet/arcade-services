@@ -1,13 +1,7 @@
-using Castle.Core.Logging;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,24 +27,22 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            string logText = await _azureDevOpsClient.TryGetLogContents(logUri, cancellationToken);
-
-            if (string.IsNullOrEmpty(logText))
+            using HttpResponseMessage response = await _azureDevOpsClient.TryGetLogContents(logUri, cancellationToken);
+            using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using StreamReader reader = new StreamReader(logStream);
+            while (!reader.EndOfStream)
             {
-                _logger.LogInformation($"Got empty log file for '{logUri}'");
-                return null;
+                var line = reader.ReadLine();
+                
+                Match match = imageNameRegex.Match(line);
+                if (match.Success)
+                {
+                    return match.Groups[1].Value;
+                }
             }
 
-            Match match = imageNameRegex.Match(logText);
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-            else
-            {
-                _logger.LogWarning($"No matches for regex '{imageNameRegex}' in log {logUri}");
-                return null;
-            }
+            _logger.LogWarning($"Didn't find image name for log {logUri}");
+            return null;
         }
 
         private static readonly Regex azurePipelinesRegex = new Regex(@"Environment: (\S+)");

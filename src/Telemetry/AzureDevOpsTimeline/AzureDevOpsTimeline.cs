@@ -370,10 +370,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 {
                     var childTask = Task.Run(async () =>
                     {
+                        await throttleSemaphore.WaitAsync();
+
                         try
                         {
-                            await throttleSemaphore.WaitAsync();
-
                             if (!cancellationToken.IsCancellationRequested)
                             {
                                 record.ImageName = (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))

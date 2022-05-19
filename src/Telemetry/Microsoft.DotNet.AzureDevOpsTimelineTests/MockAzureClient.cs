@@ -2,10 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Kusto.Cloud.Platform.Utils;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,6 +38,11 @@ Version: 20220223.1";
         public MockAzureClient()
         {
             Builds = new Dictionary<Build, List<Timeline>>();
+            _urlDictionary = new Dictionary<string, string>()
+            {
+                { oneESLogUrl, oneESLog },
+                { microsoftHostedAgentLogUrl, microsoftHostedLog }
+            };
         }
 
         public MockAzureClient(Dictionary<Build, List<Timeline>> builds)
@@ -90,9 +99,9 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken)
+        public Task<HttpResponseMessage> TryGetLogContents(string logUri, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_urlDictionary[logUri]);
+            return Task.FromResult(new HttpResponseMessage { Content = new StringContent(_urlDictionary.GetOrDefault(logUri, ""))});
         }
     }
 }

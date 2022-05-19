@@ -29,9 +29,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         [Test]
         public async Task BuildLogScraperShouldExtractMicrosoftHostedPoolImageName()
         {
-            var imageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(@$"Virtual Environment
-Environment: {_microsoftHostedAgentImageName}
-Version: 20220223.1", _cancellationTokenSource.Token);
+            var imageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(
+                MockAzureClient.microsoftHostedAgentLogUrl,
+                _cancellationTokenSource.Token);
 
             Assert.AreEqual(_microsoftHostedAgentImageName, imageName);
         }
@@ -39,9 +39,9 @@ Version: 20220223.1", _cancellationTokenSource.Token);
         [Test]
         public async Task BuildLogScraperShouldExtractOneESHostedPoolImageName()
         {
-            var imageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(@$"SKU: Standard_D4_v3
-Image: {_oneESImageName}
-Image Version: 2022.0219.013407", _cancellationTokenSource.Token);
+            var imageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(
+                MockAzureClient.oneESLogUrl,
+                _cancellationTokenSource.Token);
 
             Assert.AreEqual(_oneESImageName, imageName);
         }
@@ -49,8 +49,8 @@ Image Version: 2022.0219.013407", _cancellationTokenSource.Token);
         [Test]
         public async Task BuildLogScraperShouldntExtractAnything()
         {
-            Assert.AreEqual(string.Empty, await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
-            Assert.AreEqual(string.Empty, await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
+            Assert.IsNull(await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
+            Assert.IsNull(await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
         }
     }
 }

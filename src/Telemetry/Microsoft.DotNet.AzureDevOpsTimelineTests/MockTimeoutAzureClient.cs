@@ -1,6 +1,7 @@
 using Microsoft.DotNet.Internal.AzureDevOps;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -66,7 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken)
+        public async Task<HttpResponseMessage> TryGetLogContents(string logUri, CancellationToken cancellationToken)
         {
             using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
             {
@@ -76,7 +77,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
                 response.EnsureSuccessStatusCode();
 
-                return await response.Content.ReadAsStringAsync(cancellationToken);
+                return response;
             }
         }
     }

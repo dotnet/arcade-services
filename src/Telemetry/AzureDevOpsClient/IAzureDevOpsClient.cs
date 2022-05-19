@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,6 +20,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
         public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
         public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
-        public Task<string> TryGetLogContents(string logUri, CancellationToken cancellationToken = default);
+        public Task<HttpResponseMessage> TryGetLogContents(string logUri, CancellationToken cancellationToken = default);
     }
 }
