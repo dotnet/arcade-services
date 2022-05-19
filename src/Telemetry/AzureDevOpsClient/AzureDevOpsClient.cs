@@ -24,10 +24,10 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly string _organization;
         private readonly SemaphoreSlim _parallelism;
 
-        private const int _retryDelayMax = 2500;
-        private const int _retryDelayMin = 1500;
         private const int _retryNumber = 3;
         private static readonly Random _randomNumberGenerator = new Random();
+
+        private int RandomDelay => _randomNumberGenerator.Next(1500, 2500);
 
         public AzureDevOpsClient(
             string baseUrl,
@@ -186,7 +186,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                                 int randomDelay;
                                 lock (_randomNumberGenerator)
                                 {
-                                    randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                                    randomDelay = RandomDelay;
                                 }
                                 await Task.Delay(TimeSpan.FromSeconds(seconds).Add(TimeSpan.FromMilliseconds(randomDelay)), cancellationToken);
                                 continue;
@@ -198,22 +198,23 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                     }
                     catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
                     {
+                        
                         //Exit if the task got cancelled
                         throw;
                     }
-                    catch (Exception)
+                    catch
                     {
                         int randomDelay;
                         lock (_randomNumberGenerator)
                         {
-                            randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                            randomDelay = RandomDelay;
                         }
                         await Task.Delay(TimeSpan.FromMilliseconds(randomDelay));
                     }
                 }
             }
 
-            throw new InvalidOperationException($"Failed to get logs after retrying {_retryNumber} times");
+            throw new HttpRequestException($"Failed to get logs after retrying {_retryNumber} times");
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

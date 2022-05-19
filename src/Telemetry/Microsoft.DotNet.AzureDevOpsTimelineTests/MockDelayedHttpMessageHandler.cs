@@ -9,20 +9,20 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
-    public class MockHttpMessageHandler : HttpMessageHandler
+    public class MockDelayedHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
 
         public int RequestCancelledCount { get; private set; }
 
-        public MockHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync)
+        public MockDelayedHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync)
         {
             _sendAsync = sendAsync;
         }
 
-        public static MockHttpMessageHandler Create(string message)
+        public static MockDelayedHttpMessageHandler Create(string message)
         {
-            return new MockHttpMessageHandler(async (request, cancellationToken) =>
+            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -33,9 +33,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             });
         }
 
-        public static MockHttpMessageHandler CreateWithCustomHttpStatusCode(HttpStatusCode httpStatusCode)
+        public static MockDelayedHttpMessageHandler Create()
         {
-            return new MockHttpMessageHandler(async (request, cancellationToken) =>
+            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
+            {
+                var responseMessage = new HttpResponseMessage(HttpStatusCode.OK);
+
+                return await Task.FromResult(responseMessage);
+            });
+        }
+
+        public static MockDelayedHttpMessageHandler CreateWithCustomHttpStatusCode(HttpStatusCode httpStatusCode)
+        {
+            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(httpStatusCode);
 

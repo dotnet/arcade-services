@@ -28,7 +28,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             public static void Dependencies(IServiceCollection collection)
             {
-
                 collection.AddOptions();
                 collection.AddLogging(logging =>
                 {
@@ -86,7 +85,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
-                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", "https://www.microsoft.com"))
+                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", "https://www.dev.azure.test"))
                 .Build();
 
             // Test setup

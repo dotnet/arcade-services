@@ -236,12 +236,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         issue.AugmentedIndex = "999." + issue.Index.ToString("D3");
                     }
                 }
-            }      
-
-            TimeSpan cancellationTime; 
-            if(!TimeSpan.TryParse(_options.Value.LogScrapingTimeout, out cancellationTime)){
-                cancellationTime = TimeSpan.FromMinutes(10);
             }
+
+            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
 
             try
             {
@@ -361,7 +358,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
-            var bag = new ConcurrentBag<Task>();
+            var taskList = new List<Task>();
             int successfulTasksCount = 0;
 
             foreach (var record in records)
@@ -393,12 +390,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             throttleSemaphore.Release();
                         }
                     }, cancellationToken);
-                    bag.Add(childTask);
+                    taskList.Add(childTask);
                 }
             }
 
-            await Task.WhenAll(bag.ToArray());
-            _logger.LogInformation($"Log scraping had {bag.Count - successfulTasksCount} out of {bag.Count} tasks fail");
+            await Task.WhenAll(taskList);
+            _logger.LogInformation($"Log scraping had {taskList.Count - successfulTasksCount} out of {taskList.Count} tasks fail");
         }
     }
 }
