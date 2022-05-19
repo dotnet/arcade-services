@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(1));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
@@ -362,7 +362,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
             var bag = new ConcurrentBag<Task>();
-            int cancelledTasksCount = 0;
+            int successfulTasksCount = 0;
 
             foreach (var record in records)
             {
@@ -381,15 +381,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 : record.Raw.WorkerName.StartsWith("NetCore1ESPool-")
                                     ? await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken)
                                     : null;
+                                Interlocked.Increment(ref successfulTasksCount);
                             }
-                            else
-                            {
-                                Interlocked.Increment(ref cancelledTasksCount);
-                            }
-                        }
-                        catch (OperationCanceledException) 
-                        {
-                            Interlocked.Increment(ref cancelledTasksCount);
                         }
                         catch (Exception exception)
                         {
@@ -405,7 +398,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
 
             await Task.WhenAll(bag.ToArray());
-            _logger.LogInformation($"Log scraping had {cancelledTasksCount} out of {bag.Count} tasks canceled due to timeout");
+            _logger.LogInformation($"Log scraping had {bag.Count - successfulTasksCount} out of {bag.Count} tasks fail");
         }
     }
 }

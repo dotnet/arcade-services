@@ -11,7 +11,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -170,30 +169,47 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 {
                     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                    using var response = await _httpClient.SendAsync(request, cancellationToken);
-
-                    if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                    try
                     {
-                        if (response.Headers.TryGetValues("Retry-After", out var values) &&
-                            int.TryParse(values.First(), out var seconds))
+                        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+                        if (response.StatusCode == HttpStatusCode.TooManyRequests)
                         {
-                            int randomDelay;
-                            lock (_randomNumberGenerator)
+                            if (response.Headers.TryGetValues("Retry-After", out var values) &&
+                                int.TryParse(values.First(), out var seconds))
                             {
-                                randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                                int randomDelay;
+                                lock (_randomNumberGenerator)
+                                {
+                                    randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                                }
+                                await Task.Delay(TimeSpan.FromSeconds(seconds).Add(TimeSpan.FromMilliseconds(randomDelay)), cancellationToken);
+                                continue;
                             }
-                            await Task.Delay(TimeSpan.FromSeconds(seconds).Add(TimeSpan.FromMilliseconds(randomDelay)), cancellationToken);
-                            continue;
                         }
+
+                        response.EnsureSuccessStatusCode();
+
+                        return await response.Content.ReadAsStringAsync(cancellationToken);
                     }
-
-                    response.EnsureSuccessStatusCode();
-
-                    return await response.Content.ReadAsStringAsync(cancellationToken);
+                    catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
+                    {
+                        //Exit if the task got cancelled
+                        throw;
+                    }
+                    catch (Exception)
+                    {
+                        int randomDelay;
+                        lock (_randomNumberGenerator)
+                        {
+                            randomDelay = _randomNumberGenerator.Next(_retryDelayMin, _retryDelayMax);
+                        }
+                        await Task.Delay(TimeSpan.FromMilliseconds(randomDelay));
+                    }
                 }
             }
 
-            throw new InvalidOperationException($"Failed to get logs after getting throttled {_retryNumber} times");
+            throw new InvalidOperationException($"Failed to get logs after retrying {_retryNumber} times");
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
