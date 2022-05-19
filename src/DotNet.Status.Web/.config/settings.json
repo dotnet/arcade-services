@@ -44,7 +44,7 @@
         },
         {
           "Project": "internal",
-          "DefinitionPath": "\\dotnet\\dotnet-arcade-services\\arcade-services-internal-ci",
+          "DefinitionPath": "\\dotnet\\arcade-services\\arcade-services-internal-ci",
           "Branches": [ "main" ],
           "Assignee": "riarenas",
           "IssuesId": "dotnet-arcade"
