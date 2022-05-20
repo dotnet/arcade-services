@@ -114,7 +114,7 @@ namespace RolloutScorer
             }
 
             Scorecard scorecard = await Scorecard.CreateScorecardAsync(_rolloutScorer);
-            string expectedTimeToRollout = TimeSpan.FromMinutes(_rolloutScorer.RepoConfig.ExpectedTime).ToString();
+            string expectedTimeToRollout = TimeSpan.FromMinutes(_rolloutScorer.RepoConfig.MaxAllowedTimeInMinutes).ToString();
 
             Console.WriteLine($"The {_rolloutScorer.Repo} {_rolloutScorer.RolloutStartDate.Date.ToShortDateString()} rollout score is {scorecard.TotalScore}.\n");
             Console.WriteLine($"|              Metric              |   Value  |  Target  |   Score   |");
