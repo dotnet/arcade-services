@@ -81,7 +81,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
             string targetBranchName = "theTargetBranch";
-            MockHttpMessageHandler httpMessageHandler = MockHttpMessageHandler.Create("some string");
+            MockDelayedHttpMessageHandler httpMessageHandler = MockDelayedHttpMessageHandler.Create("some string");
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)

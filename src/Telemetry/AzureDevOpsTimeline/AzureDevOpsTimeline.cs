@@ -359,7 +359,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
             var taskList = new List<Task>();
-            int successfulTasksCount = 0;
 
             foreach (var record in records)
             {
@@ -373,17 +372,24 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         {
                             if (!cancellationToken.IsCancellationRequested)
                             {
-                                record.ImageName = (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
-                                ? await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken)
-                                : record.Raw.WorkerName.StartsWith("NetCore1ESPool-")
-                                    ? await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken)
-                                    : null;
-                                Interlocked.Increment(ref successfulTasksCount);
+                                if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+                                {
+                                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                                }
+                                else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
+                                {
+                                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                                }
+                                else
+                                {
+                                    record.ImageName = null;
+                                }
                             }
                         }
                         catch (Exception exception)
                         {
                             _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': {exception}");
+                            throw;
                         }
                         finally
                         {
@@ -394,8 +400,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }
 
-            await Task.WhenAll(taskList);
-            _logger.LogInformation($"Log scraping had {taskList.Count - successfulTasksCount} out of {taskList.Count} tasks fail");
+            try
+            {
+                await Task.WhenAll(taskList);
+            }
+            catch(Exception e)
+            {                
+                _logger.LogInformation($"Log scraping had some failures {e.Message}, summary below");
+            }
+            int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
+            int cancelledTasks = taskList.Count(task => task.IsCanceled);
+            int failedTasks = taskList.Count(task => task.IsFaulted);
+            _logger.LogInformation($"Log scraping summary: {successfulTasks} successful, {cancelledTasks} cancelled, {failedTasks} failed");
         }
     }
 }
