@@ -13,13 +13,11 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
-using NuGet.Packaging.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -1498,7 +1496,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedProject, out string feedName))
             {
-                // If we are here, it means this is a symbols package or a nupkg published as a blob,
+                // If we are here, it means this is a symbols package or a nupkg published to a feed,
                 // remove some known paths from the name
 
                 string replacedName = asset.Name.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
@@ -1507,8 +1505,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
                 replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
 
-                // finally, remove the version from the name
-                replacedName = replacedName.Replace($".{asset.Version}", "", StringComparison.OrdinalIgnoreCase);
+                // finally, remove the version from the name, which should be the last element
+                string versionSegmentToRemove = $".{asset.Version}";
+                if (!replacedName.EndsWith(versionSegmentToRemove))
+                {
+                    Logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
+                }
+                replacedName = replacedName.Remove(replacedName.Length - versionSegmentToRemove.Length);
 
                 // create a temp asset with the mangled name and version
                 Asset mangledAsset = new Asset(asset.Id,
