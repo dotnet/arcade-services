@@ -6,7 +6,7 @@ using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager
 {
-    [Command("info")]
+    [Command("info", Description = "Get tool version details")]
     class InfoCommand : Command
     {
         private readonly IConsole _console;

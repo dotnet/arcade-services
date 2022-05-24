@@ -7,7 +7,7 @@ using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager
 {
-    [Command("test")]
+    [Command("test", Description = "Attempt authentication")]
     class TestCommand : Command
     {
         private readonly IConsole _console;
