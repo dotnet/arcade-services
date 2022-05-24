@@ -52,7 +52,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
             try
             {
                 _console.WriteLine($"Synchronizing secrets contained in {_manifestFile}");
-                if (_force || _forcedSecrets.Any())
+                if ((_force || _forcedSecrets.Any()) && _console.IsInteractive)
                 {
                     bool confirmed = await _console.ConfirmAsync(
                         "--force or --force-secret is set, this will rotate one or more secrets ahead of schedule, possibly causing service disruption. Type 'yes' to continue. ");
