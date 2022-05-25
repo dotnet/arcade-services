@@ -13,7 +13,7 @@ using Command = Microsoft.DncEng.CommandLineLib.Command;
 
 namespace Microsoft.DncEng.SecretManager.Commands
 {
-    [Command("validate-all", Description = "Validate all `settings.json` and `settings.<environment>.json` files against the specified manifest(s).")]
+    [Command("validate-all")]
     public class ValidateAllCommand : Command
     {
         private readonly IConsole _console;

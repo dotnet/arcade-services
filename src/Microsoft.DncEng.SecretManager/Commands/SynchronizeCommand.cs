@@ -10,7 +10,7 @@ using Command = Microsoft.DncEng.CommandLineLib.Command;
 
 namespace Microsoft.DncEng.SecretManager.Commands
 {
-    [Command("synchronize", Description = "Compare every secret specified in the manifest with the corresponding vault, and performs the appropriate rotation for each secret that requires it.")]
+    [Command("synchronize")]
     public class SynchronizeCommand : Command
     {
         private readonly StorageLocationTypeRegistry _storageLocationTypeRegistry;
@@ -41,8 +41,8 @@ namespace Microsoft.DncEng.SecretManager.Commands
         {
             return new OptionSet
             {
-                {"f|force", "Rotate all secrets specified in the manifest regardless of expiration", f => _force = !string.IsNullOrEmpty(f)},
-                {"force-secret=", "Rotate the specified secret regardless of its expiration. May be specified multiple times.", f => _forcedSecrets.Add(f)},
+                {"f|force", "Force rotate all secrets", f => _force = !string.IsNullOrEmpty(f)},
+                {"force-secret=", "Force rotate the specified secret", f => _forcedSecrets.Add(f)},
                 {"verify-only", "Does not rotate any secrets, instead, produces an error for every secret that needs to be rotated.", v => _verifyOnly = !string.IsNullOrEmpty(v)},
             };
         }
@@ -52,10 +52,10 @@ namespace Microsoft.DncEng.SecretManager.Commands
             try
             {
                 _console.WriteLine($"Synchronizing secrets contained in {_manifestFile}");
-                if ((_force || _forcedSecrets.Any()) && _console.IsInteractive)
+                if (_force || _forcedSecrets.Any())
                 {
                     bool confirmed = await _console.ConfirmAsync(
-                        "--force or --force-secret is set, this will rotate one or more secrets ahead of schedule, possibly causing service disruption. Type 'yes' to continue. ");
+                        "--force or --force-secret is set, this will rotate one or more secrets ahead of schedule, possibly causing service disruption. Continue? ");
                     if (!confirmed)
                     {
                         return;
@@ -115,7 +115,7 @@ namespace Microsoft.DncEng.SecretManager.Commands
                         _console.WriteLine("Referenced secret was rotated, will rotate.");
                         regenerate = true;
                     }
-                    else if (!_forcedSecrets.Any())
+                    else
                     {
                         // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
                         DateTimeOffset nextRotation = existing.Select(e => e.NextRotationOn).Min();
