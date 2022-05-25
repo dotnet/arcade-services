@@ -8,7 +8,6 @@ using FluentAssertions;
 using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.SecretManager.Commands;
 using Microsoft.Extensions.DependencyInjection;
-using Mono.Options;
 using Moq;
 using Moq.Protected;
 using NUnit.Framework;
@@ -18,7 +17,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
     public class SynchronizeCommandTests
     {
         private async Task TestCommand(DateTimeOffset now, string manifestText, string locationTypeName, List<SecretProperties> existingSecrets, string secretTypeName, List<string> suffixes,
-            Func<IDictionary<string, object>, List<string>> referencesGenerator, List<List<SecretData>> rotationResults, List<(string name, SecretValue value)> expectedSets, string[] nonPositionalArguments = null)
+            Func<IDictionary<string, object>, List<string>> referencesGenerator, List<List<SecretData>> rotationResults, List<(string name, SecretValue value)> expectedSets)
         {
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
@@ -74,8 +73,6 @@ namespace Microsoft.DncEng.SecretManager.Tests
                     .Returns(secretType.Object);
 
                 var command = provider.GetRequiredService<SynchronizeCommand>();
-                OptionSet optionSet = command.GetOptions();
-                optionSet.Parse(nonPositionalArguments ?? Array.Empty<string>());
                 command.HandlePositionalArguments(new List<string> {manifestFile});
 
                 await command.RunAsync(cancellationToken);
@@ -353,146 +350,6 @@ secrets:
                     }, new List<(string name, SecretValue value)>
                     {
                     }));
-        }
-
-        /// <summary>
-        /// Use of --force should rotate all secrets even if valid
-        /// </summary>
-        [Test]
-        public async Task ForcedSecretsAreRotated()
-        {
-            var now = DateTimeOffset.Parse("3/25/2021 1:30");
-            await TestCommand(
-                now: now, 
-                manifestText: @"
-storageLocation:
-  type: test
-secrets:
-  valid-secret:
-    type: test-secret
-  to-be-rotated-secret:
-    type: test-secret
-", 
-                locationTypeName: "test",
-                existingSecrets: new List<SecretProperties>
-                {
-                    new SecretProperties("valid-secret", now.AddDays(10), now.AddDays(4), ImmutableDictionary.Create<string, string>()),
-                    new SecretProperties("to-be-rotated-secret", now.AddDays(10), now.AddDays(-1), ImmutableDictionary.Create<string, string>()),
-                },
-                secretTypeName: "test-secret",
-                suffixes: new List<string>{""},
-                referencesGenerator: parameters => new List<string>(),
-                rotationResults: new List<List<SecretData>>
-                {
-                    new List<SecretData>
-                    {
-                        new SecretData("valid-secret-test-value", now.AddDays(20), now.AddDays(5)),
-                    },
-                    new List<SecretData>
-                    {
-                        new SecretData("to-be-rotated-secret-test-value", now.AddDays(20), now.AddDays(5))
-                    },
-                }, 
-                expectedSets: new List<(string name, SecretValue value)> 
-                {
-                    ("valid-secret", new SecretValue("valid-secret-test-value", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
-                    ("to-be-rotated-secret", new SecretValue("to-be-rotated-secret-test-value", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
-                }, 
-                nonPositionalArguments: new[] {"--force"}
-            );
-        }
-
-        /// <summary>
-        /// Use of --force-secret should reset a secret even if it is valid
-        /// </summary>
-        /// <returns></returns>
-        [Test]
-        public async Task ForceSecretSecretsAreRotated()
-        {
-            var now = DateTimeOffset.Parse("3/25/2021 1:30");
-            await TestCommand(
-                now: now,
-                manifestText: @"
-storageLocation:
-  type: test
-secrets:
-  valid-secret-alpha:
-    type: test-secret
-  valid-secret-beta:
-    type: test-secret
-",
-                locationTypeName: "test",
-                existingSecrets: new List<SecretProperties>
-                {
-                    new SecretProperties("valid-secret-beta", now.AddDays(10), now.AddDays(4), ImmutableDictionary.Create<string, string>()),
-                    new SecretProperties("valid-secret-alpha", now.AddDays(10), now.AddDays(4), ImmutableDictionary.Create<string, string>())
-                },
-                secretTypeName: "test-secret",
-                suffixes: new List<string> { "" },
-                referencesGenerator: parameters => new List<string>(),
-                rotationResults: new List<List<SecretData>>
-                {
-                    new List<SecretData>
-                    {
-                        new SecretData("beta-test-value", now.AddDays(20), now.AddDays(5))
-                    },
-                    new List<SecretData>
-                    {
-                        new SecretData("alpha-test-value", now.AddDays(20), now.AddDays(5)),
-                    }
-                },
-                expectedSets: new List<(string name, SecretValue value)>
-                {
-                    ("valid-secret-beta", new SecretValue("beta-test-value", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20)))
-                },
-                nonPositionalArguments: new[] { "--force-secret=valid-secret-beta" }
-            );
-        }
-
-        /// <summary>
-        /// Use of --force-secret should reset a valid secret while ignoring other secrets even when invalid.
-        /// </summary>
-        [Test]
-        public async Task OnlyForceSecretSecretsAreRotated()
-        {
-            var now = DateTimeOffset.Parse("3/25/2021 1:30");
-            await TestCommand(
-                now: now,
-                manifestText: @"
-storageLocation:
-  type: test
-secrets:
-  invalid-secret-alpha:
-    type: test-secret
-  valid-secret-beta:
-    type: test-secret
-",
-                locationTypeName: "test",
-                existingSecrets: new List<SecretProperties>
-                {
-                    new SecretProperties("valid-secret-beta", now.AddDays(10), now.AddDays(4), ImmutableDictionary.Create<string, string>()),
-                    new SecretProperties("invalid-secret-alpha", now.AddDays(10), now.AddDays(-1), ImmutableDictionary.Create<string, string>())
-                },
-                secretTypeName: "test-secret",
-                suffixes: new List<string> { "" },
-                referencesGenerator: parameters => new List<string>(),
-                rotationResults: new List<List<SecretData>>
-                {
-                    new List<SecretData>
-                    {
-                        new SecretData("beta-test-value", now.AddDays(20), now.AddDays(5))
-                    },
-                    new List<SecretData>
-                    {
-                        new SecretData("alpha-test-value", now.AddDays(20), now.AddDays(5)),
-                    }
-                },
-                expectedSets: new List<(string name, SecretValue value)>
-                {
-                    ("valid-secret-beta", new SecretValue("beta-test-value", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20)))
-                },
-                nonPositionalArguments: new[] { "--force-secret=valid-secret-beta" }
-            );
         }
     }
 }

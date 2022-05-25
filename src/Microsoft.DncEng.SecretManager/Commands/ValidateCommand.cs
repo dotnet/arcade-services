@@ -6,7 +6,7 @@ using Command = Microsoft.DncEng.CommandLineLib.Command;
 
 namespace Microsoft.DncEng.SecretManager.Commands
 {
-    [Command("validate", Description = "Validate a given `settings.json` and `settings.<environment>.json` against a secret manifest.")]
+    [Command("validate")]
     public class ValidateCommand : Command
     {
         private readonly SettingsFileValidator _settingsFileValidator;
