@@ -44,9 +44,39 @@
         },
         {
           "Project": "internal",
-          "DefinitionPath": "\\dotnet\\dotnet-arcade-services\\arcade-services-internal-ci",
+          "DefinitionPath": "\\dotnet\\arcade-services\\arcade-services-internal-ci",
           "Branches": [ "main" ],
           "Assignee": "riarenas",
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\release\\dotnet-release-weekly",
+          "Branches": [ "main" ],
           "IssuesId": "dotnet-arcade"
         },
         {

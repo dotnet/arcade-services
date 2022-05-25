@@ -39,7 +39,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             Data = _rawData.ToDictionary(p => p.Key, p => _mapFunc(p.Value));
         }
 
-        private void Reload(object? state)
+        private void Reload(object state)
         {
             try
             {

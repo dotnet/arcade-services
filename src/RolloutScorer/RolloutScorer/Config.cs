@@ -24,13 +24,13 @@ namespace RolloutScorer
         public List<string> BuildDefinitionIds { get; set; }
         public string AzdoInstance { get; set; }
         public string GithubIssueLabel { get; set; }
-        public int ExpectedTime { get; set; }
+        public int MaxAllowedTimeInMinutes { get; set; }
         public List<string> ExcludeStages { get; set; }
     }
 
     public class RolloutWeightConfig
     {
-        public int RolloutMinutesPerPoint { get; set; }
+        public int RolloutOverTimePoints { get; set; }
         public int PointsPerIssue { get; set; }
         public int PointsPerHotfix { get; set; }
         public int PointsPerRollback { get; set; }

@@ -6,7 +6,6 @@
     <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />

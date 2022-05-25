@@ -9,6 +9,9 @@ namespace Microsoft.DncEng.Configuration.Extensions
         {
             return value =>
             {
+                if (value == null)
+                    return null;
+
                 return regex.Replace(value, match =>
                 {
                     string key = match.Groups["key"].Value;

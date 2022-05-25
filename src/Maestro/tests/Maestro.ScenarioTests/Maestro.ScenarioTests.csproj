@@ -8,9 +8,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
-    <!-- The weird implicit package reference sometimes is included, and sometimes not. Remove it. -->
-    <PackageReference Remove="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="NuGet.Configuration" />
     <PackageReference Include="Octokit" />

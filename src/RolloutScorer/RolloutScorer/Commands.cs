@@ -69,7 +69,7 @@ namespace RolloutScorer
             _rolloutScorer.GithubConfig = StandardConfig.DefaultConfig.GithubConfig;
 
             // If they haven't told us to upload but they also haven't specified a repo & rollout start date, we need to throw
-            if (string.IsNullOrEmpty(_rolloutScorer.Repo) || (_rolloutScorer.RolloutStartDate == null))
+            if (string.IsNullOrEmpty(_rolloutScorer.Repo))
             {
                 Utilities.WriteError($"ERROR: One or both of required parameters 'repo' and 'rollout-start-date' were not specified.");
                 return 1;
@@ -114,7 +114,7 @@ namespace RolloutScorer
             }
 
             Scorecard scorecard = await Scorecard.CreateScorecardAsync(_rolloutScorer);
-            string expectedTimeToRollout = TimeSpan.FromMinutes(_rolloutScorer.RepoConfig.ExpectedTime).ToString();
+            string expectedTimeToRollout = TimeSpan.FromMinutes(_rolloutScorer.RepoConfig.MaxAllowedTimeInMinutes).ToString();
 
             Console.WriteLine($"The {_rolloutScorer.Repo} {_rolloutScorer.RolloutStartDate.Date.ToShortDateString()} rollout score is {scorecard.TotalScore}.\n");
             Console.WriteLine($"|              Metric              |   Value  |  Target  |   Score   |");

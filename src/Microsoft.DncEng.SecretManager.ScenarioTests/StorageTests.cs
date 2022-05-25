@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Management.Storage;
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.Rest;
 using NUnit.Framework;
 

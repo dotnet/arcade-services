@@ -2,55 +2,68 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using GitHubJwt;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using System.Text;
+using Microsoft.Extensions.Internal;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Microsoft.DotNet.GitHub.Authentication
 {
     public class GitHubAppTokenProvider : IGitHubAppTokenProvider
     {
+        private readonly ISystemClock _clock;
         private readonly IOptionsMonitor<GitHubTokenProviderOptions> _options;
 
-        public GitHubAppTokenProvider(IOptionsMonitor<GitHubTokenProviderOptions> options = null)
+        public GitHubAppTokenProvider(ISystemClock clock, IOptionsMonitor<GitHubTokenProviderOptions> options = null)
         {
+            _clock = clock;
             _options = options;
         }
 
         public string GetAppToken()
         {
-            return GetAppToken(Options.DefaultName);
+            var options = _options.CurrentValue;
+            return GetAppToken(options.GitHubAppId, options.PrivateKey);
         }
-
         /// <summary>
-        /// Get an app token using the <see cref="GitHubTokenProviderOptions"/> corresponding to the specified <see href="https://docs.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions">named option</see>.
+        /// Get an app token using the <see cref="GitHubTokenProviderOptions"/> corresponding to the specified
+        /// <see href="https://docs.microsoft.com/en-us/dotnet/core/extensions/options#named-options-support-using-iconfigurenamedoptions">named option</see>.
         /// </summary>
         public string GetAppToken(string name)
         {
             var options = _options.Get(name);
-            return GetAppToken(options.GitHubAppId, new StringPrivateKeySource(options.PrivateKey));
+            return GetAppToken(options.GitHubAppId, options.PrivateKey);
         }
 
-        public static string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName)
+        private string GetAppToken(int gitHubAppId, string privateKey)
         {
-            string encodedKey = System.Environment.GetEnvironmentVariable(environmentVariableName);
-            byte[] keydata = System.Convert.FromBase64String(encodedKey);
-            string privateKey = Encoding.UTF8.GetString(keydata);
-
-            return GetAppToken(gitHubAppId, new StringPrivateKeySource(privateKey));
-        }
-
-        private static string GetAppToken(int gitHubAppId, IPrivateKeySource privateKeySource)
-        {
-            var generator = new GitHubJwtFactory(
-                privateKeySource,
-                new GitHubJwtFactoryOptions
+            var handler = new JwtSecurityTokenHandler
+            {
+                SetDefaultTimesOnTokenCreation = false
+            };
+            using var rsa = RSA.Create(4096);
+            rsa.ImportFromPem(privateKey);
+            var rsaSecurityKey = new RsaSecurityKey(rsa)
+            {
+                CryptoProviderFactory =
                 {
-                    AppIntegrationId = gitHubAppId,
-                    // Due to clock drift, use 9:30 to avoid "'Expiration time' claim ('exp') is too far in the future"
-                    ExpirationSeconds = 570 
-                });
-            return generator.CreateEncodedJwtToken();
+                    // Since we control the lifetime of the key, they can't cache it, since we are about to dispose it
+                    CacheSignatureProviders = false
+                }
+            };
+            var signingCredentials = new SigningCredentials(rsaSecurityKey, SecurityAlgorithms.RsaSha256);
+            var dsc = new SecurityTokenDescriptor
+            {
+                IssuedAt = _clock.UtcNow.AddMinutes(-1).UtcDateTime,
+                Expires = _clock.UtcNow.AddMinutes(9).UtcDateTime,
+                Issuer = gitHubAppId.ToString(),
+                SigningCredentials = signingCredentials
+            };
+            SecurityToken token = handler.CreateToken(dsc);
+            return handler.WriteToken(token);
         }
     }
 }

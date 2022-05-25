@@ -17,7 +17,7 @@ namespace DependencyUpdater.Tests
         {
             DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
                     {
-                        Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
+                        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
                         ServiceHost.ConfigureDefaultServices(s);
                         Program.Configure(s);
 

@@ -118,7 +118,8 @@ namespace DependencyUpdater.Tests
                 Context.Channels.Add(new Channel
                 {
                     Id = item.ChannelId,
-                    Name = $"Channel_{item.ChannelId}"
+                    Name = $"Channel_{item.ChannelId}",
+                    Classification = "Pizza",
                 });
             }
 

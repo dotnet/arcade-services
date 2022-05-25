@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +21,11 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
             string adAppId = await context.GetSecretValue(new SecretReference { Location = parameters.ADApplication.Location, Name = parameters.ADApplication.Name + ADApplication.AppIdSuffix });
             SecretValue adAppSecret = await context.GetSecret(new SecretReference { Location = parameters.ADApplication.Location, Name = parameters.ADApplication.Name + ADApplication.AppSecretSuffix });
 
+            if (adAppSecret == null)
+            {
+                throw new InvalidOperationException($"The secret referenced by secret {context.SecretName} parameter 'adApplication' does not exist.");
+            }
+
             var connectionString = new StringBuilder();
             connectionString.Append($"Data Source={parameters.DataSource}");
             if (!string.IsNullOrEmpty(parameters.InitialCatalog))
@@ -27,7 +33,7 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 connectionString.Append($";Initial Catalog={parameters.InitialCatalog}");
             }
 
-            connectionString.Append($";AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret?.Value}");
+            connectionString.Append($";AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret.Value}");
             if (!string.IsNullOrWhiteSpace(parameters.AdditionalParameters))
             {
                 connectionString.Append($";{parameters.AdditionalParameters}");

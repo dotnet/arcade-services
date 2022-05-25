@@ -10,6 +10,7 @@ using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 using Microsoft.DncEng.SecretManager.Commands;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Rest;
 
 namespace Microsoft.DncEng.SecretManager.Tests
@@ -28,6 +29,12 @@ namespace Microsoft.DncEng.SecretManager.Tests
 
             Program program = new Program();
             program.ConfigureServiceCollection(services);
+            
+            // Replace the console with a test console so that we don't get a bunch of errors/warnings
+            // the command line when running these tests
+            services.RemoveAll<IConsole>();
+            services.RemoveAll<IConsoleBackend>();
+            services.AddSingleton<IConsole, TestConsole>();
 
             ServiceProvider provider = services.BuildServiceProvider();
             GlobalCommand globalCommand = ActivatorUtilities.CreateInstance<GlobalCommand>(provider);
@@ -41,7 +48,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
             try
             {
                 manifestFile = Path.GetTempFileName();
-                File.WriteAllText(manifestFile, manifest);
+                await File.WriteAllTextAsync(manifestFile, manifest, cts.Token);
 
                 command.HandlePositionalArguments(new List<string> { manifestFile });
 
