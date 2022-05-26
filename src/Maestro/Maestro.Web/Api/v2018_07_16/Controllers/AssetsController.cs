@@ -88,19 +88,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [AllowAnonymous]
         public IActionResult GetDarcVersion()
         {
-            // Use the assembly file version, which is the same as the package
-            // version. The informational version has a "+<sha>" appended to the end for official builds
-            // We don't want this, so eliminate it. The primary use of this is to install the darc version
-            // corresponding to the maestro++ version.
-            AssemblyInformationalVersionAttribute informationalVersionAttribute =
-                typeof(IRemote).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            string version = informationalVersionAttribute.InformationalVersion;
-            int lastPlus = version.LastIndexOf('+');
-            if (lastPlus != -1)
-            {
-                version = version.Substring(0, lastPlus);
-            }
-            return Ok(version);
+            // Hardcode version to work around https://github.com/dotnet/arcade/issues/9471
+            return Ok("1.1.0-beta.22220.1");
         }
 
         /// <summary>
