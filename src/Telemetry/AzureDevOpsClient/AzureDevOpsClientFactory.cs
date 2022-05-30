@@ -12,7 +12,13 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public IAzureDevOpsClient CreateAzureDevOpsClient(string baseUrl, string organization, int maxParallelRequests, string accessToken)
         {
-            return new AzureDevOpsClient(baseUrl, organization, maxParallelRequests, accessToken);
+            return new AzureDevOpsClient(new AzureDevOpsClientOptions
+            {
+                BaseUrl = baseUrl,
+                Organization = organization,
+                MaxParallelRequests = maxParallelRequests,
+                AccessToken = accessToken
+            });
         }
     }
 }
