@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,7 +45,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 s.Bind(o);
                             });
 
-                            services.AddTransient<IAzureDevOpsClient>(p =>
+                            services.AddSingleton(p =>
                             {
                                 IConfiguration c = p.GetRequiredService<IConfiguration>();
 
@@ -52,13 +54,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                     parallelRequests = 5;
                                 }
 
-                                return new AzureDevOpsClient(
-                                    baseUrl: c["AzureDevOpsUrl"],
-                                    organization: c["AzureDevOpsOrganization"],
-                                    maxParallelRequests: parallelRequests,
-                                    accessToken: c["AzureDevOpsAccessToken"]
-                                );
+                                return new AzureDevOpsClientOptions
+                                {
+                                    BaseUrl = c["AzureDevOpsUrl"],
+                                    Organization = c["AzureDevOpsOrganization"],
+                                    MaxParallelRequests = parallelRequests,
+                                    AccessToken = c["AzureDevOpsAccessToken"]
+                                };
                             });
+
+                            services.AddSingleton<ISystemClock, SystemClock>();
+                            services.AddSingleton<RetryAfterHandler>();
+
+                            services.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
                         });
