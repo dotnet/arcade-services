@@ -110,7 +110,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromHours(1));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
