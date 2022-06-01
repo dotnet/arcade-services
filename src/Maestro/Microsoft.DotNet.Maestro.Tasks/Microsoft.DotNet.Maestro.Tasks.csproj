@@ -10,6 +10,8 @@
     <!-- Build Tasks should not include any dependencies -->
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <LangVersion>8.0</LangVersion>
+    <TargetFrameworks>$(TargetFramework);net7.0</TargetFrameworks>
+    <TargetFramework />
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,6 +4,8 @@
     <DebugType>Full</DebugType>
     <IsPackable>false</IsPackable>
     <SignAssembly>false</SignAssembly>
+    <TargetFrameworks>$(TargetFramework);net7.0</TargetFrameworks>
+    <TargetFramework />
   </PropertyGroup>
 
   <ItemGroup>
