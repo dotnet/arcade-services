@@ -75,7 +75,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Kusto", "s
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNet.Status.Web", "src\DotNet.Status.Web\DotNet.Status.Web.csproj", "{56A25499-1436-4694-8D62-30AFB69A8921}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authentication", "src\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj", "{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authentication", "src\Shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj", "{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyUpdater.Tests", "src\Maestro\tests\DependencyUpdater.Tests\DependencyUpdater.Tests.csproj", "{574719D7-D038-4184-848D-02DEEAD60017}"
 EndProject
