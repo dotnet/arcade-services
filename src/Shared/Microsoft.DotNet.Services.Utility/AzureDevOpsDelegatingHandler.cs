@@ -10,7 +10,6 @@ namespace Microsoft.DotNet.Services.Utility
 
         protected AzureDevOpsDelegatingHandler(ILogger logger)
         {
-            InnerHandler = new HttpClientHandler() { CheckCertificateRevocationList = true };
             _logger = logger;
         }
 

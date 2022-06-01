@@ -1,10 +1,9 @@
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.ApplicationInsights;
-using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DotNet.Services.Utility
 {
