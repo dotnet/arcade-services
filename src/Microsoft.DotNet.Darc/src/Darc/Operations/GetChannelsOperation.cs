@@ -78,6 +78,13 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
         }
 
+        protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
+            => outputFormat switch
+            {
+                DarcOutputType.json => true,
+                _ => base.IsOutputFormatSupported(DarcOutputType.text),
+            };
+
         private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
         {
             // Write out a simple list of each channel's name
