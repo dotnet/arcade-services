@@ -8,10 +8,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="WindowsAzure.Storage" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Microsoft.DncEng.CommandLineLib\Microsoft.DncEng.CommandLineLib.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
   </ItemGroup>
   
 </Project>

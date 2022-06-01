@@ -25,17 +25,18 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public AzureDevOpsClient(
             AzureDevOpsClientOptions options,
-            RetryAfterHandler retryAfterHandler = null)
+            IEnumerable<DelegatingHandler> delegatingHandlerList = null)
         {
             _baseUrl = options.BaseUrl;
             _organization = options.Organization;
-            if (retryAfterHandler is null)
+            
+            if (delegatingHandlerList is null)
             {
                 _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
             }
             else
             {
-                _httpClient = new HttpClient(retryAfterHandler);
+                _httpClient = HttpClientFactory.Create(new HttpClientHandler() { CheckCertificateRevocationList = true }, delegatingHandlerList.ToArray());
             }
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
