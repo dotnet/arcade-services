@@ -51,6 +51,54 @@
         },
         {
           "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade\\arcade-codeql",
+          "Branches": [ "main", "release/6.0" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade-services\\arcade-services-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade-extensions\\dotnet-arcade-extensions-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\dotnet-helix-machines\\dotnet-helix-machines-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\migrate-package\\dotnet-migrate-package-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\source-indexer\\dotnet-source-indexer-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\xliff-tasks\\xliff-tasks-codeql",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade"
+        },
+        {
+          "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
           "IssuesId": "dotnet-arcade"
