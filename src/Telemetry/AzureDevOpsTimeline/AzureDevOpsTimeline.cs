@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             else
             {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
+                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromHours(1));
                 _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
             }
 
@@ -364,38 +364,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             {
                 if (!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
                 {
-                    var childTask = Task.Run(async () =>
-                    {
-                        await throttleSemaphore.WaitAsync();
-
-                        try
-                        {
-                            if (!cancellationToken.IsCancellationRequested)
-                            {
-                                if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
-                                {
-                                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
-                                }
-                                else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
-                                {
-                                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
-                                }
-                                else
-                                {
-                                    record.ImageName = null;
-                                }
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': {exception}");
-                            throw;
-                        }
-                        finally
-                        {
-                            throttleSemaphore.Release();
-                        }
-                    }, cancellationToken);
+                    var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
                     taskList.Add(childTask);
                 }
             }
@@ -412,6 +381,39 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             int cancelledTasks = taskList.Count(task => task.IsCanceled);
             int failedTasks = taskList.Count(task => task.IsFaulted);
             _logger.LogInformation($"Log scraping summary: {successfulTasks} successful, {cancelledTasks} cancelled, {failedTasks} failed");
+        }
+
+        private async Task GetImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        {
+            await throttleSemaphore.WaitAsync();
+
+            try
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+                    {
+                        record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                    }
+                    else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
+                    {
+                        record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                    }
+                    else
+                    {
+                        record.ImageName = null;
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': {exception}");
+                throw;
+            }
+            finally
+            {
+                throttleSemaphore.Release();
+            }
         }
     }
 }
