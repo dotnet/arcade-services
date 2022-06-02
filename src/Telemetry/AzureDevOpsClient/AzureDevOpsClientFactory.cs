@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 Organization = organization,
                 MaxParallelRequests = maxParallelRequests,
                 AccessToken = accessToken
-            });
+            }, new AzureDevOpsHttpClientFactory());
         }
     }
 }
