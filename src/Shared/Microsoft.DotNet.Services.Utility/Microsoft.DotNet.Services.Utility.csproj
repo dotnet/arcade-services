@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="WindowsAzure.Storage" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+    <PackageReference Include="Microsoft.ApplicationInsights" />
   </ItemGroup>
   
 </Project>
