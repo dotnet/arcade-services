@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.ApplicationInsights;
 
 namespace Microsoft.DotNet.Services.Utility
 {
@@ -11,13 +12,16 @@ namespace Microsoft.DotNet.Services.Utility
     {
         private readonly ISystemClock _clock;
         private readonly ILogger<RetryAfterHandler> _logger;
+        private readonly TelemetryClient _telemetry;
 
         public RetryAfterHandler(
             ISystemClock clock,
-            ILogger<RetryAfterHandler> logger) : base(logger)
+            ILogger<RetryAfterHandler> logger,
+            TelemetryClient telemetry) : base(logger)
         {
             _clock = clock;
             _logger = logger;
+            _telemetry = telemetry;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -31,6 +35,7 @@ namespace Microsoft.DotNet.Services.Utility
             if (retryAfter.Date.HasValue)
             {
                 response.Dispose();
+                _telemetry.TrackEvent("AzureDevOpsThrottled");
                 _logger.LogWarning("Retry-After detected, delaying until {date}", retryAfter.Date.Value);
                 await Task.Delay(_clock.UtcNow - retryAfter.Date.Value, cancellationToken);
                 return await base.SendAsync(request, cancellationToken);
@@ -39,6 +44,7 @@ namespace Microsoft.DotNet.Services.Utility
             if (retryAfter.Delta.HasValue)
             {
                 response.Dispose();
+                _telemetry.TrackEvent("AzureDevOpsThrottled");
                 _logger.LogWarning("Retry-After detected, delaying for {delta}", retryAfter.Delta.Value);
                 await Task.Delay(retryAfter.Delta.Value, cancellationToken);
                 return await base.SendAsync(request, cancellationToken);
