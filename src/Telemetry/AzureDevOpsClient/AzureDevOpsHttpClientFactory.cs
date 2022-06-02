@@ -1,17 +1,15 @@
-using System;
+using Microsoft.DotNet.Services.Utility;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-
+    
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public class AzureDevOpsHttpClientFactory : IHttpClientFactory
     {
-        private IEnumerable<DelegatingHandler> _delegatingHandlers;
+        private IEnumerable<AzureDevOpsDelegatingHandler> _delegatingHandlers;
 
-        public AzureDevOpsHttpClientFactory(IEnumerable<DelegatingHandler> delegatingHandlers = null)
+        public AzureDevOpsHttpClientFactory(IEnumerable<AzureDevOpsDelegatingHandler> delegatingHandlers = null)
         {
             _delegatingHandlers = delegatingHandlers;
         }
