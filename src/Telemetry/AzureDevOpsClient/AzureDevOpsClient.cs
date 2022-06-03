@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public AzureDevOpsClient(
             AzureDevOpsClientOptions options,
-            AzureDevOpsHttpClientFactory azureDevOpsHttpClientFactory)
+            IAzureDevOpsHttpClientFactory azureDevOpsHttpClientFactory)
         {
             _baseUrl = options.BaseUrl;
             _organization = options.Organization;

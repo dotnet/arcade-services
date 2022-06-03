@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             services.AddSingleton<ISystemClock, SystemClock>();
                             services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
 
-                            services.AddSingleton<AzureDevOpsHttpClientFactory>();
+                            services.AddSingleton<IAzureDevOpsHttpClientFactory, AzureDevOpsHttpClientFactory>();
                             services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
