@@ -18,7 +18,7 @@ namespace RolloutScorer
     {
         public string Repo { get; set; }
         public string Branch { get; set; } = "refs/heads/production";
-        public DateTimeOffset RolloutStartDate { get; set; }
+        public DateTimeOffset? RolloutStartDate { get; set; }
         public DateTimeOffset RolloutEndDate { get; set; } = DateTimeOffset.Now;
         public int ManualRollbacks { get; set; } = 0;
         public int ManualHotfixes { get; set; } = 0;
@@ -47,7 +47,7 @@ namespace RolloutScorer
         public async Task InitAsync()
         {
             // Convert the rollout start time and end time to the strings the AzDO API recognizes and fetch builds
-            string rolloutStartTimeUriString = RolloutStartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+            string rolloutStartTimeUriString = RolloutStartDate?.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
             string rolloutEndTimeUriString = RolloutEndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
 
             foreach (string buildDefinitionId in RepoConfig.BuildDefinitionIds)
@@ -368,7 +368,7 @@ namespace RolloutScorer
                 + $"from {RolloutStartDate} to {RolloutEndDate})", Log, LogLevel);
             SearchIssuesRequest searchIssuesRequest = new SearchIssuesRequest
             {
-                Created = new DateRange(RolloutStartDate, RolloutEndDate),
+                Created = new DateRange(RolloutStartDate ?? DateTimeOffset.Now, RolloutEndDate),
             };
             searchIssuesRequest.Repos.Add(GithubConfig.ScorecardsGithubOrg, GithubConfig.ScorecardsGithubRepo);
 

@@ -106,7 +106,7 @@ namespace RolloutScorerAzureFunction
 
                         log.LogInformation($"INFO: Creating rollout scorecard...");
                         scorecards.Add(await Scorecard.CreateScorecardAsync(rolloutScorer));
-                        log.LogInformation($"INFO: Successfully created scorecard for {rolloutScorer.RolloutStartDate.Date} rollout of {rolloutScorer.Repo}.");
+                        log.LogInformation($"INFO: Successfully created scorecard for {rolloutScorer.RolloutStartDate?.Date} rollout of {rolloutScorer.Repo}.");
                     }
 
                     log.LogInformation($"INFO: Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");

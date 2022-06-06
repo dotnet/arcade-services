@@ -39,7 +39,7 @@ namespace RolloutScorer
             Scorecard scorecard = new Scorecard
             {
                 Repo = rolloutScorer.RepoConfig,
-                Date = rolloutScorer.RolloutStartDate,
+                Date = rolloutScorer.RolloutStartDate ?? DateTimeOffset.Now,
                 TimeToRollout = rolloutScorer.CalculateTimeToRollout(),
                 CriticalIssues = githubIssues
                     .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, repoLabel, rolloutScorer.Log, rolloutScorer.LogLevel)),
