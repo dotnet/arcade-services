@@ -69,23 +69,23 @@ namespace RolloutScorer
             _rolloutScorer.GithubConfig = StandardConfig.DefaultConfig.GithubConfig;
 
             // If they haven't told us to upload but they also haven't specified a repo & rollout start date, we need to throw
-            if (string.IsNullOrEmpty(_rolloutScorer.Repo))
+            if (string.IsNullOrEmpty(_rolloutScorer.Repo) || _rolloutScorer.RolloutStartDate.Year < 2000)
             {
-                Utilities.WriteError($"ERROR: One or both of required parameters 'repo' and 'rollout-start-date' were not specified.");
+                Utilities.WriteError($"One or both of required parameters 'repo' and 'rollout-start-date' were not specified.");
                 return 1;
             }
 
             _rolloutScorer.RepoConfig = StandardConfig.DefaultConfig.RepoConfigs.Find(r => r.Repo == _rolloutScorer.Repo);
             if (_rolloutScorer.RepoConfig == null)
             {
-                Utilities.WriteError($"ERROR: Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
+                Utilities.WriteError($"Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
                 return 1;
             }
 
             _rolloutScorer.AzdoConfig = StandardConfig.DefaultConfig.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
             if (_rolloutScorer.AzdoConfig == null)
             {
-                Utilities.WriteError($"ERROR: Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +
+                Utilities.WriteError($"Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +
                     $"references unknown AzDO instance '{_rolloutScorer.RepoConfig.AzdoInstance}'");
                 return 1;
             }
