@@ -175,16 +175,12 @@ namespace Microsoft.DotNet.Kusto
         {
             string queryConnectionString = _kustoOptions.CurrentValue.QueryConnectionString;
             string defaultDatabaseName = _kustoOptions.CurrentValue.Database;
-            bool adminPrivileges = _kustoOptions.CurrentValue.AdminPrivileges;
 
             if (string.IsNullOrWhiteSpace(queryConnectionString))
                 throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.QueryConnectionString)} is not configured in settings or related KeyVault");
 
             if (string.IsNullOrWhiteSpace(defaultDatabaseName))
                 throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.Database)} is not configured in settings or related KeyVault");
-
-            if (!adminPrivileges)
-                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.AdminPrivileges)} is not configured in settings or related KeyVault");
 
             return _adminClients.GetOrAdd(queryConnectionString,
                 _ => new NonDisposableCslAdmin(KustoClientFactory.CreateCslAdminProvider(queryConnectionString),
@@ -282,6 +278,5 @@ namespace Microsoft.DotNet.Kusto
         public string QueryConnectionString { get; set; }
         public string IngestConnectionString { get; set; }
         public string Database { get; set; }
-        public bool AdminPrivileges { get; set; }
     }
 }
