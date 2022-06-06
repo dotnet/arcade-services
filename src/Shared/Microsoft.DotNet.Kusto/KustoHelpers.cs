@@ -173,16 +173,21 @@ namespace Microsoft.DotNet.Kusto
 
         public ICslAdminProvider GetAdminProvider()
         {
-            string adminConnectionString = _kustoOptions.CurrentValue.AdminConnectionString;
+            string queryConnectionString = _kustoOptions.CurrentValue.QueryConnectionString;
             string defaultDatabaseName = _kustoOptions.CurrentValue.Database;
-            if (string.IsNullOrWhiteSpace(adminConnectionString))
-                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.AdminConnectionString)} is not configured in settings or related KeyVault");
+            bool adminPrivileges = _kustoOptions.CurrentValue.AdminPrivileges;
+
+            if (string.IsNullOrWhiteSpace(queryConnectionString))
+                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.QueryConnectionString)} is not configured in settings or related KeyVault");
 
             if (string.IsNullOrWhiteSpace(defaultDatabaseName))
                 throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.Database)} is not configured in settings or related KeyVault");
 
-            return _adminClients.GetOrAdd(adminConnectionString,
-                _ => new NonDisposableCslAdmin(KustoClientFactory.CreateCslAdminProvider(adminConnectionString),
+            if (!adminPrivileges)
+                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.AdminPrivileges)} is not configured in settings or related KeyVault");
+
+            return _adminClients.GetOrAdd(queryConnectionString,
+                _ => new NonDisposableCslAdmin(KustoClientFactory.CreateCslAdminProvider(queryConnectionString),
                     defaultDatabaseName));
         }
 
@@ -276,7 +281,7 @@ namespace Microsoft.DotNet.Kusto
     {
         public string QueryConnectionString { get; set; }
         public string IngestConnectionString { get; set; }
-        public string AdminConnectionString { get; set; }
         public string Database { get; set; }
+        public bool AdminPrivileges { get; set; }
     }
 }
