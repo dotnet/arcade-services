@@ -101,31 +101,31 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\release\\dotnet-release-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
@@ -163,6 +163,12 @@
         "Owner": "dotnet",
         "Name": "arcade",
         "Labels": [ "Build Failed" ]
+      },
+      {
+        "Id": "dotnet-arcade-first-responder",
+        "Owner": "dotnet",
+        "Name": "arcade",
+        "Labels": [ "Build Failed", "First Responder" ]
       },
       {
         "Id": "dotnet-aspnetcore-infra",
