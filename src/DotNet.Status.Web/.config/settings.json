@@ -26,7 +26,7 @@
       "BaseUrl": "https://dev.azure.com",
       "Organization": "dnceng",
       "MaxParallelRequests": 10,
-      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "AccessToken": "[vault(dn-bot-dnceng-build-r-code-r-project-r-profile-r)]",
       "Builds": [
         {
           "Project": "internal",
