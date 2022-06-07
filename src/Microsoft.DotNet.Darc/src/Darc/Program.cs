@@ -2,18 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using CommandLine;
-using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.Darc.Options;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using CommandLine;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc
 {
@@ -27,7 +29,18 @@ namespace Microsoft.DotNet.Darc
 
             try
             {
-                return Parser.Default.ParseArguments(args, GetOptions())
+                Type[] options;
+                if (args.FirstOrDefault() == "vmr")
+                {
+                    options = GetVmrOptions();
+                    args = args.Skip(1).ToArray();
+                }
+                else
+                {
+                    options = GetOptions();
+                }
+
+                return Parser.Default.ParseArguments(args, options)
                     .MapResult(
                         (CommandLineOptions opts) => RunOperation(opts),
                         RecordFailedCommand
@@ -127,48 +140,53 @@ namespace Microsoft.DotNet.Darc
             }
         }
 
-        private static Type[] GetOptions()
+        // This order will mandate the order in which the commands are displayed if typing just 'darc'
+        // so keep these sorted.
+        private static Type[] GetOptions() => new[]
         {
-            // This order will mandate the order in which the commands are displayed if typing just 'darc'
-            // so keep these sorted.
-            return new Type[]
-                {
-                    typeof(AddChannelCommandLineOptions),
-                    typeof(AddDependencyCommandLineOptions),
-                    typeof(AddDefaultChannelCommandLineOptions),
-                    typeof(AddSubscriptionCommandLineOptions),
-                    typeof(AddBuildToChannelCommandLineOptions),
-                    typeof(AuthenticateCommandLineOptions),
-                    typeof(CloneCommandLineOptions),
-                    typeof(DefaultChannelStatusCommandLineOptions),
-                    typeof(DeleteBuildFromChannelCommandLineOptions),
-                    typeof(DeleteChannelCommandLineOptions),
-                    typeof(DeleteDefaultChannelCommandLineOptions),
-                    typeof(DeleteSubscriptionCommandLineOptions),
-                    typeof(DeleteSubscriptionsCommandLineOptions),
-                    typeof(GatherDropCommandLineOptions),
-                    typeof(GetAssetCommandLineOptions),
-                    typeof(GetBuildCommandLineOptions),
-                    typeof(GetChannelsCommandLineOptions),
-                    typeof(GetDefaultChannelsCommandLineOptions),
-                    typeof(GetDependenciesCommandLineOptions),
-                    typeof(GetDependencyGraphCommandLineOptions),
-                    typeof(GetDependencyFlowGraphCommandLineOptions),
-                    typeof(GetHealthCommandLineOptions),
-                    typeof(GetLatestBuildCommandLineOptions),
-                    typeof(GetRepositoryMergePoliciesCommandLineOptions),
-                    typeof(GetSubscriptionsCommandLineOptions),
-                    typeof(SetRepositoryMergePoliciesCommandLineOptions),
-                    typeof(SubscriptionsStatusCommandLineOptions),
-                    typeof(TriggerSubscriptionsCommandLineOptions),
-                    typeof(UpdateBuildCommandLineOptions),
-                    typeof(UpdateDependenciesCommandLineOptions),
-                    typeof(UpdateSubscriptionCommandLineOptions),
-                    typeof(VerifyCommandLineOptions),
-                    typeof(SetGoalCommandLineOptions),
-                    typeof(GetGoalCommandLineOptions)
-                };
-        }
+            typeof(AddChannelCommandLineOptions),
+            typeof(AddDependencyCommandLineOptions),
+            typeof(AddDefaultChannelCommandLineOptions),
+            typeof(AddSubscriptionCommandLineOptions),
+            typeof(AddBuildToChannelCommandLineOptions),
+            typeof(AuthenticateCommandLineOptions),
+            typeof(CloneCommandLineOptions),
+            typeof(DefaultChannelStatusCommandLineOptions),
+            typeof(DeleteBuildFromChannelCommandLineOptions),
+            typeof(DeleteChannelCommandLineOptions),
+            typeof(DeleteDefaultChannelCommandLineOptions),
+            typeof(DeleteSubscriptionCommandLineOptions),
+            typeof(DeleteSubscriptionsCommandLineOptions),
+            typeof(GatherDropCommandLineOptions),
+            typeof(GetAssetCommandLineOptions),
+            typeof(GetBuildCommandLineOptions),
+            typeof(GetChannelsCommandLineOptions),
+            typeof(GetDefaultChannelsCommandLineOptions),
+            typeof(GetDependenciesCommandLineOptions),
+            typeof(GetDependencyGraphCommandLineOptions),
+            typeof(GetDependencyFlowGraphCommandLineOptions),
+            typeof(GetHealthCommandLineOptions),
+            typeof(GetLatestBuildCommandLineOptions),
+            typeof(GetRepositoryMergePoliciesCommandLineOptions),
+            typeof(GetSubscriptionsCommandLineOptions),
+            typeof(SetRepositoryMergePoliciesCommandLineOptions),
+            typeof(SubscriptionsStatusCommandLineOptions),
+            typeof(TriggerSubscriptionsCommandLineOptions),
+            typeof(UpdateBuildCommandLineOptions),
+            typeof(UpdateDependenciesCommandLineOptions),
+            typeof(UpdateSubscriptionCommandLineOptions),
+            typeof(VerifyCommandLineOptions),
+            typeof(SetGoalCommandLineOptions),
+            typeof(GetGoalCommandLineOptions),
+        };
+
+        // This order will mandate the order in which the commands are displayed if typing just 'darc'
+        // so keep these sorted.
+        private static Type[] GetVmrOptions() => new[]
+        {
+            typeof(InitializeCommandLineOptions),
+            typeof(UpdateCommandLineOptions),
+        };
 
         private static void InitializeTelemetry()
         {
