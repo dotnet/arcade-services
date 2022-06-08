@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
         {
             Errors errors = 0;
             string dir = null;
+            string srcDir = null;
             bool fix = false;
 
             var options = new OptionSet
@@ -30,6 +31,10 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                     "directory|dir|d=", "Directory of eng folder containing Packages.props and Version.Details.xml",
                     v => dir = v
                 },
+                {
+                    "source-directory|src-dir|s=", "Directory of the src folder containing Directory.Packages.props",
+                    v => srcDir = v
+                }
                 {"fix", "Fix mismatched errors to found when possible, rather than reporting", v => fix = v != null}
             };
 
@@ -59,7 +64,19 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
 
             string engDir = dir;
             string packageFile = Path.Combine(engDir, "Packages.props");
-            if (!File.Exists(packageFile))
+
+            if (!string.IsNullOrEmpty(srcDir))
+            {
+                packageFile = Path.Combine(srcDir, "Directory.Packages.props");
+
+                if (!File.Exists(packageFile))
+                {
+                    WriteError(
+                        $"Could not find {packageFile}, pass root or eng directory as first parameter, or run from root");
+                    return Errors.MissingFile;
+                }
+            }
+            else if (!File.Exists(packageFile))
             {
                 engDir = Path.Combine(dir, "eng");
                 packageFile = Path.Combine(engDir, "Packages.props");
@@ -130,13 +147,23 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
 
             if (!fix)
             {
-                Console.WriteLine("No errors detected, Packages.props is coherent");
+                Console.WriteLine("No errors detected, Packages.props/Directory.Packages.props is coherent");
                 return 0;
             }
 
             foreach (XElement packageRef in localPackageDocument.Descendants("PackageReference"))
             {
                 string name = packageRef.Attribute("Update")?.Value;
+
+                if (localPackages.TryGetValue(name, out string newVersion))
+                {
+                    packageRef.SetAttributeValue("Version", newVersion);
+                }
+            }
+
+            foreach (XElement packageRef in localPackageDocument.Descendants("PackageVersion"))
+            {
+                string name = packageRef.Attribute("Include")?.Value;
 
                 if (localPackages.TryGetValue(name, out string newVersion))
                 {
@@ -263,8 +290,19 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                     }
                     catch (NotFoundException)
                     {
-                        WriteWarning($"No Packages.props found for '{repo}' at '{dep.CommitHash}'");
-                        continue;
+
+                        try
+                        {
+                            contents = await client.Repository.Content.GetAllContentsByRef(owner,
+                            repository,
+                            "Directory.Packages.props",
+                            dep.CommitHash);
+                        }
+                        catch (NotFoundException)
+                        {
+                            WriteWarning($"No Packages.props or Directory.Packages.props found for '{repo}' at '{dep.CommitHash}'");
+                            continue;
+                        }
                     }
                 }
 
@@ -273,7 +311,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                 {
                     if (contents[0].Size > 100000)
                     {
-                        WriteWarning($"Packages.props too large ({contents[0].Size}) in {repo}, skipping...");
+                        WriteWarning($"Packages.props/Directory.Packages.props too large ({contents[0].Size}) in {repo}, skipping...");
                         continue;
                     }
 
@@ -322,11 +360,16 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
             IEnumerable<XElement> packageReferences = packagesDocument?.Element("Project")
                 ?.Elements("ItemGroup")
                 ?.Elements("PackageReference");
-            if (packageReferences == null)
+
+            IEnumerable<XElement> packageVersions = packagesDocument?.Element("Project")
+                ?.Elements("ItemGroup")
+                ?.Elements("PackageVersion");
+
+            if (packageReferences == null && packageVersions == null)
             {
-                WriteError($"No PackageReferences found in {repoName} Packages.props");
+                WriteError($"No PackageReferences found in {repoName} Packages.props or PackageVersions found in {repoName} Directory.Packages.props");
             }
-            else
+            else if(packageReferences != null)
             {
                 foreach (XElement packageRef in packageReferences)
                 {
@@ -343,6 +386,33 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                     {
                         WriteWarning(
                             $"PackageReference with no 'Version' for Package '{name}' found in Packages.props for repo {repoName}");
+                        continue;
+                    }
+
+                    version = Regex.Replace(version,
+                        @"\$\(([A-Za-z0-9_]*)\)",
+                        m => props.GetValueOrDefault(m.Groups[1].Value, m.Groups[0].Value));
+
+                    versions.Add(name, version);
+                }
+            }
+            else if (packageVersions != null)
+            {
+                foreach (XElement packageRef in packageVersions)
+                {
+                    string name = packageRef.Attribute("Include")?.Value;
+                    string version = packageRef.Attribute("Version")?.Value;
+
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        WriteWarning($"PackageVersion with no 'Include' found in Directory.Packages.props for repo {repoName}");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(version))
+                    {
+                        WriteWarning(
+                            $"PackageVersion with no 'Version' for Package '{name}' found in Directory.Packages.props for repo {repoName}");
                         continue;
                     }
 
