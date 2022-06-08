@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Kusto.Cloud.Platform.Data;
 
 namespace Microsoft.DotNet.Kusto
 {
@@ -103,7 +104,7 @@ namespace Microsoft.DotNet.Kusto
             int tableCompletionCount = 0;
 
             using IEnumerator<ProgressiveDataSetFrame> frames = pDataSet.GetFrames();
-            
+
             while (frames.MoveNext())
             {
                 var frame = frames.Current;
@@ -111,23 +112,30 @@ namespace Microsoft.DotNet.Kusto
                 switch (frame.FrameType)
                 {
                     case FrameType.TableFragment:
+                    {
+                        var content = frame as ProgressiveDataSetDataTableFragmentFrame;
+                        while (GetNextRow(content, out object[] row))
                         {
-                            var content = frame as ProgressiveDataSetDataTableFragmentFrame;
-                            while(GetNextRow(content, out object[] row))
-                            {
-                                yield return row;
-                            };
+                            yield return row;
                         }
+                    }
                         break;
 
                     case FrameType.DataTable:
+                    {
+                        // Note from documentation: we can't skip processing the data -- we must consume it.
+                        var content = frame as ProgressiveDataSetDataTableFrame;
+                        var reader = content.TableData;
+                        while (reader.Read())
                         {
-                            var content = frame as DataTable;
-                            foreach (DataRow dataTableRow in content.Rows)
-                            {
-                                yield return dataTableRow.ItemArray;
-                            }
+                            var writer = new System.IO.StringWriter();
+                            reader.WriteAsText("", true, writer,
+                                firstOnly: false,
+                                markdown: false,
+                                includeWithHeader: "ColumnType",
+                                includeHeader: true);
                         }
+                    }
                         break;
 
                     case FrameType.TableCompletion:
