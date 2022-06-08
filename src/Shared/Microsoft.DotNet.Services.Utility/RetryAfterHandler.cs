@@ -39,7 +39,7 @@ namespace Microsoft.DotNet.Services.Utility
             if (retryAfter.Date.HasValue)
             {
                 response.Dispose();
-                _telemetry.TrackEvent("AzureDevOpsThrottled");
+                _telemetry?.TrackEvent("AzureDevOpsThrottled");
                 _logger.LogWarning("Retry-After detected, delaying until {date}", retryAfter.Date.Value);
                 await Task.Delay(_clock.UtcNow - retryAfter.Date.Value, cancellationToken);
                 return await base.SendAsync(request, cancellationToken);
@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Services.Utility
             if (retryAfter.Delta.HasValue)
             {
                 response.Dispose();
-                _telemetry.TrackEvent("AzureDevOpsThrottled");
+                _telemetry?.TrackEvent("AzureDevOpsThrottled");
                 _logger.LogWarning("Retry-After detected, delaying for {delta}", retryAfter.Delta.Value);
                 await Task.Delay(retryAfter.Delta.Value, cancellationToken);
                 return await base.SendAsync(request, cancellationToken);

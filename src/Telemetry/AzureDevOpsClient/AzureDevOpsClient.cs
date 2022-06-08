@@ -25,12 +25,12 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public AzureDevOpsClient(
             AzureDevOpsClientOptions options,
-            IAzureDevOpsHttpClientFactory azureDevOpsHttpClientFactory)
+            IHttpClientFactory httpClientFactory)
         {
             _baseUrl = options.BaseUrl;
             _organization = options.Organization;
 
-            _httpClient = azureDevOpsHttpClientFactory.CreateClient();
+            _httpClient = httpClientFactory.CreateClient();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
 
