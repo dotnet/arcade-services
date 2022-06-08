@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Services.Utility
         public RetryAfterHandler(
             ISystemClock clock,
             ILogger<RetryAfterHandler> logger,
-            TelemetryClient telemetry) : base(logger)
+            TelemetryClient telemetry = null) : base(logger)
         {
             _clock = clock;
             _logger = logger;
