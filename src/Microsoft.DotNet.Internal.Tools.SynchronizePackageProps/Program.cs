@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                 {
                     "source-directory|src-dir|s=", "Directory of the src folder containing Directory.Packages.props",
                     v => srcDir = v
-                }
+                },
                 {"fix", "Fix mismatched errors to found when possible, rather than reporting", v => fix = v != null}
             };
 
