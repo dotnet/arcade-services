@@ -273,9 +273,9 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                         try
                         {
                             contents = await client.Repository.Content.GetAllContentsByRef(owner,
-                            repository,
-                            "Directory.Packages.props",
-                            dep.CommitHash);
+                                repository,
+                                "Directory.Packages.props",
+                                dep.CommitHash);
                         }
                         catch (NotFoundException)
                         {
@@ -348,7 +348,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
             {
                 WriteError($"No PackageReferences found in {repoName} Packages.props or PackageVersions found in {repoName} Directory.Packages.props");
             }
-            else if(packageReferences != null)
+            else if (packageReferences != null)
             {
                 foreach (XElement packageRef in packageReferences)
                 {
