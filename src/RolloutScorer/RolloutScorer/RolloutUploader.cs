@@ -189,7 +189,7 @@ namespace RolloutScorer
             string summary = $"## {scorecard.Repo.Repo}\n\n" +
                 $"|              Metric              |   Value  |  Target  |   Score   |\n" +
                 $"|:--------------------------------:|:--------:|:--------:|:---------:|\n" +
-                $"| Time to Rollout                  | {scorecard.TimeToRollout} | {TimeSpan.FromMinutes(scorecard.Repo.ExpectedTime)} |     {scorecard.TimeToRolloutScore}     |\n" +
+                $"| Time to Rollout                  | {scorecard.TimeToRollout} | {TimeSpan.FromMinutes(scorecard.Repo.MaxAllowedTimeInMinutes)} |     {scorecard.TimeToRolloutScore}     |\n" +
                 $"| Critical/blocking issues created |     {scorecard.CriticalIssues}    |    0     |     {scorecard.CriticalIssueScore}     |\n" +
                 $"| Hotfixes                         |     {scorecard.Hotfixes}    |    0     |     {scorecard.HotfixScore}     |\n" +
                 $"| Rollbacks                        |     {scorecard.Rollbacks}    |    0     |     {scorecard.RollbackScore}     |\n" +

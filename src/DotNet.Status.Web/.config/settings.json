@@ -26,7 +26,7 @@
       "BaseUrl": "https://dev.azure.com",
       "Organization": "dnceng",
       "MaxParallelRequests": 10,
-      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "AccessToken": "[vault(dn-bot-dnceng-build-r-code-r-project-r-profile-r)]",
       "Builds": [
         {
           "Project": "internal",
@@ -53,31 +53,13 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
-        },
-        {
-          "Project": "internal",
-          "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
-          "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
-        },
-        {
-          "Project": "internal",
-          "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
-          "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
-        },
-        {
-          "Project": "internal",
-          "DefinitionPath": "\\dotnet\\release\\dotnet-release-weekly",
-          "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade"
+          "IssuesId": "dotnet-arcade-first-responder"
         },
         {
           "Project": "internal",
@@ -115,6 +97,12 @@
         "Owner": "dotnet",
         "Name": "arcade",
         "Labels": [ "Build Failed" ]
+      },
+      {
+        "Id": "dotnet-arcade-first-responder",
+        "Owner": "dotnet",
+        "Name": "arcade",
+        "Labels": [ "Build Failed", "First Responder" ]
       },
       {
         "Id": "dotnet-aspnetcore-infra",

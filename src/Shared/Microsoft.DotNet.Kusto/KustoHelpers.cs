@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Kusto.Data.Common;
+using Kusto.Data.Net.Client;
 using Kusto.Ingest;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -150,6 +151,7 @@ namespace Microsoft.DotNet.Kusto
     {
         private readonly IOptionsMonitor<KustoOptions> _kustoOptions;
         private readonly ConcurrentDictionary<string, IKustoIngestClient> _clients = new ConcurrentDictionary<string, IKustoIngestClient>();
+        private readonly ConcurrentDictionary<string, ICslAdminProvider> _adminClients = new ConcurrentDictionary<string, ICslAdminProvider>();
 
         public KustoIngestClientFactory(IOptionsMonitor<KustoOptions> options)
         {
@@ -167,6 +169,22 @@ namespace Microsoft.DotNet.Kusto
                 // Since we will hand this out to multiple callers, it's important we don't let it get disposed.
                 new NonDisposable(KustoIngestFactory.CreateQueuedIngestClient(ingestConnectionString))
             );
+        }
+
+        public ICslAdminProvider GetAdminProvider()
+        {
+            string queryConnectionString = _kustoOptions.CurrentValue.QueryConnectionString;
+            string defaultDatabaseName = _kustoOptions.CurrentValue.Database;
+
+            if (string.IsNullOrWhiteSpace(queryConnectionString))
+                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.QueryConnectionString)} is not configured in settings or related KeyVault");
+
+            if (string.IsNullOrWhiteSpace(defaultDatabaseName))
+                throw new InvalidOperationException($"Kusto {nameof(_kustoOptions.CurrentValue.Database)} is not configured in settings or related KeyVault");
+
+            return _adminClients.GetOrAdd(queryConnectionString,
+                _ => new NonDisposableCslAdmin(KustoClientFactory.CreateCslAdminProvider(queryConnectionString),
+                    defaultDatabaseName));
         }
 
         private class NonDisposable : IKustoIngestClient
@@ -207,11 +225,52 @@ namespace Microsoft.DotNet.Kusto
                 return _inner.IngestFromStreamAsync(stream, ingestionProperties, sourceOptions);
             }
         }
+
+        private class NonDisposableCslAdmin : ICslAdminProvider
+        {
+            private readonly ICslAdminProvider _inner;
+            public string DefaultDatabaseName { get; set; }
+
+            public NonDisposableCslAdmin(ICslAdminProvider inner, string defaultDatabaseName)
+            {
+                _inner = inner;
+                DefaultDatabaseName = defaultDatabaseName;
+            }
+
+            public void Dispose()
+            {
+                // This is non-disposable
+            }
+
+            public IDataReader ExecuteControlCommand(
+                string databaseName, 
+                string command,
+                ClientRequestProperties properties = null)
+            {
+                return _inner.ExecuteControlCommand(databaseName, command, properties);
+            }
+
+            public Task<IDataReader> ExecuteControlCommandAsync(
+                string databaseName, 
+                string command,
+                ClientRequestProperties properties = null)
+            {
+                return _inner.ExecuteControlCommandAsync(databaseName, command, properties);
+            }
+
+            public IDataReader ExecuteControlCommand(
+                string command,
+                ClientRequestProperties properties = null)
+            {
+                return _inner.ExecuteControlCommand(command, properties);
+            }
+        }
     }
 
     public interface IKustoIngestClientFactory
     {
         IKustoIngestClient GetClient();
+        ICslAdminProvider GetAdminProvider();
     }
 
     public class KustoOptions

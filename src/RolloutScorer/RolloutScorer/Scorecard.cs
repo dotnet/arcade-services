@@ -23,7 +23,7 @@ namespace RolloutScorer
         private List<string> _githubIssuesUris = new List<string>();
         public List<string> GithubIssueUris => _githubIssuesUris.Count == 0 ? GithubIssues.Select(issue => issue.HtmlUrl.ToString()).ToList() : _githubIssuesUris;
 
-        public int TimeToRolloutScore => Math.Max((int)Math.Ceiling((TimeToRollout.TotalMinutes - Repo.ExpectedTime) / RolloutWeightConfig.RolloutMinutesPerPoint), 0);
+        public int TimeToRolloutScore => TimeToRollout.TotalMinutes > Repo.MaxAllowedTimeInMinutes ? RolloutWeightConfig.RolloutOverTimePoints : 0;
         public int CriticalIssueScore => CriticalIssues * RolloutWeightConfig.PointsPerIssue;
         public int HotfixScore => Hotfixes * RolloutWeightConfig.PointsPerHotfix;
         public int RollbackScore => Rollbacks * RolloutWeightConfig.PointsPerRollback;
@@ -39,7 +39,7 @@ namespace RolloutScorer
             Scorecard scorecard = new Scorecard
             {
                 Repo = rolloutScorer.RepoConfig,
-                Date = rolloutScorer.RolloutStartDate,
+                Date = rolloutScorer.RolloutStartDate ?? DateTimeOffset.Now,
                 TimeToRollout = rolloutScorer.CalculateTimeToRollout(),
                 CriticalIssues = githubIssues
                     .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, repoLabel, rolloutScorer.Log, rolloutScorer.LogLevel)),
