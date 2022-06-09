@@ -22,19 +22,14 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
         {
             Errors errors = 0;
             string dir = null;
-            string srcDir = null;
             bool fix = false;
 
             var options = new OptionSet
             {
                 {
-                    "directory|dir|d=", "Directory of eng folder containing Packages.props and Version.Details.xml",
+                    "directory|dir|d=", "Directory of src folder containing Directory.Packages.props and eng/Version.Details.xml",
                     v => dir = v
-                },
-                {
-                    "source-directory|src-dir|s=", "Directory of the src folder containing Directory.Packages.props",
-                    v => srcDir = v
-                },
+                }
                 {"fix", "Fix mismatched errors to found when possible, rather than reporting", v => fix = v != null}
             };
 
@@ -62,34 +57,18 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                 dir = Environment.CurrentDirectory;
             }
 
-            string engDir = dir;
-            string packageFile = Path.Combine(engDir, "Packages.props");
+            string packageFile = Path.Combine(dir, "Directory.Packages.props");
 
-            if (!string.IsNullOrEmpty(srcDir))
+            if (!File.Exists(packageFile))
             {
-                packageFile = Path.Combine(srcDir, "Directory.Packages.props");
-
-                if (!File.Exists(packageFile))
-                {
-                    WriteError(
-                        $"Could not find {packageFile}, pass root or eng directory as first parameter, or run from root");
-                    return Errors.MissingFile;
-                }
-            }
-            else if (!File.Exists(packageFile))
-            {
-                engDir = Path.Combine(dir, "eng");
-                packageFile = Path.Combine(engDir, "Packages.props");
-                if (!File.Exists(packageFile))
-                {
-                    WriteError(
-                        $"Could not find {packageFile}, pass root or eng directory as first parameter, or run from root");
-                    return Errors.MissingFile;
-                }
+                WriteError(
+                    $"Could not find {packageFile}, pass root or eng directory as first parameter, or run from root");
+                return Errors.MissingFile;
             }
 
             XDocument localPackageDocument = XDocument.Load(packageFile);
 
+            string engDir = Path.Combine(dir, "eng");
             string versionFile = Path.Combine(engDir, "Version.Details.xml");
             if (!File.Exists(versionFile))
             {
