@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                 {
                     "directory|dir|d=", "Directory of src folder containing Directory.Packages.props and eng/Version.Details.xml",
                     v => dir = v
-                }
+                },
                 {"fix", "Fix mismatched errors to found when possible, rather than reporting", v => fix = v != null}
             };
 
