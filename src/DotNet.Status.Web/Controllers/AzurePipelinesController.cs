@@ -27,7 +27,7 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
-        private readonly IOptions<BuildMonitorOptions> _options;
+        private readonly IOptionsSnapshot<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<IAzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
@@ -36,7 +36,7 @@ namespace DotNet.Status.Web.Controllers
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
-            IOptions<BuildMonitorOptions> options,
+            IOptionsSnapshot<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger,
             IHttpClientFactory clientFactory)
         {

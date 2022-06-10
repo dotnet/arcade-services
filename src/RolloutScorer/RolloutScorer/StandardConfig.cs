@@ -14,7 +14,7 @@ namespace RolloutScorer
                     BuildDefinitionIds = new List<string> { "620", "697" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Helix",
-                    ExpectedTime = 90,
+                    MaxAllowedTimeInMinutes = 360,
                     ExcludeStages = new List<string>() { "Post_Deployment_Tests" },
                 },
                 new RepoConfig
@@ -23,7 +23,7 @@ namespace RolloutScorer
                     BuildDefinitionIds = new List<string> { "596" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout OSOB",
-                    ExpectedTime = 150,
+                    MaxAllowedTimeInMinutes = 360,
                     ExcludeStages = new List<string> { "Validate", "Cleanup", "Validate_OnPrem" },
                 },
                 new RepoConfig
@@ -32,7 +32,7 @@ namespace RolloutScorer
                     BuildDefinitionIds = new List<string> { "252", "728" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Arcade-Services",
-                    ExpectedTime = 90,
+                    MaxAllowedTimeInMinutes = 360,
                     ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
                 },
             },
@@ -48,7 +48,7 @@ namespace RolloutScorer
             },
             RolloutWeightConfig = new RolloutWeightConfig
             {
-                RolloutMinutesPerPoint = 15,
+                RolloutOverTimePoints = 50,
                 PointsPerIssue = 1,
                 PointsPerHotfix = 5,
                 PointsPerRollback = 10,
