@@ -27,21 +27,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            using HttpResponseMessage response = await _azureDevOpsClient.TryGetLogContents(logUri, cancellationToken);
-            using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using StreamReader reader = new StreamReader(logStream);
-            while (!reader.EndOfStream)
-            {
-                var line = reader.ReadLine();
-                
-                Match match = imageNameRegex.Match(line);
-                if (match.Success)
-                {
-                    return match.Groups[1].Value;
-                }
-            }
+            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, cancellationToken);
 
-            _logger.LogWarning($"Didn't find image name for log {logUri}");
+            if (imageName == string.Empty)
+            {
+                _logger.LogWarning($"Didn't find image name for log {logUri}");
+            }
             return null;
         }
 

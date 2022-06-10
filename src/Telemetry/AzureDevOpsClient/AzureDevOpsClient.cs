@@ -10,8 +10,10 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -26,6 +28,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         private const int _retryNumber = 3;
         private static readonly Random _randomNumberGenerator = new Random();
+        private readonly ExponentialRetry _retry;
 
         private int RandomDelay => _randomNumberGenerator.Next(1500, 2500);
 
@@ -33,7 +36,8 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             string baseUrl,
             string organization,
             int maxParallelRequests,
-            string accessToken)
+            string accessToken,
+            ExponentialRetry retry)
         {
             _baseUrl = baseUrl;
             _organization = organization;
@@ -48,6 +52,8 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                     Convert.ToBase64String(Encoding.UTF8.GetBytes($":{accessToken}"))
                 );
             }
+
+            _retry = retry;
         }
 
         /// <summary>
@@ -164,57 +170,36 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public delegate bool TryParseLine(string line, out string parsedValue);
 
-        public async Task<HttpResponseMessage> TryGetLogContents(
+        public async Task<string> TryGetImageName(
             string logUri,
+            Regex imageNameRegex,
             CancellationToken cancellationToken)
         {
-            for (int i = 0; i < _retryNumber; i++)
+            await _retry.RetryAsync(async () =>
             {
-                using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
+                using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken);
+                using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using StreamReader reader = new StreamReader(logStream);
+                while (!reader.EndOfStream)
                 {
-                    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+                    var line = reader.ReadLine();
 
-                    try
+                    Match match = imageNameRegex.Match(line);
+                    if (match.Success)
                     {
-                        var response = await _httpClient.SendAsync(request, cancellationToken);
-
-                        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                        {
-                            if (response.Headers.TryGetValues("Retry-After", out var values) &&
-                                int.TryParse(values.First(), out var seconds))
-                            {
-                                int randomDelay;
-                                lock (_randomNumberGenerator)
-                                {
-                                    randomDelay = RandomDelay;
-                                }
-                                await Task.Delay(TimeSpan.FromSeconds(seconds).Add(TimeSpan.FromMilliseconds(randomDelay)), cancellationToken);
-                                continue;
-                            }
-                        }
-
-                        response.EnsureSuccessStatusCode();
-                        return response;
-                    }
-                    catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
-                    {
-                        
-                        //Exit if the task got cancelled
-                        throw;
-                    }
-                    catch
-                    {
-                        int randomDelay;
-                        lock (_randomNumberGenerator)
-                        {
-                            randomDelay = RandomDelay;
-                        }
-                        await Task.Delay(TimeSpan.FromMilliseconds(randomDelay));
+                        return match.Groups[1].Value;
                     }
                 }
-            }
 
-            throw new HttpRequestException($"Failed to get logs after retrying {_retryNumber} times");
+                return string.Empty;
+            },
+            ex => { },
+            _ => true);
+
+            return string.Empty;
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

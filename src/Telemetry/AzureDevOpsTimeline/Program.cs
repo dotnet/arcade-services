@@ -5,6 +5,7 @@
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -57,12 +58,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                     baseUrl: c["AzureDevOpsUrl"],
                                     organization: c["AzureDevOpsOrganization"],
                                     maxParallelRequests: parallelRequests,
-                                    accessToken: c["AzureDevOpsAccessToken"]
+                                    accessToken: c["AzureDevOpsAccessToken"],
+                                    p.GetRequiredService<ExponentialRetry>()
                                 );
                             });
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
                             services.AddSingleton<IBuildLogScraper, BuildLogScraper>();
+                            services.AddSingleton<ExponentialRetry>();
                         });
                     
                 });
