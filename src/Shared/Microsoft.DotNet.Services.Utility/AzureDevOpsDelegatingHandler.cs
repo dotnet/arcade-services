@@ -4,6 +4,7 @@
 
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Services.Utility
@@ -38,11 +39,12 @@ namespace Microsoft.DotNet.Services.Utility
                 return returnValue;
             }
 
-            string valueLog = returnValue + ";" + e.Current;
-            while (e.MoveNext())
+            StringBuilder valueLog = new StringBuilder(returnValue);
+            do
             {
-                valueLog += ";" + e.Current;
-            }
+                valueLog.Append(';').Append(e.Current);
+            } 
+            while (e.MoveNext());
 
             _logger.LogError("Header {header} exists with multiple values: '{values}'", header, valueLog);
             return null;
