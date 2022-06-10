@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.Services.Utility
             do
             {
                 valueLog.Append(';').Append(e.Current);
-            } 
+            }
             while (e.MoveNext());
 
             _logger.LogError("Header {header} exists with multiple values: '{values}'", header, valueLog);
