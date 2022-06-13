@@ -389,20 +389,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             try
             {
-                if (!cancellationToken.IsCancellationRequested)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
                 {
-                    if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
-                    {
-                        record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
-                    }
-                    else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
-                    {
-                        record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
-                    }
-                    else
-                    {
-                        record.ImageName = null;
-                    }
+                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                }
+                else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
+                {
+                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                }
+                else
+                {
+                    record.ImageName = null;
                 }
             }
             catch (Exception exception)
