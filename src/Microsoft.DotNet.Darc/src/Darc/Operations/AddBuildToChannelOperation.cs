@@ -113,7 +113,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     targetChannels.AddRange(
                         defaultChannels.
                             Where(dc => dc.Enabled).
-                            Select(dc => dc.Channel));
+                            Select(dc => dc.Channel).
+                            Distinct());
                 }
 
                 IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));
