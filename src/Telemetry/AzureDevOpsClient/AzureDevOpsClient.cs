@@ -174,7 +174,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                using var response = await _httpClient.SendAsync(request, cancellationToken);
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using StreamReader reader = new StreamReader(logStream);
                 while (!reader.EndOfStream)
