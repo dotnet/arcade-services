@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
             {
                 SetDefaultTimesOnTokenCreation = false
             };
-            using var rsa = RSA.Create(4096);
+            using var rsa = RSA.Create(4096); // lgtm [cs/cryptography/default-rsa-key-construction] False positive. This does not use the default constructor.
             rsa.ImportFromPem(privateKey);
             var rsaSecurityKey = new RsaSecurityKey(rsa)
             {
