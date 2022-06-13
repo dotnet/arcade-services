@@ -14,6 +14,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -32,13 +33,15 @@ namespace DotNet.Status.Web.Controllers
         private readonly Lazy<IAzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
         private readonly IHttpClientFactory _clientFactory;
+        private readonly ExponentialRetry _retry;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptionsSnapshot<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger,
-            IHttpClientFactory clientFactory)
+            IHttpClientFactory clientFactory,
+            ExponentialRetry retry)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
@@ -47,6 +50,7 @@ namespace DotNet.Status.Web.Controllers
             _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
             _clientFactory = clientFactory;
+            _retry = retry;
         }
 
         private IAzureDevOpsClient Client => _clientLazy.Value;
@@ -54,7 +58,13 @@ namespace DotNet.Status.Web.Controllers
         private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
-            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken, _clientFactory);
+            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(
+                o.BaseUrl,
+                o.Organization, 
+                o.MaxParallelRequests, 
+                o.AccessToken, 
+                _clientFactory,
+                _retry);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()

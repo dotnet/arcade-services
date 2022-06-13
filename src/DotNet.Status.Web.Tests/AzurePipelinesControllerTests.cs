@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Octokit;
+using Microsoft.DotNet.Services.Utility;
 
 namespace DotNet.Status.Web.Tests
 {
@@ -554,6 +555,8 @@ namespace DotNet.Status.Web.Tests
                 
                 var mockHttpClientFactory = new Mock<System.Net.Http.IHttpClientFactory>();
 
+                var exponentialRetryOptions = new ExponentialRetryOptions();
+
                 var mockAzureClientFactory = new Mock<IAzureDevOpsClientFactory>();
                 mockAzureClientFactory
                     .Setup(
@@ -562,7 +565,8 @@ namespace DotNet.Status.Web.Tests
                             It.IsAny<string>(),
                             It.IsAny<int>(),
                             It.IsAny<string>(),
-                            mockHttpClientFactory.Object
+                            mockHttpClientFactory.Object,
+                            ExponentialRetry.Default
                         )
                     )
                     .Returns(mockAzureDevOpsClient.Object);
@@ -570,6 +574,7 @@ namespace DotNet.Status.Web.Tests
                 collection.AddSingleton(mockGithubClientFactory.Object);
                 collection.AddSingleton(mockAzureClientFactory.Object);
                 collection.AddSingleton(mockHttpClientFactory.Object);
+                collection.AddSingleton(ExponentialRetry.Default);
 
                 return _ => (issueNames, issueOwners, commentNames, commentOwners);
             }

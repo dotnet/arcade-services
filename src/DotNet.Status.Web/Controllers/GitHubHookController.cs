@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -36,6 +37,7 @@ namespace DotNet.Status.Web.Controllers
         private readonly ITeamMentionForwarder _teamMentionForwarder;
         private readonly ISystemClock _systemClock;
         private readonly IHttpClientFactory _clientFactory;
+        private readonly ExponentialRetry _retry;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
@@ -46,7 +48,8 @@ namespace DotNet.Status.Web.Controllers
             ILogger<GitHubHookController> logger,
             ITeamMentionForwarder teamMentionForwarder,
             ISystemClock systemClock,
-            IHttpClientFactory clientFactory)
+            IHttpClientFactory clientFactory,
+            ExponentialRetry retry)
         {
             _githubOptions = githubOptions;
             _logger = logger;
@@ -58,6 +61,7 @@ namespace DotNet.Status.Web.Controllers
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
             _clientFactory = clientFactory;
+            _retry = retry;
         }
 
         private async Task EnsureLabelsAsync()
@@ -261,7 +265,8 @@ namespace DotNet.Status.Web.Controllers
                 _azureDevOpsOptions.Value.Organization,
                 _azureDevOpsOptions.Value.MaxParallelRequests,
                 _azureDevOpsOptions.Value.AccessToken,
-                _clientFactory);
+                _clientFactory,
+                _retry);
             WorkItem workItem = await azureDevOpsClient.CreateRcaWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
             _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
 

@@ -1,5 +1,6 @@
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -27,13 +28,20 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, cancellationToken);
+            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, LogException, cancellationToken);
 
             if (imageName == string.Empty)
             {
                 _logger.LogWarning($"Didn't find image name for log {logUri}");
+                return null;
             }
-            return null;
+            
+            return imageName;
+        }
+
+        private void LogException(Exception ex)
+        {
+            _logger.LogWarning($"Exception thrown during getting the log {ex.Message}, retrying");
         }
 
         private static readonly Regex azurePipelinesRegex = new Regex(@"Environment: (\S+)");

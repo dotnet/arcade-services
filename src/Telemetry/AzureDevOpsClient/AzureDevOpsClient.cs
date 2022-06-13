@@ -167,14 +167,13 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return JsonConvert.DeserializeObject<WorkItem>(json);
         }
 
-        public delegate bool TryParseLine(string line, out string parsedValue);
-
         public async Task<string> TryGetImageName(
             string logUri,
             Regex imageNameRegex,
+            Action<Exception> exceptionHandler,
             CancellationToken cancellationToken)
         {
-            await _retry.RetryAsync(async () =>
+            return await _retry.RetryAsync(async () =>
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
@@ -195,10 +194,8 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
                 return string.Empty;
             },
-            ex => { },
+            ex => exceptionHandler(ex),
             _ => true);
-
-            return string.Empty;
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
