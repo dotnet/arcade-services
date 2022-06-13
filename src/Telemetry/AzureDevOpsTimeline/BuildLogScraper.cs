@@ -14,6 +14,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         private readonly ILogger<BuildLogScraper> _logger;
         private readonly IAzureDevOpsClient _azureDevOpsClient;
 
+        private static readonly Regex _azurePipelinesRegex = new Regex(@"Environment: (\S+)");
+        private static readonly Regex _oneESRegex = new Regex(@"Image: (\S+)");
+
         public BuildLogScraper(ILogger<BuildLogScraper> logger, IAzureDevOpsClient client)
         {
             _azureDevOpsClient = client;
@@ -21,16 +24,16 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         }
 
         public Task<string> ExtractMicrosoftHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken)
-            => ExtractImageNameAsync(logUri, azurePipelinesRegex, cancellationToken);
+            => ExtractImageNameAsync(logUri, _azurePipelinesRegex, cancellationToken);
 
         public Task<string> ExtractOneESHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken)
-            => ExtractImageNameAsync(logUri, oneESRegex, cancellationToken);
+            => ExtractImageNameAsync(logUri, _oneESRegex, cancellationToken);
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
             var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, LogException, cancellationToken);
 
-            if (imageName == string.Empty)
+            if (imageName == null)
             {
                 _logger.LogWarning($"Didn't find image name for log {logUri}");
                 return null;
@@ -43,8 +46,5 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             _logger.LogWarning($"Exception thrown during getting the log {ex.Message}, retrying");
         }
-
-        private static readonly Regex azurePipelinesRegex = new Regex(@"Environment: (\S+)");
-        private static readonly Regex oneESRegex = new Regex(@"Image: (\S+)");
     }
 }

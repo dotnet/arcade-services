@@ -379,7 +379,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
             int cancelledTasks = taskList.Count(task => task.IsCanceled);
-            int failedTasks = taskList.Count(task => task.IsFaulted);
+            int failedTasks = taskList.Count - successfulTasks - cancelledTasks;
             _logger.LogInformation($"Log scraping summary: {successfulTasks} successful, {cancelledTasks} cancelled, {failedTasks} failed");
         }
 

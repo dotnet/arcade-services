@@ -188,7 +188,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                     }
                 }
 
-                return string.Empty;
+                return null;
             },
             ex => exceptionHandler(ex),
             _ => true);
