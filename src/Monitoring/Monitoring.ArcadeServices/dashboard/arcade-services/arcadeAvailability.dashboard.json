@@ -645,7 +645,7 @@
           {
             "evaluator": {
               "params": [
-                99
+                60
               ],
               "type": "lt"
             },
@@ -667,7 +667,7 @@
           }
         ],
         "executionErrorState": "keep_state",
-        "for": "5m",
+        "for": "15m",
         "frequency": "1m",
         "handler": 1,
         "message": "source.dot.net availability is low!",
@@ -709,7 +709,7 @@
               "type": "linear"
             },
             "showPoints": "auto",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -757,7 +757,7 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "list",
+          "displayMode": "hidden",
           "placement": "bottom"
         },
         "tooltip": {
@@ -779,7 +779,7 @@
           "azureMonitor": {
             "aggOptions": [],
             "aggregation": "Average",
-            "alias": "{{ availabilityresult/location }}",
+            "alias": "",
             "allowedTimeGrainsMs": [
               60000,
               300000,
@@ -795,11 +795,6 @@
               {
                 "dimension": "availabilityResult/name",
                 "filter": "source-dot-net",
-                "operator": "eq"
-              },
-              {
-                "dimension": "availabilityResult/location",
-                "filter": "",
                 "operator": "eq"
               }
             ],

@@ -68,14 +68,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
             public override void VisitClassDeclaration(ClassDeclarationSyntax node)
             {
                 IImmutableList<ITypeSymbol> baseTypes = SemanticModel.GetAllBaseTypeSymbols(node);
-                bool isController = baseTypes.Any(t => t.Equals(KnownTypes.Controller));
+                bool isController = baseTypes.Any(t => t.Equals(KnownTypes.Controller, SymbolEqualityComparer.Default));
                 if (!isController)
                 {
                     return;
                 }
 
                 IImmutableList<AttributeUsageInfo> attributeInfo = SemanticModel.GetAttributeInfo(node.AttributeLists);
-                bool isVersioned = attributeInfo.Any(info => info.AttributeType.Equals(KnownTypes.ApiVersionAttribute));
+                bool isVersioned = attributeInfo.Any(info => info.AttributeType.Equals(KnownTypes.ApiVersionAttribute, SymbolEqualityComparer.Default));
                 if (!isVersioned)
                 {
                     return;
@@ -100,7 +100,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
                     List<(ExpressionSyntax expression, ITypeSymbol type)> typeParameters =
                         parameters.Select(
                                 p => (expression: p.Expression, type: SemanticModel.GetTypeSymbol(p.Expression)))
-                            .Where(p => p.type.Equals(KnownTypes.Type))
+                            .Where(p => p.type.Equals(KnownTypes.Type, SymbolEqualityComparer.Default))
                             .ToList();
                     if (typeParameters.Count == 0)
                     {
@@ -155,8 +155,8 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
 
         internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             RuleId,
-            "Versioned API methods should not expose non-versioned types.",
-            "Type {0} is not versioned.",
+            "Versioned API methods should not expose non-versioned types",
+            "Type {0} is not versioned",
             "Correctness",
             DiagnosticSeverity.Error,
             true);

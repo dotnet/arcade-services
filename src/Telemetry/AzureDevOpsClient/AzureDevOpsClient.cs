@@ -33,23 +33,22 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private int RandomDelay => _randomNumberGenerator.Next(1500, 2500);
 
         public AzureDevOpsClient(
-            string baseUrl,
-            string organization,
-            int maxParallelRequests,
-            string accessToken,
+            AzureDevOpsClientOptions options,
+            IHttpClientFactory httpClientFactory,
             ExponentialRetry retry)
         {
-            _baseUrl = baseUrl;
-            _organization = organization;
-            _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _parallelism = new SemaphoreSlim(maxParallelRequests, maxParallelRequests);
+            _baseUrl = options.BaseUrl;
+            _organization = options.Organization;
 
-            if (!string.IsNullOrEmpty(accessToken))
+            _httpClient = httpClientFactory.CreateClient();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
+
+            if (!string.IsNullOrEmpty(options.AccessToken))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                     "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{accessToken}"))
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.AccessToken}"))
                 );
             }
 

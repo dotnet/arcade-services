@@ -19,7 +19,7 @@ namespace Maestro.Web.Tests
         [Test]
         public void AreDependenciesRegistered()
         {
-            Environment.SetEnvironmentVariable("ENVIRONMENT", Environments.Development);
+            Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Development);
 
             var config = new ConfigurationBuilder();
             var collection = new ServiceCollection();

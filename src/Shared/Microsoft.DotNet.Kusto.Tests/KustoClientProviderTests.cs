@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Kusto.Cloud.Platform.Utils;
+using Kusto.Data;
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Results;
@@ -150,29 +151,15 @@ namespace Microsoft.DotNet.Kusto.Tests
             var queries = new List<string>();
             var properties = new List<ClientRequestProperties>();
 
-            MockDataTable mockDataTable = new MockDataTable();
-            mockDataTable.Clear();
-            mockDataTable.Columns.Add("puppies");
-            mockDataTable.Columns.Add("kittens");
-            mockDataTable.Columns.Add("birbs");
-            mockDataTable.Columns["birbs"].DataType = typeof(int);
-            mockDataTable.Columns.Add("fishes");
-            mockDataTable.Columns["fishes"].DataType = typeof(int);
-
-            DataRow dataRow1 = mockDataTable.NewRow();
-            dataRow1["puppies"] = "e";
-            dataRow1["kittens"] = "f";
-            dataRow1["birbs"] = 5;
-            dataRow1["fishes"] = 6;
-            mockDataTable.Rows.Add(dataRow1);
-            
-            DataRow dataRow2 = mockDataTable.NewRow();
-            dataRow2["puppies"] = "g";
-            dataRow2["kittens"] = "h";
-            dataRow2["birbs"] = 7;
-            dataRow2["fishes"] = 8;
-            mockDataTable.Rows.Add(dataRow2);
-
+            var dataReader = new Mock<IDataReader>();
+            dataReader.Setup(m => m.FieldCount).Returns(2);
+            dataReader.Setup(m => m.GetName(0)).Returns("puppies");
+            dataReader.Setup(m => m.GetFieldType(0)).Returns(typeof(string));
+            dataReader.SetupSequence(m => m.Read())
+                .Returns(true)
+                .Returns(false);
+            MockDataTable mockDataTable = new MockDataTable(dataReader.Object);
+          
             var returnDataSetFrames = new List<ProgressiveDataSetFrame>() 
             {
                 new MockProgressiveDataSetFrame(new Dictionary<int, object[]>
@@ -199,13 +186,11 @@ namespace Microsoft.DotNet.Kusto.Tests
                 List<object[]> resultList = await client.ExecuteStreamableKustoQuery(query).ToListAsync();
 
                 resultList.Should().NotBeEmpty()
-                    .And.HaveCount(4)
+                    .And.HaveCount(2)
                     .And.BeEquivalentTo(new object[] 
                         { 
                             new object[] { "a", "b", 1, 2 }, 
-                            new object[] { "c", "d", 3, 4 }, 
-                            new object[] { "e", "f", 5, 6 }, 
-                            new object[] { "g", "h", 7, 8 } 
+                            new object[] { "c", "d", 3, 4 }
                         });
             }
 
@@ -296,9 +281,17 @@ namespace Microsoft.DotNet.Kusto.Tests
         private Dictionary<int, object[]>.Enumerator _dataEnumerator;
     }
 
-    public class MockDataTable : DataTable, ProgressiveDataSetFrame
+    public class MockDataTable : DataTable, ProgressiveDataSetDataTableFrame
     {
+        public MockDataTable(IDataReader tableData)
+        {
+            TableData = tableData;
+        }
+
         public FrameType FrameType => FrameType.DataTable;
+        public int TableId => 0;
+        public WellKnownDataSet TableKind => WellKnownDataSet.QueryProperties;
+        public IDataReader TableData { get; }
     }
 
     public class MockProgressiveDataSetTableCompletionFrame : ProgressiveDataSetTableCompletionFrame
