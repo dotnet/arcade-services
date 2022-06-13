@@ -16,8 +16,4 @@
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
-  </ItemGroup>
-
 </Project>

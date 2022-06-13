@@ -26,11 +26,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly string _organization;
         private readonly SemaphoreSlim _parallelism;
 
-        private const int _retryNumber = 3;
-        private static readonly Random _randomNumberGenerator = new Random();
         private readonly ExponentialRetry _retry;
-
-        private int RandomDelay => _randomNumberGenerator.Next(1500, 2500);
 
         public AzureDevOpsClient(
             AzureDevOpsClientOptions options,
