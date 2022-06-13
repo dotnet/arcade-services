@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -23,22 +24,21 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly SemaphoreSlim _parallelism;
 
         public AzureDevOpsClient(
-            string baseUrl,
-            string organization,
-            int maxParallelRequests,
-            string accessToken)
+            AzureDevOpsClientOptions options,
+            IHttpClientFactory httpClientFactory)
         {
-            _baseUrl = baseUrl;
-            _organization = organization;
-            _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _parallelism = new SemaphoreSlim(maxParallelRequests, maxParallelRequests);
+            _baseUrl = options.BaseUrl;
+            _organization = options.Organization;
 
-            if (!string.IsNullOrEmpty(accessToken))
+            _httpClient = httpClientFactory.CreateClient();
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
+
+            if (!string.IsNullOrEmpty(options.AccessToken))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                     "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{accessToken}"))
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.AccessToken}"))
                 );
             }
         }
