@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,15 +23,15 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
     {
         public IDictionary<Build, List<Timeline>> Builds { get; }
 
-        public static string oneESImageName = "Build.Ubuntu.1804.Amd64";
-        public static string microsoftHostedAgentImageName = "windows-2019";
-        public static string oneESLogUrl = $"https://www.fakeurl.com/{oneESImageName}";
-        public static string microsoftHostedAgentLogUrl = $"https://www.fakeurl.com/{microsoftHostedAgentImageName}";
-        public static string oneESLog = @$"SKU: Standard_D4_v3
-Image: {oneESImageName}
+        public static string OneESImageName = "Build.Ubuntu.1804.Amd64";
+        public static string MicrosoftHostedAgentImageName = "windows-2019";
+        public static string OneESLogUrl = $"https://www.fakeurl.test/{OneESImageName}";
+        public static string MicrosoftHostedAgentLogUrl = $"https://www.fakeurl.test/{MicrosoftHostedAgentImageName}";
+        public static string OneESLog = @$"SKU: Standard_D4_v3
+Image: {OneESImageName}
 Image Version: 2022.0219.013407";
-        public static string microsoftHostedLog = @$"SKU: Standard_D4_v3
-Environment: {microsoftHostedAgentImageName}
+        public static string MicrosoftHostedLog = @$"SKU: Standard_D4_v3
+Environment: {MicrosoftHostedAgentImageName}
 Version: 20220223.1";
 
         private readonly IDictionary<string, string> _urlDictionary;
@@ -40,8 +41,8 @@ Version: 20220223.1";
             Builds = new Dictionary<Build, List<Timeline>>();
             _urlDictionary = new Dictionary<string, string>()
             {
-                { oneESLogUrl, oneESLog },
-                { microsoftHostedAgentLogUrl, microsoftHostedLog }
+                { OneESLogUrl, OneESLog },
+                { MicrosoftHostedAgentLogUrl, MicrosoftHostedLog }
             };
         }
 
@@ -50,8 +51,8 @@ Version: 20220223.1";
             Builds = builds;
             _urlDictionary = new Dictionary<string, string>()
             {
-                { oneESLogUrl, oneESLog },
-                { microsoftHostedAgentLogUrl, microsoftHostedLog }
+                { OneESLogUrl, OneESLog },
+                { MicrosoftHostedAgentLogUrl, MicrosoftHostedLog }
             };
         }
 
@@ -99,9 +100,9 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<HttpResponseMessage> TryGetLogContents(string logUri, CancellationToken cancellationToken)
+        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, Action<Exception> exceptionHandler, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new HttpResponseMessage { Content = new StringContent(_urlDictionary.GetOrDefault(logUri, ""))});
+            return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
         }
     }
 }

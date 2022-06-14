@@ -1,51 +1,95 @@
+using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
-    public class BuildLogScraperTests
+    public partial class BuildLogScraperTests
     {
-        private Mock<ILogger<BuildLogScraper>> _logger = new Mock<ILogger<BuildLogScraper>>();
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        public static string EmptyUrl = "https://www.fakeurl.test";
 
-        private static readonly string _microsoftHostedAgentImageName = "windows-2019";
-        private static readonly string _oneESImageName = "Build.Ubuntu.1804.Amd64";
-
-        private BuildLogScraper _buildLogScraper;
-
-        public BuildLogScraperTests()
+        [TestDependencyInjectionSetup]
+        public static class TestDataConfiguration
         {
-            _buildLogScraper = new BuildLogScraper(_logger.Object, new MockAzureClient());
+            public static void Dependencies(IServiceCollection collection)
+            {
+                collection.AddLogging(logging =>
+                {
+                    logging.AddProvider(new NUnitLogger());
+                });
+            }
+
+            public static Func<IServiceProvider, BuildLogScraper> Controller(IServiceCollection collection)
+            {
+                collection.AddScoped<BuildLogScraper>();
+                return s => s.GetRequiredService<BuildLogScraper>();
+            }
+
+            public static void Build(IServiceCollection collection, (string url, string content) mockRequest)
+            {
+                var mockHttpClientFactory = new MockHttpClientFactory();
+                mockHttpClientFactory.AddCannedResponse(mockRequest.url, mockRequest.content);
+                collection.AddSingleton<IHttpClientFactory>(mockHttpClientFactory);
+                collection.AddSingleton(ExponentialRetry.Default);
+                collection.AddSingleton(new AzureDevOpsClientOptions
+                {
+                    MaxParallelRequests = 2
+                });
+                collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+            }
         }
 
         [Test]
         public async Task BuildLogScraperShouldExtractMicrosoftHostedPoolImageName()
         {
-            var imageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(
-                MockAzureClient.microsoftHostedAgentLogUrl,
-                _cancellationTokenSource.Token);
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
-            Assert.AreEqual(_microsoftHostedAgentImageName, imageName);
+            await using TestData testData = await TestData.Default
+                .WithMockRequest((MockAzureClient.OneESLogUrl, MockAzureClient.OneESLog))
+                .BuildAsync();
+
+            var imageName = await testData.Controller.ExtractOneESHostedPoolImageNameAsync(
+                MockAzureClient.OneESLogUrl,
+                cancellationTokenSource.Token);
+            Assert.AreEqual(MockAzureClient.OneESImageName, imageName);
         }
 
         [Test]
         public async Task BuildLogScraperShouldExtractOneESHostedPoolImageName()
         {
-            var imageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(
-                MockAzureClient.oneESLogUrl,
-                _cancellationTokenSource.Token);
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 
-            Assert.AreEqual(_oneESImageName, imageName);
+            await using TestData testData = await TestData.Default
+                .WithMockRequest((MockAzureClient.MicrosoftHostedAgentLogUrl, MockAzureClient.MicrosoftHostedLog))
+                .BuildAsync();
+
+            var imageName = await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(
+                MockAzureClient.MicrosoftHostedAgentLogUrl,
+                cancellationTokenSource.Token);
+            Assert.AreEqual(MockAzureClient.MicrosoftHostedAgentImageName, imageName);
         }
 
         [Test]
         public async Task BuildLogScraperShouldntExtractAnything()
         {
-            Assert.IsNull(await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
-            Assert.IsNull(await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync("Incorrect string", _cancellationTokenSource.Token));
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+            await using TestData testData = await TestData.Default
+                .WithMockRequest((EmptyUrl, string.Empty))
+                .BuildAsync();
+
+            Assert.IsNull(await testData.Controller.ExtractOneESHostedPoolImageNameAsync(EmptyUrl, cancellationTokenSource.Token));
+            Assert.IsNull(await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(EmptyUrl, cancellationTokenSource.Token));
+
         }
     }
 }

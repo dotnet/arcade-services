@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -67,17 +68,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<HttpResponseMessage> TryGetLogContents(string logUri, CancellationToken cancellationToken)
+        public async Task<string> TryGetImageName(string logUri, Regex imageNameRegex, Action<Exception> exceptionHandler, CancellationToken cancellationToken)
         {
             using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
             {
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                var response = await _httpClient.SendAsync(request, cancellationToken);
+                using var response = await _httpClient.SendAsync(request, cancellationToken);
 
                 response.EnsureSuccessStatusCode();
-
-                return response;
+                
+                return await response.Content.ReadAsStringAsync();
             }
         }
     }

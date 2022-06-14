@@ -237,8 +237,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
-                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", MockAzureClient.oneESLogUrl)
-                    .AddRecord("Azure Pipelines", "Initialize job", MockAzureClient.microsoftHostedAgentLogUrl)
+                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", MockAzureClient.OneESLogUrl)
+                    .AddRecord("Azure Pipelines", "Initialize job", MockAzureClient.MicrosoftHostedAgentLogUrl)
                     .AddRecord()
                 ).Build();
 
