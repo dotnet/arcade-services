@@ -114,7 +114,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         defaultChannels.
                             Where(dc => dc.Enabled).
                             Select(dc => dc.Channel).
-                            Distinct());
+                            DistinctBy(c => c.Id));
                 }
 
                 IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));
