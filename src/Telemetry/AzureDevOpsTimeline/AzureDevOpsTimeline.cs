@@ -262,6 +262,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 stopWatch.Stop();
                 _logger.LogInformation($"Log scraping took {stopWatch.ElapsedMilliseconds} milliseconds");                             
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                //Don't swallup up the app cancellation token, let it do its thing
+                throw;
+            }
             catch (Exception e)
             {
                 _logger.LogError($"Exception thrown while getting image names: {e}");
