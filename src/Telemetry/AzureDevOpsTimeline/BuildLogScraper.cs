@@ -31,20 +31,15 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, LogException, cancellationToken);
+            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, _logger, cancellationToken);
 
             if (imageName == null)
             {
-                _logger.LogWarning($"Didn't find image name for log {logUri}");
+                _logger.LogWarning($"Didn't find image name for log `{logUri}`");
                 return null;
             }
             
             return imageName;
-        }
-
-        private void LogException(Exception ex)
-        {
-            _logger.LogWarning($"Exception thrown during getting the log {ex.Message}, retrying");
         }
     }
 }

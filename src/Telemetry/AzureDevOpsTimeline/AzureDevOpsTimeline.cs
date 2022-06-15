@@ -269,7 +269,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch (Exception e)
             {
-                _logger.LogError($"Exception thrown while getting image names: {e}");
+                _logger.LogError($"Exception thrown while getting image names: `{e}`");
             }
 
             _logger.LogInformation("Saving TimelineBuilds...");
@@ -380,7 +380,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch(Exception e)
             {                
-                _logger.LogInformation($"Log scraping had some failures {e.Message}, summary below");
+                _logger.LogInformation($"Log scraping had some failures `{e.Message}`, summary below");
             }
             int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
             int cancelledTasks = taskList.Count(task => task.IsCanceled);
@@ -411,7 +411,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch (Exception exception)
             {
-                _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': {exception}");
+                _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': `{exception}`");
                 throw;
             }
             finally

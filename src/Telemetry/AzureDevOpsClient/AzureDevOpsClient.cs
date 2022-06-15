@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -166,10 +167,10 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public async Task<string> TryGetImageName(
             string logUri,
             Regex imageNameRegex,
-            Action<Exception> exceptionHandler,
+            ILogger logger,
             CancellationToken cancellationToken)
         {
-            return await _retry.RetryAsync(async () =>
+            return await _retry.RetryAsync(async cancellationToken =>
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
                 request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
@@ -190,8 +191,9 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
                 return null;
             },
-            ex => exceptionHandler(ex),
-            _ => true);
+            ex => logger.LogWarning($"Exception thrown during getting the log `{ex.Message}`, retrying"),
+            _ => true,
+            cancellationToken);
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
