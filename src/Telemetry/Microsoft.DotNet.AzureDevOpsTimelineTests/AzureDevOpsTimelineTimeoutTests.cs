@@ -77,7 +77,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         [Test]
         public async Task TestAzureDevOpsTimelineTimeout()
         {
-            DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
+            DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-03-04T05:00:00Z");
             string azdoProjectName = "public";
             string targetBranchName = "theTargetBranch";
             MockExceptionThrowingHandler httpMessageHandler = MockExceptionThrowingHandler.Create("Image: Build.Ubuntu.1804.Amd64", 1);
