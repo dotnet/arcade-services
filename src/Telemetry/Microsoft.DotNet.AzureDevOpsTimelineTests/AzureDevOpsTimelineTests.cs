@@ -56,11 +56,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 return s => (InMemoryTimelineTelemetryRepository) s.GetRequiredService<ITimelineTelemetryRepository>();
             }
 
-            public static void Clock(IServiceCollection collection, DateTimeOffset staticClock)
+            public static void Clock(IServiceCollection collection)
             {
-                Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
-                mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
-                collection.AddSingleton(mockSystemClock.Object);
+                collection.AddSingleton<ISystemClock, TestClock>();
             }
 
             public static void Build(IServiceCollection collection, BuildAndTimeline build)
@@ -91,7 +89,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -140,7 +137,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -180,7 +176,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             // Test setup
             await using TestData testData = await TestData.Default
                 .WithRepository(azdoProjectName, timeDatum.AddHours(-1))
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -212,7 +207,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -244,7 +238,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 

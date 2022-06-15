@@ -58,11 +58,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 return s => (InMemoryTimelineTelemetryRepository)s.GetRequiredService<ITimelineTelemetryRepository>();
             }
 
-            public static void Clock(IServiceCollection collection, DateTimeOffset staticClock)
+            public static void Clock(IServiceCollection collection)
             {
-                Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
-                mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
-                collection.AddSingleton(mockSystemClock.Object);
+                collection.AddSingleton<ISystemClock, TestClock>();
             }
 
             public static void Build(IServiceCollection collection, BuildAndTimeline build, HttpMessageHandler httpMessageHandler)
@@ -92,7 +90,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .WithHttpMessageHandler(httpMessageHandler)
                 .BuildAsync();
