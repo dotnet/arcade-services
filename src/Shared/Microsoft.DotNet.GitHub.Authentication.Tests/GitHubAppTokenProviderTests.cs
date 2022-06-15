@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.GitHub.Authentication.Tests
         {
             // Just use a random RSA key, since we just want to see if it can produce... something
             // There isn't a great way to use a "test" key, so random is what we'll use
-            using var value = RSA.Create(4096);
+            using var value = RSA.Create(4096); // lgtm [cs/cryptography/default-rsa-key-construction] False positive. This does not use the default constructor.
             string pem = ExportToPem(value);
             TestData testData = TestData
                 .Default
