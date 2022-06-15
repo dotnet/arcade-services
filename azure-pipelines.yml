@@ -129,9 +129,6 @@ stages:
         - task: npmAuthenticate@0
           inputs:
             workingFile: src\Maestro\maestro-angular\.npmrc
-        - script: |
-            cd src\Maestro\maestro-angular
-            npm ci
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
