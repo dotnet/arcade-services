@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 });
                 collection.Configure<AzureDevOpsTimelineOptions>((o, p) =>
                 {
-                    o.LogScrapingTimeout = "00:00:00.100";
+                    o.LogScrapingTimeout = "00:10:00";
                 });
             }
 
@@ -75,16 +75,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             }
         }
 
+        // The test uses the MockExceptionThrowingHandler to simulate a cancellationToken expiring
         [Test]
         public async Task TestAzureDevOpsTimelineTimeout()
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
             string targetBranchName = "theTargetBranch";
-            MockDelayedHttpMessageHandler httpMessageHandler = MockDelayedHttpMessageHandler.Create("some string");
+            MockExceptionThrowingHandler httpMessageHandler = MockExceptionThrowingHandler.Create("Image: Build.Ubuntu.1804.Amd64", 1);
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
+                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", "https://www.dev.azure.test")
                     .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", "https://www.dev.azure.test"))
                 .Build();
 
@@ -97,8 +99,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
 
+            testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
             testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
-            httpMessageHandler.RequestCancelledCount.Should().Be(1);
         }
     }
 

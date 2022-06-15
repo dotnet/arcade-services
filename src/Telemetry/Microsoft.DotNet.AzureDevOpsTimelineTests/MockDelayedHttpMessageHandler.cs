@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,20 +10,24 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
-    public class MockDelayedHttpMessageHandler : HttpMessageHandler
+    public class MockExceptionThrowingHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
+        private readonly SemaphoreSlim _mutex;
+        private int _throwAfter;
+        private int _counter;
 
-        public int RequestCancelledCount { get; private set; }
-
-        public MockDelayedHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync)
+        public MockExceptionThrowingHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync, int throwAfter)
         {
             _sendAsync = sendAsync;
+            _throwAfter = throwAfter;
+            _counter = 0;
+            _mutex = new SemaphoreSlim(1);
         }
 
-        public static MockDelayedHttpMessageHandler Create(string message)
+        public static MockExceptionThrowingHandler Create(string message, int throwAfter)
         {
-            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
+            return new MockExceptionThrowingHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -30,42 +35,29 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 };
 
                 return await Task.FromResult(responseMessage);
-            });
+            }, throwAfter);
         }
 
-        public static MockDelayedHttpMessageHandler Create()
+        public static MockExceptionThrowingHandler Create(int throwAfter)
         {
-            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
+            return new MockExceptionThrowingHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(HttpStatusCode.OK);
 
                 return await Task.FromResult(responseMessage);
-            });
-        }
-
-        public static MockDelayedHttpMessageHandler CreateWithCustomHttpStatusCode(HttpStatusCode httpStatusCode)
-        {
-            return new MockDelayedHttpMessageHandler(async (request, cancellationToken) =>
-            {
-                var responseMessage = new HttpResponseMessage(httpStatusCode);
-
-                return await Task.FromResult(responseMessage);
-            });
+            }, throwAfter);
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            try
+            _mutex.Wait(cancellationToken);
+            if (_counter++ < _throwAfter)
             {
-                await Task.Delay(1000, cancellationToken);
-
+                _mutex.Release();
                 return await _sendAsync(request, cancellationToken);
             }
-            catch (OperationCanceledException)
-            {
-                RequestCancelledCount++;
-                throw;
-            }
+            _mutex.Release();
+            throw new OperationCanceledException();
         }
     }
 }

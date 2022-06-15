@@ -4,6 +4,7 @@
 
 using Kusto.Cloud.Platform.Utils;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -100,7 +101,7 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, Action<Exception> exceptionHandler, CancellationToken cancellationToken)
+        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, ILogger logger, CancellationToken cancellationToken)
         {
             return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
         }

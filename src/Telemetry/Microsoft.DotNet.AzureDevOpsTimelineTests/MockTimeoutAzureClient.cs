@@ -1,4 +1,5 @@
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -68,18 +69,16 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<string> TryGetImageName(string logUri, Regex imageNameRegex, Action<Exception> exceptionHandler, CancellationToken cancellationToken)
+        public async Task<string> TryGetImageName(string logUri, Regex imageNameRegex, ILogger logger, CancellationToken cancellationToken)
         {
-            using (var request = new HttpRequestMessage(HttpMethod.Get, logUri))
-            {
-                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+            using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-                using var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
 
-                response.EnsureSuccessStatusCode();
+            response.EnsureSuccessStatusCode();
                 
-                return await response.Content.ReadAsStringAsync();
-            }
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }
