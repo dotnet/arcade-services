@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -35,7 +34,6 @@ namespace DotNet.Status.Web.Controllers
         private readonly ITimelineIssueTriage _timelineIssueTriage;
         private readonly ITeamMentionForwarder _teamMentionForwarder;
         private readonly ISystemClock _systemClock;
-        private readonly IHttpClientFactory _clientFactory;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
@@ -45,8 +43,7 @@ namespace DotNet.Status.Web.Controllers
             IOptions<AzureDevOpsOptions> azureDevOpsOptions,
             ILogger<GitHubHookController> logger,
             ITeamMentionForwarder teamMentionForwarder,
-            ISystemClock systemClock,
-            IHttpClientFactory clientFactory)
+            ISystemClock systemClock)
         {
             _githubOptions = githubOptions;
             _logger = logger;
@@ -57,7 +54,6 @@ namespace DotNet.Status.Web.Controllers
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
-            _clientFactory = clientFactory;
         }
 
         private async Task EnsureLabelsAsync()
@@ -260,8 +256,7 @@ namespace DotNet.Status.Web.Controllers
                 _azureDevOpsOptions.Value.BaseUrl,
                 _azureDevOpsOptions.Value.Organization,
                 _azureDevOpsOptions.Value.MaxParallelRequests,
-                _azureDevOpsOptions.Value.AccessToken,
-                _clientFactory);
+                _azureDevOpsOptions.Value.AccessToken);
             WorkItem workItem = await azureDevOpsClient.CreateRcaWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
             _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
 
