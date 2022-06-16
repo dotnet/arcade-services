@@ -137,12 +137,9 @@ namespace DotNet.Status.Web
                 o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
                     Assembly.GetEntryAssembly().GetName().Version.ToString()));
             services.Configure<ExponentialRetryOptions>(o => { });
-            services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
-            services.Configure<HttpClientFactoryOptions>(o =>
-            {
-                o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck);
-                o.HttpMessageHandlerBuilderActions.Add(AddDelegatingHandlers);
-            });
+            services.Configure<HttpClientFactoryOptions>(
+                o => o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck)
+            );
         }
 
         private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
@@ -150,14 +147,6 @@ namespace DotNet.Status.Web
             if (builder.PrimaryHandler is HttpClientHandler httpHandler)
             {
                 httpHandler.CheckCertificateRevocationList = true;
-            }
-        }
-
-        private static void AddDelegatingHandlers(HttpMessageHandlerBuilder builder)
-        {
-            foreach (var handler in builder.Services.GetServices<AzureDevOpsDelegatingHandler>())
-            {
-                builder.AdditionalHandlers.Add(handler);
             }
         }
 
