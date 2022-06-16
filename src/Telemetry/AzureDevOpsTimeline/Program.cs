@@ -2,16 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Kusto.Cloud.Platform.Utils;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
-using Microsoft.Extensions.Internal;
-using System.Net.Http;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -48,7 +43,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 s.Bind(o);
                             });
 
-                            services.AddSingleton(p =>
+                            services.AddTransient<IAzureDevOpsClient>(p =>
                             {
                                 IConfiguration c = p.GetRequiredService<IConfiguration>();
 
@@ -57,46 +52,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                     parallelRequests = 5;
                                 }
 
-                                return new AzureDevOpsClientOptions
-                                {
-                                    BaseUrl = c["AzureDevOpsUrl"],
-                                    Organization = c["AzureDevOpsOrganization"],
-                                    MaxParallelRequests = parallelRequests,
-                                    AccessToken = c["AzureDevOpsAccessToken"]
-                                };
+                                return new AzureDevOpsClient(
+                                    baseUrl: c["AzureDevOpsUrl"],
+                                    organization: c["AzureDevOpsOrganization"],
+                                    maxParallelRequests: parallelRequests,
+                                    accessToken: c["AzureDevOpsAccessToken"]
+                                );
                             });
-                            
-                            services.AddSingleton<ISystemClock, SystemClock>();
-                            services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
-
-
-                            services.Configure<HttpClientFactoryOptions>(o =>
-                            {
-                                o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck);
-                                o.HttpMessageHandlerBuilderActions.Add(AddDelegatingHandlers);
-                            });
-                            services.AddHttpClient();
-                            services.AddTransient<IAzureDevOpsClient, AzureDevOpsClient>();
 
                             services.AddSingleton<ITimelineTelemetryRepository, KustoTimelineTelemetryRepository>();
-                        });                   
+                        });
+                    
                 });
-        }
-
-        private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
-        {
-            if (builder.PrimaryHandler is HttpClientHandler httpHandler)
-            {
-                httpHandler.CheckCertificateRevocationList = true;
-            }
-        }
-
-        private static void AddDelegatingHandlers(HttpMessageHandlerBuilder builder)
-        {
-            foreach(var handler in builder.Services.GetServices<AzureDevOpsDelegatingHandler>())
-            {
-                builder.AdditionalHandlers.Add(handler);
-            }
         }
     }
 }
