@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             });
                             
                             services.AddSingleton<ISystemClock, SystemClock>();
-                            services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
+                            services.AddTransient<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
 
 
                             services.Configure<HttpClientFactoryOptions>(o =>
