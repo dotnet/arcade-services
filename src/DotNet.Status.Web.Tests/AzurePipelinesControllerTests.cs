@@ -551,8 +551,6 @@ namespace DotNet.Status.Web.Tests
                 mockAzureDevOpsClient
                     .Setup(m => m.GetTimelineAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(new Timeline()));
-                
-                var mockHttpClientFactory = new Mock<System.Net.Http.IHttpClientFactory>();
 
                 var mockAzureClientFactory = new Mock<IAzureDevOpsClientFactory>();
                 mockAzureClientFactory
@@ -561,15 +559,13 @@ namespace DotNet.Status.Web.Tests
                             It.IsAny<string>(),
                             It.IsAny<string>(),
                             It.IsAny<int>(),
-                            It.IsAny<string>(),
-                            mockHttpClientFactory.Object
+                            It.IsAny<string>()
                         )
                     )
                     .Returns(mockAzureDevOpsClient.Object);
 
                 collection.AddSingleton(mockGithubClientFactory.Object);
                 collection.AddSingleton(mockAzureClientFactory.Object);
-                collection.AddSingleton(mockHttpClientFactory.Object);
 
                 return _ => (issueNames, issueOwners, commentNames, commentOwners);
             }
