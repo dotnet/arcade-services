@@ -157,7 +157,7 @@ namespace Microsoft.DotNet.Darc.Operations
             => outputFormat switch
             {
                 DarcOutputType.json => true,
-                _ => base.IsOutputFormatSupported(DarcOutputType.text),
+                _ => base.IsOutputFormatSupported(outputFormat),
             };
     }
 }
