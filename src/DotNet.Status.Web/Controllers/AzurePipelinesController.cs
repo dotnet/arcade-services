@@ -36,7 +36,7 @@ namespace DotNet.Status.Web.Controllers
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
-            IOptions<BuildMonitorOptions> options,
+            IOptionsSnapshot<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger,
             IHttpClientFactory clientFactory)
         {
