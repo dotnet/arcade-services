@@ -54,7 +54,7 @@ namespace DotNet.Status.Web.Controllers
         private IAzureDevOpsClient BuildAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
-            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken, _clientFactory);
+            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
