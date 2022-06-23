@@ -27,5 +27,13 @@ namespace Microsoft.DncEng.SecretManager.Tests
 
             dependenciesCoherent.Should().BeTrue(errorMessage);
         }
+
+        [Test]
+        public void IsQueueInsightsCoherent()
+        {
+            var coherenent = false;
+
+            coherenent.Should().BeTrue();
+        }
     }
 }
