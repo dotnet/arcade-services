@@ -9,7 +9,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public interface IGitHubTokenProvider
     {
         Task<string> GetTokenForInstallationAsync(long installationId);
+        Task<string> GetTokenForInstallationForAppAsync(string appName, long installationId);
+
         Task<string> GetTokenForRepository(string repositoryUrl);
+        Task<string> GetTokenForRepositoryForApp(string appName, string repositoryUrl);
+
         string GetTokenForApp();
         string GetTokenForApp(string name);
     }
@@ -20,5 +24,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
         {
             return provider.GetTokenForRepository(GitHubHelper.GetRepositoryUrl(organization, repository));
         }
+
+        public static Task<string> GetTokenForRepositoryForApp(this IGitHubTokenProvider provider, string appName, string organization, string repository)
+        {
+            return provider.GetTokenForRepositoryForApp(appName, GitHubHelper.GetRepositoryUrl(organization, repository));
+        }
+
     }
 }

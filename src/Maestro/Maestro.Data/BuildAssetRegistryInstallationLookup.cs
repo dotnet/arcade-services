@@ -26,5 +26,19 @@ namespace Maestro.Data
         {
             return Task.FromResult(true);
         }
+
+        public async Task<long> GetInstallationIdForApp(string appName, string repositoryUrl)
+        {
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+                return await ctx.GetInstallationId(repositoryUrl);
+            }
+        }
+
+        public Task<bool> IsOrganizationSupportedForApp(string appName, string org)
+        {
+            return Task.FromResult(true);
+        }
     }
 }

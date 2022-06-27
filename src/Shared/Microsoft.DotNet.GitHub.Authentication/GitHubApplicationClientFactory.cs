@@ -23,6 +23,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return _clientFactory.CreateGitHubClient(await _tokenProvider.GetTokenForRepository(owner, repo));
         }
 
+        public async Task<IGitHubClient> CreateGitHubClientForAppAsync(string appName, string owner, string repo)
+        {
+            return _clientFactory.CreateGitHubClient(await _tokenProvider.GetTokenForRepositoryForApp(appName, owner, repo));
+        }
+
         public IGitHubClient CreateGitHubAppClient()
         {
             return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(), AuthenticationType.Bearer);

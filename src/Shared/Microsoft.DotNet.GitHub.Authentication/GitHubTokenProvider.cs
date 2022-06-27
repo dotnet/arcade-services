@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
         private readonly IGitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
         private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
+        private readonly ConcurrentDictionary<(string,long), AccessToken> _tokenCacheForApp;
         public readonly ILogger<GitHubTokenProvider> _logger;
         private readonly ExponentialRetry _retry;
 
@@ -35,6 +36,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
             _logger = logger;
             _retry = retry;
             _tokenCache = new ConcurrentDictionary<long, AccessToken>();
+            _tokenCacheForApp = new ConcurrentDictionary<(string, long), AccessToken>();
         }
 
         public async Task<string> GetTokenForInstallationAsync(long installationId)
@@ -59,6 +61,28 @@ namespace Microsoft.DotNet.GitHub.Authentication
                 ex => ex is ApiException exception && exception.StatusCode == HttpStatusCode.InternalServerError);
         }
 
+        public async Task<string> GetTokenForInstallationForAppAsync(string appName,long installationId)
+        {
+            if (TryGetCachedTokenForApp(appName, installationId, out AccessToken cachedToken))
+            {
+                _logger.LogInformation("Cached token obtained for GitHub installation {installationId} for app {name}. Expires at {tokenExpiresAt}.", installationId, appName, cachedToken.ExpiresAt);
+                return cachedToken.Token;
+            }
+
+            return await _retry.RetryAsync(
+                async () =>
+                {
+                    string jwt = _tokens.GetAppToken(appName);
+                    var appClient = new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
+                    AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
+                    _logger.LogInformation("New token obtained for GitHub installation {installationId} for app {name}. Expires at {tokenExpiresAt}.", installationId, appName, token.ExpiresAt);
+                    UpdateTokenCacheForApp(appName, installationId, token);
+                    return token.Token;
+                },
+                ex => _logger.LogError(ex, "Failed to get a github token for installation id {installationId} for app {name}, retrying", installationId, appName),
+                ex => ex is ApiException exception && exception.StatusCode == HttpStatusCode.InternalServerError);
+        }
+
         public string GetTokenForApp()
         {
             return _tokens.GetAppToken();
@@ -72,6 +96,11 @@ namespace Microsoft.DotNet.GitHub.Authentication
         public async Task<string> GetTokenForRepository(string repositoryUrl)
         {
             return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));
+        }
+
+        public async Task<string> GetTokenForRepositoryForApp(string appName, string repositoryUrl)
+        {
+            return await GetTokenForInstallationForAppAsync(appName, await _installationLookup.GetInstallationIdForApp(appName, repositoryUrl));
         }
 
         private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)
@@ -96,9 +125,36 @@ namespace Microsoft.DotNet.GitHub.Authentication
             return true;
         }
 
+        private bool TryGetCachedTokenForApp(string name, long installationId, out AccessToken cachedToken)
+        {
+            cachedToken = null;
+
+            if (!_tokenCacheForApp.ContainsKey((name,installationId)))
+            {
+                return false;
+            }
+
+            AccessToken token = _tokenCacheForApp[(name, installationId)];
+
+            // If the cached token will expire in less than 30 minutes we won't use it and let GetTokenForInstallationAsync generate a new one
+            // and update the cache
+            if (token.ExpiresAt.Subtract(DateTimeOffset.Now).TotalMinutes < 30)
+            {
+                return false;
+            }
+
+            cachedToken = token;
+            return true;
+        }
+
         private void UpdateTokenCache(long installationId, AccessToken accessToken)
         {
             _tokenCache.AddOrUpdate(installationId, accessToken, (installation, token) => token = accessToken);
+        }
+
+        private void UpdateTokenCacheForApp(string name, long installationId, AccessToken accessToken)
+        {
+            _tokenCacheForApp.AddOrUpdate((name,installationId), accessToken, (installation, token) => token = accessToken);
         }
     }
 }
