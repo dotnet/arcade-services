@@ -4,7 +4,7 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
+using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using System;
 using System.Net.Http;
@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             public static void Dependencies(IServiceCollection collection)
             {
+                collection.AddOptions();
                 collection.AddLogging(logging =>
                 {
                     logging.AddProvider(new NUnitLogger());
@@ -44,6 +45,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     MaxParallelRequests = 2
                 });
+                var options = new AzureDevOpsClientOptions
+                {
+                    MaxParallelRequests = 2
+                };
+                collection.AddSingleton<IOptions<AzureDevOpsClientOptions>>(Options.Create(options));
                 collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
             }
         }
