@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "tasks": [
+    {
+      "taskType": "trigger",
+      "capabilityId": "AutoMerge",
+      "subCapability": "AutoMerge",
+      "version": "1.0",
+      "id": "dvNruLGOg",
+      "config": {
+        "taskName": "Auto merge on green",
+        "minMinutesOpen": "15",
+        "mergeType": "squash",
+        "requireAllStatuses": true,
+        "label": "auto-merge",
+        "removeLabelOnPush": true
+      }
+    }
+  ],
+  "userGroups": []
+}
