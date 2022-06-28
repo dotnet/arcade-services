@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.Kusto
             var client = GetProvider();
             var properties = KustoHelpers.BuildClientRequestProperties(query);
 
-            string text = KustoHelpers.BuildKustoQueryString(query);
+            string text = KustoHelpers.BuildQueryString(query);
 
             try
             {
@@ -94,7 +94,7 @@ namespace Microsoft.DotNet.Kusto
             var properties = KustoHelpers.BuildClientRequestProperties(query);
             properties.SetOption(ClientRequestProperties.OptionResultsProgressiveEnabled, true);
 
-            string text = KustoHelpers.BuildKustoQueryString(query);
+            string text = KustoHelpers.BuildQueryString(query);
 
             ProgressiveDataSet pDataSet = await client.ExecuteQueryV2Async(
                 DatabaseName,
