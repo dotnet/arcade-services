@@ -49,26 +49,13 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 s.Bind(o);
                             });
 
-                            services.AddSingleton(p =>
+                            services.Configure<AzureDevOpsClientOptions>("AzureDevOpsClientOptions", (o, s) =>
                             {
-                                IConfiguration c = p.GetRequiredService<IConfiguration>();
-
-                                if (!int.TryParse(c["ParallelRequests"], out int parallelRequests) || parallelRequests < 1)
-                                {
-                                    parallelRequests = 5;
-                                }
-
-                                return new AzureDevOpsClientOptions
-                                {
-                                    BaseUrl = c["AzureDevOpsUrl"],
-                                    Organization = c["AzureDevOpsOrganization"],
-                                    MaxParallelRequests = parallelRequests,
-                                    AccessToken = c["AzureDevOpsAccessToken"]
-                                };
+                                s.Bind(o);
                             });
                             
                             services.AddSingleton<ISystemClock, SystemClock>();
-                            services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
+                            services.AddTransient<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
 
 
                             services.Configure<HttpClientFactoryOptions>(o =>

@@ -137,7 +137,7 @@ namespace DotNet.Status.Web
                 o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
                     Assembly.GetEntryAssembly().GetName().Version.ToString()));
             services.Configure<ExponentialRetryOptions>(o => { });
-            services.AddSingleton<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
+            services.AddTransient<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
             services.Configure<HttpClientFactoryOptions>(o =>
             {
                 o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck);

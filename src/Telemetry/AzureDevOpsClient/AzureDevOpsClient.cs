@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -30,22 +31,22 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly ExponentialRetry _retry;
 
         public AzureDevOpsClient(
-            AzureDevOpsClientOptions options,
+            IOptions<AzureDevOpsClientOptions> options,
             IHttpClientFactory httpClientFactory,
             ExponentialRetry retry)
         {
-            _baseUrl = options.BaseUrl;
-            _organization = options.Organization;
+            _baseUrl = options.Value.BaseUrl;
+            _organization = options.Value.Organization;
 
             _httpClient = httpClientFactory.CreateClient();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
+            _parallelism = new SemaphoreSlim(options.Value.MaxParallelRequests, options.Value.MaxParallelRequests);
 
-            if (!string.IsNullOrEmpty(options.AccessToken))
+            if (!string.IsNullOrEmpty(options.Value.AccessToken))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                     "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.AccessToken}"))
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.Value.AccessToken}"))
                 );
             }
 

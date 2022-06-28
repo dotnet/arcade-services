@@ -18,5 +18,12 @@
     "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]",
     "Database": "engineeringdata"
+  },
+
+  "AzureDevOpsClientOptions": {
+    "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+    "Organization": "dnceng",
+    "BaseUrl": "https://dev.azure.com",
+    "MaxParallelRequests": 4
   }
 }

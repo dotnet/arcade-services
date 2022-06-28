@@ -3,31 +3,36 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Options;
 using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public sealed class AzureDevOpsClientFactory : IAzureDevOpsClientFactory
     {
-        public AzureDevOpsClientFactory() { }
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ExponentialRetry _exponentialRetry;
+
+        public AzureDevOpsClientFactory(IHttpClientFactory httpClientFactory, ExponentialRetry exponentialRetry) 
+        {
+            _httpClientFactory = httpClientFactory;
+            _exponentialRetry = exponentialRetry;
+        }
 
         public IAzureDevOpsClient CreateAzureDevOpsClient(
             string baseUrl,
             string organization,
             int maxParallelRequests,
-            string accessToken,
-            IHttpClientFactory clientFactory,
-            ExponentialRetry retry)
+            string accessToken)
         {
-            return new AzureDevOpsClient(new AzureDevOpsClientOptions
+            return new AzureDevOpsClient(new OptionsWrapper<AzureDevOpsClientOptions>(new AzureDevOpsClientOptions()
             {
+                AccessToken = accessToken,
                 BaseUrl = baseUrl,
                 Organization = organization,
-                MaxParallelRequests = maxParallelRequests,
-                AccessToken = accessToken
-            }, clientFactory,
-            retry);
+                MaxParallelRequests = maxParallelRequests
+            }), _httpClientFactory,
+            _exponentialRetry);
         }
     }
 }

@@ -10,12 +10,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public interface IAzureDevOpsClientFactory
     {
-        IAzureDevOpsClient CreateAzureDevOpsClient(
-            string baseUrl,
-            string organization, 
-            int maxParallelRequests,
-            string accessToken,
-            IHttpClientFactory clientFactory,
-            ExponentialRetry retry);
+        IAzureDevOpsClient CreateAzureDevOpsClient(string baseUrl, string organization, int maxParallelRequests, string accessToken);
     }
 }

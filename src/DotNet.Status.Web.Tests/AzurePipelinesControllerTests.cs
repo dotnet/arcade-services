@@ -564,9 +564,7 @@ namespace DotNet.Status.Web.Tests
                             It.IsAny<string>(),
                             It.IsAny<string>(),
                             It.IsAny<int>(),
-                            It.IsAny<string>(),
-                            mockHttpClientFactory.Object,
-                            ExponentialRetry.Default
+                            It.IsAny<string>()
                         )
                     )
                     .Returns(mockAzureDevOpsClient.Object);
