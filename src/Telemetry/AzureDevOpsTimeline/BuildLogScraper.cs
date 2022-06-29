@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             if (imageName == null)
             {
-                _logger.LogWarning($"Didn't find image name for log `{logUri}`");
+                _logger.LogInformation("Didn't find image name for log `{logUri}`", logUri);
                 return null;
             }
             

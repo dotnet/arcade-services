@@ -179,10 +179,9 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using StreamReader reader = new StreamReader(logStream);
-                while (!reader.EndOfStream)
+                string line;
+                while ((line = reader.ReadLine()) != null)
                 {
-                    var line = reader.ReadLine();
-
                     Match match = imageNameRegex.Match(line);
                     if (match.Success)
                     {
@@ -192,7 +191,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
                 return null;
             },
-            ex => logger.LogWarning($"Exception thrown during getting the log `{ex.Message}`, retrying"),
+            ex => logger.LogWarning("Exception thrown during getting the log `exception`, retrying", ex),
             _ => true,
             cancellationToken);
         }

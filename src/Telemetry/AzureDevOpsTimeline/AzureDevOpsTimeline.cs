@@ -238,39 +238,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }
 
-            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
-
-            try
-            {
-                _logger.LogInformation("Starting log scraping");
-
-                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
-                var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
-
-                var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
-                var combinedCancellationToken = combinedCancellationTokenSource.Token;
-
-                Stopwatch stopWatch = Stopwatch.StartNew();
-
-                await GetImageNames(records, combinedCancellationToken);
-
-                if (combinedCancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning($"Log scraping timed out after {cancellationTime}");
-                }
-
-                stopWatch.Stop();
-                _logger.LogInformation($"Log scraping took {stopWatch.ElapsedMilliseconds} milliseconds");                             
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                //Don't swallup up the app cancellation token, let it do its thing
-                throw;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Exception thrown while getting image names: `{e}`");
-            }
+            await AddImageNamesToRecordsAsync(records, cancellationToken);
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
@@ -359,6 +327,38 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
         }
 
+        private async Task AddImageNamesToRecordsAsync(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+        {
+            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
+
+            try
+            {
+                _logger.LogInformation("Starting log scraping");
+
+                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
+                var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
+
+                using var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
+                var combinedCancellationToken = combinedCancellationTokenSource.Token;
+
+                Stopwatch stopWatch = Stopwatch.StartNew();
+
+                await GetImageNames(records, combinedCancellationToken);
+
+                stopWatch.Stop();
+                _logger.LogInformation("Log scraping took {elapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                //Don't swallup up the app cancellation token, let it do its thing
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Exception thrown while getting image names: `{exception}`", e);
+            }
+        }
+
         private async Task GetImageNames(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
         {
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
@@ -380,17 +380,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch(Exception e)
             {                
-                _logger.LogInformation($"Log scraping had some failures `{e.Message}`, summary below");
+                _logger.LogInformation("Log scraping had some failures `{exception}`, summary below", e);
             }
             int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
             int cancelledTasks = taskList.Count(task => task.IsCanceled);
             int failedTasks = taskList.Count - successfulTasks - cancelledTasks;
-            _logger.LogInformation($"Log scraping summary: {successfulTasks} successful, {cancelledTasks} cancelled, {failedTasks} failed");
+            _logger.LogInformation("Log scraping summary: {SuccessfulTasks} successful, {CancelledTasks} cancelled, {FailedTasks} failed", successfulTasks, cancelledTasks, failedTasks);
         }
-
+        
         private async Task GetImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
         {
-            await throttleSemaphore.WaitAsync();
+            await throttleSemaphore.WaitAsync(cancellationToken);
 
             try
             {
@@ -411,7 +411,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch (Exception exception)
             {
-                _logger.LogInformation($"Non critical exception thrown when trying to get log '{record.Raw.Log.Url}': `{exception}`");
+                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
                 throw;
             }
             finally

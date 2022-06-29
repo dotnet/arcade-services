@@ -37,9 +37,7 @@ namespace DotNet.Status.Web.Controllers
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptionsSnapshot<BuildMonitorOptions> options,
-            ILogger<AzurePipelinesController> logger,
-            IHttpClientFactory clientFactory,
-            ExponentialRetry retry)
+            ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;

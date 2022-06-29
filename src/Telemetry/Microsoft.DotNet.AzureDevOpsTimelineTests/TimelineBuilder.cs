@@ -50,11 +50,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
         public TimelineBuilder AddRecord(string previousAttemptTimelineId)
         {
-            int nextId = 1;
-            if (records.Any())
-            {
-                nextId += records.Max(r => int.Parse(r.Id));
-            }
+            int nextId = (records.Any() ? records.Max(r => int.Parse(r.Id)) : 0) + 1;
 
             TimelineRecord record = new TimelineRecord()
             {
@@ -80,11 +76,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
         public TimelineBuilder AddRecord(string workerName, string recordName, string logUrl)
         {
-            int nextId = 1;
-            if (records.Any())
-            {
-                nextId += records.Max(r => int.Parse(r.Id));
-            }
+            int nextId =  (records.Any() ? records.Max(r => int.Parse(r.Id)) : 0) + 1;
 
             TimelineRecord record = new TimelineRecord()
             {
