@@ -2,17 +2,33 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using System.Net.Http;
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public sealed class AzureDevOpsClientFactory : IAzureDevOpsClientFactory
     {
-        public AzureDevOpsClientFactory() { }
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public IAzureDevOpsClient CreateAzureDevOpsClient(string baseUrl, string organization, int maxParallelRequests, string accessToken)
+        public AzureDevOpsClientFactory(IHttpClientFactory httpClientFactory) 
         {
-            return new AzureDevOpsClient(baseUrl, organization, maxParallelRequests, accessToken);
+            _httpClientFactory = httpClientFactory;
+        }
+
+        public IAzureDevOpsClient CreateAzureDevOpsClient(
+            string baseUrl,
+            string organization,
+            int maxParallelRequests,
+            string accessToken)
+        {
+            return new AzureDevOpsClient(new OptionsWrapper<AzureDevOpsClientOptions>(new AzureDevOpsClientOptions()
+            {
+                AccessToken = accessToken,
+                BaseUrl = baseUrl,
+                Organization = organization,
+                MaxParallelRequests = maxParallelRequests
+            }), _httpClientFactory);
         }
     }
 }
