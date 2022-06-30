@@ -28,12 +28,9 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private readonly string _organization;
         private readonly SemaphoreSlim _parallelism;
 
-        private readonly ExponentialRetry _retry;
-
         public AzureDevOpsClient(
             IOptions<AzureDevOpsClientOptions> options,
-            IHttpClientFactory httpClientFactory,
-            ExponentialRetry retry)
+            IHttpClientFactory httpClientFactory)
         {
             _baseUrl = options.Value.BaseUrl;
             _organization = options.Value.Organization;
@@ -49,8 +46,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                     Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.Value.AccessToken}"))
                 );
             }
-
-            _retry = retry;
         }
 
         /// <summary>
@@ -168,32 +163,26 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public async Task<string> TryGetImageName(
             string logUri,
             Regex imageNameRegex,
-            ILogger logger,
             CancellationToken cancellationToken)
         {
-            return await _retry.RetryAsync(async cancellationToken =>
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using StreamReader reader = new StreamReader(logStream);
+            string line;
+            while ((line = reader.ReadLine()) != null)
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
-                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-
-                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                using StreamReader reader = new StreamReader(logStream);
-                string line;
-                while ((line = reader.ReadLine()) != null)
+                Match match = imageNameRegex.Match(line);
+                if (match.Success)
                 {
-                    Match match = imageNameRegex.Match(line);
-                    if (match.Success)
-                    {
-                        return match.Groups[1].Value;
-                    }
+                    return match.Groups[1].Value;
                 }
+            }
 
-                return null;
-            },
-            ex => logger.LogWarning("Exception thrown during getting the log `exception`, retrying", ex),
-            _ => true,
-            cancellationToken);
+            return null;
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

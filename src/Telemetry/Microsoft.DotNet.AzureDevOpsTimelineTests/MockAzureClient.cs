@@ -101,7 +101,7 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, ILogger logger, CancellationToken cancellationToken)
+        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
             return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
         }

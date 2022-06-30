@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
-            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, _logger, cancellationToken);
+            var imageName = await _azureDevOpsClient.TryGetImageName(logUri, imageNameRegex, cancellationToken);
 
             if (imageName == null)
             {

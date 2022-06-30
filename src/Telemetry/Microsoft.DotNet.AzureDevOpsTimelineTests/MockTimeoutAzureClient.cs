@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             throw new NotImplementedException();
         }
 
-        public async Task<string> TryGetImageName(string logUri, Regex imageNameRegex, ILogger logger, CancellationToken cancellationToken)
+        public async Task<string> TryGetImageName(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));

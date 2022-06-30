@@ -56,11 +56,13 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             
                             services.AddSingleton<ISystemClock, SystemClock>();
                             services.AddTransient<AzureDevOpsDelegatingHandler, RetryAfterHandler>();
-
+                            services.AddTransient<RetryAllHandler>();
 
                             services.Configure<HttpClientFactoryOptions>(o =>
                             {
                                 o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck);
+                                // adding this handler first so it gets the response last, after other handlers have dealt with things like throttling
+                                o.HttpMessageHandlerBuilderActions.Add(AddRetryAllHandler);
                                 o.HttpMessageHandlerBuilderActions.Add(AddDelegatingHandlers);
                             });
                             services.AddHttpClient();
@@ -87,6 +89,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             {
                 builder.AdditionalHandlers.Add(handler);
             }
+        }
+
+        private static void AddRetryAllHandler(HttpMessageHandlerBuilder builder)
+        {
+            var handler = builder.Services.GetService<RetryAllHandler>();
+            builder.AdditionalHandlers.Add(handler);
         }
     }
 }

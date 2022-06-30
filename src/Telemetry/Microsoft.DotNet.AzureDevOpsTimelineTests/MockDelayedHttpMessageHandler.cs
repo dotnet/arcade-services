@@ -13,7 +13,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
     public class MockExceptionThrowingHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
-        private readonly SemaphoreSlim _mutex;
         private int _throwAfter;
         private int _counter;
 
@@ -22,7 +21,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             _sendAsync = sendAsync;
             _throwAfter = throwAfter;
             _counter = 0;
-            _mutex = new SemaphoreSlim(1);
         }
 
         public static MockExceptionThrowingHandler Create(string message, int throwAfter)
@@ -50,13 +48,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            _mutex.Wait(cancellationToken);
-            if (_counter++ < _throwAfter)
+            if (Interlocked.Increment(ref _counter) <= _throwAfter)
             {
-                _mutex.Release();
                 return await _sendAsync(request, cancellationToken);
             }
-            _mutex.Release();
             throw new OperationCanceledException();
         }
     }

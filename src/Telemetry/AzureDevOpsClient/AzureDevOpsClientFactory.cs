@@ -11,12 +11,10 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
     public sealed class AzureDevOpsClientFactory : IAzureDevOpsClientFactory
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ExponentialRetry _exponentialRetry;
 
-        public AzureDevOpsClientFactory(IHttpClientFactory httpClientFactory, ExponentialRetry exponentialRetry) 
+        public AzureDevOpsClientFactory(IHttpClientFactory httpClientFactory) 
         {
             _httpClientFactory = httpClientFactory;
-            _exponentialRetry = exponentialRetry;
         }
 
         public IAzureDevOpsClient CreateAzureDevOpsClient(
@@ -31,8 +29,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
                 BaseUrl = baseUrl,
                 Organization = organization,
                 MaxParallelRequests = maxParallelRequests
-            }), _httpClientFactory,
-            _exponentialRetry);
+            }), _httpClientFactory);
         }
     }
 }
