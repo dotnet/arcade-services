@@ -229,7 +229,7 @@ stages:
             artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f net5.0
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f net6.0
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
 
