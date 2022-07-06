@@ -65,9 +65,9 @@ namespace Microsoft.DotNet.Kusto
         public async Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query)
         {
             var client = GetProvider();
-            var properties = BuildClientRequestProperties(query);
+            var properties = KustoHelpers.BuildClientRequestProperties(query);
 
-            string text = BuildQueryText(query);
+            string text = KustoHelpers.BuildQueryString(query);
 
             try
             {
@@ -91,10 +91,10 @@ namespace Microsoft.DotNet.Kusto
         public async IAsyncEnumerable<object[]> ExecuteStreamableKustoQuery(KustoQuery query)
         {
             var client = GetProvider();
-            var properties = BuildClientRequestProperties(query);
+            var properties = KustoHelpers.BuildClientRequestProperties(query);
             properties.SetOption(ClientRequestProperties.OptionResultsProgressiveEnabled, true);
 
-            string text = BuildQueryText(query);
+            string text = KustoHelpers.BuildQueryString(query);
 
             ProgressiveDataSet pDataSet = await client.ExecuteQueryV2Async(
                 DatabaseName,
@@ -162,29 +162,6 @@ namespace Microsoft.DotNet.Kusto
                 row = new object[frame.FieldCount];
                 return frame.GetNextRecord(row);
             }
-        }
-
-        private ClientRequestProperties BuildClientRequestProperties(KustoQuery query)
-        {
-            var properties = new ClientRequestProperties();
-            foreach (var parameter in query.Parameters)
-            {
-                properties.SetParameter(parameter.Name, parameter.Value.ToString());
-            }
-
-            return properties;
-        }
-
-        private string BuildQueryText(KustoQuery query)
-        {
-            string text = query.Text;
-            if (query.Parameters?.Any() == true)
-            {
-                string parameterList = string.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type.CslDataType}"));
-                text = $"declare query_parameters ({parameterList});{query.Text}";
-            }
-
-            return text;
         }
 
         public void Dispose()

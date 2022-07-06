@@ -145,6 +145,29 @@ namespace Microsoft.DotNet.Kusto
 
             logger.LogTrace("Ingest complete");
         }
+
+        public static ClientRequestProperties BuildClientRequestProperties(KustoQuery query)
+        {
+            var properties = new ClientRequestProperties();
+            foreach (var parameter in query.Parameters)
+            {
+                properties.SetParameter(parameter.Name, parameter.Value.ToString());
+            }
+
+            return properties;
+        }
+
+        public static string BuildQueryString(KustoQuery query)
+        {
+            string text = query.Text;
+            if (query.Parameters?.Any() == true)
+            {
+                string parameterList = string.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type.CslDataType}"));
+                text = $"declare query_parameters ({parameterList});{query.Text}";
+            }
+
+            return text;
+        }
     }
 
     public class KustoIngestClientFactory : IKustoIngestClientFactory
