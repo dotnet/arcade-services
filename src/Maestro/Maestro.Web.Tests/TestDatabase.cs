@@ -48,7 +48,7 @@ namespace Maestro.Web.Tests
 
         public void Dispose()
         {
-            using var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true");
+            using var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true"); // lgtm [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
             connection.Open();
             DropAllTestDatabases(connection).GetAwaiter().GetResult();
         }
