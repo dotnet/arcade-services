@@ -8,7 +8,6 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +31,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     logging.AddProvider(new NUnitLogger());
                 });
+                collection.Configure<AzureDevOpsTimelineOptions>((o, p) =>
+                {
+                    o.LogScrapingTimeout = "00:00:02";
+                });
             }
 
             public static Func<IServiceProvider,AzureDevOpsTimeline> Controller(IServiceCollection collection)
@@ -53,11 +56,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 return s => (InMemoryTimelineTelemetryRepository) s.GetRequiredService<ITimelineTelemetryRepository>();
             }
 
-            public static void Clock(IServiceCollection collection, DateTimeOffset staticClock)
+            public static void Clock(IServiceCollection collection)
             {
-                Mock<ISystemClock> mockSystemClock = new Mock<ISystemClock>();
-                mockSystemClock.Setup(x => x.UtcNow).Returns(staticClock);
-                collection.AddSingleton(mockSystemClock.Object);
+                collection.AddSingleton<ISystemClock, TestClock>();
             }
 
             public static void Build(IServiceCollection collection, BuildAndTimeline build)
@@ -66,6 +67,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     {build.Build, build.Timelines.ToList()}
                 }));
+                collection.AddSingleton<IBuildLogScraper, BuildLogScraper>();
             }
         }
 
@@ -87,7 +89,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -136,13 +137,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
             /// Test execution
             await testData.Controller.RunProject("public", 1000, CancellationToken.None);
-
+            
             // Test results
             testData.Repository.TimelineRecords
                 .Select(r => r.Raw)
@@ -176,7 +176,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             // Test setup
             await using TestData testData = await TestData.Default
                 .WithRepository(azdoProjectName, timeDatum.AddHours(-1))
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -208,7 +207,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithStaticClock(timeDatum)
                 .WithBuild(build)
                 .BuildAsync();
 
@@ -222,6 +220,32 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                     first.Build.Should().BeSameAs(build.Build);
                     first.TargetBranch.Should().Be(string.Empty);
                 });
+        }
+
+        [Test]
+        public async Task BuildLogScraping()
+        {
+            DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
+            string azdoProjectName = "public";
+            string targetBranchName = "theTargetBranch";
+
+            BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
+                .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
+                    .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", MockAzureClient.OneESLogUrl)
+                    .AddRecord("Azure Pipelines", "Initialize job", MockAzureClient.MicrosoftHostedAgentLogUrl)
+                    .AddRecord()
+                ).Build();
+
+            // Test setup
+            await using TestData testData = await TestData.Default
+                .WithBuild(build)
+                .BuildAsync();
+
+            /// Test execution
+            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+
+            testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(2);
+            testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
         }
     }
 }

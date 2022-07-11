@@ -18,6 +18,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.DotNet.Web.Authentication.Tests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -936,6 +937,7 @@ namespace DotNet.Status.Web.Tests
                         .First(f => f.ServiceType == typeof(GitHubVerifySignatureFilter)));
                     o.Filters.AddService<TestVerifySignatureFilter>();
                 });
+                services.AddSingleton(ExponentialRetry.Default);
             });
             factory.ConfigureBuilder(app =>
             {

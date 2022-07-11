@@ -55,7 +55,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new ClientRequestProperties()
                 );
 
-                if (!result.Read())
+                // Staging Kusto cluster has no data in the TimelineBuilds table, so we need to handle that case
+                if (!result.Read() || result.IsDBNull(0))
                 {
                     return null;
                 }
@@ -154,6 +155,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("TaskName", b.Raw.Task?.Name, KustoDataType.String),
                     new KustoValue("TaskVersion", b.Raw.Task?.Version, KustoDataType.String),
                     new KustoValue("Attempt", b.Raw.Attempt, KustoDataType.Int),
+                    new KustoValue("ImageName", b.ImageName, KustoDataType.String),
                 });
         }
 

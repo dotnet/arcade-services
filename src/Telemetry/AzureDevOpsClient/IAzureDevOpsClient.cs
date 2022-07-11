@@ -2,7 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Logging;
 using System;
+using System.IO;
+using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,5 +22,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
         public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
         public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
+        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, CancellationToken cancellationToken = default);
     }
 }
