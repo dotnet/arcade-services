@@ -107,7 +107,7 @@
     <PackageVersion Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.7" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.17.0" />
     <PackageVersion Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="3.0.13" />
+    <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
     <PackageVersion Include="Microsoft.ServiceFabric" Version="8.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />
