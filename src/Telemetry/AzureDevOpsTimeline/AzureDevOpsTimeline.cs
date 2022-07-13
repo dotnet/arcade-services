@@ -10,8 +10,11 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -29,19 +32,22 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
         private readonly IAzureDevOpsClient _azureServer;
         private readonly ISystemClock _systemClock;
+        private readonly IBuildLogScraper _buildLogScraper;
 
         public AzureDevOpsTimeline(
             ILogger<AzureDevOpsTimeline> logger,
             IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
             ITimelineTelemetryRepository timelineTelemetryRepository,
             IAzureDevOpsClient azureDevopsClient,
-            ISystemClock systemClock)
+            ISystemClock systemClock,
+            IBuildLogScraper buildLogScraper)
         {
             _logger = logger;
             _options = options;
             _timelineTelemetryRepository = timelineTelemetryRepository;
             _azureServer = azureDevopsClient;
             _systemClock = systemClock;
+            _buildLogScraper = buildLogScraper;
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -142,7 +148,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             // Identify additional timelines by inspecting each record for a "PreviousAttempt"
             // object, then fetching the "timelineId" field.
             List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
-
             foreach ((Build build, Task<Timeline> timelineTask) in tasks)
             {
                 Timeline timeline = await timelineTask;
@@ -233,6 +238,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }
 
+            await AddImageNamesToRecordsAsync(records, cancellationToken);
+
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
 
@@ -318,6 +325,99 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             CancellationToken cancellationToken)
         {
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+        }
+
+        private async Task AddImageNamesToRecordsAsync(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+        {
+            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
+
+            try
+            {
+                _logger.LogInformation("Starting log scraping");
+
+                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
+                var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
+
+                using var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
+                var combinedCancellationToken = combinedCancellationTokenSource.Token;
+
+                Stopwatch stopWatch = Stopwatch.StartNew();
+
+                await GetImageNames(records, combinedCancellationToken);
+
+                stopWatch.Stop();
+                _logger.LogInformation("Log scraping took {elapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                //Don't swallup up the app cancellation token, let it do its thing
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Exception thrown while getting image names: `{exception}`", e);
+            }
+        }
+
+        private async Task GetImageNames(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+        {
+            SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
+
+            var taskList = new List<Task>();
+
+            foreach (var record in records)
+            {
+                if (!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
+                {
+                    var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
+                    taskList.Add(childTask);
+                }
+            }
+
+            try
+            {
+                await Task.WhenAll(taskList);
+            }
+            catch(Exception e)
+            {                
+                _logger.LogInformation("Log scraping had some failures `{exception}`, summary below", e);
+            }
+            int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
+            int cancelledTasks = taskList.Count(task => task.IsCanceled);
+            int failedTasks = taskList.Count - successfulTasks - cancelledTasks;
+            _logger.LogInformation("Log scraping summary: {SuccessfulTasks} successful, {CancelledTasks} cancelled, {FailedTasks} failed", successfulTasks, cancelledTasks, failedTasks);
+        }
+        
+        private async Task GetImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        {
+            await throttleSemaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+                {
+                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                }
+                else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
+                {
+                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                }
+                else
+                {
+                    record.ImageName = null;
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
+                throw;
+            }
+            finally
+            {
+                throttleSemaphore.Release();
+            }
         }
     }
 }

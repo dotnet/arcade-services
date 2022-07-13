@@ -4,13 +4,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -154,6 +158,31 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
             string json = await CreateWorkItem(project, "RCA", fields, cancellationToken);
             return JsonConvert.DeserializeObject<WorkItem>(json);
+        }
+
+        public async Task<string> TryGetImageName(
+            string logUri,
+            Regex imageNameRegex,
+            CancellationToken cancellationToken)
+        {
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using StreamReader reader = new StreamReader(logStream);
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                Match match = imageNameRegex.Match(line);
+                if (match.Success)
+                {
+                    return match.Groups[1].Value;
+                }
+            }
+
+            return null;
         }
 
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

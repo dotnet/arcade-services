@@ -14,6 +14,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -31,14 +32,12 @@ namespace DotNet.Status.Web.Controllers
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<IAzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
-        private readonly IHttpClientFactory _clientFactory;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IAzureDevOpsClientFactory azureDevOpsClientFactory,
             IOptionsSnapshot<BuildMonitorOptions> options,
-            ILogger<AzurePipelinesController> logger,
-            IHttpClientFactory clientFactory)
+            ILogger<AzurePipelinesController> logger)
         {
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
@@ -46,7 +45,6 @@ namespace DotNet.Status.Web.Controllers
             _logger = logger;
             _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
             _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
-            _clientFactory = clientFactory;
         }
 
         private IAzureDevOpsClient Client => _clientLazy.Value;
