@@ -37,7 +37,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 .UseContentRoot(AppContext.BaseDirectory)
                 .ConfigureAppConfiguration((context, builder) =>
                 {
-                    builder.AddDefaultJsonConfiguration(context.HostingEnvironment, serviceProvider: null)
+                    builder.AddDefaultJsonConfiguration(context.HostingEnvironment, serviceProvider: null);
                 })
                 .ConfigureServices(ServiceHost.ConfigureDefaultServices)
                 .ConfigureServices(services =>
