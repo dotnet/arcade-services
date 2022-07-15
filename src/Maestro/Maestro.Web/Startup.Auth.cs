@@ -202,7 +202,7 @@ namespace Maestro.Web
                             policy.RequireAuthenticatedUser();
                             if (!HostingEnvironment.IsDevelopment())
                             {
-                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","arcade-contrib"));
+                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng-public"), GitHubClaimResolver.GetTeamRole("dotnet","arcade-contrib"));
                             }
                         });
                 });

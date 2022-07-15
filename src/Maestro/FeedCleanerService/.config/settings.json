@@ -7,22 +7,22 @@
     "Enabled": false,
     "ReleasePackageFeeds": [
       {
-        "Account": "dnceng",
+        "Account": "dnceng-public",
         "Project": "public",
         "Name": "dotnet3"
       },
       {
-        "Account": "dnceng",
+        "Account": "dnceng-public",
         "Project": "public",
         "Name": "dotnet3.1"
       },
       {
-        "Account": "dnceng",
+        "Account": "dnceng-public",
         "Project": "public",
         "Name": "dotnet5"
       },
       {
-        "Account": "dnceng",
+        "Account": "dnceng-public",
         "Project": "public",
         "Name": "dotnet-tools"
       }

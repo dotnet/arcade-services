@@ -268,7 +268,7 @@ namespace DotNet.Status.Web
                             policy.RequireAuthenticatedUser();
                             if (!Env.IsDevelopment())
                             {
-                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","bots-high"));
+                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng-public"), GitHubClaimResolver.GetTeamRole("dotnet","bots-high"));
                             }
                         });
                 });
