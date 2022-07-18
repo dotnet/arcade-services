@@ -28,7 +28,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private static void NonServiceFabricMain()
         {
-            new WebHostBuilder().UseKestrel()
+            new WebHostBuilder().UseKestrel(o =>
+                    {
+                        // Default 32k, which isn't enough for oauth cookies from GitHub for people with many teams/claims
+                        o.Limits.MaxRequestHeadersTotalSize = 65536;
+                    }
+                )
                 .UseContentRoot(AppContext.BaseDirectory)
                 .ConfigureAppConfiguration((context, builder) =>
                 {
