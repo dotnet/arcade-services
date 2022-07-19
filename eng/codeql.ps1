@@ -1,9 +1,20 @@
 function Install-Gdn {
     param(
-        [string]$Path
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [string]$Version
     )
 
-    Start-Process nuget -Verbose -ArgumentList "install", "Microsoft.Guardian.Cli", "-Source https://securitytools.pkgs.visualstudio.com/_packaging/Guardian/nuget/v3/index.json", "-OutputDirectory $Path", "-NonInteractive", "-NoCache" -NoNewWindow -Wait
+    $installArgs = @("install", "Microsoft.Guardian.Cli", "-Source https://securitytools.pkgs.visualstudio.com/_packaging/Guardian/nuget/v3/index.json", "-OutputDirectory $Path", "-NonInteractive", "-NoCache")
+
+    if($Version)
+    {
+        $installArgs += "-Version $Version"
+    }
+
+    Start-Process nuget -Verbose -ArgumentList $installArgs -NoNewWindow -Wait
+    
     $gdnCliPath = Get-ChildItem -Filter guardian.cmd -Recurse -Path $Path
     return $gdnCliPath.FullName
 }
