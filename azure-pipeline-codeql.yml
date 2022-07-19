@@ -136,7 +136,7 @@ stages:
             -ConfigurationPath $(Build.SourcesDirectory)\.gdn\r\semmle-javascript-configure.gdnconfig
         displayName: 'CodeQL: maestro-angular (typescript)'
 
-        - pwsh: |
+      - pwsh: |
           . $(Build.SourcesDirectory)\eng\codeql.ps1
           Invoke-GdnSemmle -GuardianCliLocation $(GuardianCliLocation) `
             -WorkingDirectory $(Build.SourcesDirectory) `
