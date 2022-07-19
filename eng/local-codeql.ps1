@@ -1,4 +1,5 @@
 $loggerLevel = 'Standard'
+$sdlSuite = 'SuiteSDLRecommended'
 
 Set-Location $(Join-Path $PSScriptRoot "..")
 
@@ -6,7 +7,7 @@ Write-Host $pwd
 
 . $(Join-Path $pwd "eng\codeql.ps1")
 
-$GdnCliPath = Install-Gdn -Path $(Join-Path $pwd "artifacts")
+$GdnCliPath = Install-Gdn -Path $(Join-Path $pwd "artifacts") -Version 0.109.0
 
 if (!$(Test-Path $GdnCliPath)) {
     throw "Unable to find Guardian CLI"
@@ -19,14 +20,23 @@ Initialize-Gdn `
     -WorkingDirectory $pwd `
     -LoggerLevel $loggerLevel
 
+ New-GdnSemmleConfig -GuardianCliLocation $GdnCliPath `
+     -LoggerLevel $loggerLevel `
+     -Language 'csharp' `
+     -WorkingDirectory $pwd `
+     -SourceCodeDirectory $pwd\src `
+     -OutputPath $(Join-Path $pwd ".gdn\r\semmle-csharp-configure.gdnconfig") `
+     -Suite $sdlSuite `
+     -BuildCommand "..\build.cmd -restore -configuration Release" `
+     -Force
+
 New-GdnSemmleConfig -GuardianCliLocation $GdnCliPath `
-    -LoggerLevel 'Standard' `
-    -Language 'csharp' `
+    -LoggerLevel $loggerLevel `
+    -Language 'python' `
     -WorkingDirectory $pwd `
-    -SourceCodeDirectory $pwd\src `
-    -OutputPath $(Join-Path $pwd ".gdn\r\semmle-csharp-configure.gdnconfig") `
-    -Suite "SuiteSDLRecommended" `
-    -BuildCommand "..\build.cmd -configuration Release"
+    -SourceCodeDirectory $pwd\src\Monitoring\grafana-init `
+    -OutputPath $pwd\.gdn\r\semmle-python-configure.gdnconfig `
+    -Suite $sdlSuite
 
 .\eng\set-version-parameters.ps1
 
@@ -41,6 +51,10 @@ $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name(
 $manifest.Save("src\Telemetry\TelemetryApplication\ApplicationPackageRoot\ApplicationManifest.xml")
 
 
+ Invoke-GdnSemmle -GuardianCliLocation $GdnCliPath `
+     -WorkingDirectory $pwd `
+     -ConfigurationPath $(Join-Path $pwd ".gdn\r\semmle-csharp-configure.gdnconfig")
+
 Invoke-GdnSemmle -GuardianCliLocation $GdnCliPath `
     -WorkingDirectory $pwd `
-    -ConfigurationPath $(Join-Path $pwd ".gdn\r\semmle-csharp-configure.gdnconfig")
+    -ConfigurationPath $(Join-Path $pwd ".gdn\r\semmle-python-configure.gdnconfig")
