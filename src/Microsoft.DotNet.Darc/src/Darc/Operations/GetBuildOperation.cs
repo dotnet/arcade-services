@@ -108,5 +108,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
         }
+
+        protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
+            => outputFormat switch
+            {
+                DarcOutputType.json => true,
+                _ => base.IsOutputFormatSupported(outputFormat),
+            };
     }
 }
