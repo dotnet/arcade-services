@@ -124,6 +124,12 @@ namespace Microsoft.DncEng.PatGeneratorTool
             VssCredentials credentials;
             if (!string.IsNullOrEmpty(user))
             {
+                // rewrite REDMOND\account -> account@microsoft.com
+                if (user.Contains("\\"))
+                {
+                    user = $"{user.Split('\\').Last()}@microsoft.com";
+                }
+
                 credentials = new VssAadCredential(user, password);
             }
             else
