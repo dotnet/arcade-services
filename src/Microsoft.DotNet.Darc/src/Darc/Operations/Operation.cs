@@ -31,6 +31,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 level = LogLevel.Information;
             }
 
+            if (!IsOutputFormatSupported(options.OutputFormat))
+            {
+                throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
+            }
+
             ServiceCollection collection = new ServiceCollection();
             collection.AddLogging(b => b.AddConsole().AddFilter(l => l >= level));
             _provider = collection.BuildServiceProvider();
@@ -38,6 +43,20 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         public abstract Task<int> ExecuteAsync();
+
+        /// <summary>
+        ///  Indicates whether the requested output format is supported.
+        /// </summary>
+        /// <param name="outputFormat">The desired output format.</param>
+        /// <returns>
+        ///  The base implementations returns <see langword="true"/> for <see cref="DarcOutputType.text"/>; otherwise <see langword="false"/>.
+        /// </returns>
+        protected virtual bool IsOutputFormatSupported(DarcOutputType outputFormat)
+            => outputFormat switch
+            {
+                DarcOutputType.text => true,
+                _ => false
+            };
 
         protected virtual void Dispose(bool disposing)
         {

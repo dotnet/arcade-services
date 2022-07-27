@@ -110,7 +110,17 @@ stages:
             -SourceCodeDirectory $(Build.SourcesDirectory)\src\Maestro\maestro-angular `
             -OutputPath $(Build.SourcesDirectory)\.gdn\r\semmle-javascript-configure.gdnconfig `
             -AdditionalSemmleParameters @("Typescript < $true")
-        displayName: 'CodeQL: Create Typescript configuration'
+        displayName: 'CodeQL: Create maestro-angular (typescript) configuration'
+
+      - pwsh: |
+          . $(Build.SourcesDirectory)\eng\codeql.ps1
+          New-GdnSemmleConfig -GuardianCliLocation $(GuardianCliLocation) `
+            -LoggerLevel 'Standard' `
+            -Language 'python' `
+            -WorkingDirectory $(Build.SourcesDirectory) `
+            -SourceCodeDirectory $(Build.SourcesDirectory)\src\Monitoring\grafana-init `
+            -OutputPath $(Build.SourcesDirectory)\.gdn\r\semmle-python-configure.gdnconfig
+        displayName: 'CodeQL: Create Grafana Init (python) configuration'
 
       - pwsh: |
           . $(Build.SourcesDirectory)\eng\codeql.ps1
@@ -124,7 +134,14 @@ stages:
           Invoke-GdnSemmle -GuardianCliLocation $(GuardianCliLocation) `
             -WorkingDirectory $(Build.SourcesDirectory) `
             -ConfigurationPath $(Build.SourcesDirectory)\.gdn\r\semmle-javascript-configure.gdnconfig
-        displayName: 'CodeQL: Typescript'
+        displayName: 'CodeQL: maestro-angular (typescript)'
+
+      - pwsh: |
+          . $(Build.SourcesDirectory)\eng\codeql.ps1
+          Invoke-GdnSemmle -GuardianCliLocation $(GuardianCliLocation) `
+            -WorkingDirectory $(Build.SourcesDirectory) `
+            -ConfigurationPath $(Build.SourcesDirectory)\.gdn\r\semmle-python-configure.gdnconfig
+        displayName: 'CodeQL: Grafana Init (python)'
 
       - pwsh: |
           . $(Build.SourcesDirectory)\eng\codeql.ps1
