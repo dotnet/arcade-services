@@ -1,9 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" VersionOverride="19.208.0-preview"/>
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" VersionOverride="5.2.7" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Client" VersionOverride="19.208.0-preview" />
   </ItemGroup>
 </Project>

@@ -1,22 +1,24 @@
 using Azure.Core;
 using Azure.Identity;
 using Microsoft.DncEng.PatGenerator;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
-using Microsoft.VisualStudio.Services.Client;
 using Microsoft.VisualStudio.Services.Common;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Identity.Client;
+using Microsoft.VisualStudio.Services.OAuth;
 
 namespace Microsoft.DncEng.PatGeneratorTool
 {
     class Program
     {
         private const int DefaultExpirationInDays = 30;
+        private const string AzdoClientId = "872cd9fa-d31f-45e0-9eab-6e460a02d1f1";
 
         static int Main(string[] args)
         {
@@ -130,7 +132,16 @@ namespace Microsoft.DncEng.PatGeneratorTool
                     user = $"{user.Split('\\').Last()}@microsoft.com";
                 }
 
-                credentials = new VssAadCredential(user, password);
+                var app = PublicClientApplicationBuilder
+                    .Create(AzdoClientId)
+                    .WithAuthority("https://login.microsoftonline.com/microsoft.com/")
+                    .Build();
+
+                var passwordSecureStr = new SecureString();
+                Array.ForEach(password!.ToCharArray(), passwordSecureStr.AppendChar);
+
+                var authResult = await app.AcquireTokenByUsernamePassword(AzureDevOpsAuthScopes, user, passwordSecureStr).ExecuteAsync();
+                credentials = new VssCredentials(new VssOAuthAccessTokenCredential(authResult.AccessToken));
             }
             else
             {
@@ -142,6 +153,7 @@ namespace Microsoft.DncEng.PatGeneratorTool
             Console.WriteLine($"{patName} (Valid Until: {credentialExpiration}): {pat.Token}");
             return 0;
         }
+
 
         /// <summary>
         /// Determine the desired name of the PAT. It appears that PATs may have really any combination of characters
