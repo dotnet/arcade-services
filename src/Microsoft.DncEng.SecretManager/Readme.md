@@ -113,7 +113,7 @@ These must be run in a context that can resolve the .net cli tool secret-manager
     dotnet secret-manager synchronize --force-secret=<secret-name> <manifest.yaml>
 
 ## Onboarding a new Repo
-- If .config/dotnet-tools.json doesn't exist, run `dotnet new tool manifest`
+- If .config/dotnet-tools.json doesn't exist, run `dotnet new toolmanifest`
 - Run `dotnet tool install microsoft.dnceng.secretmanager --version 1.1.0-*`
 - Create manifests for vaults in `$(RepoRoot)/.vault-config`. The path is arbitrary, but must match the scripts below.
 - Add the following stage to a weekly build:
