@@ -11,28 +11,50 @@ namespace Microsoft.DotNet.Kusto
         public KustoQuery()
         {
             Parameters = new List<KustoParameter>();
+            Options = new Dictionary<string, object>();
         }
 
         public KustoQuery(string text, IEnumerable<KustoParameter> parameters)
         {
             Text = text;
             Parameters = parameters.ToList();
+            Options = new Dictionary<string, object>();
         }
 
-        public KustoQuery(string text) : this(text, new List<KustoParameter>())
+        public KustoQuery(string text, Dictionary<string, object> options)
+        {
+            Text = text;
+            Parameters = new List<KustoParameter>();
+            Options = options;
+        }
+
+        public KustoQuery(string text, IEnumerable<KustoParameter> parameters, Dictionary<string, object> options)
+        {
+            Text = text;
+            Parameters = parameters.ToList();
+            Options = options;
+        }
+
+        public KustoQuery(string text) : this(text, new List<KustoParameter>(), new Dictionary<string, object>())
         {
         }
 
-        public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters)
+        public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters, new Dictionary<string, object>())
         {
         }
 
+        public Dictionary<string, object> Options { get; }
         public List<KustoParameter> Parameters { get; }
         public string Text { get; set; } 
 
         public void AddParameter(string name, object value, KustoDataType type)
         {
             Parameters.Add(new KustoParameter(name, value, type));
+        }
+
+        public void AddOption(string key, object value)
+        {
+            Options.Add(key, value);
         }
     }
 }

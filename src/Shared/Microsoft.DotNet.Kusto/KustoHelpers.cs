@@ -154,6 +154,11 @@ namespace Microsoft.DotNet.Kusto
                 properties.SetParameter(parameter.Name, parameter.Value.ToString());
             }
 
+            foreach (var option in query.Options)
+            {
+                properties.SetOption(option.Key, option.Value);
+            }
+
             return properties;
         }
 
