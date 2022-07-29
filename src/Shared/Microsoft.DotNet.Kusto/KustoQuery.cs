@@ -14,32 +14,18 @@ namespace Microsoft.DotNet.Kusto
             Options = new Dictionary<string, object>();
         }
 
-        public KustoQuery(string text, IEnumerable<KustoParameter> parameters)
+        public KustoQuery(string text, IEnumerable<KustoParameter> parameters, Dictionary<string, object> options = null)
         {
             Text = text;
             Parameters = parameters.ToList();
-            Options = new Dictionary<string, object>();
+            Options = options ?? new Dictionary<string, object>();
         }
 
-        public KustoQuery(string text, Dictionary<string, object> options)
-        {
-            Text = text;
-            Parameters = new List<KustoParameter>();
-            Options = options;
-        }
-
-        public KustoQuery(string text, IEnumerable<KustoParameter> parameters, Dictionary<string, object> options)
-        {
-            Text = text;
-            Parameters = parameters.ToList();
-            Options = options;
-        }
-
-        public KustoQuery(string text) : this(text, new List<KustoParameter>(), new Dictionary<string, object>())
+        public KustoQuery(string text) : this(text, new List<KustoParameter>())
         {
         }
 
-        public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters, new Dictionary<string, object>())
+        public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters)
         {
         }
 
