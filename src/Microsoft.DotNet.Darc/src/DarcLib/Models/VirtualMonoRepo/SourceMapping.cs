@@ -7,10 +7,13 @@ using System.Collections.Generic;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-public record SourceMapping (
+/// <summary>
+/// Model for the configuration JSON file with list of individual repositories.
+/// </summary>
+public record SourceMapping(
     string Name,
     string DefaultRemote,
+    string DefaultBranch,
     IReadOnlyCollection<string> Include,
     IReadOnlyCollection<string> Exclude,
-    string? Version = null,
-    string? DefaultBranch = null);
+    string? Version = null);

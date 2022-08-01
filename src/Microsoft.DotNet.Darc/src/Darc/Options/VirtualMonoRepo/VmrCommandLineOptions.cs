@@ -16,6 +16,6 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
     [Option("vmr", Required = false, HelpText = "Path to the virtual mono repo; defaults to cwd.")]
     public string VmrPath { get; set; } = Environment.CurrentDirectory;
 
-    [Option("tmp", Required = true, HelpText = "Temporary path where intermediate files are stored and repositories are cloned to.")]
+    [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored and repositories are cloned to. Defaults to artifacts/tmp in git root.")]
     public string TmpPath { get; set; }
 }
