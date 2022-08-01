@@ -14,7 +14,6 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.DependencyCollector;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc
 {
