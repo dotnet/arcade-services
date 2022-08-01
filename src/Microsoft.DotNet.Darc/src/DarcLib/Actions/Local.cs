@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,9 +14,8 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class Local : ILocal
     {
-        private const string _branch = "current";
         private readonly GitFileManager _fileManager;
-        private readonly IGitRepo _gitClient;
+        private readonly ILocalGitRepo _gitClient;
 
         private readonly ILogger _logger;
 
