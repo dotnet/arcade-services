@@ -393,7 +393,7 @@ namespace Microsoft.DotNet.DarcLib
             var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
             foreach (Commit commit in commits)
             {
-                if (!commit.Author.Equals("dotnet-maestro[bot]"))
+                if (!commit.Author.Equals(Constants.DarcBotName))
                 {
                     commitMessage += $@"
 

@@ -5,6 +5,7 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations

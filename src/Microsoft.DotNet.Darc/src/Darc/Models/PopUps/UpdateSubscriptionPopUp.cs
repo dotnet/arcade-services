@@ -12,6 +12,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
+using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
 {

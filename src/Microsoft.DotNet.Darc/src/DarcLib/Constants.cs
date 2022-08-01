@@ -7,10 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Microsoft.DotNet.Darc
+namespace Microsoft.DotNet.DarcLib
 {
     public class Constants
     {
+        public const string DarcBotName = "dotnet-maestro[bot]";
+        public const string DarcBotEmail = "dotnet-maestro[bot]@users.noreply.github.com";
+
         public const string SettingsFileName = "settings";
         public const int ErrorCode = 42;
         public const int SuccessCode = 0;
