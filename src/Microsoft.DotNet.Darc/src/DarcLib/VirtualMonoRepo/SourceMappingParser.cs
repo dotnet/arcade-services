@@ -50,7 +50,7 @@ public class SourceMappingParser : ISourceMappingParser
                 Name: m.Name ?? throw new InvalidOperationException($"Missing `name` in {SourceMappingsFileName}"),
                 Version: m.Version,
                 DefaultRemote: m.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {SourceMappingsFileName}"),
-                DefaultBranch: m.DefaultBranch ?? "main",
+                DefaultRef: m.DefaultRef ?? "main",
                 Include: ImmutableArray.Create(m.Include ?? Array.Empty<string>()),
                 Exclude: ImmutableArray.Create(m.Exclude ?? Array.Empty<string>())))
             .ToImmutableArray();
@@ -61,7 +61,7 @@ public class SourceMappingParser : ISourceMappingParser
         public string? Name { get; set; }
         public string? Version { get; set; }
         public string? DefaultRemote { get; set; }
-        public string? DefaultBranch { get; set; }
+        public string? DefaultRef { get; set; }
         public string[]? Include { get; set; }
         public string[]? Exclude { get; set; }
     }

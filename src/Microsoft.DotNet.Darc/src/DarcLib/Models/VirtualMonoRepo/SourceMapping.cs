@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 public record SourceMapping(
     string Name,
     string DefaultRemote,
-    string DefaultBranch,
+    string DefaultRef,
     IReadOnlyCollection<string> Include,
     IReadOnlyCollection<string> Exclude,
     string? Version = null);

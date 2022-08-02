@@ -18,7 +18,10 @@ public interface IProcessManager
 {
     Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null);
 
-    Task<ProcessExecutionResult> ExecuteGit(string gitExecutable, string repoPath, params string[] arguments);
+    Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments);
+
+    Task<ProcessExecutionResult> ExecuteGit(string repoPath, IEnumerable<string> arguments)
+        => ExecuteGit(repoPath, arguments.ToArray());
 
     string FindGitRoot(string path);
 }
@@ -26,16 +29,18 @@ public interface IProcessManager
 public class ProcessManager : IProcessManager
 {
     private readonly ILogger _logger;
+    private readonly string _gitExecutable;
 
-    public ProcessManager(ILogger logger) => _logger = logger;
+    public ProcessManager(ILogger logger, string gitExecutable)
+    {
+        _logger = logger;
+        _gitExecutable = gitExecutable;
+    }
 
-    public Task<ProcessExecutionResult> ExecuteGit(string gitExecutable, string repoPath, params string[] arguments)
-        => Execute(gitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
+    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
+        => Execute(_gitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
 
-    public Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null)
-        => Execute(executable, arguments, _logger, timeout);
-
-    public static async Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, ILogger logger, TimeSpan? timeout = null)
+    public async Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null)
     {
         var processStartInfo = new ProcessStartInfo()
         {
@@ -51,7 +56,7 @@ public class ProcessManager : IProcessManager
             processStartInfo.ArgumentList.Add(arg);
         }
 
-        logger.LogDebug("Executing command: '{executable} {arguments}'",
+        _logger.LogDebug("Executing command: '{executable} {arguments}'",
             executable, StringUtils.FormatArguments(processStartInfo.ArgumentList));
 
         var p = new Process() { StartInfo = processStartInfo };
@@ -101,7 +106,7 @@ public class ProcessManager : IProcessManager
 
         if (cts.IsCancellationRequested)
         {
-            logger.LogError("Waiting for command timed out: execution may be compromised");
+            _logger.LogError("Waiting for command timed out: execution may be compromised");
             timedOut = true;
             exitCode = -2;
 

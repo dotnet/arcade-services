@@ -8,15 +8,16 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations
 {
     public abstract class Operation : IDisposable
     {
-        private readonly ServiceProvider _provider;
+        protected ServiceProvider Provider { get; }
 
         protected ILogger<Operation> Logger { get; }
 
-        protected Operation(CommandLineOptions options)
+        protected Operation(CommandLineOptions options, IServiceCollection? services = null)
         {
             // Because the internal logging in DarcLib tends to be chatty and non-useful,
             // we remap the --verbose switch onto 'info', --debug onto highest level, and the
@@ -36,10 +37,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 throw new NotImplementedException($"Output format type '{options.OutputFormat}' not yet supported for this operation.\r\nPlease raise a new issue in https://github.com/dotnet/arcade/issues/.");
             }
 
-            ServiceCollection collection = new ServiceCollection();
-            collection.AddLogging(b => b.AddConsole().AddFilter(l => l >= level));
-            _provider = collection.BuildServiceProvider();
-            Logger = _provider.GetRequiredService<ILogger<Operation>>();
+            services ??= new ServiceCollection();
+            services.AddLogging(b => b.AddConsole().AddFilter(l => l >= level));
+
+            Provider = services.BuildServiceProvider();
+            Logger = Provider.GetRequiredService<ILogger<Operation>>();
         }
 
         public abstract Task<int> ExecuteAsync();
@@ -62,7 +64,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             if (disposing)
             {
-                _provider?.Dispose();
+                Provider?.Dispose();
             }
         }
 
