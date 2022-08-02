@@ -42,9 +42,9 @@ public class VmrManager : IVmrManager
     private const string EmptyGitObject = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
     private const string HEAD = "HEAD";
 
-    private static LibGit2Sharp.Signature CommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
+    private static Signature CommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
 
-    private readonly ILogger _logger;
+    private readonly ILogger<VmrManager> _logger;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly string _vmrPath;
@@ -55,7 +55,7 @@ public class VmrManager : IVmrManager
     public VmrManager(
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
-        ILogger logger,
+        ILogger<VmrManager> logger,
         IReadOnlyCollection<SourceMapping> mappings,
         string vmrPath,
         string tmpPath)
@@ -88,7 +88,7 @@ public class VmrManager : IVmrManager
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var clone = new LibGit2Sharp.Repository(clonePath);
+        using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, targetRevision is null || targetRevision == HEAD ? null : targetRevision);
 
         await CreatePatch(mapping, clonePath, EmptyGitObject, commit.Id.Sha, patchPath);
@@ -131,7 +131,7 @@ public class VmrManager : IVmrManager
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var clone = new LibGit2Sharp.Repository(clonePath);
+        using var clone = new Repository(clonePath);
         var currentCommit = GetCommit(clone, currentSha);
         var targetCommit = GetCommit(clone, targetRevision);
 
@@ -149,7 +149,7 @@ public class VmrManager : IVmrManager
                 $"Synchronizing backwards is not allowed");
         }
 
-        using var repo = new LibGit2Sharp.Repository(clonePath);
+        using var repo = new Repository(clonePath);
         ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
         {
             FirstParentOnly = true,
@@ -254,7 +254,7 @@ public class VmrManager : IVmrManager
         string clonePath,
         bool ignoreWorkingTree,
         string commitMessage,
-        LibGit2Sharp.Signature author,
+        Signature author,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -312,7 +312,7 @@ public class VmrManager : IVmrManager
         await File.WriteAllTextAsync(tagFile, commitId);
 
         // Stage the tag file
-        using var repository = new LibGit2Sharp.Repository(_processManager.FindGitRoot(_vmrPath));
+        using var repository = new Repository(_processManager.FindGitRoot(_vmrPath));
         Commands.Stage(repository, Path.Combine(_vmrPath, "." + mapping.Name));
     }
 
@@ -415,12 +415,12 @@ public class VmrManager : IVmrManager
         }
     }
 
-    private void Commit(string commitMessage, LibGit2Sharp.Signature author)
+    private void Commit(string commitMessage, Signature author)
     {
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new LibGit2Sharp.Repository(_processManager.FindGitRoot(_vmrPath));
+        using var repository = new Repository(_processManager.FindGitRoot(_vmrPath));
         var commit = repository.Commit(commitMessage, author, CommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
@@ -435,7 +435,7 @@ public class VmrManager : IVmrManager
 
     private string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
 
-    private static LibGit2Sharp.Commit GetCommit(LibGit2Sharp.Repository repository, string? sha)
+    private static LibGit2Sharp.Commit GetCommit(Repository repository, string? sha)
     {
         var commit = sha is null ? repository.Commits.FirstOrDefault() : repository.Commits.FirstOrDefault(c => c.Id.Sha.StartsWith(sha));
         return commit ?? throw new InvalidOperationException($"Failed to find commit {sha} in {repository}");

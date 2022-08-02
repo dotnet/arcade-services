@@ -39,6 +39,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             services ??= new ServiceCollection();
             services.AddLogging(b => b.AddConsole().AddFilter(l => l >= level));
+            services.AddSingleton(options);
 
             Provider = services.BuildServiceProvider();
             Logger = Provider.GetRequiredService<ILogger<Operation>>();

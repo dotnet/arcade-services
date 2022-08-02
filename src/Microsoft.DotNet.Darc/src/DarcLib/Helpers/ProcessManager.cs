@@ -31,7 +31,7 @@ public class ProcessManager : IProcessManager
     private readonly ILogger _logger;
     private readonly string _gitExecutable;
 
-    public ProcessManager(ILogger logger, string gitExecutable)
+    public ProcessManager(ILogger<IProcessManager> logger, string gitExecutable)
     {
         _logger = logger;
         _gitExecutable = gitExecutable;

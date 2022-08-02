@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -24,7 +23,6 @@ internal class InitializeOperation : VmrOperationBase
 
     protected override async Task ExecuteInternalAsync(
         IVmrManager vmrManager,
-        ILogger logger,
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken) =>
