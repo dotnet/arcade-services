@@ -16,7 +16,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private static readonly Regex _azurePipelinesRegex = new Regex(@"Environment: (\S+)");
         private static readonly Regex _oneESRegex = new Regex(@"Image: (\S+)");
-        private static readonly Regex _dockerImageRegex = new Regex(@"mcr.microsoft.com\/dotnet-buildtools\/prereqs:\S+");
+        // The added () are so we force the match to also be in the first group, like it is in the regexes above
+        private static readonly Regex _dockerImageRegex = new Regex(@"(mcr.microsoft.com\/dotnet-buildtools\/prereqs:\S+)");
 
         public BuildLogScraper(ILogger<BuildLogScraper> logger, IAzureDevOpsClient client)
         {
