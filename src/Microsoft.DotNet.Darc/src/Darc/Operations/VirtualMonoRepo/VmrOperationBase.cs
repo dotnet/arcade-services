@@ -23,7 +23,6 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class VmrOperationBase : Operation
 {
-    private bool _runCanceled = false;
     private readonly VmrCommandLineOptions _options;
 
     protected VmrOperationBase(VmrCommandLineOptions options) : base(options, RegisterServices(options))
@@ -70,32 +69,22 @@ internal abstract class VmrOperationBase : Operation
 
         // We have a graceful cancellation to not leave the git repo in some inconsistent state
         // This is mainly useful for manual use but can be also useful in CI when we time out but still want to push what we committed
-        CancellationToken cancellationToken = ListenForEscapeKey(Logger);
+        using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
         try
         {
             foreach (var (mapping, revision) in reposToSync)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, Logger, mapping, revision, cancellationToken);
+                listener.Token.ThrowIfCancellationRequested();
+                success &= await ExecuteAsync(vmrManager, mapping, revision, listener.Token);
             }
         }
         catch (OperationCanceledException)
         {
-            if (!_runCanceled)
-            {
-                Environment.Exit(Constants.ErrorCode);
-            }
-
             return Constants.ErrorCode;
         }
 
-        if (_runCanceled)
-        {
-            Environment.Exit(Constants.ErrorCode);
-        }
-
-        if (cancellationToken.IsCancellationRequested)
+        if (listener.Token.IsCancellationRequested)
         {
             return Constants.ErrorCode;
         }
@@ -105,85 +94,35 @@ internal abstract class VmrOperationBase : Operation
 
     protected abstract Task ExecuteInternalAsync(
         IVmrManager vmrManager,
-        ILogger logger,
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         IVmrManager vmrManager,
-        ILogger logger,
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken)
     {
-        using (logger.BeginScope(mapping.Name))
+        using (Logger.BeginScope(mapping.Name))
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, logger, mapping, targetRevision, cancellationToken);
+                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
             {
-                logger.LogInformation("{message}", e.Message);
+                Logger.LogInformation("{message}", e.Message);
                 return true;
             }
             catch (Exception e)
             {
-                logger.LogError("Failed to synchronize repo {name}{exception}", mapping.Name, Environment.NewLine + e.Message);
-                logger.LogDebug("{exception}", e);
+                Logger.LogError("Failed to synchronize repo {name}{exception}", mapping.Name, Environment.NewLine + e.Message);
+                Logger.LogDebug("{exception}", e);
                 return false;
             }
         }
-    }
-
-    /// <summary>
-    /// Listens for user's key presses and triggers a cancellation when ESC / Space is pressed.
-    /// This is used for graceful cancellation to not leave the git repo in some inconsistent state.
-    /// This is mainly useful for manual use but can be also useful in CI when we time out but still want to push what we committed.
-    /// </summary>
-    protected CancellationToken ListenForEscapeKey(ILogger logger)
-    {
-        // Key read might not be available in all scenarios
-        if (Console.IsInputRedirected)
-        {
-            return CancellationToken.None;
-        }
-
-        var cancellationSource = new CancellationTokenSource();
-
-        void CancelRun()
-        {
-            logger.LogWarning("Run interrupted by user, stopping synchronization...");
-            cancellationSource.Cancel();
-        }
-
-        Console.CancelKeyPress += new ConsoleCancelEventHandler((object? sender, ConsoleCancelEventArgs args) =>
-        {
-            args.Cancel = true;
-            _runCanceled = true;
-            CancelRun();
-        });
-
-        new Thread(() =>
-        {
-            ConsoleKeyInfo keyInfo;
-
-            do
-            {
-                while (!Console.KeyAvailable)
-                {
-                    Thread.Sleep(250);
-                }
-
-                keyInfo = Console.ReadKey(true);
-            } while (keyInfo.Key != ConsoleKey.Escape && keyInfo.Key != ConsoleKey.Spacebar);
-
-            CancelRun();
-        }).Start();
-
-        return cancellationSource.Token;
     }
 
     private static IServiceCollection RegisterServices(VmrCommandLineOptions options)
@@ -191,11 +130,12 @@ internal abstract class VmrOperationBase : Operation
         var services = new ServiceCollection();
         services.TryAddTransient<IProcessManager>(s => ActivatorUtilities.CreateInstance<ProcessManager>(s, options.GitLocation));
         services.TryAddSingleton<ISourceMappingParser, SourceMappingParser>();
+        services.TryAddSingleton<IVmrManagerFactory, VmrManagerFactory>();
         services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(options));
         services.TryAddSingleton<IVmrManager>(s =>
         {
             var processManager = s.GetRequiredService<IProcessManager>();
-            var logger = s.GetRequiredService<ILogger>();
+            var logger = s.GetRequiredService<ILogger<DarcSettings>>();
             var factory = s.GetRequiredService<IVmrManagerFactory>();
 
             var vmrPath = options.VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
