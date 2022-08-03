@@ -16,6 +16,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private static readonly Regex _azurePipelinesRegex = new Regex(@"Environment: (\S+)");
         private static readonly Regex _oneESRegex = new Regex(@"Image: (\S+)");
+        private static readonly Regex _dockerImageRegex = new Regex(@"mcr.microsoft.com\/dotnet-buildtools\/prereqs:\S+");
 
         public BuildLogScraper(ILogger<BuildLogScraper> logger, IAzureDevOpsClient client)
         {
@@ -28,6 +29,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         public Task<string> ExtractOneESHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken)
             => ExtractImageNameAsync(logUri, _oneESRegex, cancellationToken);
+
+        public Task<string> ExtractDockerImageNameAsync(string logUri, CancellationToken cancellationToken)
+            => ExtractImageNameAsync(logUri, _dockerImageRegex, cancellationToken);
 
         private async Task<string> ExtractImageNameAsync(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
         {

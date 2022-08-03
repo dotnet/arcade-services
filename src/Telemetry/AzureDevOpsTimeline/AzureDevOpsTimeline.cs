@@ -367,10 +367,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             foreach (var record in records)
             {
-                if (!string.IsNullOrEmpty(record.Raw.Log?.Url) && record.Raw.Name == "Initialize job")
+                if (!string.IsNullOrEmpty(record.Raw.Log?.Url))
                 {
-                    var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
-                    taskList.Add(childTask);
+                    if (record.Raw.Name == "Initialize job")
+                    {
+                        var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
+                        taskList.Add(childTask);
+                    }
+                    else if (record.Raw.Name == "Initialize containers")
+                    {
+                        var childTask = GetDockerImageName(record, throttleSemaphore, cancellationToken);
+                        taskList.Add(childTask);
+                    }
                 }
             }
 
@@ -408,6 +416,27 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 {
                     record.ImageName = null;
                 }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
+                throw;
+            }
+            finally
+            {
+                throttleSemaphore.Release();
+            }
+        }
+
+        private async Task GetDockerImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        {
+            await throttleSemaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                record.ImageName = await _buildLogScraper.ExtractDockerImageNameAsync(record.Raw.Log.Url, cancellationToken);
             }
             catch (Exception exception)
             {
