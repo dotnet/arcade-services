@@ -98,8 +98,7 @@ public class VmrManager : IVmrManager
         await ApplyPatch(mapping, patchPath, cleanWorkingTree: !ignoreWorkingTree);
         await TagRepo(mapping, commit.Id.Sha);
 
-        var description = $"[{mapping.Name}] Initial commit ({ShortenId(commit.Id.Sha)}): " +
-            commit.Message +
+        var description = $"[{mapping.Name}] Initial pull of the individual repository ({ShortenId(commit.Id.Sha)})" +
             Environment.NewLine + Environment.NewLine +
             $"Original commit: {mapping.DefaultRemote}/commit/{commit.Id.Sha}";
 
