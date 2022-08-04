@@ -48,6 +48,7 @@ public class VmrManager : IVmrManager
     private readonly IRemoteFactory _remoteFactory;
     private readonly string _vmrPath;
     private readonly string _reposPath;
+    private readonly string _tagsPath;
     private readonly string _tmpPath;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
@@ -66,6 +67,7 @@ public class VmrManager : IVmrManager
         _tmpPath = tmpPath;
         _vmrPath = vmrPath;
         _reposPath = Path.Join(vmrPath, "src");
+        _tagsPath = Path.Join(_reposPath, ".tags");
 
         Mappings = mappings;
     }
@@ -113,7 +115,7 @@ public class VmrManager : IVmrManager
         bool ignoreWorkingTree,
         CancellationToken cancellationToken)
     {
-        var tagFile = Path.Combine(_reposPath, $".{mapping.Name}");
+        var tagFile = GetTagFilePath(mapping);
         string currentSha;
         try
         {
@@ -202,7 +204,12 @@ public class VmrManager : IVmrManager
                 _logger.LogInformation("Updating {repo} from {current} to {next}..",
                     mapping.Name, ShortenId(currentSha), ShortenId(commitToCopy.Id.Sha));
 
-                var message = PrepareCommitMessage(SingleCommitMessage, mapping, currentSha, commitToCopy.Id.Sha, commitToCopy.Message);
+                var message = PrepareCommitMessage(
+                    SingleCommitMessage,
+                    mapping,
+                    currentSha,
+                    commitToCopy.Id.Sha,
+                    commitToCopy.Message);
 
                 await UpdateRepoToRevision(
                     mapping,
@@ -227,7 +234,12 @@ public class VmrManager : IVmrManager
                     .AppendLine($"    {mapping.DefaultRemote}/commit/{targetRevision}");
             }
 
-            var message = PrepareCommitMessage(SquashCommitMessage, mapping, currentSha, targetRevision, commitMessages.ToString());
+            var message = PrepareCommitMessage(
+                SquashCommitMessage,
+                mapping,
+                currentSha,
+                targetRevision,
+                commitMessages.ToString());
 
             await UpdateRepoToRevision(
                 mapping,
@@ -316,7 +328,12 @@ public class VmrManager : IVmrManager
     /// <param name="commitId">SHA</param>
     private async Task TagRepo(SourceMapping mapping, string commitId)
     {
-        var tagFile = Path.Combine(_reposPath, $".{mapping.Name}");
+        if (!Directory.Exists(_tagsPath))
+        {
+            Directory.CreateDirectory(_tagsPath);
+        }
+
+        var tagFile = GetTagFilePath(mapping);
         await File.WriteAllTextAsync(tagFile, commitId);
 
         // Stage the tag file
@@ -447,6 +464,8 @@ public class VmrManager : IVmrManager
     }
 
     private string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
+
+    private string GetTagFilePath(SourceMapping mapping) => Path.Combine(_tagsPath, $".{mapping.Name}");
 
     private static string PrepareCommitMessage(string template, SourceMapping mapping, string oldSha, string newSha, string commitMessage)
     {
