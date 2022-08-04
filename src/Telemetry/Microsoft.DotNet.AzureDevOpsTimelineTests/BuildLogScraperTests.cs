@@ -85,6 +85,21 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         }
 
         [Test]
+        public async Task BuildLogScraperShouldExtractDockerImageName()
+        {
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+            await using TestData testData = await TestData.Default
+                .WithMockRequest((MockAzureClient.DockerLogUrl, MockAzureClient.DockerLog))
+                .BuildAsync();
+
+            var imateName = await testData.Controller.ExtractDockerImageNameAsync(
+                MockAzureClient.DockerLogUrl,
+                cancellationTokenSource.Token);
+            Assert.AreEqual(MockAzureClient.DockerImageName, imateName);
+        }
+
+        [Test]
         public async Task BuildLogScraperShouldntExtractAnything()
         {
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();

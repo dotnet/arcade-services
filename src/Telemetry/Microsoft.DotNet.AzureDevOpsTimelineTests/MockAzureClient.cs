@@ -34,6 +34,15 @@ Image Version: 2022.0219.013407";
         public static string MicrosoftHostedLog = @$"SKU: Standard_D4_v3
 Environment: {MicrosoftHostedAgentImageName}
 Version: 20220223.1";
+        public static string DockerImageName = "mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-mlnet-8bba86b-20190314145033";
+        public static string DockerLogUrl = $"https://www.fakeurl.test/{DockerImageName}";
+        public static string DockerLog = $@"2022-08-04T08:00:55.3397230Z Docker client API version: '1.41'
+2022-08-04T08:00:55.3410985Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter 'label=82ff57'
+2022-08-04T08:00:55.3863389Z ##[command]/usr/bin/docker network prune --force --filter 'label=82ff57'
+2022-08-04T08:00:55.4450968Z ##[command]/usr/bin/docker pull mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-mlnet-8bba86b-20190314145033
+2022-08-04T08:00:55.8023661Z centos-7-mlnet-8bba86b-20190314145033: Pulling from dotnet-buildtools/prereqs
+2022-08-04T08:00:55.8024272Z a02a4930cb5d: Pulling fs layer
+2022-08-04T08:00:55.8024527Z 54355103c1c9: Pulling fs layer";
 
         private readonly IDictionary<string, string> _urlDictionary;
 
@@ -42,8 +51,9 @@ Version: 20220223.1";
             Builds = new Dictionary<Build, List<Timeline>>();
             _urlDictionary = new Dictionary<string, string>()
             {
-                { OneESLogUrl, OneESLog },
-                { MicrosoftHostedAgentLogUrl, MicrosoftHostedLog }
+                { OneESLogUrl, OneESImageName },
+                { MicrosoftHostedAgentLogUrl, MicrosoftHostedAgentImageName},
+                { DockerLogUrl, DockerImageName },
             };
         }
 
@@ -52,8 +62,9 @@ Version: 20220223.1";
             Builds = builds;
             _urlDictionary = new Dictionary<string, string>()
             {
-                { OneESLogUrl, OneESLog },
-                { MicrosoftHostedAgentLogUrl, MicrosoftHostedLog }
+                { OneESLogUrl, OneESImageName },
+                { MicrosoftHostedAgentLogUrl, MicrosoftHostedAgentImageName},
+                { DockerLogUrl, DockerImageName },
             };
         }
 
@@ -101,7 +112,7 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<string> TryGetImageName(string logUri, Regex imageNameRegex, CancellationToken cancellationToken)
+        public Task<string> TryGetImageName(string logUri, Func<string, string> regexFunction, CancellationToken cancellationToken)
         {
             return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
         }
