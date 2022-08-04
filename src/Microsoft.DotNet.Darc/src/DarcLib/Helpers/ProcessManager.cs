@@ -24,21 +24,24 @@ public interface IProcessManager
         => ExecuteGit(repoPath, arguments.ToArray());
 
     string FindGitRoot(string path);
+
+    string GitExecutable { get; }
 }
 
 public class ProcessManager : IProcessManager
 {
     private readonly ILogger _logger;
-    private readonly string _gitExecutable;
+
+    public string GitExecutable { get; }
 
     public ProcessManager(ILogger<IProcessManager> logger, string gitExecutable)
     {
         _logger = logger;
-        _gitExecutable = gitExecutable;
+        GitExecutable = gitExecutable;
     }
 
     public Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
-        => Execute(_gitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
+        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
 
     public async Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null)
     {

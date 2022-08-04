@@ -26,5 +26,5 @@ internal class InitializeOperation : VmrOperationBase
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken) =>
-        await vmrManager.InitializeRepo(mapping, targetRevision, _options.IgnoreWorkingTree, cancellationToken);
+        await vmrManager.InitializeVmr(mapping, targetRevision, _options.IgnoreWorkingTree, cancellationToken);
 }

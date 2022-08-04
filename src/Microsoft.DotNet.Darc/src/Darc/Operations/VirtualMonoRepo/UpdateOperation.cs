@@ -26,5 +26,5 @@ internal class UpdateOperation : VmrOperationBase
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken) =>
-        await vmrManager.UpdateRepo(mapping, targetRevision, _options.NoSquash, _options.IgnoreWorkingTree, cancellationToken);
+        await vmrManager.UpdateVmr(mapping, targetRevision, _options.NoSquash, _options.IgnoreWorkingTree, cancellationToken);
 }

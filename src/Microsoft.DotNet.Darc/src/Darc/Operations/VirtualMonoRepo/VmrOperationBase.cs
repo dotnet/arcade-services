@@ -31,7 +31,7 @@ internal abstract class VmrOperationBase : Operation
     }
 
     /// <summary>
-    /// Executes any VMR command by running it for every repository from the arguments.
+    /// Executes any VMR command by running it for every repository set in the arguments.
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {

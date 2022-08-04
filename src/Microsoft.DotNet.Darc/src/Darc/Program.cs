@@ -180,8 +180,7 @@ namespace Microsoft.DotNet.Darc
             typeof(GetGoalCommandLineOptions),
         };
 
-        // This order will mandate the order in which the commands are displayed if typing just 'darc'
-        // so keep these sorted.
+        // These are under the "vmr" subcommand
         private static Type[] GetVmrOptions() => new[]
         {
             typeof(InitializeCommandLineOptions),
