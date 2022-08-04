@@ -8,7 +8,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("init", HelpText = "Initializes new repo(s) that haven't been synchronized into the VMR yet.")]
+[Verb("initialize", HelpText = "Initializes new repo(s) that haven't been synchronized into the VMR yet.")]
 internal class InitializeCommandLineOptions : VmrCommandLineOptions
 {
     public override Operation GetOperation() => new InitializeOperation(this);
