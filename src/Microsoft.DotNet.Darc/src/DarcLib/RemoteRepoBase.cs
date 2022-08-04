@@ -135,9 +135,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Target directory to clone to</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger logger, string pat, string gitDirectory)
+        protected void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, ILogger logger, string pat, string gitDirectory)
         {
             string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
             LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
@@ -183,8 +184,10 @@ namespace Microsoft.DotNet.DarcLib
                     Directory.Move(repoPath, gitDirectory);
                     File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
                 }
-                using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(targetDirectory))
+
+                if (checkoutSubmodules)
                 {
+                    using var localRepo = new LibGit2Sharp.Repository(targetDirectory);
                     CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, logger);
                 }
             }
