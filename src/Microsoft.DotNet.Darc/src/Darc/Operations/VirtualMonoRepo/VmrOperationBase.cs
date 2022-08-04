@@ -54,15 +54,20 @@ internal abstract class VmrOperationBase : Operation
         }
         else
         {
-            var repoNamesWithRevisions = repositories
+            IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
                 .Select(a => a.Split(':') is string[] parts && parts.Length == 2
                     ? (Name: parts[0], Revision: parts[1])
                     : (a, null));
 
+            SourceMapping ResolveMapping(string repo)
+            {
+                return vmrManager!.Mappings.FirstOrDefault(m => m.Name.Equals(repo, StringComparison.InvariantCultureIgnoreCase))
+                    ?? throw new Exception($"No mapping named '{repo}' found");
+            }
+
             reposToSync = repoNamesWithRevisions
-                .Select<(string Name, string? Revision), (SourceMapping Mapping, string? Revision)>(repo => (
-                    vmrManager.Mappings.FirstOrDefault(m => m.Name.Equals(repo.Name, StringComparison.InvariantCultureIgnoreCase)) ?? throw new Exception($"No repo named '{repo.Name}' found"),
-                    repo.Revision));
+                .Select(repo => (ResolveMapping(repo.Name), repo.Revision))
+                .ToList();
         }
 
         var success = true;
