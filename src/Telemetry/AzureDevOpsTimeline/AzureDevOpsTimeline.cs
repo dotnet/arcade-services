@@ -367,18 +367,23 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             foreach (var record in records)
             {
-                if (!string.IsNullOrEmpty(record.Raw.Log?.Url))
+                if (string.IsNullOrEmpty(record.Raw.Log?.Url))
                 {
-                    if (record.Raw.Name == "Initialize job")
-                    {
-                        var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
-                        taskList.Add(childTask);
-                    }
-                    else if (record.Raw.Name == "Initialize containers")
-                    {
-                        var childTask = GetDockerImageName(record, throttleSemaphore, cancellationToken);
-                        taskList.Add(childTask);
-                    }
+                    continue;
+                }
+
+                if (record.Raw.Name == "Initialize job")
+                {
+                    var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
+                    taskList.Add(childTask);
+                    continue;
+                }
+
+                if (record.Raw.Name == "Initialize containers")
+                {
+                    var childTask = GetDockerImageName(record, throttleSemaphore, cancellationToken);
+                    taskList.Add(childTask);
+                    continue;
                 }
             }
 

@@ -162,7 +162,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public async Task<string> TryGetImageName(
             string logUri,
-            Func<string, string> regexFunction,
+            Func<string, string> findImageName,
             CancellationToken cancellationToken)
         {
 
@@ -175,7 +175,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             string line;
             while ((line = reader.ReadLine()) != null)
             {
-                var imageName = regexFunction(line);
+                var imageName = findImageName(line);
                 if (imageName != null)
                 {
                     return imageName;
