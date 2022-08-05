@@ -22,6 +22,14 @@ public class VmrManager : IVmrManager
 {
     private const string HEAD = "HEAD";
 
+    // Message shown when initializing an individual repo for the first time
+    private const string InitializationCommitMessage =
+        """
+        [{name}] Initial pull of the individual repository ({newShaShort})
+
+        Original commit: {remote}/commit/{newSha}
+        """;
+
     // Message shown when synchronizing a single commit
     private const string SingleCommitMessage =
         """
@@ -91,16 +99,14 @@ public class VmrManager : IVmrManager
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);
-        var commit = GetCommit(clone, targetRevision is null || targetRevision == HEAD ? null : targetRevision);
+        var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
         await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath);
         cancellationToken.ThrowIfCancellationRequested();
         await ApplyPatch(mapping, patchPath, cleanWorkingTree: !ignoreWorkingTree);
         await TagRepo(mapping, commit.Id.Sha);
 
-        var description = $"[{mapping.Name}] Initial pull of the individual repository ({ShortenId(commit.Id.Sha)})" +
-            Environment.NewLine + Environment.NewLine +
-            $"Original commit: {mapping.DefaultRemote}/commit/{commit.Id.Sha}";
+        var description = PrepareCommitMessage(InitializationCommitMessage, mapping, null, commit.Id.Sha, null);
 
         // Commit but do not add files (they were added to index directly)
         cancellationToken.ThrowIfCancellationRequested();
@@ -466,16 +472,16 @@ public class VmrManager : IVmrManager
 
     private string GetTagFilePath(SourceMapping mapping) => Path.Combine(_tagsPath, $".{mapping.Name}");
 
-    private static string PrepareCommitMessage(string template, SourceMapping mapping, string oldSha, string newSha, string commitMessage)
+    private static string PrepareCommitMessage(string template, SourceMapping mapping, string? oldSha, string? newSha, string? commitMessage)
     {
-        var replaces = new Dictionary<string, string>
+        var replaces = new Dictionary<string, string?>
         {
             { "name", mapping.Name },
             { "remote", mapping.DefaultRemote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", ShortenId(oldSha) },
-            { "newShaShort", ShortenId(newSha) },
+            { "oldShaShort", oldSha is null ? null : ShortenId(oldSha) },
+            { "newShaShort", newSha is null ? null : ShortenId(newSha) },
             { "commitMessage", commitMessage },
         };
 
