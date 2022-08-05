@@ -57,31 +57,40 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         [Test]
         public async Task BuildLogScraperShouldExtractMicrosoftHostedPoolImageName()
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
             await using TestData testData = await TestData.Default
                 .WithMockRequest((MockAzureClient.OneESLogUrl, MockAzureClient.OneESLog))
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractOneESHostedPoolImageNameAsync(
                 MockAzureClient.OneESLogUrl,
-                cancellationTokenSource.Token);
+                CancellationToken.None);
             Assert.AreEqual(MockAzureClient.OneESImageName, imageName);
         }
 
         [Test]
         public async Task BuildLogScraperShouldExtractOneESHostedPoolImageName()
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
             await using TestData testData = await TestData.Default
                 .WithMockRequest((MockAzureClient.MicrosoftHostedAgentLogUrl, MockAzureClient.MicrosoftHostedLog))
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(
                 MockAzureClient.MicrosoftHostedAgentLogUrl,
-                cancellationTokenSource.Token);
+                CancellationToken.None);
             Assert.AreEqual(MockAzureClient.MicrosoftHostedAgentImageName, imageName);
+        }
+
+        [Test]
+        public async Task BuildLogScraperShouldExtractDockerImageName()
+        {
+            await using TestData testData = await TestData.Default
+                .WithMockRequest((MockAzureClient.DockerLogUrl, MockAzureClient.DockerLog))
+                .BuildAsync();
+
+            var imageName = await testData.Controller.ExtractDockerImageNameAsync(
+                MockAzureClient.DockerLogUrl,
+                CancellationToken.None);
+            Assert.AreEqual(MockAzureClient.DockerImageName, imageName);
         }
 
         [Test]
