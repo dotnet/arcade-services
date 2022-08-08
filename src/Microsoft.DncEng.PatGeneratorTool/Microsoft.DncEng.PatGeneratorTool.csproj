@@ -22,11 +22,11 @@
       We're dogfooding new TFS libraries that support MSAL. If you cannot restore these packages, follow these instructions: 
       https://mseng.visualstudio.com/AzureDevOps/_wiki/wikis/AzureDevOps.wiki/17849/Engineering-Environment-Setup?anchor=nuget-credential-provider
     -->
-    <PackageReference Include="Microsoft.Identity.Client" VersionOverride="4.44.0" />
+    <PackageReference Include="Microsoft.Identity.Client" VersionOverride="4.46.0" />
     <PackageReference Include="Microsoft.AspNet.WebApi.Client" VersionOverride="5.2.7" />
-    <PackageReference Include="Microsoft.TeamFoundationServer.Client" VersionOverride="19.208.0-preview" />
-    <PackageReference Include="Microsoft.VisualStudio.Services.Client" VersionOverride="19.208.0-preview" />
-    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" VersionOverride="19.208.0-preview" />
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" VersionOverride="19.209.0-preview" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Client" VersionOverride="19.209.0-preview" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" VersionOverride="19.209.0-preview" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 </Project>

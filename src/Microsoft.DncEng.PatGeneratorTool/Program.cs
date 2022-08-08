@@ -137,10 +137,7 @@ namespace Microsoft.DncEng.PatGeneratorTool
                     .WithAuthority("https://login.microsoftonline.com/microsoft.com/")
                     .Build();
 
-                var passwordSecureStr = new SecureString();
-                Array.ForEach(password!.ToCharArray(), passwordSecureStr.AppendChar);
-
-                var authResult = await app.AcquireTokenByUsernamePassword(AzureDevOpsAuthScopes, user, passwordSecureStr).ExecuteAsync();
+                var authResult = await app.AcquireTokenByUsernamePassword(AzureDevOpsAuthScopes, user, password).ExecuteAsync();
                 credentials = new VssCredentials(new VssOAuthAccessTokenCredential(authResult.AccessToken));
             }
             else
