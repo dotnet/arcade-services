@@ -63,12 +63,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 collection.AddSingleton<ISystemClock, TestClock>();
             }
 
-            public static void Build(IServiceCollection collection, BuildAndTimeline build, HttpMessageHandler httpMessageHandler)
+            public static void Build(IServiceCollection collection, BuildAndTimeline build, DelegatingHandler delegatingHandler)
             {
+                var httpClientHandler = new HttpClientHandler { CheckCertificateRevocationList = true };
+                delegatingHandler.InnerHandler = httpClientHandler;
                 collection.AddSingleton<IAzureDevOpsClient>(client => new MockTimeoutAzureClient(new Dictionary<Build, List<Timeline>>
                 {
                     {build.Build, build.Timelines.ToList()}
-                }, httpMessageHandler));
+                }, delegatingHandler));
                 collection.AddSingleton<IBuildLogScraper, BuildLogScraper>();
             }
         }
@@ -80,7 +82,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-03-04T05:00:00Z");
             string azdoProjectName = "public";
             string targetBranchName = "theTargetBranch";
-            MockExceptionThrowingHandler httpMessageHandler = MockExceptionThrowingHandler.Create("Image: Build.Ubuntu.1804.Amd64", 1);
+            var delegatingHandler = MockExceptionThrowingDelegatingHandler.Create("Image: Build.Ubuntu.1804.Amd64", 1);
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
@@ -91,7 +93,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             // Test setup
             await using TestData testData = await TestData.Default
                 .WithBuild(build)
-                .WithHttpMessageHandler(httpMessageHandler)
+                .WithDelegatingHandler(delegatingHandler)
                 .BuildAsync();
 
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
