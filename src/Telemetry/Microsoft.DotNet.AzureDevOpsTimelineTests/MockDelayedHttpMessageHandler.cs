@@ -1,27 +1,31 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics.Metrics;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
-    public class MockExceptionThrowingDelegatingHandler : DelegatingHandler
+    public class MockExceptionThrowingHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
         private int _throwAfter;
         private int _counter;
 
-        public MockExceptionThrowingDelegatingHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync, int throwAfter)
+        public MockExceptionThrowingHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync, int throwAfter)
         {
             _sendAsync = sendAsync;
             _throwAfter = throwAfter;
             _counter = 0;
         }
 
-        public static MockExceptionThrowingDelegatingHandler Create(string message, int throwAfter)
+        public static MockExceptionThrowingHandler Create(string message, int throwAfter)
         {
-            return new MockExceptionThrowingDelegatingHandler(async (request, cancellationToken) =>
+            return new MockExceptionThrowingHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -32,9 +36,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             }, throwAfter);
         }
 
-        public static MockExceptionThrowingDelegatingHandler Create(int throwAfter)
+        public static MockExceptionThrowingHandler Create(int throwAfter)
         {
-            return new MockExceptionThrowingDelegatingHandler(async (request, cancellationToken) =>
+            return new MockExceptionThrowingHandler(async (request, cancellationToken) =>
             {
                 var responseMessage = new HttpResponseMessage(HttpStatusCode.OK);
 
@@ -46,14 +50,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             if (Interlocked.Increment(ref _counter) <= _throwAfter)
             {
-                // I think we need to call the HttpClientHandler to get the CheckCertificateRevocation stuff done
-                // This call is going to fail so we're just ingoring it and doing what we want
-                try
-                {
-                    await base.SendAsync(request, cancellationToken);
-                }
-                catch (Exception) { }
-
                 return await _sendAsync(request, cancellationToken);
             }
             throw new OperationCanceledException();
