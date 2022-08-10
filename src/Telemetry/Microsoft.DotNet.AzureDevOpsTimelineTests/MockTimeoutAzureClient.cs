@@ -22,7 +22,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         public MockTimeoutAzureClient(Dictionary<Build, List<Timeline>> builds, HttpMessageHandler httpMessageHandler)
         {
             Builds = builds;
-            _httpClient = new HttpClient(httpMessageHandler);
+            _httpClient = new HttpClient(httpMessageHandler); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
         }
 
         public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default)
