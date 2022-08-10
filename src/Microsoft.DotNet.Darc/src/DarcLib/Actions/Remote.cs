@@ -393,7 +393,7 @@ namespace Microsoft.DotNet.DarcLib
             var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
             foreach (Commit commit in commits)
             {
-                if (!commit.Author.Equals("dotnet-maestro[bot]"))
+                if (!commit.Author.Equals(Constants.DarcBotName))
                 {
                     commitMessage += $@"
 
@@ -1381,12 +1381,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for the .git directory</param>
         /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
+        public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
             CheckForValidGitClient();
-            _gitClient.Clone(repoUri, commit, targetDirectory, gitDirectory);
+            _gitClient.Clone(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
         }
 
         /// <summary>

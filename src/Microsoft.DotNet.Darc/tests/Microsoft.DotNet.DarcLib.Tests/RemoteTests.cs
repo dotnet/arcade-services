@@ -62,8 +62,8 @@ Coherency Update:
 [marker]: <> (End:390b1f10-7ba2-4d3a-142d-08d8149908a8)";
             pr.Title = "[352119842] Update dependencies from maestro-auth-test/maestro-test1";
 
-            Commit firstCommit = new Commit("dotnet-maestro[bot]", "Sha", "TestCommit1");
-            Commit secondCommit = new Commit("dotnet-maestro[bot]", "Sha", "TestCommit2");
+            Commit firstCommit = new Commit(Constants.DarcBotName, "Sha", "TestCommit1");
+            Commit secondCommit = new Commit(Constants.DarcBotName, "Sha", "TestCommit2");
             Commit thirdCommit = new Commit("User", "Sha", "Updated text");
 
             IList<Commit> commits = new List<Commit>();
