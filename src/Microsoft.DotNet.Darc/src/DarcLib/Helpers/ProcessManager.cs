@@ -12,11 +12,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public interface IProcessManager
 {
-    Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null);
+    Task<ProcessExecutionResult> Execute(
+        string executable,
+        IEnumerable<string> arguments,
+        TimeSpan? timeout = null,
+        string? workingDir = null);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments);
 
@@ -43,7 +48,11 @@ public class ProcessManager : IProcessManager
     public Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
         => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
 
-    public async Task<ProcessExecutionResult> Execute(string executable, IEnumerable<string> arguments, TimeSpan? timeout = null)
+    public async Task<ProcessExecutionResult> Execute(
+        string executable,
+        IEnumerable<string> arguments,
+        TimeSpan? timeout = null,
+        string? workingDir = null)
     {
         var processStartInfo = new ProcessStartInfo()
         {
@@ -52,6 +61,7 @@ public class ProcessManager : IProcessManager
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            WorkingDirectory = workingDir,
         };
 
         foreach (var arg in arguments)
@@ -59,8 +69,10 @@ public class ProcessManager : IProcessManager
             processStartInfo.ArgumentList.Add(arg);
         }
 
-        _logger.LogDebug("Executing command: '{executable} {arguments}'",
-            executable, StringUtils.FormatArguments(processStartInfo.ArgumentList));
+        _logger.LogDebug("Executing command: '{executable} {arguments}'{workingDir}",
+            executable,
+            string.Join(' ', processStartInfo.ArgumentList),
+            workingDir is null ? string.Empty : " in " + workingDir);
 
         var p = new Process() { StartInfo = processStartInfo };
 
