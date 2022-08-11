@@ -315,9 +315,9 @@ public class VmrManager : IVmrManager
             var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
             localRepo.Checkout(clonePath, mapping.DefaultRef);
 
-            /*var result = await _processManager.ExecuteGit(clonePath, "pull");
+            var result = await _processManager.ExecuteGit(clonePath, "pull");
             result.ThrowIfFailed($"Failed to pull new changes from {mapping.DefaultRemote} into {clonePath}");
-            _logger.LogDebug("{output}", result.ToString());*/
+            _logger.LogDebug("{output}", result.ToString());
 
             return Path.Combine(clonePath, ".git");
         }
