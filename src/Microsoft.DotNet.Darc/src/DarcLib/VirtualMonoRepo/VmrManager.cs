@@ -21,6 +21,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public class VmrManager : IVmrManager
 {
     private const string HEAD = "HEAD";
+    private const string KeepAttribute = "vmr-preserve";
+    private const string IgnoreAttribute = "vmr-ignore";
 
     // Message shown when initializing an individual repo for the first time
     private const string InitializationCommitMessage =
@@ -361,21 +363,28 @@ public class VmrManager : IVmrManager
             "--output", // Store the diff in a .patch file
             destPath,
             $"{sha1}..{sha2}",
+            "--",
         };
 
-        if (mapping.Include.Any() || mapping.Exclude.Any())
+        if (!mapping.Include.Any())
         {
-            args.Add("--");
-            args.AddRange(mapping.Include.Select(p => $":(glob){p}"));
-            args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob){p}"));
-        }
-        else
-        {
-            args.Add("--");
-            args.Add($".");
+            mapping = mapping with
+            {
+                Include = new[] { "**/*" }
+            };
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, args);
+        args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{IgnoreAttribute}){p}"));
+        args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{KeepAttribute}){p}"));
+
+        // Other git commands are executed from whichever folder and use `-C [path to repo]` 
+        // However, here we must execute in repo's dir because attribute filters work against the working tree
+        // We also need to do call this from the repo root and not from repo/.git
+        var result = await _processManager.Execute(
+            _processManager.GitExecutable,
+            args,
+            workingDir: repoPath.EndsWith(".git") ? Path.GetDirectoryName(repoPath) : repoPath);
+
         result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
 
         _logger.LogDebug("{output}", result.ToString());
