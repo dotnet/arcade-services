@@ -114,7 +114,7 @@ namespace Microsoft.DncEng.SecretManager
                         default: throw new ArgumentOutOfRangeException(nameof(service));
                     }
             }
-            Console.WriteLine(serviceList);
+
             string sas = account.GetSharedAccessSignature(new SharedAccessAccountPolicy
             {
                 SharedAccessExpiryTime = expiryTime,
