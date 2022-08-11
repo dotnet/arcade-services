@@ -78,14 +78,14 @@ namespace Microsoft.DncEng.SecretManager
             SharedAccessAccountServices serviceList = default(SharedAccessAccountServices);
             if(service.Contains("|"))
             {
-                HashSet<string> servicesUsed = new HashSet<string>();
+                HashSet<string> servicesUsed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach(var serviceString in service.Split("|"))
                 {
                     if(!servicesUsed.Add(serviceString))
                     {
                         throw new ArgumentOutOfRangeException(nameof(service));
                     }
-                    switch(serviceString)
+                    switch(serviceString.ToLowerInvariant())
                     {
                         case "blob": serviceList |= SharedAccessAccountServices.Blob;
                             break;
@@ -101,7 +101,7 @@ namespace Microsoft.DncEng.SecretManager
             }
             else
             {
-                switch(service)
+                switch(service.ToLowerInvariant())
                     {
                         case "blob": serviceList = SharedAccessAccountServices.Blob;
                             break;
