@@ -383,7 +383,7 @@ public class VmrManager : IVmrManager
         var result = await _processManager.Execute(
             _processManager.GitExecutable,
             args,
-            workingDir: Path.GetDirectoryName(repoPath));
+            workingDir: repoPath.EndsWith(".git") ? Path.GetDirectoryName(repoPath) : repoPath);
 
         result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
 
