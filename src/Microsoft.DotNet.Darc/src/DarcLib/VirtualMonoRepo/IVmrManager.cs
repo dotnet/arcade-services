@@ -22,6 +22,7 @@ public interface IVmrManager
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeVmr(
         string mappingName,
         string? targetRevision,
@@ -40,6 +41,7 @@ public interface IVmrManager
     /// <param name="mapping">Repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeVmr(
         SourceMapping mapping,
         string? targetRevision,
@@ -53,6 +55,7 @@ public interface IVmrManager
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="noSquash">Whether to pull changes commit by commit instead of squashing all updates into one</param>
     /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task UpdateVmr(
         string mappingName,
         string? targetRevision,
@@ -73,6 +76,7 @@ public interface IVmrManager
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="noSquash">Whether to pull changes commit by commit instead of squashing all updates into one</param>
     /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     Task UpdateVmr(
         SourceMapping mapping,
         string? targetRevision,
