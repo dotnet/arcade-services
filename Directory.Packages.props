@@ -11,7 +11,7 @@
     <!-- Note: These libraries can be loaded by Arcade SDK clients, which may already have a
          newer copy of this package loaded. When updating one, be aware of the other to prevent runtime issues
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
-    <PackageVersion Include="Azure.Core" Version="1.24.0" />
+    <PackageVersion Include="Azure.Core" Version="1.25.0" />
     <PackageVersion Include="Azure.Data.AppConfiguration" Version="1.0.0" />
     <PackageVersion Include="Azure.Data.Tables" Version="12.2.0" />
     <PackageVersion Include="Azure.Identity" Version="1.5.0" /> 
