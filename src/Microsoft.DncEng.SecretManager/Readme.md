@@ -222,7 +222,9 @@ parameters:
 type: azure-storage-account-sas-token
 parameters:
   connectionString: SecretReference to the connection string for the account
+  service: Service i.e (blob, queue, table, file) that the token is for. Can specify more than one by separating them with |, i.e (blob|queue)
   permissions: permissions needed for the sas e.g. 'racwd'
+```
 
 #### Container Sas Uri
 ```yaml
