@@ -76,43 +76,26 @@ namespace Microsoft.DncEng.SecretManager
         {
             CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
             SharedAccessAccountServices serviceList = default(SharedAccessAccountServices);
-            if(service.Contains("|"))
+
+            HashSet<string> servicesUsed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var serviceString in service.Split("|"))
             {
-                HashSet<string> servicesUsed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach(var serviceString in service.Split("|"))
+                if(!servicesUsed.Add(serviceString))
                 {
-                    if(!servicesUsed.Add(serviceString))
-                    {
-                        throw new ArgumentOutOfRangeException(nameof(service));
-                    }
-                    switch(serviceString.ToLowerInvariant())
-                    {
-                        case "blob": serviceList |= SharedAccessAccountServices.Blob;
-                            break;
-                        case "table": serviceList |= SharedAccessAccountServices.Table;
-                            break;
-                        case "file": serviceList |= SharedAccessAccountServices.File;
-                            break;
-                        case "queue": serviceList |= SharedAccessAccountServices.Queue;
-                            break;
-                        default: throw new ArgumentOutOfRangeException(nameof(service));
-                    }
+                    throw new ArgumentOutOfRangeException(nameof(service));
                 }
-            }
-            else
-            {
-                switch(service.ToLowerInvariant())
-                    {
-                        case "blob": serviceList = SharedAccessAccountServices.Blob;
-                            break;
-                        case "table": serviceList = SharedAccessAccountServices.Table;
-                            break;
-                        case "file": serviceList = SharedAccessAccountServices.File;
-                            break;
-                        case "queue": serviceList = SharedAccessAccountServices.Queue;
-                            break;
-                        default: throw new ArgumentOutOfRangeException(nameof(service));
-                    }
+                switch(serviceString.ToLowerInvariant())
+                {
+                    case "blob": serviceList |= SharedAccessAccountServices.Blob;
+                        break;
+                    case "table": serviceList |= SharedAccessAccountServices.Table;
+                        break;
+                    case "file": serviceList |= SharedAccessAccountServices.File;
+                        break;
+                    case "queue": serviceList |= SharedAccessAccountServices.Queue;
+                        break;
+                    default: throw new ArgumentOutOfRangeException(nameof(service));
+                }
             }
 
             string sas = account.GetSharedAccessSignature(new SharedAccessAccountPolicy
