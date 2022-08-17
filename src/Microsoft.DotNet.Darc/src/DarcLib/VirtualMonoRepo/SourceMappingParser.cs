@@ -42,18 +42,51 @@ public class SourceMappingParser : ISourceMappingParser
         };
 
         using var stream = File.Open(mappingFile.FullName, FileMode.Open);
-        var mappings = await JsonSerializer.DeserializeAsync<SourceMappingSetting[]>(stream, options)
+        var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
             ?? throw new Exception($"Failed to deserialize {SourceMappingsFileName}");
 
-        return mappings
-            .Select(m => new SourceMapping(
-                Name: m.Name ?? throw new InvalidOperationException($"Missing `name` in {SourceMappingsFileName}"),
-                Version: m.Version,
-                DefaultRemote: m.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {SourceMappingsFileName}"),
-                DefaultRef: m.DefaultRef ?? "main",
-                Include: ImmutableArray.Create(m.Include ?? Array.Empty<string>()),
-                Exclude: ImmutableArray.Create(m.Exclude ?? Array.Empty<string>())))
+        return settings.Mappings
+            .Select(m => CreateMapping(settings.Defaults, m))
             .ToImmutableArray();
+    }
+
+    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting)
+    {
+        IEnumerable<string> include = setting.Include ?? Enumerable.Empty<string>();
+        IEnumerable<string> exclude = setting.Exclude ?? Enumerable.Empty<string>();
+
+        if (!setting.IgnoreDefaults)
+        {
+            if (defaults.Include is not null)
+            {
+                include = defaults.Include.Concat(include).ToArray();
+            }
+
+            if (defaults.Exclude is not null)
+            {
+                exclude = defaults.Exclude.Concat(exclude).ToArray();
+            }
+        }
+
+        return new SourceMapping(
+            Name: setting.Name ?? throw new InvalidOperationException($"Missing `name` in {SourceMappingsFileName}"),
+            Version: setting.Version,
+            DefaultRemote: setting.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {SourceMappingsFileName}"),
+            DefaultRef: setting.DefaultRef ?? defaults.DefaultRef ?? "main",
+            Include: include.ToImmutableArray(),
+            Exclude: exclude.ToImmutableArray());
+    }
+
+    private class SourceMappingFile
+    {
+        public SourceMappingSetting Defaults { get; set; } = new()
+        {
+            DefaultRef = "main",
+            Include = Array.Empty<string>(),
+            Exclude = Array.Empty<string>(),
+        };
+
+        public List<SourceMappingSetting> Mappings { get; set; } = new();
     }
 
     private class SourceMappingSetting
@@ -64,5 +97,6 @@ public class SourceMappingParser : ISourceMappingParser
         public string? DefaultRef { get; set; }
         public string[]? Include { get; set; }
         public string[]? Exclude { get; set; }
+        public bool IgnoreDefaults { get; set; }
     }
 }
