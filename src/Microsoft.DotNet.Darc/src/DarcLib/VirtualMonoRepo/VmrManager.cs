@@ -112,7 +112,7 @@ public class VmrManager : IVmrManager
 
         // Commit but do not add files (they were added to index directly)
         cancellationToken.ThrowIfCancellationRequested();
-        Commit(description, commit.Author);
+        Commit(description, DotnetBotCommitSignature);
     }
 
     public async Task UpdateVmr(
@@ -255,7 +255,7 @@ public class VmrManager : IVmrManager
                 clonePath,
                 ignoreWorkingTree,
                 message,
-                CommitSignature,
+                DotnetBotCommitSignature,
                 cancellationToken);
         }
     }
@@ -462,7 +462,7 @@ public class VmrManager : IVmrManager
 
         var watch = Stopwatch.StartNew();
         using var repository = new Repository(_vmrPath);
-        var commit = repository.Commit(commitMessage, author, CommitSignature);
+        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
@@ -508,7 +508,7 @@ public class VmrManager : IVmrManager
         return commit ?? throw new InvalidOperationException($"Failed to find commit {sha} in {repository.Info.Path}");
     }
 
-    private static Signature CommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
+    private static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
 
     private static string ShortenId(string commitSha) => commitSha[..7];
 }
