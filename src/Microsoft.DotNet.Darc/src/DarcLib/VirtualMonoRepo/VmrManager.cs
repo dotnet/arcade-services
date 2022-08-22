@@ -95,7 +95,7 @@ public class VmrManager : IVmrManager
 
         _logger.LogInformation("Initializing {name}", mapping.Name);
 
-        string clonePath = await PrepareClone(mapping);
+        string clonePath = await CloneOrPull(mapping);
         string patchPath = GetPatchFilePath(mapping);
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -141,7 +141,7 @@ public class VmrManager : IVmrManager
         _logger.LogInformation("Synchronizing {name} from {current} to {repo}@{revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
-        var clonePath = await PrepareClone(mapping);
+        var clonePath = await CloneOrPull(mapping);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -301,11 +301,11 @@ public class VmrManager : IVmrManager
     }
 
     /// <summary>
-    /// Prepares a git repository either by cloning it or if clone is already found, pulling the newest changes.
+    /// Prepares a clone of given git repository either by cloning it to temp or if exists, pulling the newest changes.
     /// </summary>
     /// <param name="mapping">Repository mapping</param>
     /// <returns>Path to the cloned repo</returns>
-    private async Task<string> PrepareClone(SourceMapping mapping)
+    private async Task<string> CloneOrPull(SourceMapping mapping)
     {
         var clonePath = Path.Combine(_tmpPath, mapping.Name);
         if (Directory.Exists(clonePath))
