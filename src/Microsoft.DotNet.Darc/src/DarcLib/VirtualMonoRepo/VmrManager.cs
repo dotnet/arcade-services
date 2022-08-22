@@ -504,7 +504,10 @@ public class VmrManager : IVmrManager
 
     private static LibGit2Sharp.Commit GetCommit(Repository repository, string? sha)
     {
-        var commit = sha is null ? repository.Commits.FirstOrDefault() : repository.Commits.FirstOrDefault(c => c.Id.Sha.StartsWith(sha));
+        var commit = sha is null
+            ? repository.Commits.FirstOrDefault()
+            : repository.Lookup<LibGit2Sharp.Commit>(sha);
+
         return commit ?? throw new InvalidOperationException($"Failed to find commit {sha} in {repository.Info.Path}");
     }
 
