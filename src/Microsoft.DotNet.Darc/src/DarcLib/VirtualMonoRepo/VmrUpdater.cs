@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public class VmrUpdater : VmrManagerBase
+public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
     // Message shown when synchronizing a single commit
     private const string SingleCommitMessage =
@@ -46,10 +46,9 @@ public class VmrUpdater : VmrManagerBase
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         ILogger<VmrUpdater> logger,
-        IReadOnlyCollection<SourceMapping> mappings,
-        string vmrPath,
-        string tmpPath)
-        : base(processManager, remoteFactory, logger, mappings, vmrPath, tmpPath)
+        IVmrManagerConfiguration configuration,
+        IReadOnlyCollection<SourceMapping> mappings)
+        : base(processManager, remoteFactory, logger, mappings, configuration.VmrPath, configuration.TmpPath)
     {
         _logger = logger;
         _remoteFactory = remoteFactory;

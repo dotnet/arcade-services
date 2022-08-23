@@ -18,9 +18,7 @@ public static class VmrRegistrations
         string vmrPath,
         string tmpPath)
     {
-        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
-        services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
-        services.TryAddTransient<IVmrManagerFactory, VmrManagerFactory>();
+        RegisterManagers(services, gitLocation);
         services.TryAddSingleton<IVmrManagerConfiguration>(new VmrManagerConfiguration(vmrPath, tmpPath));
         return services;
     }
@@ -28,12 +26,19 @@ public static class VmrRegistrations
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
         string gitLocation,
-        Func<IServiceProvider, IVmrManagerConfiguration> configureOptions)
+        Func<IServiceProvider, IVmrManagerConfiguration> configure)
+    {
+        RegisterManagers(services, gitLocation);
+        services.TryAddSingleton<IVmrManagerConfiguration>(configure);
+        return services;
+    }
+
+    private static void RegisterManagers(IServiceCollection services, string gitLocation)
     {
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVmrManagerFactory, VmrManagerFactory>();
-        services.AddSingleton<IVmrManagerConfiguration>(configureOptions);
-        return services;
+        services.TryAddTransient<IVmrUpdater>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrUpdater().GetAwaiter().GetResult());
+        services.TryAddTransient<IVmrInitializer>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrInitializer().GetAwaiter().GetResult());
     }
 }

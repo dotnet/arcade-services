@@ -135,11 +135,10 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         var services = new ServiceCollection();
 
         services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(options));
-        services.AddVmrManagers(options.GitLocation, configureOptions: sp =>
+        services.AddVmrManagers(options.GitLocation, configure: sp =>
         {
             var processManager = sp.GetRequiredService<IProcessManager>();
             var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
-            var factory = sp.GetRequiredService<IVmrManagerFactory>();
 
             var vmrPath = options.VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
             var tmpPath = options.TmpPath ?? LocalSettings.GetDarcSettings(options, logger).TemporaryRepositoryRoot;
