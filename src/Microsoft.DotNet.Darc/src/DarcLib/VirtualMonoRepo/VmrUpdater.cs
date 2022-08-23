@@ -207,7 +207,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         var patchPath = GetPatchFilePath(mapping);
-        await CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath);
+        await CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -223,7 +223,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await ApplyPatch(mapping, patchPath);
+            await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
         await TagRepo(mapping, toRevision);

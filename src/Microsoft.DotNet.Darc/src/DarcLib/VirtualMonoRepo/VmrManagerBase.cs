@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -103,7 +104,13 @@ public abstract class VmrManagerBase
     /// <summary>
     /// Creates a patch file (a diff) for given two commits in a repo adhering to the in/exclusion filters of the mapping.
     /// </summary>
-    protected async Task CreatePatch(SourceMapping mapping, string repoPath, string sha1, string sha2, string destPath)
+    protected async Task CreatePatch(
+        SourceMapping mapping,
+        string repoPath,
+        string sha1,
+        string sha2,
+        string destPath,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating diff in {path}..", destPath);
 
@@ -135,7 +142,8 @@ public abstract class VmrManagerBase
         var result = await _processManager.Execute(
             _processManager.GitExecutable,
             args,
-            workingDir: repoPath.EndsWith(".git") ? Path.GetDirectoryName(repoPath) : repoPath);
+            workingDir: repoPath.EndsWith(".git") ? Path.GetDirectoryName(repoPath) : repoPath,
+            cancellationToken: cancellationToken);
 
         result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
 
@@ -148,13 +156,19 @@ public abstract class VmrManagerBase
             $"{sha1}..{sha2}",
         };
 
-        var distance = (await _processManager.ExecuteGit(repoPath, args)).StandardOutput.Trim();
+        var distance = (await _processManager.ExecuteGit(repoPath, args, cancellationToken)).StandardOutput.Trim();
 
         _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
             destPath, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(destPath));
     }
 
-    protected async Task ApplyPatch(SourceMapping mapping, string patchPath)
+    /// <summary>
+    /// Applies a given patch file onto given mapping's subrepository.
+    /// </summary>
+    /// <param name="mapping">Mapping</param>
+    /// <param name="patchPath">Path to the patch file with the diff</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    protected async Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
     {
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = Path.Combine(SourcesPath, mapping.Name)
@@ -165,7 +179,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("Applying patch to {path}...", destPath);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(_vmrPath, "config", "apply.ignoreWhitespace", "change"))
+        (await _processManager.ExecuteGit(_vmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         Directory.CreateDirectory(destPath);
@@ -191,7 +205,7 @@ public abstract class VmrManagerBase
             patchPath,
         };
 
-        var result = await _processManager.ExecuteGit(_vmrPath, args);
+        var result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: default);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
 
@@ -200,7 +214,7 @@ public abstract class VmrManagerBase
         // This will end up having the working tree all staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(_vmrPath, args);
+        result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: default);
         result.ThrowIfFailed($"Failed to clean the working tree");
         _logger.LogDebug("{output}", result.ToString());
     }

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -55,9 +54,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
-        await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath);
+        await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        await ApplyPatch(mapping, patchPath);
+        await ApplyPatch(mapping, patchPath, cancellationToken);
         await TagRepo(mapping, commit.Id.Sha);
 
         var description = PrepareCommitMessage(InitializationCommitMessage, mapping, null, commit.Id.Sha, null);
