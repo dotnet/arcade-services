@@ -15,13 +15,15 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public interface IVmrManager
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
+}
 
+public interface IVmrInitializer : IVmrManager
+{
     /// <summary>
     /// Initializes new repo that hasn't been synchronized into the VMR yet.
     /// </summary>
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
-    /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeVmr(
         string mappingName,
@@ -32,7 +34,7 @@ public interface IVmrManager
         var mapping = Mappings.FirstOrDefault(m => m.Name == mappingName)
             ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
 
-        return InitializeVmr(mapping, targetRevision, ignoreWorkingTree, cancellationToken);
+        return InitializeVmr(mapping, targetRevision, cancellationToken);
     }
 
     /// <summary>
@@ -42,31 +44,24 @@ public interface IVmrManager
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task InitializeVmr(
-        SourceMapping mapping,
-        string? targetRevision,
-        bool ignoreWorkingTree,
-        CancellationToken cancellationToken);
+    Task InitializeVmr(SourceMapping mapping, string? targetRevision, CancellationToken cancellationToken);
+}
 
+public interface IVmrUpdater : IVmrManager
+{
     /// <summary>
     /// Updates repo in the VMR to given revision.
     /// </summary>
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="noSquash">Whether to pull changes commit by commit instead of squashing all updates into one</param>
-    /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task UpdateVmr(
-        string mappingName,
-        string? targetRevision,
-        bool noSquash,
-        bool ignoreWorkingTree,
-        CancellationToken cancellationToken)
+    Task UpdateVmr(string mappingName, string? targetRevision, bool noSquash, CancellationToken cancellationToken)
     {
         var mapping = Mappings.FirstOrDefault(m => m.Name == mappingName)
             ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
 
-        return UpdateVmr(mapping, targetRevision, noSquash, ignoreWorkingTree, cancellationToken);
+        return UpdateVmr(mapping, targetRevision, noSquash, cancellationToken);
     }
 
     /// <summary>
@@ -75,12 +70,6 @@ public interface IVmrManager
     /// <param name="mapping">Repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="noSquash">Whether to pull changes commit by commit instead of squashing all updates into one</param>
-    /// <param name="ignoreWorkingTree">Does not keep working tree clean after commits for faster synchronization (changes are applied into the index directly)</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task UpdateVmr(
-        SourceMapping mapping,
-        string? targetRevision,
-        bool noSquash,
-        bool ignoreWorkingTree,
-        CancellationToken cancellationToken);
+    Task UpdateVmr(SourceMapping mapping, string? targetRevision, bool noSquash, CancellationToken cancellationToken);
 }

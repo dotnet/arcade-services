@@ -26,6 +26,6 @@ public class VmrManagerFactory : IVmrManagerFactory
     public async Task<IVmrManager> CreateVmrManager(IServiceProvider services, string vmrPath, string tmpPath)
     {
         var mappings = await _sourceMappingParser.ParseMappings(vmrPath);
-        return ActivatorUtilities.CreateInstance<VmrManager>(services, mappings, vmrPath, tmpPath);
+        return ActivatorUtilities.CreateInstance<VmrUpdater>(services, mappings, vmrPath, tmpPath);
     }
 }
