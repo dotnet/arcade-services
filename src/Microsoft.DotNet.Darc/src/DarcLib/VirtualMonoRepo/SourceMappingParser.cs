@@ -33,8 +33,6 @@ public class SourceMappingParser : ISourceMappingParser
                 mappingFilePath);
         }
 
-        var patchesPath = Path.Join(vmrPath, VmrManagerBase.VmrPatchesPath);
-
         var options = new JsonSerializerOptions
         {
             AllowTrailingCommas = true,
@@ -45,12 +43,18 @@ public class SourceMappingParser : ISourceMappingParser
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
             ?? throw new Exception($"Failed to deserialize {VmrManagerBase.SourceMappingsFileName}");
 
+        var patchesPath = settings.PatchesPath;
+        if (patchesPath is not null)
+        {
+            patchesPath = Path.Combine(vmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
         return settings.Mappings
             .Select(mapping => CreateMapping(settings.Defaults, mapping, Path.Join(patchesPath, mapping.Name)))
             .ToImmutableArray();
     }
 
-    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting, string patchesPath)
+    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting, string? patchesPath)
     {
         IEnumerable<string> include = setting.Include ?? Enumerable.Empty<string>();
         IEnumerable<string> exclude = setting.Exclude ?? Enumerable.Empty<string>();
@@ -68,14 +72,14 @@ public class SourceMappingParser : ISourceMappingParser
             }
         }
 
-        var vmrPatches = Directory.Exists(patchesPath)
+        var vmrPatches = patchesPath is not null && Directory.Exists(patchesPath)
             ? Directory.GetFiles(patchesPath)
             : Array.Empty<string>();
 
         return new SourceMapping(
-            Name: setting.Name ?? throw new InvalidOperationException($"Missing `name` in {VmrManagerBase.SourceMappingsFileName}"),
+            Name: setting.Name ?? throw new InvalidOperationException($"Missing `{nameof(SourceMapping.Name).ToLower()}` in {VmrManagerBase.SourceMappingsFileName}"),
             Version: setting.Version,
-            DefaultRemote: setting.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {VmrManagerBase.SourceMappingsFileName}"),
+            DefaultRemote: setting.DefaultRemote ?? throw new InvalidOperationException($"Missing `{nameof(SourceMapping.DefaultRemote).ToLower()}` in {VmrManagerBase.SourceMappingsFileName}"),
             DefaultRef: setting.DefaultRef ?? defaults.DefaultRef ?? "main",
             Include: include.ToImmutableArray(),
             Exclude: exclude.ToImmutableArray(),
@@ -90,6 +94,8 @@ public class SourceMappingParser : ISourceMappingParser
             Include = Array.Empty<string>(),
             Exclude = Array.Empty<string>(),
         };
+
+        public string? PatchesPath { get; set; }
 
         public List<SourceMappingSetting> Mappings { get; set; } = new();
     }

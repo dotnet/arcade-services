@@ -24,7 +24,6 @@ public abstract class VmrManagerBase
     private const string IgnoreAttribute = "vmr-ignore";
 
     public const string VmrSourcesPath = "src";
-    public const string VmrPatchesPath = "patches";
     public const string SourceMappingsFileName = "source-mappings.json";
 
     private readonly ILogger<VmrUpdater> _logger;
