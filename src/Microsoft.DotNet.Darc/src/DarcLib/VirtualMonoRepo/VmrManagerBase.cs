@@ -205,7 +205,7 @@ public abstract class VmrManagerBase
             patchPath,
         };
 
-        var result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: default);
+        var result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
 
@@ -214,7 +214,7 @@ public abstract class VmrManagerBase
         // This will end up having the working tree all staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: default);
+        result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to clean the working tree");
         _logger.LogDebug("{output}", result.ToString());
     }

@@ -57,6 +57,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await ApplyPatch(mapping, patchPath, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         await TagRepo(mapping, commit.Id.Sha);
 
         var description = PrepareCommitMessage(InitializationCommitMessage, mapping, null, commit.Id.Sha, null);
