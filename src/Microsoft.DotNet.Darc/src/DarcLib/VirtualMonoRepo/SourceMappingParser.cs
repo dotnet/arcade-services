@@ -21,19 +21,19 @@ public interface ISourceMappingParser
 
 public class SourceMappingParser : ISourceMappingParser
 {
-    private const string SourceMappingsFileName = "source-mappings.json";
-
     public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string vmrPath)
     {
-        var mappingFilePath = Path.Combine(vmrPath, "src", SourceMappingsFileName);
+        var mappingFilePath = Path.Combine(vmrPath, VmrManagerBase.VmrSourcesPath, VmrManagerBase.SourceMappingsFileName);
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {SourceMappingsFileName} file in the VMR directory",
+                $"Failed to find {VmrManagerBase.SourceMappingsFileName} file in the VMR directory",
                 mappingFilePath);
         }
+
+        var patchesPath = Path.Join(vmrPath, VmrManagerBase.VmrPatchesPath);
 
         var options = new JsonSerializerOptions
         {
@@ -43,14 +43,14 @@ public class SourceMappingParser : ISourceMappingParser
 
         using var stream = File.Open(mappingFile.FullName, FileMode.Open);
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
-            ?? throw new Exception($"Failed to deserialize {SourceMappingsFileName}");
+            ?? throw new Exception($"Failed to deserialize {VmrManagerBase.SourceMappingsFileName}");
 
         return settings.Mappings
-            .Select(m => CreateMapping(settings.Defaults, m))
+            .Select(mapping => CreateMapping(settings.Defaults, mapping, Path.Join(patchesPath, mapping.Name)))
             .ToImmutableArray();
     }
 
-    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting)
+    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting, string patchesPath)
     {
         IEnumerable<string> include = setting.Include ?? Enumerable.Empty<string>();
         IEnumerable<string> exclude = setting.Exclude ?? Enumerable.Empty<string>();
@@ -68,13 +68,18 @@ public class SourceMappingParser : ISourceMappingParser
             }
         }
 
+        var vmrPatches = Directory.Exists(patchesPath)
+            ? Directory.GetFiles(patchesPath)
+            : Array.Empty<string>();
+
         return new SourceMapping(
-            Name: setting.Name ?? throw new InvalidOperationException($"Missing `name` in {SourceMappingsFileName}"),
+            Name: setting.Name ?? throw new InvalidOperationException($"Missing `name` in {VmrManagerBase.SourceMappingsFileName}"),
             Version: setting.Version,
-            DefaultRemote: setting.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {SourceMappingsFileName}"),
+            DefaultRemote: setting.DefaultRemote ?? throw new InvalidOperationException($"Missing `defaultRemote` in {VmrManagerBase.SourceMappingsFileName}"),
             DefaultRef: setting.DefaultRef ?? defaults.DefaultRef ?? "main",
             Include: include.ToImmutableArray(),
-            Exclude: exclude.ToImmutableArray());
+            Exclude: exclude.ToImmutableArray(),
+            VmrPatches: vmrPatches.ToImmutableArray());
     }
 
     private class SourceMappingFile

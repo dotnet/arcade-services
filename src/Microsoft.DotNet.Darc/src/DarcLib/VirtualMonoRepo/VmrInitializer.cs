@@ -59,11 +59,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await TagRepo(mapping, commit.Id.Sha);
+        cancellationToken.ThrowIfCancellationRequested();
+        await ApplyVmrPatches(mapping, cancellationToken);
 
-        var description = PrepareCommitMessage(InitializationCommitMessage, mapping, null, commit.Id.Sha, null);
+        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, oldSha: null, commit.Id.Sha, null);
 
         // Commit but do not add files (they were added to index directly)
         cancellationToken.ThrowIfCancellationRequested();
-        Commit(description, DotnetBotCommitSignature);
+        Commit(message, DotnetBotCommitSignature);
     }
 }
