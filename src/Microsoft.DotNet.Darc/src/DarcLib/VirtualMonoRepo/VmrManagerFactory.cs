@@ -11,21 +11,49 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrManagerFactory
 {
-    Task<IVmrManager> CreateVmrManager(IServiceProvider services, string vmrPath, string tmpPath);
+    Task<IVmrInitializer> CreateVmrInitializer();
+    Task<IVmrInitializer> CreateVmrInitializer(string vmrPath, string tmpPath);
+    Task<IVmrUpdater> CreateVmrUpdater();
+    Task<IVmrUpdater> CreateVmrUpdater(string vmrPath, string tmpPath);
 }
 
 public class VmrManagerFactory : IVmrManagerFactory
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly ISourceMappingParser _sourceMappingParser;
+    private readonly IVmrManagerConfiguration _configuration;
 
-    public VmrManagerFactory(ISourceMappingParser sourceMappingParser)
+    public VmrManagerFactory(
+        IServiceProvider serviceProvider,
+        ISourceMappingParser sourceMappingParser,
+        IVmrManagerConfiguration configuration)
     {
+        _serviceProvider = serviceProvider;
         _sourceMappingParser = sourceMappingParser;
+        _configuration = configuration;
     }
 
-    public async Task<IVmrManager> CreateVmrManager(IServiceProvider services, string vmrPath, string tmpPath)
+    public Task<IVmrInitializer> CreateVmrInitializer()
+        => CreateVmrManager<IVmrInitializer, VmrInitializer>();
+
+    public Task<IVmrInitializer> CreateVmrInitializer(string vmrPath, string tmpPath)
+        => CreateVmrManager<IVmrInitializer, VmrInitializer>(vmrPath, tmpPath);
+
+    public Task<IVmrUpdater> CreateVmrUpdater()
+        => CreateVmrManager<IVmrUpdater, VmrUpdater>();
+
+    public Task<IVmrUpdater> CreateVmrUpdater(string vmrPath, string tmpPath)
+        => CreateVmrManager<IVmrUpdater, VmrUpdater>(vmrPath, tmpPath);
+
+    private async Task<R> CreateVmrManager<R, T>() where T : R
     {
-        var mappings = await _sourceMappingParser.ParseMappings(vmrPath);
-        return ActivatorUtilities.CreateInstance<VmrManager>(services, mappings, vmrPath, tmpPath);
+        var mappings = await _sourceMappingParser.ParseMappings(_configuration.VmrPath);
+        return ActivatorUtilities.CreateInstance<T>(_serviceProvider, mappings);
+    }
+
+    private async Task<R> CreateVmrManager<R, T>(string vmrPath, string tmpPath) where T : R
+    {
+        var mappings = await _sourceMappingParser.ParseMappings(_configuration.VmrPath);
+        return ActivatorUtilities.CreateInstance<T>(_serviceProvider, new VmrManagerConfiguration(vmrPath, tmpPath), mappings);
     }
 }

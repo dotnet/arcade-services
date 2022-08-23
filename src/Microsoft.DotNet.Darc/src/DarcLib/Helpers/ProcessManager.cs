@@ -21,12 +21,19 @@ public interface IProcessManager
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
-        string? workingDir = null);
+        string? workingDir = null,
+        CancellationToken cancellationToken = default);
 
-    Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments);
+    Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken);
 
-    Task<ProcessExecutionResult> ExecuteGit(string repoPath, IEnumerable<string> arguments)
-        => ExecuteGit(repoPath, arguments.ToArray());
+    Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
+        => ExecuteGit(repoPath, arguments.ToArray(), default);
+
+    Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        IEnumerable<string> arguments,
+        CancellationToken cancellationToken = default)
+        => ExecuteGit(repoPath, arguments.ToArray(), cancellationToken);
 
     string FindGitRoot(string path);
 
@@ -45,14 +52,15 @@ public class ProcessManager : IProcessManager
         GitExecutable = gitExecutable;
     }
 
-    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
-        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments));
+    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken)
+        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), cancellationToken: cancellationToken);
 
     public async Task<ProcessExecutionResult> Execute(
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
-        string? workingDir = null)
+        string? workingDir = null,
+        CancellationToken cancellationToken = default)
     {
         var processStartInfo = new ProcessStartInfo()
         {
@@ -107,21 +115,18 @@ public class ProcessManager : IProcessManager
 
         bool timedOut = false;
         int exitCode;
-        var cts = new CancellationTokenSource();
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (timeout.HasValue)
         {
             cts.CancelAfter((int) Math.Min(timeout.Value.TotalMilliseconds, int.MaxValue));
-            await p.WaitForExitAsync(cts.Token);
         }
-        else
-        {
-            await p.WaitForExitAsync();
-        }
+
+        await p.WaitForExitAsync(cts.Token);
 
         if (cts.IsCancellationRequested)
         {
-            _logger.LogError("Waiting for command timed out: execution may be compromised");
+            _logger.LogError("Waiting for command timed out");
             timedOut = true;
             exitCode = -2;
 
