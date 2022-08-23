@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class VmrOperationBase : Operation
+internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : IVmrManager
 {
     private readonly VmrCommandLineOptions _options;
 
@@ -43,7 +43,7 @@ internal abstract class VmrOperationBase : Operation
             return Constants.ErrorCode;
         }
 
-        var vmrManager = Provider.GetRequiredService<IVmrManager>();
+        var vmrManager = Provider.GetRequiredService<TVmrManager>();
 
         IEnumerable<(SourceMapping Mapping, string? Revision)> reposToSync;
 
@@ -98,13 +98,13 @@ internal abstract class VmrOperationBase : Operation
     }
 
     protected abstract Task ExecuteInternalAsync(
-        IVmrManager vmrManager,
+        TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
-        IVmrManager vmrManager,
+        TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
         CancellationToken cancellationToken)
@@ -133,20 +133,18 @@ internal abstract class VmrOperationBase : Operation
     private static IServiceCollection RegisterServices(VmrCommandLineOptions options)
     {
         var services = new ServiceCollection();
-        services.TryAddTransient<IProcessManager>(s => ActivatorUtilities.CreateInstance<ProcessManager>(s, options.GitLocation));
-        services.TryAddSingleton<ISourceMappingParser, SourceMappingParser>();
-        services.TryAddSingleton<IVmrManagerFactory, VmrManagerFactory>();
+
         services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(options));
-        services.TryAddSingleton<IVmrManager>(s =>
+        services.AddVmrManagers(options.GitLocation, configureOptions: sp =>
         {
-            var processManager = s.GetRequiredService<IProcessManager>();
-            var logger = s.GetRequiredService<ILogger<DarcSettings>>();
-            var factory = s.GetRequiredService<IVmrManagerFactory>();
+            var processManager = sp.GetRequiredService<IProcessManager>();
+            var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
+            var factory = sp.GetRequiredService<IVmrManagerFactory>();
 
             var vmrPath = options.VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
             var tmpPath = options.TmpPath ?? LocalSettings.GetDarcSettings(options, logger).TemporaryRepositoryRoot;
 
-            return factory.CreateVmrManager(s, vmrPath, tmpPath).GetAwaiter().GetResult();
+            return new VmrManagerConfiguration(vmrPath, tmpPath);
         });
 
         return services;

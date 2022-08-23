@@ -11,20 +11,18 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class InitializeOperation : VmrOperationBase
+internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
 {
-    private readonly InitializeCommandLineOptions _options;
-
     public InitializeOperation(InitializeCommandLineOptions options)
         : base(options)
     {
-        _options = options;
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrManager vmrManager,
+        IVmrInitializer vmrManager,
         SourceMapping mapping,
         string? targetRevision,
-        CancellationToken cancellationToken) =>
-        await vmrManager.InitializeVmr(mapping, targetRevision, _options.IgnoreWorkingTree, cancellationToken);
+        CancellationToken cancellationToken)
+        =>
+        await vmrManager.InitializeVmr(mapping, targetRevision, cancellationToken);
 }
