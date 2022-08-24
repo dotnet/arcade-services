@@ -44,7 +44,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        _logger.LogInformation("Initializing {name}", mapping.Name);
+        _logger.LogInformation("Initializing {name} at {revision}", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
         string patchPath = GetPatchFilePath(mapping);
@@ -56,16 +56,18 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
         await TagRepo(mapping, commit.Id.Sha);
         cancellationToken.ThrowIfCancellationRequested();
-        await ApplyVmrPatches(mapping, cancellationToken);
 
-        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
+        await ApplyVmrPatches(mapping, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
-        cancellationToken.ThrowIfCancellationRequested();
+        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
         Commit(message, DotnetBotCommitSignature);
     }
 }
