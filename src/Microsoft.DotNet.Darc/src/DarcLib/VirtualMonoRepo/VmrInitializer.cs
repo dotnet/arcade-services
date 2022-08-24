@@ -44,7 +44,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        _logger.LogInformation("Initializing {name} at {revision}", mapping.Name, targetRevision ?? mapping.DefaultRef);
+        _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
         cancellationToken.ThrowIfCancellationRequested();
@@ -68,5 +68,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         // Commit but do not add files (they were added to index directly)
         var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
         Commit(message, DotnetBotCommitSignature);
+
+        _logger.LogInformation("Initialization of {name} finished", mapping.Name);
     }
 }
