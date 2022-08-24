@@ -62,7 +62,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         cancellationToken.ThrowIfCancellationRequested();
         await ApplyVmrPatches(mapping, cancellationToken);
 
-        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, oldSha: null, commit.Id.Sha, null);
+        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
 
         // Commit but do not add files (they were added to index directly)
         cancellationToken.ThrowIfCancellationRequested();

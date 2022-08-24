@@ -262,7 +262,20 @@ public abstract class VmrManagerBase
     
     protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
 
-    protected static string PrepareCommitMessage(string template, SourceMapping mapping, string? oldSha, string? newSha, string? commitMessage)
+    /// <summary>
+    /// Takes a given commit message template and populates it with given values, URLs and others.
+    /// </summary>
+    /// <param name="template">Template into which the values are filled into</param>
+    /// <param name="mapping">Repository mapping</param>
+    /// <param name="oldSha">SHA we are updating from</param>
+    /// <param name="newSha">SHA we are updating to</param>
+    /// <param name="additionalMessage">Additional message inserted in the commit body</param>
+    protected static string PrepareCommitMessage(
+        string template,
+        SourceMapping mapping,
+        string? oldSha = null,
+        string? newSha = null,
+        string? additionalMessage = null)
     {
         var replaces = new Dictionary<string, string?>
         {
@@ -270,9 +283,9 @@ public abstract class VmrManagerBase
             { "remote", mapping.DefaultRemote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? null : ShortenId(oldSha) },
-            { "newShaShort", newSha is null ? null : ShortenId(newSha) },
-            { "commitMessage", commitMessage },
+            { "oldShaShort", oldSha is null ? string.Empty : ShortenId(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : ShortenId(newSha) },
+            { "commitMessage", additionalMessage ?? string.Empty },
         };
 
         foreach (var replace in replaces)
