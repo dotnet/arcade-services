@@ -47,13 +47,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _logger.LogInformation("Initializing {name} at {revision}", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
-        string patchPath = GetPatchFilePath(mapping);
-
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
+        string patchPath = GetPatchFilePath(mapping);
         await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
