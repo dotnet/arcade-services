@@ -11,7 +11,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class UpdateOperation : VmrOperationBase
+internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
 {
     private readonly UpdateCommandLineOptions _options;
 
@@ -22,9 +22,10 @@ internal class UpdateOperation : VmrOperationBase
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrManager vmrManager,
+        IVmrUpdater vmrManager,
         SourceMapping mapping,
         string? targetRevision,
-        CancellationToken cancellationToken) =>
-        await vmrManager.UpdateVmr(mapping, targetRevision, _options.NoSquash, _options.IgnoreWorkingTree, cancellationToken);
+        CancellationToken cancellationToken)
+        =>
+        await vmrManager.UpdateVmr(mapping, targetRevision, _options.NoSquash, cancellationToken);
 }

@@ -15,9 +15,6 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
         "Omitting REVISION will synchronize the repo to current HEAD. Pass 'all' to update all repositories.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("ignore-working-tree", HelpText = "Do not keep working tree clean after commits for faster synchronization (changes are applied into the index directly).")]
-    public bool IgnoreWorkingTree { get; set; } = false;
-
     [Option("vmr", Required = false, HelpText = "Path to the VMR; defaults to git root above cwd.")]
     public string VmrPath { get; set; } = Environment.CurrentDirectory;
 
