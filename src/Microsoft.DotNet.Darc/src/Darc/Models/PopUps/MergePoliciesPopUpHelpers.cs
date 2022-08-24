@@ -38,7 +38,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                         }
                     }
                     else if (policy.Name.Equals(MergePolicyConstants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
-                             policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                             policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                             policy.Name.Equals(MergePolicyConstants.DontAutomergeDowngradesPolicyName, StringComparison.OrdinalIgnoreCase))
                     {
                         // All good
                     }
