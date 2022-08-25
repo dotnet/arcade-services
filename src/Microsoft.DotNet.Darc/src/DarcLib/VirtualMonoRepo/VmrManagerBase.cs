@@ -23,12 +23,16 @@ public abstract class VmrManagerBase
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
+    public const string VmrSourcesPath = "src";
+    public const string SourceMappingsFileName = "source-mappings.json";
+
     private readonly ILogger<VmrUpdater> _logger;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly string _vmrPath;
     private readonly string _tagsPath;
     private readonly string _tmpPath;
+
+    protected string VmrPath { get; }
 
     protected string SourcesPath { get; }
 
@@ -46,9 +50,9 @@ public abstract class VmrManagerBase
         _processManager = processManager;
         _remoteFactory = remoteFactory;
         _tmpPath = tmpPath;
-        _vmrPath = vmrPath;
-        SourcesPath = Path.Join(vmrPath, "src");
-        _tagsPath = Path.Join(SourcesPath, ".tags");
+        VmrPath = vmrPath;
+        SourcesPath = Path.Combine(vmrPath, "src");
+        _tagsPath = Path.Combine(SourcesPath, ".tags");
 
         Mappings = mappings;
     }
@@ -60,7 +64,7 @@ public abstract class VmrManagerBase
     /// <returns>Path to the cloned repo</returns>
     protected async Task<string> CloneOrPull(SourceMapping mapping)
     {
-        var clonePath = Path.Combine(_tmpPath, mapping.Name);
+        var clonePath = GetClonePath(mapping);
         if (Directory.Exists(clonePath))
         {
             _logger.LogInformation("Clone of {repo} found, pulling new changes...", mapping.DefaultRemote);
@@ -97,7 +101,7 @@ public abstract class VmrManagerBase
         await File.WriteAllTextAsync(tagFile, commitId);
 
         // Stage the tag file
-        using var repository = new Repository(_vmrPath);
+        using var repository = new Repository(VmrPath);
         Commands.Stage(repository, tagFile);
     }
 
@@ -172,14 +176,14 @@ public abstract class VmrManagerBase
     {
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = Path.Combine(SourcesPath, mapping.Name)
-            .Replace(_vmrPath, null)
+            .Replace(VmrPath, null)
             .Replace("\\", "/")
             [1..];
 
-        _logger.LogInformation("Applying patch to {path}...", destPath);
+        _logger.LogInformation("Applying patch {patchPath} to {path}...", patchPath, destPath);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(_vmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
+        (await _processManager.ExecuteGit(VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         Directory.CreateDirectory(destPath);
@@ -205,7 +209,7 @@ public abstract class VmrManagerBase
             patchPath,
         };
 
-        var result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: CancellationToken.None);
+        var result = await _processManager.ExecuteGit(VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
 
@@ -214,9 +218,31 @@ public abstract class VmrManagerBase
         // This will end up having the working tree all staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(_vmrPath, args, cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to clean the working tree");
         _logger.LogDebug("{output}", result.ToString());
+    }
+
+    /// <summary>
+    /// Applies VMR patches onto files of given mapping's subrepository.
+    /// </summary>
+    /// <param name="mapping">Mapping</param>
+    protected async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
+    {
+        if (!mapping.VmrPatches.Any())
+        {
+            return;
+        }
+
+        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
+
+        foreach (var patchFile in mapping.VmrPatches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _logger.LogDebug("Applying {patch}..", patchFile);
+            await ApplyPatch(mapping, patchFile, cancellationToken);
+        }
     }
 
     protected void Commit(string commitMessage, Signature author)
@@ -224,7 +250,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new Repository(_vmrPath);
+        using var repository = new Repository(VmrPath);
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
@@ -233,8 +259,23 @@ public abstract class VmrManagerBase
     protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
 
     protected string GetTagFilePath(SourceMapping mapping) => Path.Combine(_tagsPath, $".{mapping.Name}");
+    
+    protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
 
-    protected static string PrepareCommitMessage(string template, SourceMapping mapping, string? oldSha, string? newSha, string? commitMessage)
+    /// <summary>
+    /// Takes a given commit message template and populates it with given values, URLs and others.
+    /// </summary>
+    /// <param name="template">Template into which the values are filled into</param>
+    /// <param name="mapping">Repository mapping</param>
+    /// <param name="oldSha">SHA we are updating from</param>
+    /// <param name="newSha">SHA we are updating to</param>
+    /// <param name="additionalMessage">Additional message inserted in the commit body</param>
+    protected static string PrepareCommitMessage(
+        string template,
+        SourceMapping mapping,
+        string? oldSha = null,
+        string? newSha = null,
+        string? additionalMessage = null)
     {
         var replaces = new Dictionary<string, string?>
         {
@@ -242,9 +283,9 @@ public abstract class VmrManagerBase
             { "remote", mapping.DefaultRemote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? null : ShortenId(oldSha) },
-            { "newShaShort", newSha is null ? null : ShortenId(newSha) },
-            { "commitMessage", commitMessage },
+            { "oldShaShort", oldSha is null ? string.Empty : ShortenId(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : ShortenId(newSha) },
+            { "commitMessage", additionalMessage ?? string.Empty },
         };
 
         foreach (var replace in replaces)
