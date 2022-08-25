@@ -74,7 +74,10 @@ function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
 }
 
 function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channel) {
-  var g = new graphlib.Graph().setGraph({
+  var g = new graphlib.Graph<{
+    title: string;
+    description: string;
+  }>().setGraph({
     ranksep: 25,
     ranker: 'tight-tree'
   });
