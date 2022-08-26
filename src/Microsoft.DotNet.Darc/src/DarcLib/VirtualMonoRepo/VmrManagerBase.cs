@@ -262,7 +262,7 @@ public abstract class VmrManagerBase
         var pathSettingRegex = new Regex(@"(\bpath[ \t]*\=[ \t]*\b)");
 
         using (var vmrGitmodule = File.Open(Path.Combine(VmrPath, gitmodulesFileName), FileMode.Create))
-        using (var writer = new StreamWriter(vmrGitmodule))
+        using (var writer = new StreamWriter(vmrGitmodule) { NewLine = "\n" })
         {
             foreach (var mapping in Mappings)
             {
@@ -285,7 +285,10 @@ public abstract class VmrManagerBase
                 var content = await File.ReadAllTextAsync(repoGitmodulePath, cancellationToken);
 
                 // Add src/[repo]/ prefixes to paths
-                content = pathSettingRegex.Replace(content, $"$1{VmrSourcesPath}/{mapping.Name}/");
+                content = pathSettingRegex
+                    .Replace(content, $"$1{VmrSourcesPath}/{mapping.Name}/")
+                    .Replace("\r\n", "\n");
+
                 await writer.WriteAsync(content);
 
                 // Add some spacing
