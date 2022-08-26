@@ -243,8 +243,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await TagRepo(mapping, toRevision);
         cancellationToken.ThrowIfCancellationRequested();
+
         await ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
+        await UpdateGitmodules(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
         Commit(commitMessage, author);
     }
 
