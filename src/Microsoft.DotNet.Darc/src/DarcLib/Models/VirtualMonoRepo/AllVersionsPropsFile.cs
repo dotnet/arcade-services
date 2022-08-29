@@ -24,12 +24,14 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 /// </summary>
 public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
 {
+    public const string FileName = "AllRepoVersions.props";
     private const string ShaPropertyName = "GitCommitHash";
     private const string PackageVersionPropertyName = "OutputPackageVersion";
 
     public Dictionary<string, string> Versions { get; }
 
     public AllVersionsPropsFile(Dictionary<string, string> versions)
+        : base(orderPropertiesAscending: true)
     {
         Versions = versions;
     }

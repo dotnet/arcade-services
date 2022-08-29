@@ -30,6 +30,7 @@ public class GitInfoFile : MsBuildPropsFile
     public GitInfoFileItem Item { get; }
 
     public GitInfoFile(GitInfoFileItem item)
+        : base(orderPropertiesAscending: null)
     {
         Item = item;
     }

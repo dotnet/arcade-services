@@ -33,6 +33,19 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
     private const string ProjectPropertyName = "Project";
     private const string PropertyGroupName = "PropertyGroup";
 
+    /// <summary>
+    /// Controls how we will serialize the properties into the XML.
+    ///   - true - ascending
+    ///   - false - descending
+    ///   - null - keep original order from the dictionary
+    /// </summary>
+    private readonly bool? _orderPropertiesAscending;
+
+    protected MsBuildPropsFile(bool? orderPropertiesAscending)
+    {
+        _orderPropertiesAscending = orderPropertiesAscending;
+    }
+
     public void SerializeToXml(string path)
     {
         XmlSerializer serializer = new XmlSerializer(typeof(XmlElement));
@@ -61,12 +74,25 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
         .Descendants()
         .ToDictionary(element => element.Name.LocalName, element => element.Value);
 
-    protected static void SerializeDictionary(
+    protected void SerializeDictionary(
         Dictionary<string, string> properties,
         XmlElement propertyGroup,
         Func<string, XmlElement> createElement)
     {
-        foreach (var key in properties.Keys.OrderBy(k => k))
+        IEnumerable<string> keys;
+
+        if (_orderPropertiesAscending.HasValue)
+        {
+            keys = _orderPropertiesAscending.Value
+                ? properties.Keys.OrderBy(k => k)
+                : properties.Keys.OrderByDescending(k => k);
+        }
+        else
+        {
+            keys = properties.Keys;
+        }
+
+        foreach (var key in keys)
         {
             var element = createElement(key);
             element.InnerText = properties[key];
