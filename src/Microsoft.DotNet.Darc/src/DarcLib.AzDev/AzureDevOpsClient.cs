@@ -539,17 +539,17 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         {
             if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
-                return $"- ❓ **{result.Message}**";
+                return $"- ❓ **{result.Title}**";
             }
 
             if (result.Status == MergePolicyEvaluationStatus.Success)
             {
-                return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Message == null
+                return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Title == null
                            ? ""
-                           : $" - {result.Message}");
+                           : $" - {result.Title}");
             }
 
-            return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Message}";
+            return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Title}";
         }
 
         /// <summary>

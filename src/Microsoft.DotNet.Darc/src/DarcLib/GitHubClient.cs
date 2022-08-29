@@ -551,7 +551,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private static NewCheckRunOutput FormatOutput(MergePolicyEvaluationResult result)
         {
-            return new NewCheckRunOutput(result.Message ?? "no details", string.Empty);
+            return new NewCheckRunOutput(result.Title ?? "no details", result.Message);
         }
 
         /// <summary>

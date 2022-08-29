@@ -49,7 +49,7 @@ namespace SubscriptionActorService
                 else
                 {
                     var notImplemented = new NotImplementedMergePolicy(definition.Name);
-                    results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, $"Unknown Merge Policy: '{definition.Name}'", notImplemented));
+                    results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, $"Unknown Merge Policy: '{definition.Name}'", string.Empty, notImplemented));
                 }
             }
 
