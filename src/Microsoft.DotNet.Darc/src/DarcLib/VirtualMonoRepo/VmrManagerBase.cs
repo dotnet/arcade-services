@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -51,7 +52,7 @@ public abstract class VmrManagerBase
         _remoteFactory = remoteFactory;
         _tmpPath = tmpPath;
         VmrPath = vmrPath;
-        SourcesPath = Path.Combine(vmrPath, "src");
+        SourcesPath = Path.Combine(vmrPath, VmrSourcesPath);
         _tagsPath = Path.Combine(SourcesPath, ".tags");
 
         Mappings = mappings;
@@ -175,7 +176,7 @@ public abstract class VmrManagerBase
     protected async Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
     {
         // We have to give git a relative path with forward slashes where to apply the patch
-        var destPath = Path.Combine(SourcesPath, mapping.Name)
+        var destPath = GetRepoSourcesPath(mapping)
             .Replace(VmrPath, null)
             .Replace("\\", "/")
             [1..];
@@ -245,6 +246,61 @@ public abstract class VmrManagerBase
         }
     }
 
+    /// <summary>
+    /// Gets information about submodules from individual repos and compiles a .gitmodules file for the VMR.
+    /// We also need to replace the submodule paths with the src/[repo] prefixes.
+    /// The .gitmodules file is only relevant in the root of the repo. We can leave the old files behind.
+    /// The information about the commit the submodule is referencing is stored in the git tree.
+    /// </summary>
+    protected async Task UpdateGitmodules(CancellationToken cancellationToken)
+    {
+        const string gitmodulesFileName = ".gitmodules";
+
+        _logger.LogInformation("Updating .gitmodules file..");
+
+        // Matches the 'path = ' setting from the .gitmodules file so that we can prefix it
+        var pathSettingRegex = new Regex(@"(\bpath[ \t]*\=[ \t]*\b)");
+
+        using (var vmrGitmodule = File.Open(Path.Combine(VmrPath, gitmodulesFileName), FileMode.Create))
+        using (var writer = new StreamWriter(vmrGitmodule) { NewLine = "\n" })
+        {
+            foreach (var mapping in Mappings)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var repoGitmodulePath = Path.Combine(GetRepoSourcesPath(mapping), gitmodulesFileName);
+                if (!File.Exists(repoGitmodulePath))
+                {
+                    continue;
+                }
+
+                _logger.LogDebug("Copying .gitmodules from {repo}..", mapping.Name);
+
+                // Header for the repo
+                await writer.WriteAsync("# ");
+                await writer.WriteLineAsync(mapping.Name);
+                await writer.WriteLineAsync();
+
+                // Copy contents
+                var content = await File.ReadAllTextAsync(repoGitmodulePath, cancellationToken);
+
+                // Add src/[repo]/ prefixes to paths
+                content = pathSettingRegex
+                    .Replace(content, $"$1{VmrSourcesPath}/{mapping.Name}/")
+                    .Replace("\r\n", "\n");
+
+                await writer.WriteAsync(content);
+
+                // Add some spacing
+                await writer.WriteLineAsync();
+                await writer.WriteLineAsync();
+            }
+        }
+
+        (await _processManager.ExecuteGit(VmrPath, new[] { "add", gitmodulesFileName }, cancellationToken))
+            .ThrowIfFailed("Failed to stage the .gitmodules file!");
+    }
+
     protected void Commit(string commitMessage, Signature author)
     {
         _logger.LogInformation("Committing..");
@@ -259,8 +315,10 @@ public abstract class VmrManagerBase
     protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
 
     protected string GetTagFilePath(SourceMapping mapping) => Path.Combine(_tagsPath, $".{mapping.Name}");
-    
+
     protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
+
+    protected string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(SourcesPath, mapping.Name);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

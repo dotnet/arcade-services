@@ -39,7 +39,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     public async Task InitializeVmr(SourceMapping mapping, string? targetRevision, CancellationToken cancellationToken)
     {
-        if (File.Exists(Path.Combine(SourcesPath, $".{mapping.Name}")))
+        if (File.Exists(GetTagFilePath(mapping)))
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
@@ -63,6 +63,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await UpdateGitmodules(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
