@@ -79,7 +79,9 @@ Coherency Update:
             client.Setup(x => x.MergeDependencyPullRequestAsync(It.IsAny<string>(),
                 It.IsAny<MergePullRequestParameters>(), Moq.Capture.In(commitToMerge))).Returns(Task.CompletedTask);
 
-            Remote remote = new Remote(client.Object, barClient.Object, new NUnitLogger());
+            var logger = new NUnitLogger();
+
+            Remote remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(logger), logger);
 
             await remote.MergeDependencyPullRequestAsync(
                 "https://github.com/test/test2",

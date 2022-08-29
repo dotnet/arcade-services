@@ -28,6 +28,7 @@ namespace Microsoft.DotNet.Darc.Tests
     {
         private string _testName;
         private LocalGitClient _gitClient;
+        private VersionDetailsParser _versionDetailsParser;
         private GitFileManager _gitFileManager;
         private const string inputRootDir = "inputs";
         private const string inputDir = "input";
@@ -67,7 +68,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Set up a git file manager
             _gitClient = new LocalGitClient("git", NullLogger.Instance);
-            _gitFileManager = new GitFileManager(GitClient, NullLogger.Instance);
+            _versionDetailsParser = new VersionDetailsParser(NullLogger.Instance);
+            _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
         }
 
         public async Task AddDependencyAsync(DependencyDetail dependency)
@@ -94,7 +96,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             string testVersionDetailsXmlPath = Path.Combine(RootExpectedOutputsPath, VersionFiles.VersionDetailsXml);
             string versionDetailsContents = File.ReadAllText(testVersionDetailsXmlPath);
-            IEnumerable<DependencyDetail> dependencies = _gitFileManager.ParseVersionDetailsXml(versionDetailsContents, false);
+            IEnumerable<DependencyDetail> dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents, false);
 
             GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
                 dependencies,

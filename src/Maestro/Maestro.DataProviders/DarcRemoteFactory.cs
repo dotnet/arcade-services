@@ -16,6 +16,7 @@ namespace Maestro.DataProviders
 {
     public class DarcRemoteFactory : IRemoteFactory
     {
+        private readonly IVersionDetailsParser _versionDetailsParser;
         private readonly OperationManager _operations;
 
         public DarcRemoteFactory(
@@ -23,6 +24,7 @@ namespace Maestro.DataProviders
             IKustoClientProvider kustoClientProvider,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
+            IVersionDetailsParser versionDetailsParser,
             DarcRemoteMemoryCache memoryCache,
             OperationManager operations)
         {
@@ -31,6 +33,7 @@ namespace Maestro.DataProviders
             KustoClientProvider = (KustoClientProvider)kustoClientProvider;
             GitHubTokenProvider = gitHubTokenProvider;
             AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
+            _versionDetailsParser = versionDetailsParser;
             Cache = memoryCache;
         }
 
@@ -46,7 +49,7 @@ namespace Maestro.DataProviders
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), logger));
+            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger));
         }
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -81,7 +84,7 @@ namespace Maestro.DataProviders
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
                 };
 
-                return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), logger);
+                return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
             }
         }
     }

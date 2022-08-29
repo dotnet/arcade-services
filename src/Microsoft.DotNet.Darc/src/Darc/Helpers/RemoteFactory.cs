@@ -67,7 +67,10 @@ namespace Microsoft.DotNet.Darc.Helpers
                 barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
                                                     darcSettings.BuildAssetRegistryBaseUri);
             }
-            return new Remote(gitClient, barClient, logger);
+
+            var versionDetailsParser = new VersionDetailsParser(logger);
+
+            return new Remote(gitClient, barClient, versionDetailsParser, logger);
         }
 
         /// <summary>

@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.Darc.Tests
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
         public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
         {
-            GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
+            GitFileManager gitFileManager = new GitFileManager(null, new VersionDetailsParser(NullLogger.Instance), NullLogger.Instance);
 
             string inputNugetPath = Path.Combine(
                 Environment.CurrentDirectory,
@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 testName,
                 InputNugetConfigFile);
             string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
-            var inputNuGetConfigFile = GitFileManager.ReadXmlFile(inputXmlContent);
+            var inputNuGetConfigFile = GitFileManager.GetXmlDocument(inputXmlContent);
 
             Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>();
             configFileUpdateData.Add("testKey", new HashSet<string>(managedFeeds));
@@ -119,7 +119,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [TestCase("NoDuplicatedDifferentConditions.props", false)]
         public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
         {
-            GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
+            GitFileManager gitFileManager = new GitFileManager(null, new VersionDetailsParser(NullLogger.Instance), NullLogger.Instance);
 
             string inputVersionPropsPath = Path.Combine(
                 Environment.CurrentDirectory,

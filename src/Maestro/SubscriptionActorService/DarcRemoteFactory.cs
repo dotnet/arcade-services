@@ -26,11 +26,13 @@ namespace SubscriptionActorService
             BuildAssetRegistryContext context,
             TemporaryFiles tempFiles,
             ILocalGit localGit,
+            IVersionDetailsParser versionDetailsParser,
             OperationManager operations,
             ExponentialRetry retry)
         {
             _tempFiles = tempFiles;
             _localGit = localGit;
+            _versionDetailsParser = versionDetailsParser;
             _operations = operations;
             _retry = retry;
             _configuration = configuration;
@@ -48,13 +50,14 @@ namespace SubscriptionActorService
 
         private readonly TemporaryFiles _tempFiles;
         private readonly ILocalGit _localGit;
+        private readonly IVersionDetailsParser _versionDetailsParser;
         private readonly OperationManager _operations;
         private readonly ExponentialRetry _retry;
 
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), logger));
+            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
         }
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -98,7 +101,7 @@ namespace SubscriptionActorService
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
                 };
 
-                return new Remote(gitClient, new MaestroBarClient(_context), logger);
+                return new Remote(gitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
             }
         }
     }

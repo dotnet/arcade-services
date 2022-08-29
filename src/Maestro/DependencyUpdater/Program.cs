@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Reflection;
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Maestro.DataProviders;
@@ -10,11 +11,8 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
-using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace DependencyUpdater
 {
@@ -70,6 +68,7 @@ namespace DependencyUpdater
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
+            services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
             services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddKustoClientProvider("Kusto");
         }
