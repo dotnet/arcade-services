@@ -2,17 +2,31 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Xml;
-using System.Xml.Linq;
-using System.Xml.Serialization;
+using Microsoft.DotNet.DarcLib.Models;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-public class AllVersionsPropsFile
+public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
+    Dictionary<string, string> Versions { get; }
+
+    string? GetMappingSha(SourceMapping mapping);
+    void UpdateVersions(SourceMapping mapping, string sha, string version);
+}
+
+/// <summary>
+/// A model for a file AllRepoVersions.props which is part of the VMR and contains list of all versions
+/// of all synchronized individual repositories.
+/// </summary>
+public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
+{
+    private const string ShaPropertyName = "GitCommitHash";
+    private const string PackageVersionPropertyName = "OutputPackageVersion";
+
     public Dictionary<string, string> Versions { get; }
 
     public AllVersionsPropsFile(Dictionary<string, string> versions)
@@ -20,39 +34,30 @@ public class AllVersionsPropsFile
         Versions = versions;
     }
 
-    public void SerializeToXml(string path)
+    public string? GetMappingSha(SourceMapping mapping)
     {
-        XmlSerializer serializer = new XmlSerializer(typeof(XmlElement));
-        var xmlDocument = new XmlDocument();
-        XmlElement root = xmlDocument.CreateElement("Project");
-        var propertyGroup = xmlDocument.CreateElement("PropertyGroup");
-        root.AppendChild(propertyGroup);
+        var key = SanitizePropertyName(mapping.Name) + ShaPropertyName;
+        Versions.TryGetValue(key, out var sha);
+        return sha;
+    }
 
-        foreach (var key in Versions.Keys.OrderBy(k => k))
-        {
-            var element = xmlDocument.CreateElement(key);
-            element.InnerText = Versions[key];
-            propertyGroup.AppendChild(element);
-        }
-
-        var settings = new XmlWriterSettings
-        {
-            Indent = true,
-            Encoding = System.Text.Encoding.UTF8,
-        };
-
-        using var writer = XmlWriter.Create(path, settings);
-        serializer.Serialize(writer, root);
+    public void UpdateVersions(SourceMapping mapping, string sha, string version)
+    {
+        var key = SanitizePropertyName(mapping.Name);
+        Versions[key + ShaPropertyName] = sha;
+        Versions[key + PackageVersionPropertyName] = version;
     }
 
     public static AllVersionsPropsFile DeserializeFromXml(string path)
     {
-        var versions = XDocument.Load(path)
-            .Descendants("Project")
-            .Descendants("PropertyGroup")
-            .Descendants()
-            .ToDictionary(element => element.Name.LocalName, element => element.Value);
-
+        var versions = DeserializeProperties(path);
         return new AllVersionsPropsFile(versions);
     }
+
+    protected override void SerializeProperties(XmlElement propertyGroup, Func<string, XmlElement> createElement)
+        => SerializeDictionary(Versions, propertyGroup, createElement);
+
+    private static string SanitizePropertyName(string propertyName) => propertyName
+        .Replace("-", string.Empty)
+        .Replace(".", string.Empty);
 }
