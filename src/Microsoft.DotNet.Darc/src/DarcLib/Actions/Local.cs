@@ -8,7 +8,6 @@ using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
@@ -145,15 +144,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
         {
-            try
-            {
-                return _versionDetailsParser.ParseVersionDetailsXml(fileContents, includePinned);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, $"There was an error while parsing '{VersionFiles.VersionDetailsXml}'");
-                return Enumerable.Empty<DependencyDetail>();
-            }
+            return _versionDetailsParser.ParseVersionDetailsXml(fileContents, includePinned);
         }
 
         /// <summary>

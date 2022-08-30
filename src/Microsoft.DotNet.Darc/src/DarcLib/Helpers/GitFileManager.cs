@@ -105,15 +105,7 @@ namespace Microsoft.DotNet.DarcLib
 
             XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 
-            try
-            {
-                return _versionDetailsParser.ParseVersionDetailsXml(document, includePinned);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, $"There was an error while parsing '{VersionFiles.VersionDetailsXml}'");
-                return Enumerable.Empty<DependencyDetail>();
-            }
+            return _versionDetailsParser.ParseVersionDetailsXml(document, includePinned);
         }
 
         /// <summary>
