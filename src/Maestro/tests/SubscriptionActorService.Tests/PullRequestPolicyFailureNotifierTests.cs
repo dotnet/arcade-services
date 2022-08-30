@@ -2,6 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
@@ -11,10 +15,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using ClientModels = Microsoft.DotNet.Maestro.Client.Models;
 
 namespace SubscriptionActorService.Tests
@@ -86,11 +86,11 @@ namespace SubscriptionActorService.Tests
                            checksToReturn.Add(new Check(CheckState.Failure, "Important PR Check", "", false));
                        }
 
-                       return Task.FromResult((IList<Check>)checksToReturn);
+                       return Task.FromResult((IList<Check>) checksToReturn);
                    });
 
 
-            MockRemote = new Remote(GitRepo.Object, BarClient.Object, NullLogger.Instance);
+            MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
             Provider = services.BuildServiceProvider();
