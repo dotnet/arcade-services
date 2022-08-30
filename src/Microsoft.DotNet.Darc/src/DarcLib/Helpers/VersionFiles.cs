@@ -32,6 +32,7 @@ namespace Microsoft.DotNet.DarcLib
         public const string KeyAttributeName = "key";
         public const string ValueAttributeName = "value";
         public const string SourceBuildElementName = "SourceBuild";
+        public const string SourceBuildOldElementName = "SourceBuildTarball";
         public const string RepoNameAttributeName = "RepoName";
         public const string ManagedOnlyAttributeName = "ManagedOnly";
 

@@ -71,7 +71,9 @@ public class VersionDetailsParser : IVersionDetailsParser
 
             SourceBuildInfo? sourceBuildInfo = null;
 
-            XmlNode? sourceBuildNode = dependency.SelectSingleNode(VersionFiles.SourceBuildElementName);
+            XmlNode? sourceBuildNode = dependency.SelectSingleNode(VersionFiles.SourceBuildElementName)
+                ?? dependency.SelectSingleNode(VersionFiles.SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
+
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
                 string repoName = sourceBuildElement.Attributes[VersionFiles.RepoNameAttributeName]?.Value
