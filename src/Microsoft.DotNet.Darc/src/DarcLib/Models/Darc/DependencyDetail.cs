@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib
@@ -95,5 +93,10 @@ namespace Microsoft.DotNet.DarcLib
         /// Asset locations for the dependency
         /// </summary>
         public IEnumerable<string> Locations { get; set; }
+
+        /// <summary>
+        /// Information whether dependency is needed for source-build.
+        /// </summary>
+        public SourceBuildInfo SourceBuild { get; set; }
     }
 }

@@ -31,6 +31,9 @@ namespace Microsoft.DotNet.DarcLib
         public const string ClearElement = "clear";
         public const string KeyAttributeName = "key";
         public const string ValueAttributeName = "value";
+        public const string SourceBuildElementName = "SourceBuild";
+        public const string RepoNameAttributeName = "RepoName";
+        public const string ManagedOnlyAttributeName = "ManagedOnly";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
