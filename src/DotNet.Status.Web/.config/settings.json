@@ -63,6 +63,18 @@
         },
         {
           "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade-first-responder"
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade-first-responder"
+        },
+        {
+          "Project": "internal",
           "DefinitionPath": "\\dotnet-release\\Validate-DotNet",
           "Branches": [ "main" ],
           "IssuesId": "dotnet-aspnetcore-infra",
