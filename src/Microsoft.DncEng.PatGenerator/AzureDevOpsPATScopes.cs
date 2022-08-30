@@ -26,7 +26,7 @@ namespace Microsoft.DncEng.PatGenerator
 
     /// <summary>
     /// Available Azure DevOps Scopes
-    /// See <see cref="https://docs.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/oauth?view=azure-devops#scopes"/>
+    /// See <see href="https://docs.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/oauth?view=azure-devops#scopes"/>
     /// for more information.
     /// 
     /// A flags enumeration is used to coalesce different permissions levels. For example,
@@ -38,75 +38,82 @@ namespace Microsoft.DncEng.PatGenerator
     [Flags]
     public enum AzureDevOpsPATScopes
     {
-        // Build - Bits 0x3
+        // Build - Bits 0b11
 
         [ScopeDescription("build", "r", "Build (read)")]
-        build = 0x1,
+        build = 0b1,
         [ScopeDescription("build", "re", "Build (read and execute)")]
-        build_execute = 0x2 | build,
+        build_execute = 0b10 | build,
 
-        // Code - Bits 0x3C
+        // Code - Bits 0b11_1100
 
         [ScopeDescription("code", "r", "Code (read)")]
-        code = 0x4,
+        code = 0b100,
         [ScopeDescription("code", "s", "Code (update commit status)")]
-        code_status = 0x8,
+        code_status = 0b1000,
         [ScopeDescription("code", "rw", "Code (read and write)")]
-        code_write = 0x10 | code | code_status,
+        code_write = 0b1_0000 | code | code_status,
         [ScopeDescription("code", "m", "Code (read, write, and manage)")]
-        code_manage = 0x20 | code_write,
+        code_manage = 0b10_0000 | code_write,
 
-        // Packaging - Bits 0x1C0
+        // Packaging - Bits 0b1_1100_0000
 
         [ScopeDescription("package", "r", "Packaging (read)")]
-        packaging = 0x40,
+        packaging = 0b100_0000,
         [ScopeDescription("package", "rw", "Packaging (read and write)")]
-        packaging_write = 0x80 | packaging,
+        packaging_write = 0b1000_0000 | packaging,
         [ScopeDescription("package", "m", "Packaging (read, write, and manage)")]
-        packaging_manage = 0x100 | packaging_write,
+        packaging_manage = 0b1_0000_0000 | packaging_write,
 
-        // Symbols - Bits 0xE00
+        // Symbols - Bits 0b1110_0000_0000
 
         [ScopeDescription("symbols", "r", "Symbols (read)")]
-        symbols = 0x200,
+        symbols = 0b10_0000_0000,
         [ScopeDescription("symbols", "rw", "Symbols (read and write)")]
-        symbols_write = 0x400 | symbols,
+        symbols_write = 0b100_0000_0000 | symbols,
         [ScopeDescription("symbols", "m", "Symbols (read, write and manage)")]
-        symbols_manage = 0x800 | symbols_write,
+        symbols_manage = 0b1000_0000_0000 | symbols_write,
 
-        // Release - Bits 0x7000
+        // Release - Bits 0b111_0000_0000_0000
 
         [ScopeDescription("release", "r", "Release (read)")]
-        release = 0x1000,
+        release = 0b1_0000_0000_0000,
         [ScopeDescription("release", "rw", "Release (read, write and execute)")]
-        release_execute = 0x2000 | release,
+        release_execute = 0b10_0000_0000_0000 | release,
         [ScopeDescription("release", "m", "Release (read, write, execute and manage)")]
-        release_manage = 0x4000 | release_execute,
+        release_manage = 0b100_0000_0000_0000 | release_execute,
 
-        // User Profile - Bits 0x18000 - Note that write does not appear to include read
+        // User Profile - Bits 0b1_1000_0000_0000_0000 - Note that write does not appear to include read
 
         [ScopeDescription("profile", "r", "User profile (read)")]
-        profile = 0x8000,
+        profile = 0b1000_0000_0000_0000,
         [ScopeDescription("profile", "w", "User profile (write)")]
-        profile_write = 0x10000,
+        profile_write = 0b1_0000_0000_0000_0000,
 
-        // Variable Groups - Bits 0xE0000
+        // Variable Groups - Bits 0b1110_0000_0000_0000_0000
 
         [ScopeDescription("variablegroups", "r", "Variable Groups (read)")]
-        variablegroups_read = 0x20000,
+        variablegroups_read = 0b10_0000_0000_0000_0000,
         [ScopeDescription("variablegroups", "rw", "Variable Groups (read, create)")]
-        variablegroups_write = 0x40000 | variablegroups_read,
+        variablegroups_write = 0b100_0000_0000_0000_0000 | variablegroups_read,
         [ScopeDescription("variablegroups", "m", "Variable Groups (read, create and manage)")]
-        variablegroups_manage = 0x80000 | variablegroups_write,
+        variablegroups_manage = 0b1000_0000_0000_0000_0000 | variablegroups_write,
 
-        // Work items - Bits 0x700000
+        // Work items - Bits 0b111_0000_0000_0000_0000_0000
 
         [ScopeDescription("work", "r", "Work items (read)")]
-        work = 0x100000,
+        work = 0b1_0000_0000_0000_0000_0000,
         [ScopeDescription("work", "rw", "Work items (read and write)")]
-        work_write = 0x200000 | work,
+        work_write = 0b10_0000_0000_0000_0000_0000 | work,
         [ScopeDescription("work", "f", "Work items (full)")]
-        work_full = 0x400000 | work_write,
+        work_full = 0b100_0000_0000_0000_0000_0000 | work_write,
+
+        // Test - Bits 0b1_1000_0000_0000_0000_0000_0000
+
+        [ScopeDescription("test", "r", "Test Management (read)")]
+        test = 0b1000_0000_0000_0000_0000_0000,
+        [ScopeDescription("test", "rw", "Test Management (read and write)")]
+        test_write = 0b1_0000_0000_0000_0000_0000_0000 | test,
     }
 
     public static class AzureDevOpsPATScopesExtensions

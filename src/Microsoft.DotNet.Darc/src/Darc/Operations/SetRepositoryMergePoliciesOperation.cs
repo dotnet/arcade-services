@@ -63,6 +63,16 @@ namespace Microsoft.DotNet.Darc.Operations
                     });
             }
 
+            if (_options.DontAutomergeDowngradesMergePolicy)
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.DontAutomergeDowngradesPolicyName,
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                    });
+            }
+
             if (_options.StandardAutoMergePolicies)
             {
                 mergePolicies.Add(

@@ -1782,7 +1782,7 @@
             "dimensionFilters": [
               {
                 "dimension": "cloud/roleName",
-                "filter": "fabric:/CustomAutoScale/AutoScaleActorService' or cloud/roleName eq 'fabric:/CustomAutoScale/ProcessAutoScaleService",
+                "filter": "fabric:/Helix/AutoScaleActorService' or cloud/roleName eq 'fabric:/Helix/ProcessAutoScaleService",
                 "operator": "eq"
               }
             ],

@@ -23,6 +23,7 @@ namespace Microsoft.DotNet.DarcLib
     public sealed class Remote : IRemote
     {
         private readonly IBarClient _barClient;
+        private readonly IVersionDetailsParser _versionDetailsParser;
         private readonly GitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
@@ -35,15 +36,16 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-        public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
+        public Remote(IGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
         {
             _logger = logger;
             _barClient = barClient;
             _gitClient = gitClient;
+            _versionDetailsParser = versionDetailsParser;
 
             if (_gitClient != null)
             {
-                _fileManager = new GitFileManager(_gitClient, _logger);
+                _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
             }
         }
 
@@ -393,7 +395,7 @@ namespace Microsoft.DotNet.DarcLib
             var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
             foreach (Commit commit in commits)
             {
-                if (!commit.Author.Equals("dotnet-maestro[bot]"))
+                if (!commit.Author.Equals(Constants.DarcBotName))
                 {
                     commitMessage += $@"
 
@@ -1381,12 +1383,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for the .git directory</param>
         /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
+        public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
             CheckForValidGitClient();
-            _gitClient.Clone(repoUri, commit, targetDirectory, gitDirectory);
+            _gitClient.Clone(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
         }
 
         /// <summary>

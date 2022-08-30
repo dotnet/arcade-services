@@ -24,6 +24,7 @@ namespace Microsoft.DncEng.PatGenerator.Tests
         [TestCase(AzureDevOpsPATScopes.code | AzureDevOpsPATScopes.code_status | AzureDevOpsPATScopes.code_manage, "code-m")]
         [TestCase(AzureDevOpsPATScopes.code | AzureDevOpsPATScopes.code_status, "code-rs")]
         [TestCase(AzureDevOpsPATScopes.packaging | AzureDevOpsPATScopes.packaging_write | AzureDevOpsPATScopes.build_execute | AzureDevOpsPATScopes.code | AzureDevOpsPATScopes.code_status, "build-re-code-rs-package-rw")]
+        [TestCase(AzureDevOpsPATScopes.test | AzureDevOpsPATScopes.test_write, "test-rw")]
         public void MinimalScopeStringTests(AzureDevOpsPATScopes scopes, string expectedString)
         {
             scopes.GetScopeString().Should().Be(expectedString);

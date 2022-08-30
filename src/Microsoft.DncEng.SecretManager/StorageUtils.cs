@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Collections.Generic;
 using Azure.Core;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.DncEng.CommandLineLib.Authentication;
@@ -74,22 +75,37 @@ namespace Microsoft.DncEng.SecretManager
         public static string GenerateBlobAccountSas(string connectionString, string permissions, string service, DateTimeOffset expiryTime)
         {
             CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
+            SharedAccessAccountServices serviceList = default(SharedAccessAccountServices);
+
+            HashSet<string> servicesUsed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var serviceString in service.Split("|"))
+            {
+                if(!servicesUsed.Add(serviceString))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(service));
+                }
+                switch(serviceString.ToLowerInvariant())
+                {
+                    case "blob": serviceList |= SharedAccessAccountServices.Blob;
+                        break;
+                    case "table": serviceList |= SharedAccessAccountServices.Table;
+                        break;
+                    case "file": serviceList |= SharedAccessAccountServices.File;
+                        break;
+                    case "queue": serviceList |= SharedAccessAccountServices.Queue;
+                        break;
+                    default: throw new ArgumentOutOfRangeException(nameof(service));
+                }
+            }
+
             string sas = account.GetSharedAccessSignature(new SharedAccessAccountPolicy
             {
                 SharedAccessExpiryTime = expiryTime,
                 Permissions = AccountPermissionsFromString(permissions),
-                Services = service.ToLowerInvariant() switch
-                {
-                    "blob" => SharedAccessAccountServices.Blob,
-                    "table" => SharedAccessAccountServices.Table,
-                    "file" => SharedAccessAccountServices.File,
-                    "queue" => SharedAccessAccountServices.Queue,
-                    _ => throw new ArgumentOutOfRangeException(nameof(service)),
-                },
+                Services = serviceList,
                 ResourceTypes = SharedAccessAccountResourceTypes.Service | SharedAccessAccountResourceTypes.Container | SharedAccessAccountResourceTypes.Object,
                 Protocols = SharedAccessProtocol.HttpsOnly,
             });
-
             return sas;
         }
 

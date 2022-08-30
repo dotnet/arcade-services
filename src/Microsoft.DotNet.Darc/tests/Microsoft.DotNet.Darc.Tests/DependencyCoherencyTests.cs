@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public async Task CoherencyUpdateTests1()
         {
-            Remote remote = new Remote(null, null, NullLogger.Instance);
+            Remote remote = new Remote(null, null, null, NullLogger.Instance);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public async Task CoherencyUpdateTests2()
         {
-            Remote remote = new Remote(null, null, NullLogger.Instance);
+            Remote remote = new Remote(null, null, null, NullLogger.Instance);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -90,7 +90,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public async Task CoherencyUpdateTests3()
         {
-            Remote remote = new Remote(null, null, NullLogger.Instance);
+            Remote remote = new Remote(null, null, null, NullLogger.Instance);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -119,7 +119,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public async Task CoherencyUpdateTests4()
         {
-            Remote remote = new Remote(null, null, NullLogger.Instance);
+            Remote remote = new Remote(null, null, null, NullLogger.Instance);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -150,7 +150,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public async Task CoherencyUpdateTests5()
         {
-            Remote remote = new Remote(null, null, NullLogger.Instance);
+            Remote remote = new Remote(null, null, null, NullLogger.Instance);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: true);
@@ -181,7 +181,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -265,7 +265,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -328,7 +328,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -388,7 +388,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -458,7 +458,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -541,7 +541,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -589,7 +589,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -625,7 +625,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -662,7 +662,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -703,7 +703,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -759,7 +759,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -823,7 +823,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -870,7 +870,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -921,7 +921,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -980,7 +980,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1051,7 +1051,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1120,7 +1120,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1193,7 +1193,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1267,7 +1267,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1339,7 +1339,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1383,7 +1383,7 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, NullLogger.Instance);
+            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();

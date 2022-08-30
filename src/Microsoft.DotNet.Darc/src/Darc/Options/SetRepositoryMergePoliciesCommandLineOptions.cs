@@ -31,6 +31,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("no-requested-changes", HelpText = "PR is not merged if there are changes requested or the PR has been rejected.")]
         public bool NoRequestedChangesMergePolicy { get; set; }
 
+        [Option("no-downgrades", HelpText = "PR is not merged if there are version downgrades.")]
+        public bool DontAutomergeDowngradesMergePolicy { get; set; }
+
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }
 

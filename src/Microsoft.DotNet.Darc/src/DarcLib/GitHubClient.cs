@@ -551,7 +551,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private static NewCheckRunOutput FormatOutput(MergePolicyEvaluationResult result)
         {
-            return new NewCheckRunOutput(result.Message ?? "no details", string.Empty);
+            return new NewCheckRunOutput(result.Title ?? "no details", result.Message);
         }
 
         /// <summary>
@@ -1175,9 +1175,9 @@ namespace Microsoft.DotNet.DarcLib
                 branch, 
                 commitMessage, 
                 _logger, 
-                _personalAccessToken, 
-                "dotnet-maestro[bot]", 
-                "dotnet-maestro[bot]@users.noreply.github.com");
+                _personalAccessToken,
+                Constants.DarcBotName, 
+                Constants.DarcBotEmail);
         }
 
         /// <summary>
@@ -1225,11 +1225,11 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Commit, branch, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone into</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-        /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
+        public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
-            this.Clone(repoUri, commit, targetDirectory, _logger, _personalAccessToken, gitDirectory);
+            Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
         }
 
         /// <summary>

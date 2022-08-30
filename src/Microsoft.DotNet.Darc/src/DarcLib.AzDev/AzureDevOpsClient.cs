@@ -425,7 +425,7 @@ namespace Microsoft.DotNet.DarcLib
             foreach (var commit in pullRequest.Commits)
             {
                 commits.Add(new Commit(
-                    commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
+                    commit.Author.Name == "DotNet-Bot" ? Constants.DarcBotName : commit.Author.Name,
                     commit.CommitId,
                     commit.Comment));
             }
@@ -539,17 +539,17 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         {
             if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
-                return $"- ❓ **{result.Message}**";
+                return $"- ❓ **{result.Title}**";
             }
 
             if (result.Status == MergePolicyEvaluationStatus.Success)
             {
-                return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Message == null
+                return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Title == null
                            ? ""
-                           : $" - {result.Message}");
+                           : $" - {result.Title}");
             }
 
-            return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Message}";
+            return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Title}";
         }
 
         /// <summary>
@@ -1484,11 +1484,11 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Branch, tag, or commit to checkout</param>
         /// <param name="targetDirectory">Directory to clone into</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-        /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
+        public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
-            this.Clone(repoUri, commit, targetDirectory, _logger, _personalAccessToken, gitDirectory);
+            Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
         }
 
         /// <summary>

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
     <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

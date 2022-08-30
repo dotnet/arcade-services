@@ -11,5 +11,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     {
         Task<string> ExtractMicrosoftHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken);
         Task<string> ExtractOneESHostedPoolImageNameAsync(string logUri, CancellationToken cancellationToken);
+        Task<string> ExtractDockerImageNameAsync(string logUri, CancellationToken cancellationToken);
     }
 }

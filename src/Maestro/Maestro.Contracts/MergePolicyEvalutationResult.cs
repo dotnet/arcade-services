@@ -27,7 +27,7 @@ namespace Maestro.Contracts
 
     public class MergePolicyEvaluationResult
     {
-        public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string message, IMergePolicyInfo mergePolicy)
+        public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, IMergePolicyInfo mergePolicy)
         {
             if (mergePolicy == null)
             {
@@ -43,12 +43,14 @@ namespace Maestro.Contracts
             }
 
             Status = status;
+            Title = title;
             Message = message;
             MergePolicyInfo = mergePolicy;
         }
 
         public MergePolicyEvaluationStatus Status { get; }
-        public string Message { get; }
+        public string Title { get; }
+        public string Message { get;}
         public IMergePolicyInfo MergePolicyInfo { get; }
     }
 

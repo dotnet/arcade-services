@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface IGitRepo
+    public interface IGitRepo : ILocalGitRepo
     {
         /// <summary>
         /// Specifies whether functions with a retry field should employ retries
@@ -37,16 +37,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository where the branch lives</param>
         /// <param name="branch">The branch to delete</param>
         Task DeleteBranchAsync(string repoUri, string branch);
-
-        /// <summary>
-        ///     Commit or update a set of files to a repo
-        /// </summary>
-        /// <param name="filesToCommit">Files to comit</param>
-        /// <param name="repoUri">Remote repository URI</param>
-        /// <param name="branch">Branch to push to</param>
-        /// <param name="commitMessage">Commit message</param>
-        /// <returns></returns>
-        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
 
         /// <summary>
         ///     Search pull requests matching the specified criteria
@@ -120,24 +110,6 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
         /// <summary>
-        ///     Retrieve a set of file under a specific path at a commit
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="commit">Commit to get files at</param>
-        /// <param name="path">Path to retrieve files from</param>
-        /// <returns>Set of files under <paramref name="path"/> at <paramref name="commit"/></returns>
-        Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
-
-        /// <summary>
-        ///     Retrieve the contents of a repository file as a string
-        /// </summary>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="branch">Branch to get file contents from</param>
-        /// <returns>File contents.</returns>
-        Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch);
-
-        /// <summary>
         ///     Get the latest commit in a repo on the specific branch 
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
@@ -183,24 +155,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
+        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for .git directory, or null for default</param>
-        /// <returns></returns>
-        void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory);
-
-        /// <summary>
-        ///     Checkout the repository to a given state.
-        /// </summary>
-        /// <param name="repoPath">Path to the local repository</param>
-        /// <param name="commit">Tag, branch, or commit to checkout</param>
-        /// <param name="force">True to force the checkout (loses work)</param>
-        void Checkout(string repoPath, string commit, bool force);
-
-        /// <summary>
-        ///     Add a remote to local repo if it does not already exist, and attempt to fetch commits.
-        /// </summary>
-        /// <param name="repoDir">The local repo directory</param>
-        /// <param name="repoUrl">The remote URL to add</param>
-        void AddRemoteIfMissing(string repoDir, string repoUrl);
+        void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null);
 
         /// <summary>
         ///     Delete a pull request's branch if it still exists

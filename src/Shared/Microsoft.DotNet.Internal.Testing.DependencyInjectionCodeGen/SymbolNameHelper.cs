@@ -32,6 +32,11 @@ namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
             {
                 return "(" + string.Join(", ", tuple.TupleElements.Select(t => FullName(t.Type) + " " + t.Name)) + ")";
             }
+            
+            if (type is IArrayTypeSymbol array)
+            {
+                return FullName(array.ElementType) + "[" + new string(',', array.Rank - 1) + "]";
+            }
 
             string name = type.Name;
 

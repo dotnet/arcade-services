@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
@@ -6,6 +6,7 @@
     <IsPackable>true</IsPackable>
     <Description>Darc Library</Description>
     <PackageTags>Arcade Darc Dependency Flow</PackageTags>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

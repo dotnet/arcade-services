@@ -233,6 +233,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .AddTimeline(TimelineBuilder.EmptyTimeline("1", timeDatum)
                     .AddRecord("NetCore1ESPool-Internal 5", "Initialize job", MockAzureClient.OneESLogUrl)
                     .AddRecord("Azure Pipelines", "Initialize job", MockAzureClient.MicrosoftHostedAgentLogUrl)
+                    .AddRecord("Azure Pipelines", "Initialize containers", MockAzureClient.DockerLogUrl)
                     .AddRecord()
                 ).Build();
 
@@ -244,7 +245,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             /// Test execution
             await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
 
-            testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(2);
+            testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(3);
             testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
         }
     }
