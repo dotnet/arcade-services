@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
@@ -18,19 +19,9 @@ public interface IVersionDetailsParser
 
 public class VersionDetailsParser : IVersionDetailsParser
 {
-    private readonly ILogger _logger;
-
-    public VersionDetailsParser(ILogger logger)
-    {
-        _logger = logger;
-    }
-
     public IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
-        _logger.LogInformation($"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}'...");
-
         XmlDocument document = GetXmlDocument(fileContents);
-
         return ParseVersionDetailsXml(document, includePinned: includePinned);
     }
 
@@ -95,7 +86,7 @@ public class VersionDetailsParser : IVersionDetailsParser
         }
         else
         {
-            _logger.LogError($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
+            throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
                 $"Look for exceptions above.");
         }
 

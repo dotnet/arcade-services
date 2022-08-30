@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
             _logger = logger;
-            _versionDetailsParser = new VersionDetailsParser(logger);
+            _versionDetailsParser = new VersionDetailsParser();
             _gitClient = new LocalGitClient(GitExecutable, _logger);
             _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
         }

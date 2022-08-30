@@ -68,7 +68,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Set up a git file manager
             _gitClient = new LocalGitClient("git", NullLogger.Instance);
-            _versionDetailsParser = new VersionDetailsParser(NullLogger.Instance);
+            _versionDetailsParser = new VersionDetailsParser();
             _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
         }
 

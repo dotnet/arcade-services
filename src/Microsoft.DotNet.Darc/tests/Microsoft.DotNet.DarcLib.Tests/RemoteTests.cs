@@ -81,7 +81,7 @@ Coherency Update:
 
             var logger = new NUnitLogger();
 
-            Remote remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(logger), logger);
+            Remote remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(), logger);
 
             await remote.MergeDependencyPullRequestAsync(
                 "https://github.com/test/test2",

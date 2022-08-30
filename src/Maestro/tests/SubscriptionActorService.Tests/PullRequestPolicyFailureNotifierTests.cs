@@ -90,7 +90,7 @@ namespace SubscriptionActorService.Tests
                    });
 
 
-            MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(NullLogger.Instance), NullLogger.Instance);
+            MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
             Provider = services.BuildServiceProvider();

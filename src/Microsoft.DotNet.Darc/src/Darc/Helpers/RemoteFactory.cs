@@ -68,9 +68,7 @@ namespace Microsoft.DotNet.Darc.Helpers
                                                     darcSettings.BuildAssetRegistryBaseUri);
             }
 
-            var versionDetailsParser = new VersionDetailsParser(logger);
-
-            return new Remote(gitClient, barClient, versionDetailsParser, logger);
+            return new Remote(gitClient, barClient, new VersionDetailsParser(), logger);
         }
 
         /// <summary>
