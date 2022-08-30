@@ -262,7 +262,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
             };
 
-            if (build.GitHubBranch.Contains("release/", StringComparison.InvariantCultureIgnoreCase))
+            if ((build.GitHubBranch?.Contains("release/", StringComparison.InvariantCultureIgnoreCase)) == true ||
+                (build.AzureDevOpsBranch?.Contains("release/", StringComparison.InvariantCultureIgnoreCase) == true))
             {
                 promotionPipelineVariables.Add("UseServicingBuildPool", true.ToString());
             }
