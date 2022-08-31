@@ -25,6 +25,8 @@ namespace Microsoft.DotNet.DarcLib
         public const string NameAttributeName = "Name";
         public const string VersionAttributeName = "Version";
         public const string CoherentParentAttributeName = "CoherentParentDependency";
+        public const string ProductDependencyElementName = "ProductDependencies";
+        public const string ToolsetDependencyElementName = "ToolsetDependencies";
         public const string PinnedAttributeName = "Pinned";
         public const string NugetConfig = "NuGet.config";
         public const string AddElement = "add";
@@ -35,6 +37,7 @@ namespace Microsoft.DotNet.DarcLib
         public const string SourceBuildOldElementName = "SourceBuildTarball";
         public const string RepoNameAttributeName = "RepoName";
         public const string ManagedOnlyAttributeName = "ManagedOnly";
+        public const string TarballOnlyAttributeName = "TarballOnly";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
