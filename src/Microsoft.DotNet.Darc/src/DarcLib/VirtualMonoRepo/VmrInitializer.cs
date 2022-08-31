@@ -39,31 +39,39 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     public async Task InitializeVmr(SourceMapping mapping, string? targetRevision, CancellationToken cancellationToken)
     {
-        if (File.Exists(Path.Combine(SourcesPath, $".{mapping.Name}")))
+        if (File.Exists(GetTagFilePath(mapping)))
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        _logger.LogInformation("Initializing {name}", mapping.Name);
+        _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
-        string patchPath = GetPatchFilePath(mapping);
-
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
+        string patchPath = GetPatchFilePath(mapping);
         await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        await TagRepo(mapping, commit.Id.Sha);
 
-        var description = PrepareCommitMessage(InitializationCommitMessage, mapping, null, commit.Id.Sha, null);
+        await TagRepo(mapping, commit.Id.Sha);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await ApplyVmrPatches(mapping, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await UpdateGitmodules(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
-        cancellationToken.ThrowIfCancellationRequested();
-        Commit(description, DotnetBotCommitSignature);
+        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
+        Commit(message, DotnetBotCommitSignature);
+
+        _logger.LogInformation("Initialization of {name} finished", mapping.Name);
     }
 }

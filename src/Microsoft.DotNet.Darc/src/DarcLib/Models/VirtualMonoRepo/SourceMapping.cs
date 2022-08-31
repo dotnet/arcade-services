@@ -16,4 +16,5 @@ public record SourceMapping(
     string DefaultRef,
     IReadOnlyCollection<string> Include,
     IReadOnlyCollection<string> Exclude,
+    IReadOnlyCollection<string> VmrPatches,
     string? Version = null);

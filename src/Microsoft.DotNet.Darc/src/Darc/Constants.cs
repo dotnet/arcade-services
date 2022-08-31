@@ -50,10 +50,12 @@ namespace Microsoft.DotNet.Darc
             "The standard github merge policy is:",
             $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'WIP' and 'license/cla' checks ignored.",
             $"- {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
+            $"- {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
             "The standard Azure DevOps merge policy is:",
             $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
             "  and 'Work item linking' checks ignored.",
             $"- {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
+            $"- {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
             "YAML format:",
             $"- Name: {MergePolicyConstants.StandardMergePolicyName}",
             "",
@@ -71,6 +73,10 @@ namespace Microsoft.DotNet.Darc
             $"{MergePolicyConstants.NoRequestedChangesMergePolicyName} - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
             "YAML format:",
             $"- Name: {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
+            "",
+            $"{MergePolicyConstants.DontAutomergeDowngradesPolicyName} - If any version change is a downgrade, it will not be merged.",
+            "YAML format:",
+            $"- Name: {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
         };
     }
 }

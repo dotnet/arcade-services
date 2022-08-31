@@ -370,7 +370,11 @@ namespace Maestro.Web
                     ctx => IsGet(ctx) &&
                         ctx.Request.Path.StartsWithSegments("/api") &&
                         !ctx.Request.Path.Value.EndsWith("swagger.json"),
-                    a => { a.Run(ApiRedirectHandler); });
+                    a =>
+                    {
+                        app.UseAuthentication();
+                        a.Run(ApiRedirectHandler);
+                    });
             }
 
             app.Use(

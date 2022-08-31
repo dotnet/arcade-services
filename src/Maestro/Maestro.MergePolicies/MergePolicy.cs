@@ -51,11 +51,13 @@ namespace Maestro.MergePolicies
 
         public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
 
-        public MergePolicyEvaluationResult Pending(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, message, this);
+        public MergePolicyEvaluationResult Pending(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, title, string.Empty, this);
 
-        public MergePolicyEvaluationResult Succeed(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, message, this);
+        public MergePolicyEvaluationResult Succeed(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, title, string.Empty, this);
 
-        public MergePolicyEvaluationResult Fail(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, message, this);
+        public MergePolicyEvaluationResult Fail(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, string.Empty, this);
+
+        public MergePolicyEvaluationResult Fail(string title, string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, message, this);
     }
 
     public interface IMergePolicy : IMergePolicyInfo
