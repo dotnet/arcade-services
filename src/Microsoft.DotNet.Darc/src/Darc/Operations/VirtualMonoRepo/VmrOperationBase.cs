@@ -48,7 +48,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         IEnumerable<(SourceMapping Mapping, string? Revision)> reposToSync;
 
         // 'all' means sync all of the repos
-        if (repositories.Count() == 1 && repositories.First() == "all")
+        if (repositories.Count == 1 && repositories.First() == "all")
         {
             reposToSync = vmrManager.Mappings.Select<SourceMapping, (SourceMapping Mapping, string? Revision)>(m => (m, null));
         }
@@ -81,7 +81,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             foreach (var (mapping, revision) in reposToSync)
             {
                 listener.Token.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, mapping, revision, listener.Token);
+                success &= await ExecuteAsync(vmrManager, mapping, revision, _options.Recursive, listener.Token);
             }
         }
         catch (OperationCanceledException)
@@ -101,19 +101,21 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
+        bool recursive,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
+        bool recursive,
         CancellationToken cancellationToken)
     {
         using (Logger.BeginScope(mapping.Name))
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, cancellationToken);
+                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, recursive, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)

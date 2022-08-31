@@ -20,4 +20,7 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
     public string TmpPath { get; set; }
+
+    [Option('r', "recursive", Required = false, HelpText = "Process also dependencies (from Version.Details.xml) recursively.")]
+    public bool Recursive { get; set; } = false;
 }
