@@ -37,6 +37,7 @@ public static class VmrRegistrations
     {
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
+        services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrManagerFactory, VmrManagerFactory>();
         services.TryAddTransient<IVmrUpdater>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrUpdater().GetAwaiter().GetResult());
         services.TryAddTransient<IVmrInitializer>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrInitializer().GetAwaiter().GetResult());

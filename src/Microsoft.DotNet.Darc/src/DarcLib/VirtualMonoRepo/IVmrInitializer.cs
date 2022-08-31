@@ -18,7 +18,7 @@ public interface IVmrInitializer : IVmrManager
     /// </summary>
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
-    /// <param name="initializeDependencies">When true, initialize dependency repos based on the Version.Details.xml of the currently initialized repo</param>
+    /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeRepository(string mappingName, string? targetRevision, bool initializeDependencies, CancellationToken cancellationToken)
     {
@@ -33,7 +33,7 @@ public interface IVmrInitializer : IVmrManager
     /// </summary>
     /// <param name="mapping">Repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
-    /// <param name="initializeDependencies">When true, initialize dependency repos based on the Version.Details.xml of the currently initialized repo</param>
+    /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeRepository(SourceMapping mapping, string? targetRevision, bool initializeDependencies, CancellationToken cancellationToken);
 }
