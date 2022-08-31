@@ -111,12 +111,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return;
         }
 
-        if (currentCommit.Committer.When > targetCommit.Committer.When)
-        {
-            throw new InvalidOperationException($"Target revision {targetRevision} is older than current ({currentSha})! " +
-                $"Synchronizing backwards is not allowed");
-        }
-
         using var repo = new Repository(clonePath);
         ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
         {
@@ -227,7 +221,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision)>();
         reposToUpdate.Enqueue((mapping, targetRevision));
 
-        var updatedDependencies = new HashSet<SourceMapping>();
+        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision)>();
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
@@ -235,14 +229,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             _logger.LogInformation("Recursively updating dependency {repo} / {commit}",
                 mappingToUpdate.Name,
-                repoToUpdate.targetRevision);
+                repoToUpdate.targetRevision ?? HEAD);
 
             await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, noSquash, cancellationToken);
-            updatedDependencies.Add(mappingToUpdate);
+            updatedDependencies.Add(repoToUpdate);
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
             {
-                if (updatedDependencies.Contains(dependencyMapping))
+                if (updatedDependencies.Any(d => d.mapping == dependencyMapping))
                 {
                     continue;
                 }
@@ -257,6 +251,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reposToUpdate.Enqueue((dependencyMapping, dependency.Commit));
             }
         }
+
+        var summaryMessage = new StringBuilder();
+        summaryMessage.AppendLine("Recursive update finished. Updated repositories:");
+
+        foreach (var update in updatedDependencies)
+        {
+            summaryMessage.AppendLine($"  - {update.mapping.Name} / {update.targetRevision ?? HEAD}");
+        }
+
+        _logger.LogInformation("{summary}", summaryMessage);
     }
 
     /// <summary>
