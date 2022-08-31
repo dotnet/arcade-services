@@ -324,7 +324,7 @@ public abstract class VmrManagerBase
     {
         var versionDetailsPath = Path.Combine(
             GetRepoSourcesPath(mapping),
-            VersionFiles.VersionDetailsXml.Replace("/", Environment.NewLine));
+            VersionFiles.VersionDetailsXml.Replace('/', Path.DirectorySeparatorChar));
 
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
 
