@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -18,13 +18,14 @@ public interface IVmrInitializer : IVmrManager
     /// </summary>
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
+    /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task InitializeVmr(string mappingName, string? targetRevision, CancellationToken cancellationToken)
+    Task InitializeRepository(string mappingName, string? targetRevision, bool initializeDependencies, CancellationToken cancellationToken)
     {
         var mapping = Mappings.FirstOrDefault(m => m.Name == mappingName)
             ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
 
-        return InitializeVmr(mapping, targetRevision, cancellationToken);
+        return InitializeRepository(mapping, targetRevision, initializeDependencies, cancellationToken);
     }
 
     /// <summary>
@@ -32,6 +33,7 @@ public interface IVmrInitializer : IVmrManager
     /// </summary>
     /// <param name="mapping">Repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
+    /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    Task InitializeVmr(SourceMapping mapping, string? targetRevision, CancellationToken cancellationToken);
+    Task InitializeRepository(SourceMapping mapping, string? targetRevision, bool initializeDependencies, CancellationToken cancellationToken);
 }
