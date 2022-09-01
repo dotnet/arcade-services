@@ -50,19 +50,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
 
     private readonly ILogger<VmrUpdater> _logger;
+    private readonly IVmrDependencyInfo _dependencyInfo;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
 
     public VmrUpdater(
+        IVmrDependencyInfo dependencyInfo,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
-        IVmrManagerConfiguration configuration,
-        IReadOnlyCollection<SourceMapping> mappings)
-        : base(processManager, remoteFactory, versionDetailsParser, logger, mappings, configuration.VmrPath, configuration.TmpPath)
+        IVmrManagerConfiguration configuration)
+        : base(dependencyInfo, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
+        _dependencyInfo = dependencyInfo;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
     }
@@ -300,7 +302,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
-        await TagRepo(mapping, toRevision);
+        await _dependencyInfo.UpdateDependencyVersion(mapping, toRevision, );
+        Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesPath);
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
@@ -347,6 +350,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
         localRepo.Checkout(clonePath, originalRevision);
 
+        var repoSourcesPath = _dependencyInfo.GetRepoSourcesPath(mapping);
+
         foreach (var patch in mapping.VmrPatches)
         {
             _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
@@ -359,7 +364,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     : patchedFile;
 
                 var originalFile = Path.Combine(clonePath, relativePath);
-                var destination = Path.Combine(SourcesPath, mapping.Name, relativePath);
+                var destination = Path.Combine(repoSourcesPath, relativePath);
 
                 _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
 
@@ -369,8 +374,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        using var repository = new Repository(VmrPath);
-        Commands.Stage(repository, $"{VmrSourcesPath}/{mapping.Name}");
+        using var repository = new Repository(_dependencyInfo.VmrPath);
+        Commands.Stage(repository, repoSourcesPath);
 
         _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
     }
@@ -401,17 +406,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<string> GetCurrentVersion(SourceMapping mapping)
     {
-        var tagFile = GetTagFilePath(mapping);
-        string currentSha;
-        try
-        {
-            currentSha = (await File.ReadAllTextAsync(tagFile)).Trim();
-        }
-        catch (FileNotFoundException)
+        var version = await _dependencyInfo.GetDependencyVersion(mapping);
+
+        if (!version.HasValue)
         {
             throw new InvalidOperationException($"Missing tag file for {mapping.Name} - please initialize the individual repo first");
         }
 
-        return currentSha;
+        return version.Value.Sha;
     }
 }
