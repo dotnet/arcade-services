@@ -15,7 +15,7 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
     Dictionary<string, string> Versions { get; }
 
     string? GetMappingSha(SourceMapping mapping);
-    void UpdateVersions(SourceMapping mapping, string sha, string version);
+    void UpdateVersion(SourceMapping mapping, string sha, string version);
 }
 
 /// <summary>
@@ -43,7 +43,7 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         return sha;
     }
 
-    public void UpdateVersions(SourceMapping mapping, string sha, string version)
+    public void UpdateVersion(SourceMapping mapping, string sha, string version)
     {
         var key = SanitizePropertyName(mapping.Name);
         Versions[key + ShaPropertyName] = sha;

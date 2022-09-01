@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using NuGet.Versioning;
+using System;
+
 namespace Microsoft.DotNet.DarcLib
 {
     /// <summary>
@@ -76,5 +79,63 @@ namespace Microsoft.DotNet.DarcLib
         {
             return dependencyName;
         }
+
+        /// <summary>
+        /// Reverse a version in the Arcade style (https://github.com/dotnet/arcade/blob/fb92b14d8cd07cf44f8f7eefa8ac58d7ffd05f3f/src/Microsoft.DotNet.Arcade.Sdk/tools/Version.BeforeCommonTargets.targets#L18)
+        /// back to an OfficialBuildId + ReleaseLabel which we can then supply to get the same resulting version number.
+        /// </summary>
+        /// <param name="repoName">The source build name of the repo to get the version info for.</param>
+        /// <param name="version">The complete version, e.g. 1.0.0-beta1-19720.5</param>
+        public static (string BuildId, string ReleaseLabel) DeriveBuildInfo(string repoName, string version)
+        {
+            var nugetVersion = new NuGetVersion(version);
+
+            if (string.IsNullOrWhiteSpace(nugetVersion.Release))
+            {
+                // finalized version number (x.y.z) - probably not our code
+                // Application Insights, Newtonsoft.Json do this
+                return (DateTime.Now.ToString("yyyyMMdd.1"), string.Empty);
+            }
+
+            var releaseParts = nugetVersion.Release.Split('-', '.');
+            if (repoName.Contains("nuget"))
+            {
+                // NuGet does this - arbitrary build IDs
+                return (DateTime.Now.ToString("yyyyMMdd.1"), releaseParts[0]);
+            }
+
+            if (releaseParts.Length == 3)
+            {
+                // VSTest uses full dates for the first part of their preview build numbers
+                if (repoName.Contains("vstest"))
+                {
+                    return ($"{releaseParts[1]}.{releaseParts[2]}", releaseParts[0]);
+                }
+                else if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
+                {
+                    if (datePart > 1 && datePart < 8 && buildPart > 1000 && buildPart < 10000)
+                    {
+                        return (releaseParts[2], $"{releaseParts[0]}.{releaseParts[1]}");
+                    }
+                    else
+                    {
+                        return (VersionToDate(datePart, buildPart), releaseParts[0]);
+                    }
+                }
+            }
+
+            if (releaseParts.Length == 4)
+            {
+                // new preview version style, e.g. 5.0.0-preview.7.20365.12
+                if (int.TryParse(releaseParts[2], out int datePart) && int.TryParse(releaseParts[3], out int buildPart))
+                {
+                    return (VersionToDate(datePart, buildPart), $"{releaseParts[0]}.{releaseParts[1]}");
+                }
+            }
+
+            throw new FormatException($"Can't derive a build ID from version {version} (release {string.Join(";", nugetVersion.Release.Split('-', '.'))})");
+        }
+
+        private static string VersionToDate(int date, int build) => $"20{date / 1000}{date % 1000 / 50:D2}{date % 50:D2}.{build}";
     }
 }
