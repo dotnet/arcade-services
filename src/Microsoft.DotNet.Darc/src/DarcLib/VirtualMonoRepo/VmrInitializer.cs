@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -44,6 +42,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     public async Task InitializeRepository(
         SourceMapping mapping,
         string? targetRevision,
+        string? packageVersion,
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
@@ -67,7 +66,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _dependencyInfo.UpdateDependencyVersion(mapping, commit.Id.Sha, );
+        await _dependencyInfo.UpdateDependencyVersion(mapping, commit.Id.Sha, packageVersion);
         Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesPath);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -104,7 +103,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 dependency.Commit,
                 dependency.Version);
 
-            await InitializeRepository(dependencyMapping, dependency.Commit, true, cancellationToken);
+            await InitializeRepository(dependencyMapping, dependency.Commit, dependency.Version, true, cancellationToken);
         }
     }
 }

@@ -72,18 +72,20 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     public Task UpdateRepository(
         SourceMapping mapping,
         string? targetRevision,
+        string? packageVersion,
         bool noSquash,
         bool updateDependencies,
         CancellationToken cancellationToken)
     {
         return updateDependencies
-            ? UpdateRepositoryRecursively(mapping, targetRevision, noSquash, cancellationToken)
-            : UpdateRepository(mapping, targetRevision, noSquash, cancellationToken);
+            ? UpdateRepositoryRecursively(mapping, targetRevision, packageVersion, noSquash, cancellationToken)
+            : UpdateRepository(mapping, targetRevision, packageVersion, noSquash, cancellationToken);
     }
 
     private async Task UpdateRepository(
         SourceMapping mapping,
         string? targetRevision,
+        string? packageVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
@@ -174,6 +176,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     mapping,
                     currentSha,
                     commitToCopy.Sha,
+                    commitToCopy.Sha == targetCommit.Sha ? packageVersion : null,
                     clonePath,
                     message,
                     commitToCopy.Author,
@@ -203,6 +206,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 mapping,
                 currentSha,
                 targetRevision,
+                packageVersion,
                 clonePath,
                 message,
                 DotnetBotCommitSignature,
@@ -217,13 +221,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task UpdateRepositoryRecursively(
         SourceMapping mapping,
         string? targetRevision,
+        string? packageVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision)>();
-        reposToUpdate.Enqueue((mapping, targetRevision));
+        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? packageVersion)>();
+        reposToUpdate.Enqueue((mapping, targetRevision, packageVersion));
 
-        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision)>();
+        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision, string? packageVersion)>();
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
@@ -233,7 +238,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 mappingToUpdate.Name,
                 repoToUpdate.targetRevision ?? HEAD);
 
-            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, noSquash, cancellationToken);
+            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, repoToUpdate.packageVersion, noSquash, cancellationToken);
             updatedDependencies.Add(repoToUpdate);
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
@@ -250,7 +255,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     continue;
                 }
 
-                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit));
+                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit, dependency.Version));
             }
         }
 
@@ -272,6 +277,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         SourceMapping mapping,
         string fromRevision,
         string toRevision,
+        string? packageVersion,
         string clonePath,
         string commitMessage,
         Signature author,
@@ -302,7 +308,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
-        await _dependencyInfo.UpdateDependencyVersion(mapping, toRevision, );
+        await _dependencyInfo.UpdateDependencyVersion(mapping, toRevision, packageVersion);
         Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesPath);
         cancellationToken.ThrowIfCancellationRequested();
 
