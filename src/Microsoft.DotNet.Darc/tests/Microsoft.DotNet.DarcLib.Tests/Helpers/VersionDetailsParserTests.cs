@@ -2,10 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using FluentAssertions;
-using NUnit.Framework;
-
-namespace Microsoft.DotNet.DarcLib.Tests;
+namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 [TestFixture]
 public class VersionDetailsParserTests
@@ -37,7 +34,7 @@ public class VersionDetailsParserTests
               </ToolsetDependencies>
             </Dependencies>
             """;
-        
+
         var parser = new VersionDetailsParser();
         var dependencies = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
@@ -83,7 +80,7 @@ public class VersionDetailsParserTests
             <?xml version="1.0" encoding="utf-8"?>
             <Dependencies></Dependencies>
             """;
-        
+
         var parser = new VersionDetailsParser();
         var dependencies = parser.ParseVersionDetailsXml(VersionDetailsXml);
         dependencies.Should().BeEmpty();

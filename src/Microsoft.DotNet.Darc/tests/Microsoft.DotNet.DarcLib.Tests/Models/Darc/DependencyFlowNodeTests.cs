@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace Microsoft.DotNet.DarcLib.Tests
+namespace Microsoft.DotNet.DarcLib.Tests.Models.Darc
 {
     public class DependencyFlowNodeTests
     {
