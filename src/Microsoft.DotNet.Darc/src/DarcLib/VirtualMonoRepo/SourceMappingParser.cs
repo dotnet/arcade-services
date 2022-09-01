@@ -23,7 +23,7 @@ public class SourceMappingParser : ISourceMappingParser
 {
     public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string vmrPath)
     {
-        var mappingFilePath = Path.Combine(vmrPath, VmrDependencyInfo.VmrSourcesPath, VmrDependencyInfo.SourceMappingsFileName);
+        var mappingFilePath = Path.Combine(vmrPath, VmrDependencyInfo.VmrSourcesDir, VmrDependencyInfo.SourceMappingsFileName);
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)

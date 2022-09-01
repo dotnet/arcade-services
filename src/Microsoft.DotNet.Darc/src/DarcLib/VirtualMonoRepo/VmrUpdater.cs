@@ -89,7 +89,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var currentSha = await GetCurrentVersion(mapping);
+        var currentSha = GetCurrentVersion(mapping);
 
         if (!await HasRemoteUpdates(mapping, currentSha))
         {
@@ -248,7 +248,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     continue;
                 }
 
-                var dependencySha = await GetCurrentVersion(dependencyMapping);
+                var dependencySha = GetCurrentVersion(dependencyMapping);
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
@@ -308,8 +308,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
-        await _dependencyInfo.UpdateDependencyVersion(mapping, toRevision, packageVersion);
-        Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesPath);
+        _dependencyInfo.UpdateDependencyVersion(mapping, toRevision, packageVersion);
+        Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
@@ -410,9 +410,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return files;
     }
 
-    private async Task<string> GetCurrentVersion(SourceMapping mapping)
+    private string GetCurrentVersion(SourceMapping mapping)
     {
-        var version = await _dependencyInfo.GetDependencyVersion(mapping);
+        var version = _dependencyInfo.GetDependencyVersion(mapping);
 
         if (!version.HasValue)
         {

@@ -258,7 +258,7 @@ public abstract class VmrManagerBase : IVmrManager
 
                 // Add src/[repo]/ prefixes to paths
                 content = pathSettingRegex
-                    .Replace(content, $"$1{VmrDependencyInfo.VmrSourcesPath}/{mapping.Name}/")
+                    .Replace(content, $"$1{VmrDependencyInfo.VmrSourcesDir}/{mapping.Name}/")
                     .Replace("\r\n", "\n");
 
                 await writer.WriteAsync(content);

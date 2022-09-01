@@ -33,7 +33,7 @@ public interface IVmrUpdater : IVmrManager
         var mapping = Mappings.FirstOrDefault(m => m.Name == mappingName)
             ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
 
-        return UpdateRepository(mapping, targetRevision, noSquash, updateDependencies, cancellationToken);
+        return UpdateRepository(mapping, targetRevision, null, noSquash, updateDependencies, cancellationToken);
     }
 
     /// <summary>
