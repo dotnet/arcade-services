@@ -88,20 +88,22 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="version">The complete version, e.g. 1.0.0-beta1-19720.5</param>
         public static (string BuildId, string ReleaseLabel) DeriveBuildInfo(string repoName, string version)
         {
+            const string fallbackBuildIdFormat = "yyyyMMdd.1";
+
             var nugetVersion = new NuGetVersion(version);
 
             if (string.IsNullOrWhiteSpace(nugetVersion.Release))
             {
-                // finalized version number (x.y.z) - probably not our code
+                // Finalized version number (x.y.z) - probably not our code
                 // Application Insights, Newtonsoft.Json do this
-                return (DateTime.Now.ToString("yyyyMMdd.1"), string.Empty);
+                return (DateTime.Now.ToString(fallbackBuildIdFormat), string.Empty);
             }
 
             var releaseParts = nugetVersion.Release.Split('-', '.');
             if (repoName.Contains("nuget"))
             {
                 // NuGet does this - arbitrary build IDs
-                return (DateTime.Now.ToString("yyyyMMdd.1"), releaseParts[0]);
+                return (DateTime.Now.ToString(fallbackBuildIdFormat), releaseParts[0]);
             }
 
             if (releaseParts.Length == 3)
@@ -111,22 +113,21 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     return ($"{releaseParts[1]}.{releaseParts[2]}", releaseParts[0]);
                 }
-                else if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
+                
+                if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
                 {
                     if (datePart > 1 && datePart < 8 && buildPart > 1000 && buildPart < 10000)
                     {
                         return (releaseParts[2], $"{releaseParts[0]}.{releaseParts[1]}");
                     }
-                    else
-                    {
-                        return (VersionToDate(datePart, buildPart), releaseParts[0]);
-                    }
+                    
+                    return (VersionToDate(datePart, buildPart), releaseParts[0]);
                 }
             }
 
             if (releaseParts.Length == 4)
             {
-                // new preview version style, e.g. 5.0.0-preview.7.20365.12
+                // New preview version style, e.g. 5.0.0-preview.7.20365.12
                 if (int.TryParse(releaseParts[2], out int datePart) && int.TryParse(releaseParts[3], out int buildPart))
                 {
                     return (VersionToDate(datePart, buildPart), $"{releaseParts[0]}.{releaseParts[1]}");
