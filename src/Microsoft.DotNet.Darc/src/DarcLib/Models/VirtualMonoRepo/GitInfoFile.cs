@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
 /// <summary>
-/// Representation of the whole git-info file structure.
+/// Model for the git-info files that are part of the VMR.
+/// These track what versions of individual repositories are included.
 /// Example:
 /// <![CDATA[
 ///    <Project>
@@ -27,44 +27,49 @@ namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 /// </summary>
 public class GitInfoFile : MsBuildPropsFile
 {
-    public GitInfoFileItem Item { get; }
-
-    public GitInfoFile(GitInfoFileItem item)
-        : base(orderPropertiesAscending: null)
-    {
-        Item = item;
-    }
-
-    protected override void SerializeProperties(XmlElement propertyGroup, Func<string, XmlElement> createElement)
-    {
-        var properties = new Dictionary<string, string>
-        {
-            [nameof(GitInfoFileItem.GitCommitHash)] = Item.GitCommitHash,
-            [nameof(GitInfoFileItem.OfficialBuildId)] = Item.OfficialBuildId,
-            [nameof(GitInfoFileItem.OutputPackageVersion)] = Item.OutputPackageVersion,
-            [nameof(GitInfoFileItem.PreReleaseVersionLabel)] = Item.PreReleaseVersionLabel,
-            [nameof(GitInfoFileItem.IsStable)] = string.IsNullOrWhiteSpace(Item.PreReleaseVersionLabel) ? "true" : "false",
-        };
-
-        if (Item.GitCommitCount.HasValue)
-        {
-            properties.Add(nameof(GitInfoFileItem.GitCommitCount), Item.GitCommitCount.Value.ToString());
-        }
-
-        SerializeDictionary(properties, propertyGroup, createElement);
-    }
-}
-
-/// <summary>
-/// Item representing information about a repo stored in a "git-info" XML file in the VMR.
-/// </summary>
-#nullable disable
-public class GitInfoFileItem
-{
     public string GitCommitHash { get; set; }
     public string OfficialBuildId { get; set; }
     public string OutputPackageVersion { get; set; }
     public string PreReleaseVersionLabel { get; set; }
     public bool IsStable { get; set; }
     public int? GitCommitCount { get; set; }
+
+    public GitInfoFile()
+        : base(orderPropertiesAscending: null)
+    {
+    }
+
+    protected override void SerializeProperties(XmlElement propertyGroup, Func<string, XmlElement> createElement)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            [nameof(GitCommitHash)] = GitCommitHash,
+            [nameof(OfficialBuildId)] = OfficialBuildId,
+            [nameof(OutputPackageVersion)] = OutputPackageVersion,
+            [nameof(PreReleaseVersionLabel)] = PreReleaseVersionLabel,
+            [nameof(IsStable)] = IsStable ? "true" : "false",
+        };
+
+        if (GitCommitCount.HasValue)
+        {
+            properties.Add(nameof(GitCommitCount), GitCommitCount.Value.ToString());
+        }
+
+        SerializeDictionary(properties, propertyGroup, createElement);
+    }
+
+    public static GitInfoFile DeserializeFromXml(string path)
+    {
+        var properties = DeserializeProperties(path);
+        return new()
+        {
+            GitCommitHash = properties[nameof(GitCommitHash)],
+            OfficialBuildId = properties[nameof(OfficialBuildId)],
+            OutputPackageVersion = properties[nameof(OutputPackageVersion)],
+            PreReleaseVersionLabel = properties[nameof(PreReleaseVersionLabel)],
+            IsStable = properties[nameof(IsStable)] == "true",
+            GitCommitCount = properties.TryGetValue(nameof(GitCommitCount), out var count) ? int.Parse(count) : null,
+        };
+    }
 }
+
