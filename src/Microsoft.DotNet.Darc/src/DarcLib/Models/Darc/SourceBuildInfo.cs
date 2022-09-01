@@ -15,4 +15,9 @@ public class SourceBuildInfo
     /// Indicates whether a dependency depends only on managed inputs.
     /// </summary>
     public bool ManagedOnly { get; set; }
+
+    /// <summary>
+    /// Indicates whether a dependency is only used in the tarball builds.
+    /// </summary>
+    public bool TarballOnly { get; set; }
 }

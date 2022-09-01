@@ -27,7 +27,7 @@ public class VersionDetailsParser : IVersionDetailsParser
 
     public IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
-        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes("//Dependency");
+        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{VersionFiles.DependencyElementName}");
         if (dependencyNodes == null)
         {
             throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
@@ -49,49 +49,42 @@ public class VersionDetailsParser : IVersionDetailsParser
                 continue;
             }
 
-            var type = dependency.ParentNode!.Name switch
+            if (dependency.ParentNode is null)
             {
-                "ProductDependencies" => DependencyType.Product,
-                "ToolsetDependencies" => DependencyType.Toolset,
+                throw new DarcException($"{VersionFiles.DependencyElementName} elements cannot be top-level; " +
+                    $"they must belong to a group such as {VersionFiles.ProductDependencyElementName}");
+            }
+
+            if (dependency.Attributes is null)
+            {
+                throw new DarcException($"Dependencies cannot be top-level and must belong to a group such as {VersionFiles.ProductDependencyElementName}");
+            }
+
+            var type = dependency.ParentNode.Name switch
+            {
+                VersionFiles.ProductDependencyElementName => DependencyType.Product,
+                VersionFiles.ToolsetDependencyElementName => DependencyType.Toolset,
                 _ => throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'"),
             };
 
-            bool isPinned = false;
-
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
-            XmlAttribute? isPinnedAttribute = dependency.Attributes![VersionFiles.PinnedAttributeName];
-            if (isPinnedAttribute != null)
-            {
-                if (!bool.TryParse(isPinnedAttribute.Value, out isPinned))
-                {
-                    throw new DarcException($"The '{VersionFiles.PinnedAttributeName}' attribute is set but the value " +
-                        $"'{isPinnedAttribute.Value}' is not a valid boolean...");
-                }
-            }
-
-            SourceBuildInfo? sourceBuildInfo = null;
+            bool isPinned = ParseBooleanAttribute(dependency.Attributes, VersionFiles.PinnedAttributeName);
 
             XmlNode? sourceBuildNode = dependency.SelectSingleNode(VersionFiles.SourceBuildElementName)
                 ?? dependency.SelectSingleNode(VersionFiles.SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
 
+            SourceBuildInfo? sourceBuildInfo = null;
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
                 string repoName = sourceBuildElement.Attributes[VersionFiles.RepoNameAttributeName]?.Value
                     ?? throw new DarcException($"{VersionFiles.RepoNameAttributeName} of {VersionFiles.SourceBuildElementName} " +
                                                $"null or empty in '{dependency.Attributes[VersionFiles.NameAttributeName]?.Value}'");
 
-                bool managedOnly = false;
-                XmlAttribute? managedOnlyAttribute = sourceBuildElement.Attributes[VersionFiles.ManagedOnlyAttributeName];
-                if (managedOnlyAttribute is not null && !bool.TryParse(managedOnlyAttribute.Value, out managedOnly))
-                {
-                    throw new DarcException($"The '{VersionFiles.ManagedOnlyAttributeName}' attribute is set but the value " +
-                        $"'{managedOnlyAttribute.Value}' is not a valid boolean...");
-                }
-
                 sourceBuildInfo = new SourceBuildInfo
                 {
                     RepoName = repoName,
-                    ManagedOnly = managedOnly,
+                    ManagedOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, VersionFiles.ManagedOnlyAttributeName),
+                    TarballOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, VersionFiles.TarballOnlyAttributeName),
                 };
             }
 
@@ -111,6 +104,19 @@ public class VersionDetailsParser : IVersionDetailsParser
         }
 
         return dependencyDetails;
+    }
+    
+    private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
+    {
+        var result = false;
+        XmlAttribute? attribute = attributes[attributeName];
+        if (attribute is not null && !bool.TryParse(attribute.Value, out result))
+        {
+            throw new DarcException($"The '{attributeName}' attribute is set but the value " +
+                $"'{attribute.Value}' is not a valid boolean...");
+        }
+
+        return result;
     }
 
     private static XmlDocument GetXmlDocument(string fileContent)
