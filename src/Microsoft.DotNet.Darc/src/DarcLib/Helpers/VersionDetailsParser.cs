@@ -19,6 +19,29 @@ public interface IVersionDetailsParser
 
 public class VersionDetailsParser : IVersionDetailsParser
 {
+    // Version.Details.xml schema
+    public const string VersionPropsVersionElementSuffix = "PackageVersion";
+    public const string VersionPropsAlternateVersionElementSuffix = "Version";
+    public const string ShaElementName = "Sha";
+    public const string UriElementName = "Uri";
+    public const string DependencyElementName = "Dependency";
+    public const string DependenciesElementName = "Dependencies";
+    public const string NameAttributeName = "Name";
+    public const string VersionAttributeName = "Version";
+    public const string CoherentParentAttributeName = "CoherentParentDependency";
+    public const string ProductDependencyElementName = "ProductDependencies";
+    public const string ToolsetDependencyElementName = "ToolsetDependencies";
+    public const string PinnedAttributeName = "Pinned";
+    public const string AddElement = "add";
+    public const string ClearElement = "clear";
+    public const string KeyAttributeName = "key";
+    public const string ValueAttributeName = "value";
+    public const string SourceBuildElementName = "SourceBuild";
+    public const string SourceBuildOldElementName = "SourceBuildTarball";
+    public const string RepoNameAttributeName = "RepoName";
+    public const string ManagedOnlyAttributeName = "ManagedOnly";
+    public const string TarballOnlyAttributeName = "TarballOnly";
+    
     public IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
         XmlDocument document = GetXmlDocument(fileContents);
@@ -27,7 +50,7 @@ public class VersionDetailsParser : IVersionDetailsParser
 
     public IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
-        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{VersionFiles.DependencyElementName}");
+        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
         if (dependencyNodes == null)
         {
             throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
@@ -51,50 +74,50 @@ public class VersionDetailsParser : IVersionDetailsParser
 
             if (dependency.ParentNode is null)
             {
-                throw new DarcException($"{VersionFiles.DependencyElementName} elements cannot be top-level; " +
-                    $"they must belong to a group such as {VersionFiles.ProductDependencyElementName}");
+                throw new DarcException($"{DependencyElementName} elements cannot be top-level; " +
+                    $"they must belong to a group such as {ProductDependencyElementName}");
             }
 
             if (dependency.Attributes is null)
             {
-                throw new DarcException($"Dependencies cannot be top-level and must belong to a group such as {VersionFiles.ProductDependencyElementName}");
+                throw new DarcException($"Dependencies cannot be top-level and must belong to a group such as {ProductDependencyElementName}");
             }
 
             var type = dependency.ParentNode.Name switch
             {
-                VersionFiles.ProductDependencyElementName => DependencyType.Product,
-                VersionFiles.ToolsetDependencyElementName => DependencyType.Toolset,
+                ProductDependencyElementName => DependencyType.Product,
+                ToolsetDependencyElementName => DependencyType.Toolset,
                 _ => throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'"),
             };
 
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
-            bool isPinned = ParseBooleanAttribute(dependency.Attributes, VersionFiles.PinnedAttributeName);
+            bool isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
-            XmlNode? sourceBuildNode = dependency.SelectSingleNode(VersionFiles.SourceBuildElementName)
-                ?? dependency.SelectSingleNode(VersionFiles.SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
+            XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
+                ?? dependency.SelectSingleNode(SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
 
             SourceBuildInfo? sourceBuildInfo = null;
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
-                string repoName = sourceBuildElement.Attributes[VersionFiles.RepoNameAttributeName]?.Value
-                    ?? throw new DarcException($"{VersionFiles.RepoNameAttributeName} of {VersionFiles.SourceBuildElementName} " +
-                                               $"null or empty in '{dependency.Attributes[VersionFiles.NameAttributeName]?.Value}'");
+                string repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
+                    ?? throw new DarcException($"{RepoNameAttributeName} of {SourceBuildElementName} " +
+                                               $"null or empty in '{dependency.Attributes[NameAttributeName]?.Value}'");
 
                 sourceBuildInfo = new SourceBuildInfo
                 {
                     RepoName = repoName,
-                    ManagedOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, VersionFiles.ManagedOnlyAttributeName),
-                    TarballOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, VersionFiles.TarballOnlyAttributeName),
+                    ManagedOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, ManagedOnlyAttributeName),
+                    TarballOnly = ParseBooleanAttribute(sourceBuildElement.Attributes, TarballOnlyAttributeName),
                 };
             }
 
             var dependencyDetail = new DependencyDetail
             {
-                Name = dependency.Attributes[VersionFiles.NameAttributeName]?.Value?.Trim(),
-                RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName)?.InnerText?.Trim(),
-                Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
-                Version = dependency.Attributes[VersionFiles.VersionAttributeName]?.Value?.Trim(),
-                CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
+                Name = dependency.Attributes[NameAttributeName]?.Value?.Trim(),
+                RepoUri = dependency.SelectSingleNode(UriElementName)?.InnerText?.Trim(),
+                Commit = dependency.SelectSingleNode(ShaElementName)?.InnerText?.Trim(),
+                Version = dependency.Attributes[VersionAttributeName]?.Value?.Trim(),
+                CoherentParentDependencyName = dependency.Attributes[CoherentParentAttributeName]?.Value?.Trim(),
                 Pinned = isPinned,
                 Type = type,
                 SourceBuild = sourceBuildInfo,

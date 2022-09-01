@@ -12,35 +12,12 @@ namespace Microsoft.DotNet.DarcLib
     /// </summary>
     public static class VersionFiles
     {
-        /// <summary>
-        ///     Locations of the version files within a repository.
-        /// </summary>
+        // Locations of the version files within a repository
         public const string VersionDetailsXml = "eng/Version.Details.xml";
         public const string VersionProps = "eng/Versions.props";
         public const string GlobalJson = "global.json";
         public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
-        public const string VersionPropsVersionElementSuffix = "PackageVersion";
-        public const string VersionPropsAlternateVersionElementSuffix = "Version";
-        public const string ShaElementName = "Sha";
-        public const string UriElementName = "Uri";
-        public const string DependencyElementName = "Dependency";
-        public const string DependenciesElementName = "Dependencies";
-        public const string NameAttributeName = "Name";
-        public const string VersionAttributeName = "Version";
-        public const string CoherentParentAttributeName = "CoherentParentDependency";
-        public const string ProductDependencyElementName = "ProductDependencies";
-        public const string ToolsetDependencyElementName = "ToolsetDependencies";
-        public const string PinnedAttributeName = "Pinned";
         public const string NugetConfig = "NuGet.config";
-        public const string AddElement = "add";
-        public const string ClearElement = "clear";
-        public const string KeyAttributeName = "key";
-        public const string ValueAttributeName = "value";
-        public const string SourceBuildElementName = "SourceBuild";
-        public const string SourceBuildOldElementName = "SourceBuildTarball";
-        public const string RepoNameAttributeName = "RepoName";
-        public const string ManagedOnlyAttributeName = "ManagedOnly";
-        public const string TarballOnlyAttributeName = "TarballOnly";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
@@ -55,7 +32,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Element name</returns>
         public static string GetVersionPropsPackageVersionElementName(string dependencyName)
         {
-            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionDetailsParser.VersionPropsVersionElementSuffix}";
         }
 
         /// <summary>
@@ -67,7 +44,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public static string GetVersionPropsAlternatePackageVersionElementName(string dependencyName)
         {
-            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsAlternateVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionDetailsParser.VersionPropsAlternateVersionElementSuffix}";
         }
 
         public static string CalculateGlobalJsonElementName(string dependencyName)
