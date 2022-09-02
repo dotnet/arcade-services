@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using NuGet.Versioning;
+using System;
+
 namespace Microsoft.DotNet.DarcLib
 {
     /// <summary>
@@ -9,35 +12,12 @@ namespace Microsoft.DotNet.DarcLib
     /// </summary>
     public static class VersionFiles
     {
-        /// <summary>
-        ///     Locations of the version files within a repository.
-        /// </summary>
+        // Locations of the version files within a repository
         public const string VersionDetailsXml = "eng/Version.Details.xml";
         public const string VersionProps = "eng/Versions.props";
         public const string GlobalJson = "global.json";
         public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
-        public const string VersionPropsVersionElementSuffix = "PackageVersion";
-        public const string VersionPropsAlternateVersionElementSuffix = "Version";
-        public const string ShaElementName = "Sha";
-        public const string UriElementName = "Uri";
-        public const string DependencyElementName = "Dependency";
-        public const string DependenciesElementName = "Dependencies";
-        public const string NameAttributeName = "Name";
-        public const string VersionAttributeName = "Version";
-        public const string CoherentParentAttributeName = "CoherentParentDependency";
-        public const string ProductDependencyElementName = "ProductDependencies";
-        public const string ToolsetDependencyElementName = "ToolsetDependencies";
-        public const string PinnedAttributeName = "Pinned";
         public const string NugetConfig = "NuGet.config";
-        public const string AddElement = "add";
-        public const string ClearElement = "clear";
-        public const string KeyAttributeName = "key";
-        public const string ValueAttributeName = "value";
-        public const string SourceBuildElementName = "SourceBuild";
-        public const string SourceBuildOldElementName = "SourceBuildTarball";
-        public const string RepoNameAttributeName = "RepoName";
-        public const string ManagedOnlyAttributeName = "ManagedOnly";
-        public const string TarballOnlyAttributeName = "TarballOnly";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
@@ -52,7 +32,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Element name</returns>
         public static string GetVersionPropsPackageVersionElementName(string dependencyName)
         {
-            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionDetailsParser.VersionPropsVersionElementSuffix}";
         }
 
         /// <summary>
@@ -64,7 +44,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public static string GetVersionPropsAlternatePackageVersionElementName(string dependencyName)
         {
-            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsAlternateVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionDetailsParser.VersionPropsAlternateVersionElementSuffix}";
         }
 
         public static string CalculateGlobalJsonElementName(string dependencyName)
@@ -76,5 +56,64 @@ namespace Microsoft.DotNet.DarcLib
         {
             return dependencyName;
         }
+
+        /// <summary>
+        /// Reverse a version in the Arcade style (https://github.com/dotnet/arcade/blob/fb92b14d8cd07cf44f8f7eefa8ac58d7ffd05f3f/src/Microsoft.DotNet.Arcade.Sdk/tools/Version.BeforeCommonTargets.targets#L18)
+        /// back to an OfficialBuildId + ReleaseLabel which we can then supply to get the same resulting version number.
+        /// </summary>
+        /// <param name="repoName">The source build name of the repo to get the version info for.</param>
+        /// <param name="version">The complete version, e.g. 1.0.0-beta1-19720.5</param>
+        public static (string BuildId, string ReleaseLabel) DeriveBuildInfo(string repoName, string version)
+        {
+            const string fallbackBuildIdFormat = "yyyyMMdd.1";
+
+            var nugetVersion = new NuGetVersion(version);
+
+            if (string.IsNullOrWhiteSpace(nugetVersion.Release))
+            {
+                // Finalized version number (x.y.z) - probably not our code
+                // Application Insights, Newtonsoft.Json do this
+                return (DateTime.Now.ToString(fallbackBuildIdFormat), string.Empty);
+            }
+
+            var releaseParts = nugetVersion.Release.Split('-', '.');
+            if (repoName.Contains("nuget"))
+            {
+                // NuGet does this - arbitrary build IDs
+                return (DateTime.Now.ToString(fallbackBuildIdFormat), releaseParts[0]);
+            }
+
+            if (releaseParts.Length == 3)
+            {
+                // VSTest uses full dates for the first part of their preview build numbers
+                if (repoName.Contains("vstest"))
+                {
+                    return ($"{releaseParts[1]}.{releaseParts[2]}", releaseParts[0]);
+                }
+                
+                if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
+                {
+                    if (datePart > 1 && datePart < 8 && buildPart > 1000 && buildPart < 10000)
+                    {
+                        return (releaseParts[2], $"{releaseParts[0]}.{releaseParts[1]}");
+                    }
+                    
+                    return (VersionToDate(datePart, buildPart), releaseParts[0]);
+                }
+            }
+
+            if (releaseParts.Length == 4)
+            {
+                // New preview version style, e.g. 5.0.0-preview.7.20365.12
+                if (int.TryParse(releaseParts[2], out int datePart) && int.TryParse(releaseParts[3], out int buildPart))
+                {
+                    return (VersionToDate(datePart, buildPart), $"{releaseParts[0]}.{releaseParts[1]}");
+                }
+            }
+
+            throw new FormatException($"Can't derive a build ID from version {version} (release {string.Join(";", nugetVersion.Release.Split('-', '.'))})");
+        }
+
+        private static string VersionToDate(int date, int build) => $"20{date / 1000}{date % 1000 / 50:D2}{date % 50:D2}.{build}";
     }
 }

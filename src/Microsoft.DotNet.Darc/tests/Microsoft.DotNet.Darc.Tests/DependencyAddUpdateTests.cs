@@ -479,8 +479,8 @@ namespace Microsoft.DotNet.Darc.Tests
         [Test]
         public void CheckAlternateSuffix()
         {
-            VersionFiles.VersionPropsAlternateVersionElementSuffix.EndsWith(
-                         VersionFiles.VersionPropsVersionElementSuffix).Should().BeFalse();
+            VersionDetailsParser.VersionPropsAlternateVersionElementSuffix.EndsWith(
+                VersionDetailsParser.VersionPropsVersionElementSuffix).Should().BeFalse();
         }
 
         /// <summary>

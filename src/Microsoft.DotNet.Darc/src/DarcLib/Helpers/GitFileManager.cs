@@ -208,7 +208,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // Use a case-insensitive update.
-                XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionFiles.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
+                XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionDetailsParser.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
                     $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
 
                 if (versionList.Count != 1)
@@ -226,10 +226,10 @@ namespace Microsoft.DotNet.DarcLib
 
                 XmlNode nodeToUpdate = versionList.Item(0);
 
-                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.VersionAttributeName, itemToUpdate.Version);
-                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.NameAttributeName, itemToUpdate.Name);
-                SetElement(versionDetails, nodeToUpdate, VersionFiles.ShaElementName, itemToUpdate.Commit);
-                SetElement(versionDetails, nodeToUpdate, VersionFiles.UriElementName, itemToUpdate.RepoUri);
+                SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.VersionAttributeName, itemToUpdate.Version);
+                SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.NameAttributeName, itemToUpdate.Name);
+                SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.ShaElementName, itemToUpdate.Commit);
+                SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.UriElementName, itemToUpdate.RepoUri);
                 UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
             }
 
@@ -376,7 +376,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     // Remove the clear element wherever it is.
                     // It will be added when we add the maestro managed sources.
-                    else if (currentNode.Name.Equals(VersionFiles.ClearElement, StringComparison.OrdinalIgnoreCase))
+                    else if (currentNode.Name.Equals(VersionDetailsParser.ClearElement, StringComparison.OrdinalIgnoreCase))
                     {
                         currentNode = RemoveCurrentNode(currentNode);
                         continue;
@@ -562,7 +562,7 @@ namespace Microsoft.DotNet.DarcLib
         // <MaestroEndComment />
         private void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
         {
-            var clearNode = nugetConfig.CreateElement(VersionFiles.ClearElement);
+            var clearNode = nugetConfig.CreateElement(VersionDetailsParser.ClearElement);
             XmlNode currentNode = packageSourcesNode.PrependChild(clearNode);
 
             if (maestroManagedFeedsByRepo.Values.Count == 0)
@@ -596,10 +596,10 @@ namespace Microsoft.DotNet.DarcLib
 
                 foreach ((string key, string feed) in managedSources)
                 {
-                    var newElement = nugetConfig.CreateElement(VersionFiles.AddElement);
+                    var newElement = nugetConfig.CreateElement(VersionDetailsParser.AddElement);
 
-                    SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
-                    SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
+                    SetAttribute(nugetConfig, newElement, VersionDetailsParser.KeyAttributeName, key);
+                    SetAttribute(nugetConfig, newElement, VersionDetailsParser.ValueAttributeName, feed);
 
                     currentNode = packageSourcesNode.InsertAfter(newElement, currentNode);
                 }
@@ -648,30 +648,30 @@ namespace Microsoft.DotNet.DarcLib
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null);
 
-            XmlNode newDependency = versionDetails.CreateElement(VersionFiles.DependencyElementName);
+            XmlNode newDependency = versionDetails.CreateElement(VersionDetailsParser.DependencyElementName);
 
-            SetAttribute(versionDetails, newDependency, VersionFiles.NameAttributeName, dependency.Name);
-            SetAttribute(versionDetails, newDependency, VersionFiles.VersionAttributeName, dependency.Version);
+            SetAttribute(versionDetails, newDependency, VersionDetailsParser.NameAttributeName, dependency.Name);
+            SetAttribute(versionDetails, newDependency, VersionDetailsParser.VersionAttributeName, dependency.Version);
 
             // Only add the pinned attribute if the pinned option is set to true
             if (dependency.Pinned)
             {
-                SetAttribute(versionDetails, newDependency, VersionFiles.PinnedAttributeName, "True");
+                SetAttribute(versionDetails, newDependency, VersionDetailsParser.PinnedAttributeName, "True");
             }
 
             // Only add the coherent parent attribute if it is set
             if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
             {
-                SetAttribute(versionDetails, newDependency, VersionFiles.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
+                SetAttribute(versionDetails, newDependency, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
             }
 
-            SetElement(versionDetails, newDependency, VersionFiles.UriElementName, dependency.RepoUri);
-            SetElement(versionDetails, newDependency, VersionFiles.ShaElementName, dependency.Commit);
+            SetElement(versionDetails, newDependency, VersionDetailsParser.UriElementName, dependency.RepoUri);
+            SetElement(versionDetails, newDependency, VersionDetailsParser.ShaElementName, dependency.Commit);
 
-            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionFiles.DependenciesElementName}");
+            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
             if (dependenciesNode == null)
             {
-                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}{VersionFiles.DependenciesElementName}");
+                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
                 versionDetails.DocumentElement.AppendChild(dependenciesNode);
             }
             dependenciesNode.AppendChild(newDependency);
@@ -737,7 +737,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         foreach (XmlNode propertyNode in propertyGroupNode.ChildNodes)
                         {
-                            if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsVersionElementSuffix))
+                            if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionDetailsParser.VersionPropsVersionElementSuffix))
                             {
                                 XmlNode newPackageVersionElement = versionProps.CreateElement(
                                     packageVersionElementName,
@@ -751,7 +751,7 @@ namespace Microsoft.DotNet.DarcLib
                             // Test for alternate suffixes.  This will eventually be replaced by repo-level configuration:
                             // https://github.com/dotnet/arcade/issues/1095
                             else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
-                                VersionFiles.VersionPropsAlternateVersionElementSuffix))
+                                VersionDetailsParser.VersionPropsAlternateVersionElementSuffix))
                             {
                                 XmlNode newPackageVersionElement = versionProps.CreateElement(
                                     packageVersionAlternateElementName,
