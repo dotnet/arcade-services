@@ -35,7 +35,7 @@ steps:
     arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
   displayName: Convert Code Coverage to XML (powershell)
 
-- task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
+- task: reportgenerator@5
   displayName: ReportGenerator
   inputs:
     reports: $(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml
