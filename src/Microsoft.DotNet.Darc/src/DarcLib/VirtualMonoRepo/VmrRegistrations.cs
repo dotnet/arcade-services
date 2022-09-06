@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -38,8 +40,14 @@ public static class VmrRegistrations
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.TryAddTransient<IVmrManagerFactory, VmrManagerFactory>();
-        services.TryAddTransient<IVmrUpdater>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrUpdater().GetAwaiter().GetResult());
-        services.TryAddTransient<IVmrInitializer>(sp => sp.GetRequiredService<IVmrManagerFactory>().CreateVmrInitializer().GetAwaiter().GetResult());
+        services.TryAddTransient<IVmrDependencyTracker, VmrDependencyTracker>();
+        services.TryAddTransient<IVmrUpdater, VmrUpdater>();
+        services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
+        {
+            var configuration = sp.GetRequiredService<IVmrManagerConfiguration>();
+            var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
+            return mappingParser.ParseMappings(configuration.VmrPath).GetAwaiter().GetResult();
+        });
     }
 }

@@ -14,7 +14,7 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
     Dictionary<string, string> Versions { get; }
 
-    (string? Sha, string? Version) GetVersion(string repository);
+    (string? Sha, string? Version)? GetVersion(string repository);
     void UpdateVersion(string repository, string? sha, string? version);
 }
 
@@ -36,13 +36,19 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         Versions = versions;
     }
 
-    public (string? Sha, string? Version) GetVersion(string repository)
+    public (string? Sha, string? Version)? GetVersion(string repository)
     {
         var key = SanitizePropertyName(repository) + ShaPropertyName;
         Versions.TryGetValue(key, out var sha);
 
         key = SanitizePropertyName(repository) + PackageVersionPropertyName;
         Versions.TryGetValue(key, out var version);
+
+        if (sha is null && version is null)
+        {
+            return null;
+        }
+
         return (sha, version);
     }
 

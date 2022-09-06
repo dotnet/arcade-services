@@ -46,7 +46,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
-        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
+        if (_dependencyTracker.GetDependencyVersion(mapping).HasValue)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }

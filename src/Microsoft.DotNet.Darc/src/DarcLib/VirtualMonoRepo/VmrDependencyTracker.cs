@@ -57,9 +57,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         Mappings = mappings;
 
         _allVersionsFilePath = Path.Combine(VmrPath, GitInfoSourcesDir, AllVersionsPropsFile.FileName);
-        _repoVersions = new Lazy<AllVersionsPropsFile>(
-            () => AllVersionsPropsFile.DeserializeFromXml(_allVersionsFilePath),
-            LazyThreadSafetyMode.ExecutionAndPublication);
+        _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public (string? Sha, string? Version)? GetDependencyVersion(SourceMapping mapping)
@@ -85,6 +83,16 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));
+    }
+
+    private AllVersionsPropsFile LoadAllVersionsFile()
+    {
+        if (!File.Exists(_allVersionsFilePath))
+        {
+            return new AllVersionsPropsFile(new());
+        }
+
+        return AllVersionsPropsFile.DeserializeFromXml(_allVersionsFilePath);
     }
 
     private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(VmrPath, GitInfoSourcesDir, $"{mapping.Name}.props");
