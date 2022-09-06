@@ -24,7 +24,7 @@ public abstract class VmrManagerBase : IVmrManager
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
-    private readonly IVmrDependencyInfo _dependencyInfo;
+    private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -35,7 +35,7 @@ public abstract class VmrManagerBase : IVmrManager
     public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
 
     protected VmrManagerBase(
-        IVmrDependencyInfo dependencyInfo,
+        IVmrDependencyTracker dependencyInfo,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
@@ -258,7 +258,7 @@ public abstract class VmrManagerBase : IVmrManager
 
                 // Add src/[repo]/ prefixes to paths
                 content = pathSettingRegex
-                    .Replace(content, $"$1{VmrDependencyInfo.VmrSourcesDir}/{mapping.Name}/")
+                    .Replace(content, $"$1{VmrDependencyTracker.VmrSourcesDir}/{mapping.Name}/")
                     .Replace("\r\n", "\n");
 
                 await writer.WriteAsync(content);

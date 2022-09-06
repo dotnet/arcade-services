@@ -23,30 +23,30 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         Original commit: {remote}/commit/{newSha}
         """;
     
-    private readonly IVmrDependencyInfo _dependencyInfo;
+    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILogger<VmrUpdater> _logger;
 
     public VmrInitializer(
-        IVmrDependencyInfo dependencyInfo,
+        IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyInfo, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
-        _dependencyInfo = dependencyInfo;
+        _dependencyTracker = dependencyTracker;
         _logger = logger;
     }
 
     public async Task InitializeRepository(
         SourceMapping mapping,
         string? targetRevision,
-        string? packageVersion,
+        string? targetVersion,
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
-        if (_dependencyInfo.GetDependencyVersion(mapping) is not null)
+        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
@@ -66,8 +66,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        _dependencyInfo.UpdateDependencyVersion(mapping, commit.Id.Sha, packageVersion);
-        Commands.Stage(new Repository(_dependencyInfo.VmrPath), VmrDependencyInfo.GitInfoSourcesDir);
+        _dependencyTracker.UpdateDependencyVersion(mapping, commit.Id.Sha, targetVersion);
+        Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
@@ -92,7 +92,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         foreach (var (dependency, dependencyMapping) in await GetDependencies(mapping, cancellationToken))
         {
-            if (Directory.Exists(_dependencyInfo.GetRepoSourcesPath(dependencyMapping)))
+            if (Directory.Exists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
             {
                 _logger.LogDebug("Dependency {repo} has already been initialized", dependencyMapping.Name);
                 continue;

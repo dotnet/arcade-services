@@ -23,13 +23,13 @@ public class SourceMappingParser : ISourceMappingParser
 {
     public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string vmrPath)
     {
-        var mappingFilePath = Path.Combine(vmrPath, VmrDependencyInfo.VmrSourcesDir, VmrDependencyInfo.SourceMappingsFileName);
+        var mappingFilePath = Path.Combine(vmrPath, VmrDependencyTracker.VmrSourcesDir, VmrDependencyTracker.SourceMappingsFileName);
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {VmrDependencyInfo.SourceMappingsFileName} file in the VMR directory",
+                $"Failed to find {VmrDependencyTracker.SourceMappingsFileName} file in the VMR directory",
                 mappingFilePath);
         }
 
@@ -41,7 +41,7 @@ public class SourceMappingParser : ISourceMappingParser
 
         using var stream = File.Open(mappingFile.FullName, FileMode.Open);
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
-            ?? throw new Exception($"Failed to deserialize {VmrDependencyInfo.SourceMappingsFileName}");
+            ?? throw new Exception($"Failed to deserialize {VmrDependencyTracker.SourceMappingsFileName}");
 
         var patchesPath = settings.PatchesPath;
         if (patchesPath is not null)
@@ -59,13 +59,13 @@ public class SourceMappingParser : ISourceMappingParser
         if (setting.Name is null)
         {
             throw new InvalidOperationException(
-                $"Missing `{nameof(SourceMapping.Name).ToLower()}` in {VmrDependencyInfo.SourceMappingsFileName}");
+                $"Missing `{nameof(SourceMapping.Name).ToLower()}` in {VmrDependencyTracker.SourceMappingsFileName}");
         }
 
         if (setting.DefaultRemote is null)
         {
             throw new InvalidOperationException(
-                $"Missing `{nameof(SourceMapping.DefaultRemote).ToLower()}` in {VmrDependencyInfo.SourceMappingsFileName}");
+                $"Missing `{nameof(SourceMapping.DefaultRemote).ToLower()}` in {VmrDependencyTracker.SourceMappingsFileName}");
         }
 
         IEnumerable<string> include = setting.Include ?? Enumerable.Empty<string>();

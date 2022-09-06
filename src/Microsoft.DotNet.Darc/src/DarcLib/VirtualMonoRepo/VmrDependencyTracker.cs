@@ -11,7 +11,7 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrDependencyInfo
+public interface IVmrDependencyTracker
 {
     string VmrPath { get; }
 
@@ -30,7 +30,7 @@ public interface IVmrDependencyInfo
 /// Holds information about versions of individual repositories synchronized in the VMR.
 /// Uses the AllRepoVersions.props file as source of truth and propagates changes into the git-info files.
 /// </summary>
-public class VmrDependencyInfo : IVmrDependencyInfo
+public class VmrDependencyTracker : IVmrDependencyTracker
 {
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string VmrSourcesDir = "src";
@@ -48,7 +48,7 @@ public class VmrDependencyInfo : IVmrDependencyInfo
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public VmrDependencyInfo(
+    public VmrDependencyTracker(
         IVmrManagerConfiguration configuration,
         IReadOnlyCollection<SourceMapping> mappings)
     {
