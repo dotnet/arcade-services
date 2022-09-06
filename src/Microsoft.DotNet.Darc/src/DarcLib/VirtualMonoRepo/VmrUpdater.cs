@@ -414,9 +414,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var version = _dependencyTracker.GetDependencyVersion(mapping);
 
-        if (!version.HasValue)
+        if (!version.HasValue || version.Value.Sha is null)
         {
-            throw new InvalidOperationException($"Missing tag file for {mapping.Name} - please initialize the individual repo first");
+            throw new InvalidOperationException($"Repository {mapping.Name} has not been initialized yet");
         }
 
         return version.Value.Sha;
