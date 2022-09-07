@@ -56,28 +56,36 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     public VmrUpdater(
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration,
         IReadOnlyCollection<SourceMapping> mappings)
-        : base(processManager, remoteFactory, logger, mappings, configuration.VmrPath, configuration.TmpPath)
+        : base(processManager, remoteFactory, versionDetailsParser, logger, mappings, configuration.VmrPath, configuration.TmpPath)
     {
         _logger = logger;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
     }
 
-    public async Task UpdateVmr(SourceMapping mapping, string? targetRevision, bool noSquash, CancellationToken cancellationToken)
+    public Task UpdateRepository(
+        SourceMapping mapping,
+        string? targetRevision,
+        bool noSquash,
+        bool updateDependencies,
+        CancellationToken cancellationToken)
     {
-        var tagFile = GetTagFilePath(mapping);
-        string currentSha;
-        try
-        {
-            currentSha = File.ReadAllText(tagFile).Trim();
-        }
-        catch (FileNotFoundException)
-        {
-            throw new InvalidOperationException($"Missing tag file for {mapping.Name} - please init the individual repo first");
-        }
+        return updateDependencies
+            ? UpdateRepositoryRecursively(mapping, targetRevision, noSquash, cancellationToken)
+            : UpdateRepository(mapping, targetRevision, noSquash, cancellationToken);
+    }
+
+    private async Task UpdateRepository(
+        SourceMapping mapping,
+        string? targetRevision,
+        bool noSquash,
+        CancellationToken cancellationToken)
+    {
+        var currentSha = await GetCurrentVersion(mapping);
 
         if (!await HasRemoteUpdates(mapping, currentSha))
         {
@@ -101,12 +109,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             _logger.LogInformation("No new commits found to synchronize");
             return;
-        }
-
-        if (currentCommit.Committer.When > targetCommit.Committer.When)
-        {
-            throw new InvalidOperationException($"Target revision {targetRevision} is older than current ({currentSha})! " +
-                $"Synchronizing backwards is not allowed");
         }
 
         using var repo = new Repository(clonePath);
@@ -143,7 +145,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (commitsToCopy.Count == 0)
         {
-            throw new EmptySyncException($"Found no commits between {currentSha} and {targetRevision} when synchronizing {mapping.Name}");
+            // TODO: https://github.com/dotnet/arcade/issues/10550 - enable synchronization between arbitrary commits
+            throw new EmptySyncException($"Found no commits between {currentSha} and {targetRevision} " +
+                $"when synchronizing {mapping.Name}");
         }
 
         // When we go one by one, we basically "copy" the commits.
@@ -202,6 +206,61 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 DotnetBotCommitSignature,
                 cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Updates a repository and all of it's dependencies recursively starting with a given mapping.
+    /// Always updates to the first version found per repository in the dependency tree.
+    /// </summary>
+    private async Task UpdateRepositoryRecursively(
+        SourceMapping mapping,
+        string? targetRevision,
+        bool noSquash,
+        CancellationToken cancellationToken)
+    {
+        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision)>();
+        reposToUpdate.Enqueue((mapping, targetRevision));
+
+        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision)>();
+
+        while (reposToUpdate.TryDequeue(out var repoToUpdate))
+        {
+            var mappingToUpdate = repoToUpdate.mapping;
+
+            _logger.LogInformation("Recursively updating dependency {repo} / {commit}",
+                mappingToUpdate.Name,
+                repoToUpdate.targetRevision ?? HEAD);
+
+            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, noSquash, cancellationToken);
+            updatedDependencies.Add(repoToUpdate);
+
+            foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
+            {
+                if (updatedDependencies.Any(d => d.mapping == dependencyMapping))
+                {
+                    continue;
+                }
+
+                var dependencySha = await GetCurrentVersion(dependencyMapping);
+                if (dependencySha == dependency.Commit)
+                {
+                    _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
+                    continue;
+                }
+
+                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit));
+            }
+        }
+
+        var summaryMessage = new StringBuilder();
+        summaryMessage.AppendLine("Recursive update finished. Updated repositories:");
+
+        foreach (var update in updatedDependencies)
+        {
+            summaryMessage.AppendLine($"  - {update.mapping.Name} / {update.targetRevision ?? HEAD}");
+        }
+
+        _logger.LogInformation("{summary}", summaryMessage);
     }
 
     /// <summary>
@@ -338,5 +397,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         return files;
+    }
+
+    private async Task<string> GetCurrentVersion(SourceMapping mapping)
+    {
+        var tagFile = GetTagFilePath(mapping);
+        string currentSha;
+        try
+        {
+            currentSha = (await File.ReadAllTextAsync(tagFile)).Trim();
+        }
+        catch (FileNotFoundException)
+        {
+            throw new InvalidOperationException($"Missing tag file for {mapping.Name} - please initialize the individual repo first");
+        }
+
+        return currentSha;
     }
 }

@@ -30,6 +30,7 @@ public abstract class VmrManagerBase
     private readonly ILogger<VmrUpdater> _logger;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly string _tagsPath;
     private readonly string _tmpPath;
 
@@ -42,6 +43,7 @@ public abstract class VmrManagerBase
     protected VmrManagerBase(
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IReadOnlyCollection<SourceMapping> mappings,
         string vmrPath,
@@ -50,6 +52,7 @@ public abstract class VmrManagerBase
         _logger = logger;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
+        _versionDetailsParser = versionDetailsParser;
         _tmpPath = tmpPath;
         VmrPath = vmrPath;
         SourcesPath = Path.Combine(vmrPath, VmrSourcesPath);
@@ -310,6 +313,41 @@ public abstract class VmrManagerBase
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
+    }
+
+    /// <summary>
+    /// Parses Version.Details.xml of a given mapping and returns the list of source build dependencies (+ their mapping).
+    /// </summary>
+    protected async Task<IList<(DependencyDetail dependency, SourceMapping mapping)>> GetDependencies(
+        SourceMapping mapping,
+        CancellationToken cancellationToken)
+    {
+        var versionDetailsPath = Path.Combine(
+            GetRepoSourcesPath(mapping),
+            VersionFiles.VersionDetailsXml.Replace('/', Path.DirectorySeparatorChar));
+
+        var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
+
+        var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent, true)
+            .Where(dep => dep.SourceBuild is not null);
+
+        var result = new List<(DependencyDetail, SourceMapping)>();
+
+        foreach (var dependency in dependencies)
+        {
+            var dependencyMapping = Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName);
+
+            if (dependencyMapping is null)
+            {
+                throw new InvalidOperationException(
+                    $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
+                    $"for a {VersionFiles.VersionDetailsXml} dependency {dependency.Name}");
+            }
+
+            result.Add((dependency, dependencyMapping));
+        }
+
+        return result;
     }
 
     protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");

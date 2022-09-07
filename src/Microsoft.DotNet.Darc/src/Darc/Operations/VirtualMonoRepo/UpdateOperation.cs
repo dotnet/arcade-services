@@ -25,7 +25,8 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
         IVmrUpdater vmrManager,
         SourceMapping mapping,
         string? targetRevision,
+        bool recursive,
         CancellationToken cancellationToken)
         =>
-        await vmrManager.UpdateVmr(mapping, targetRevision, _options.NoSquash, cancellationToken);
+        await vmrManager.UpdateRepository(mapping, targetRevision, _options.NoSquash, recursive, cancellationToken);
 }
