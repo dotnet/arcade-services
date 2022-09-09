@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
@@ -48,6 +49,12 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
 
     public void SerializeToXml(string path)
     {
+        var parentDir = Path.GetDirectoryName(path) ?? throw new ArgumentException($"'{path}' is not a valid path.");
+        if (!Directory.Exists(parentDir))
+        {
+            Directory.CreateDirectory(parentDir);
+        }
+        
         XmlSerializer serializer = new XmlSerializer(typeof(XmlElement));
         var xmlDocument = new XmlDocument();
         XmlElement root = xmlDocument.CreateElement(ProjectPropertyName);
