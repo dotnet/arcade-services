@@ -11,6 +11,8 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+public record VmrDependencyVersion(string Sha, string? PackageVersion);
+
 public interface IVmrDependencyTracker
 {
     string VmrPath { get; }
@@ -21,9 +23,9 @@ public interface IVmrDependencyTracker
 
     string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(SourcesPath, mapping.Name);
 
-    void UpdateDependencyVersion(SourceMapping mapping, string sha, string? version);
+    void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
 
-    (string? Sha, string? Version)? GetDependencyVersion(SourceMapping mapping);
+    VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
 
 /// <summary>
@@ -37,7 +39,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public const string GitInfoSourcesDir = "git-info";
 
     // TODO: https://github.com/dotnet/source-build/issues/2250
-    private const string DefaultVersion = "7.0.100";
+    private const string DefaultVersion = "8.0.100";
 
     private readonly Lazy<AllVersionsPropsFile> _repoVersions;
     private readonly string _allVersionsFilePath;
@@ -60,26 +62,29 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public (string? Sha, string? Version)? GetDependencyVersion(SourceMapping mapping)
+    public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _repoVersions.Value.GetVersion(mapping.Name);
 
-    public void UpdateDependencyVersion(SourceMapping mapping, string sha, string? version)
+    public void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)
     {
         // TODO: https://github.com/dotnet/source-build/issues/2250
-        version ??= DefaultVersion;
+        if (version.PackageVersion is null)
+        {
+            version = version with { PackageVersion = DefaultVersion };
+        }
 
-        _repoVersions.Value.UpdateVersion(mapping.Name, sha, version);
+        _repoVersions.Value.UpdateVersion(mapping.Name, version);
         _repoVersions.Value.SerializeToXml(_allVersionsFilePath);
 
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version);
+        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version.PackageVersion);
         
         var gitInfo = new GitInfoFile
         {
-            GitCommitHash = sha,
+            GitCommitHash = version.Sha,
             OfficialBuildId = buildId,
             PreReleaseVersionLabel = releaseLabel,
             IsStable = string.IsNullOrWhiteSpace(releaseLabel),
-            OutputPackageVersion = version,
+            OutputPackageVersion = version.PackageVersion,
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));

@@ -308,7 +308,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, toRevision, targetVersion);
+        _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -414,11 +414,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var version = _dependencyTracker.GetDependencyVersion(mapping);
 
-        if (!version.HasValue || version.Value.Sha is null)
+        if (version is null)
         {
             throw new InvalidOperationException($"Repository {mapping.Name} has not been initialized yet");
         }
 
-        return version.Value.Sha;
+        return version.Sha;
     }
 }

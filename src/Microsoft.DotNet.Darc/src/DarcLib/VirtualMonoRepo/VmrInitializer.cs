@@ -46,7 +46,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
-        if (_dependencyTracker.GetDependencyVersion(mapping).HasValue)
+        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
@@ -66,7 +66,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, commit.Id.Sha, targetVersion);
+        _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 

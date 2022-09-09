@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -14,8 +15,8 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
     Dictionary<string, string> Versions { get; }
 
-    (string? Sha, string? Version)? GetVersion(string repository);
-    void UpdateVersion(string repository, string? sha, string? version);
+    VmrDependencyVersion? GetVersion(string repository);
+    void UpdateVersion(string repository, VmrDependencyVersion version);
 }
 
 /// <summary>
@@ -36,38 +37,38 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         Versions = versions;
     }
 
-    public (string? Sha, string? Version)? GetVersion(string repository)
+    public VmrDependencyVersion? GetVersion(string repository)
     {
         var key = SanitizePropertyName(repository) + ShaPropertyName;
         Versions.TryGetValue(key, out var sha);
 
-        key = SanitizePropertyName(repository) + PackageVersionPropertyName;
-        Versions.TryGetValue(key, out var version);
-
-        if (sha is null && version is null)
+        if (sha is null)
         {
             return null;
         }
 
-        return (sha, version);
+        key = SanitizePropertyName(repository) + PackageVersionPropertyName;
+        Versions.TryGetValue(key, out var version);
+
+        return new(sha, version);
     }
 
-    public void UpdateVersion(string repository, string? sha, string? version)
+    public void UpdateVersion(string repository, VmrDependencyVersion version)
     {
         var key = SanitizePropertyName(repository);
 
-        if (sha is not null)
+        if (version.Sha is not null)
         {
-            Versions[key + ShaPropertyName] = sha;
+            Versions[key + ShaPropertyName] = version.Sha;
         }
         else if (Versions.ContainsKey(key + ShaPropertyName))
         {
             Versions.Remove(key + ShaPropertyName);
         }
 
-        if (version is not null)
+        if (version.PackageVersion is not null)
         {
-            Versions[key + PackageVersionPropertyName] = version;
+            Versions[key + PackageVersionPropertyName] = version.PackageVersion;
         }
         else if (Versions.ContainsKey(key + PackageVersionPropertyName))
         {

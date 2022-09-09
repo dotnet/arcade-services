@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -41,21 +42,21 @@ public class AllVersionsPropsFileTests
     [Test]
     public void AllVersionsPropsFileIsDeSerializedTest()
     {
-        string runtimeSha = "26a71c61fbda229f151afb14e274604b4926df5c";
-        string runtimeVersion = "7.0.0-rc.1.22403.8";
+        var runtimeVersion = new VmrDependencyVersion("26a71c61fbda229f151afb14e274604b4926df5c", "7.0.0-rc.1.22403.8");
+        var sdkVersion = new VmrDependencyVersion("6e00e543bbeb8e0491420e2f6b3f7d235166596d", "7.0.100-rc.1.22404.18");
 
         var allVersionsPropsFile = new AllVersionsPropsFile(new()
         {
-            { "runtimeGitCommitHash", runtimeSha },
-            { "runtimeOutputPackageVersion", runtimeVersion },
-            { "sdkGitCommitHash", "6e00e543bbeb8e0491420e2f6b3f7d235166596d" },
-            { "sdkOutputPackageVersion", "7.0.100-rc.1.22404.18" },
+            { "runtimeGitCommitHash", runtimeVersion.Sha },
+            { "runtimeOutputPackageVersion", runtimeVersion.PackageVersion! },
+            { "sdkGitCommitHash", sdkVersion.Sha },
+            { "sdkOutputPackageVersion", sdkVersion.PackageVersion! },
         });
 
         void VerifyVersions()
         {
-            allVersionsPropsFile.GetVersion("runtime").Should().Be((runtimeSha, runtimeVersion));
-            allVersionsPropsFile.GetVersion("sdk").Should().Be(("6e00e543bbeb8e0491420e2f6b3f7d235166596d", "7.0.100-rc.1.22404.18"));
+            allVersionsPropsFile.GetVersion("runtime").Should().Be(runtimeVersion);
+            allVersionsPropsFile.GetVersion("sdk").Should().Be(sdkVersion);
         }
         
         VerifyVersions();
@@ -68,10 +69,10 @@ public class AllVersionsPropsFileTests
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
               <PropertyGroup>
-                <runtimeGitCommitHash>{runtimeSha}</runtimeGitCommitHash>
-                <runtimeOutputPackageVersion>{runtimeVersion}</runtimeOutputPackageVersion>
-                <sdkGitCommitHash>6e00e543bbeb8e0491420e2f6b3f7d235166596d</sdkGitCommitHash>
-                <sdkOutputPackageVersion>7.0.100-rc.1.22404.18</sdkOutputPackageVersion>
+                <runtimeGitCommitHash>{runtimeVersion.Sha}</runtimeGitCommitHash>
+                <runtimeOutputPackageVersion>{runtimeVersion.PackageVersion}</runtimeOutputPackageVersion>
+                <sdkGitCommitHash>{sdkVersion.Sha}</sdkGitCommitHash>
+                <sdkOutputPackageVersion>{sdkVersion.PackageVersion}</sdkOutputPackageVersion>
               </PropertyGroup>
             </Project>
             """);
@@ -80,12 +81,12 @@ public class AllVersionsPropsFileTests
 
         VerifyVersions();
 
-        var newRuntimeSha = "225ce682f0578db2db5644df5e7024276b39785e";
-        var newRuntimeVersion = "7.0.0-rc.1.22403.8";
-        allVersionsPropsFile.UpdateVersion("runtime", newRuntimeSha, newRuntimeVersion);
+        runtimeVersion = new VmrDependencyVersion("225ce682f0578db2db5644df5e7024276b39785e", "7.0.0-rc.1.22444.8");
 
-        allVersionsPropsFile.GetVersion("runtime").Should().Be((newRuntimeSha, newRuntimeVersion));
-        allVersionsPropsFile.GetVersion("sdk").Should().Be(("6e00e543bbeb8e0491420e2f6b3f7d235166596d", "7.0.100-rc.1.22404.18"));
+        allVersionsPropsFile.UpdateVersion("runtime", runtimeVersion);
+
+        allVersionsPropsFile.GetVersion("runtime").Should().Be(runtimeVersion);
+        allVersionsPropsFile.GetVersion("sdk").Should().Be(sdkVersion);
 
         allVersionsPropsFile.SerializeToXml(_outputFile);
 
@@ -95,10 +96,10 @@ public class AllVersionsPropsFileTests
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
               <PropertyGroup>
-                <runtimeGitCommitHash>{newRuntimeSha}</runtimeGitCommitHash>
-                <runtimeOutputPackageVersion>{newRuntimeVersion}</runtimeOutputPackageVersion>
-                <sdkGitCommitHash>6e00e543bbeb8e0491420e2f6b3f7d235166596d</sdkGitCommitHash>
-                <sdkOutputPackageVersion>7.0.100-rc.1.22404.18</sdkOutputPackageVersion>
+                <runtimeGitCommitHash>{runtimeVersion.Sha}</runtimeGitCommitHash>
+                <runtimeOutputPackageVersion>{runtimeVersion.PackageVersion}</runtimeOutputPackageVersion>
+                <sdkGitCommitHash>{sdkVersion.Sha}</sdkGitCommitHash>
+                <sdkOutputPackageVersion>{sdkVersion.PackageVersion}</sdkOutputPackageVersion>
               </PropertyGroup>
             </Project>
             """);
