@@ -20,10 +20,21 @@
     "Database": "engineeringdata"
   },
 
-  "AzureDevOpsClientOptions": {
+  "AzureDevOpsSettings": {
     "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-    "Organization": "dnceng",
-    "BaseUrl": "https://dev.azure.com",
-    "MaxParallelRequests": 4
+    "Settings": [
+      {
+        "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+        "CollectionUri": "https://dev.azure.com/dnceng/",
+        "OrgId": "dnceng",
+        "MaxParallelRequests": 4
+      },
+      {
+        "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+        "CollectionUri": "https://dev.azure.com/dnceng-public",
+        "OrgId": "dnceng-public",
+        "MaxParallelRequests": 4
+      }
+   ]
   }
 }

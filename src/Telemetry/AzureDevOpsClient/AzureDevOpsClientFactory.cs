@@ -4,7 +4,9 @@
 
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
 using System.Net.Http;
+
 
 namespace Microsoft.DotNet.Internal.AzureDevOps
 {
@@ -23,12 +25,18 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             int maxParallelRequests,
             string accessToken)
         {
-            return new AzureDevOpsClient(new OptionsWrapper<AzureDevOpsClientOptions>(new AzureDevOpsClientOptions()
+            return new AzureDevOpsClient(new OptionsWrapper<AzureDevOpsClientOptions>(new AzureDevOpsClientOptions
             {
-                AccessToken = accessToken,
-                BaseUrl = baseUrl,
-                Organization = organization,
-                MaxParallelRequests = maxParallelRequests
+                Settings = new List<AzureDevOpsSettings>()
+                {
+                    new AzureDevOpsSettings
+                    { 
+                      AccessToken = accessToken,
+                      BaseUrl = baseUrl,
+                      Organization = organization,
+                      MaxParallelRequests = maxParallelRequests
+                    }
+                }
             }), _httpClientFactory);
         }
     }
