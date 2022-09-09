@@ -67,7 +67,7 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
 
         if (version is not null)
         {
-            Versions[key + ShaPropertyName] = version;
+            Versions[key + PackageVersionPropertyName] = version;
         }
         else if (Versions.ContainsKey(key + PackageVersionPropertyName))
         {
