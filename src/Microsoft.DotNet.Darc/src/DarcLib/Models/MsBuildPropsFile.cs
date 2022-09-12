@@ -49,10 +49,10 @@ public abstract class MsBuildPropsFile : IMsBuildPropsFile
 
     public void SerializeToXml(string path)
     {
-        var parentDir = Path.GetDirectoryName(path) ?? throw new ArgumentException($"'{path}' is not a valid path.");
-        if (!Directory.Exists(parentDir))
+        var directory = Path.GetDirectoryName(path) ?? throw new ArgumentException($"'{path}' is not a valid path.");
+        if (!Directory.Exists(directory))
         {
-            Directory.CreateDirectory(parentDir);
+            Directory.CreateDirectory(directory);
         }
         
         XmlSerializer serializer = new XmlSerializer(typeof(XmlElement));
