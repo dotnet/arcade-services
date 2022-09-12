@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -14,8 +15,8 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
     Dictionary<string, string> Versions { get; }
 
-    (string? Sha, string? Version) GetVersion(string repository);
-    void UpdateVersion(string repository, string sha, string version);
+    VmrDependencyVersion? GetVersion(string repository);
+    void UpdateVersion(string repository, string sha, string packageVersion);
 }
 
 /// <summary>
@@ -36,21 +37,27 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         Versions = versions;
     }
 
-    public (string? Sha, string? Version) GetVersion(string repository)
+    public VmrDependencyVersion? GetVersion(string repository)
     {
         var key = SanitizePropertyName(repository) + ShaPropertyName;
         Versions.TryGetValue(key, out var sha);
 
+        if (sha is null)
+        {
+            return null;
+        }
+
         key = SanitizePropertyName(repository) + PackageVersionPropertyName;
         Versions.TryGetValue(key, out var version);
-        return (sha, version);
+
+        return new(sha, version);
     }
 
-    public void UpdateVersion(string repository, string sha, string version)
+    public void UpdateVersion(string repository, string sha, string packageVersion)
     {
         var key = SanitizePropertyName(repository);
         Versions[key + ShaPropertyName] = sha;
-        Versions[key + PackageVersionPropertyName] = version;
+        Versions[key + PackageVersionPropertyName] = packageVersion;
     }
 
     public static AllVersionsPropsFile DeserializeFromXml(string path)

@@ -18,47 +18,36 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public abstract class VmrManagerBase
+public abstract class VmrManagerBase : IVmrManager
 {
     protected const string HEAD = "HEAD";
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
-    public const string VmrSourcesPath = "src";
-    public const string SourceMappingsFileName = "source-mappings.json";
-
-    private readonly ILogger<VmrUpdater> _logger;
+    private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly string _tagsPath;
+    private readonly ILogger _logger;
+    
     private readonly string _tmpPath;
 
-    protected string VmrPath { get; }
-
-    protected string SourcesPath { get; }
-
-    public IReadOnlyCollection<SourceMapping> Mappings { get; }
+    public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
 
     protected VmrManagerBase(
+        IVmrDependencyTracker dependencyInfo,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
-        IReadOnlyCollection<SourceMapping> mappings,
-        string vmrPath,
         string tmpPath)
     {
         _logger = logger;
+        _dependencyInfo = dependencyInfo;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
         _versionDetailsParser = versionDetailsParser;
         _tmpPath = tmpPath;
-        VmrPath = vmrPath;
-        SourcesPath = Path.Combine(vmrPath, VmrSourcesPath);
-        _tagsPath = Path.Combine(SourcesPath, ".tags");
-
-        Mappings = mappings;
     }
 
     /// <summary>
@@ -87,26 +76,6 @@ public abstract class VmrManagerBase
         remoteRepo.Clone(mapping.DefaultRemote, mapping.DefaultRef, clonePath, checkoutSubmodules: false, null);
 
         return clonePath;
-    }
-
-    /// <summary>
-    /// Notes down the current SHA the given repo is synchronized to into a file inside the VMR.
-    /// </summary>
-    /// <param name="mapping">Repository</param>
-    /// <param name="commitId">SHA</param>
-    protected async Task TagRepo(SourceMapping mapping, string commitId)
-    {
-        if (!Directory.Exists(_tagsPath))
-        {
-            Directory.CreateDirectory(_tagsPath);
-        }
-
-        var tagFile = GetTagFilePath(mapping);
-        await File.WriteAllTextAsync(tagFile, commitId);
-
-        // Stage the tag file
-        using var repository = new Repository(VmrPath);
-        Commands.Stage(repository, tagFile);
     }
 
     /// <summary>
@@ -179,15 +148,15 @@ public abstract class VmrManagerBase
     protected async Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
     {
         // We have to give git a relative path with forward slashes where to apply the patch
-        var destPath = GetRepoSourcesPath(mapping)
-            .Replace(VmrPath, null)
+        var destPath = _dependencyInfo.GetRepoSourcesPath(mapping)
+            .Replace(_dependencyInfo.VmrPath, null)
             .Replace("\\", "/")
             [1..];
 
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patchPath, destPath);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
+        (await _processManager.ExecuteGit(_dependencyInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         Directory.CreateDirectory(destPath);
@@ -213,7 +182,7 @@ public abstract class VmrManagerBase
             patchPath,
         };
 
-        var result = await _processManager.ExecuteGit(VmrPath, args, cancellationToken: CancellationToken.None);
+        var result = await _processManager.ExecuteGit(_dependencyInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
 
@@ -222,7 +191,7 @@ public abstract class VmrManagerBase
         // This will end up having the working tree all staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(VmrPath, args, cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(_dependencyInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to clean the working tree");
         _logger.LogDebug("{output}", result.ToString());
     }
@@ -264,14 +233,14 @@ public abstract class VmrManagerBase
         // Matches the 'path = ' setting from the .gitmodules file so that we can prefix it
         var pathSettingRegex = new Regex(@"(\bpath[ \t]*\=[ \t]*\b)");
 
-        using (var vmrGitmodule = File.Open(Path.Combine(VmrPath, gitmodulesFileName), FileMode.Create))
+        using (var vmrGitmodule = File.Open(Path.Combine(_dependencyInfo.VmrPath, gitmodulesFileName), FileMode.Create))
         using (var writer = new StreamWriter(vmrGitmodule) { NewLine = "\n" })
         {
             foreach (var mapping in Mappings)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var repoGitmodulePath = Path.Combine(GetRepoSourcesPath(mapping), gitmodulesFileName);
+                var repoGitmodulePath = Path.Combine(_dependencyInfo.GetRepoSourcesPath(mapping), gitmodulesFileName);
                 if (!File.Exists(repoGitmodulePath))
                 {
                     continue;
@@ -289,7 +258,7 @@ public abstract class VmrManagerBase
 
                 // Add src/[repo]/ prefixes to paths
                 content = pathSettingRegex
-                    .Replace(content, $"$1{VmrSourcesPath}/{mapping.Name}/")
+                    .Replace(content, $"$1{VmrDependencyTracker.VmrSourcesDir}/{mapping.Name}/")
                     .Replace("\r\n", "\n");
 
                 await writer.WriteAsync(content);
@@ -300,7 +269,7 @@ public abstract class VmrManagerBase
             }
         }
 
-        (await _processManager.ExecuteGit(VmrPath, new[] { "add", gitmodulesFileName }, cancellationToken))
+        (await _processManager.ExecuteGit(_dependencyInfo.VmrPath, new[] { "add", gitmodulesFileName }, cancellationToken))
             .ThrowIfFailed("Failed to stage the .gitmodules file!");
     }
 
@@ -309,7 +278,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new Repository(VmrPath);
+        using var repository = new Repository(_dependencyInfo.VmrPath);
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
@@ -323,7 +292,7 @@ public abstract class VmrManagerBase
         CancellationToken cancellationToken)
     {
         var versionDetailsPath = Path.Combine(
-            GetRepoSourcesPath(mapping),
+            _dependencyInfo.GetRepoSourcesPath(mapping),
             VersionFiles.VersionDetailsXml.Replace('/', Path.DirectorySeparatorChar));
 
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
@@ -352,11 +321,7 @@ public abstract class VmrManagerBase
 
     protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
 
-    protected string GetTagFilePath(SourceMapping mapping) => Path.Combine(_tagsPath, $".{mapping.Name}");
-
     protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
-
-    protected string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(SourcesPath, mapping.Name);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.
