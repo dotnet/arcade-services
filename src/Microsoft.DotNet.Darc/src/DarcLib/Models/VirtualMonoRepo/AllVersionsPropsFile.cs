@@ -16,7 +16,7 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
     Dictionary<string, string> Versions { get; }
 
     VmrDependencyVersion? GetVersion(string repository);
-    void UpdateVersion(string repository, VmrDependencyVersion version);
+    void UpdateVersion(string repository, string sha, string packageVersion);
 }
 
 /// <summary>
@@ -53,27 +53,11 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         return new(sha, version);
     }
 
-    public void UpdateVersion(string repository, VmrDependencyVersion version)
+    public void UpdateVersion(string repository, string sha, string packageVersion)
     {
         var key = SanitizePropertyName(repository);
-
-        if (version.Sha is not null)
-        {
-            Versions[key + ShaPropertyName] = version.Sha;
-        }
-        else if (Versions.ContainsKey(key + ShaPropertyName))
-        {
-            Versions.Remove(key + ShaPropertyName);
-        }
-
-        if (version.PackageVersion is not null)
-        {
-            Versions[key + PackageVersionPropertyName] = version.PackageVersion;
-        }
-        else if (Versions.ContainsKey(key + PackageVersionPropertyName))
-        {
-            Versions.Remove(key + PackageVersionPropertyName);
-        }
+        Versions[key + ShaPropertyName] = sha;
+        Versions[key + PackageVersionPropertyName] = packageVersion;
     }
 
     public static AllVersionsPropsFile DeserializeFromXml(string path)

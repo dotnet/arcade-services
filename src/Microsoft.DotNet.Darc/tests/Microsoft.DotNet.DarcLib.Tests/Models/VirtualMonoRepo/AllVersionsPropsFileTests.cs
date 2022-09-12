@@ -83,7 +83,7 @@ public class AllVersionsPropsFileTests
 
         runtimeVersion = new VmrDependencyVersion("225ce682f0578db2db5644df5e7024276b39785e", "7.0.0-rc.1.22444.8");
 
-        allVersionsPropsFile.UpdateVersion("runtime", runtimeVersion);
+        allVersionsPropsFile.UpdateVersion("runtime", runtimeVersion.Sha, runtimeVersion.PackageVersion!);
 
         allVersionsPropsFile.GetVersion("runtime").Should().Be(runtimeVersion);
         allVersionsPropsFile.GetVersion("sdk").Should().Be(sdkVersion);

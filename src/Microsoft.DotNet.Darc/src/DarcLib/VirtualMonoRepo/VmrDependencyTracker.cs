@@ -73,7 +73,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             version = version with { PackageVersion = DefaultVersion };
         }
 
-        _repoVersions.Value.UpdateVersion(mapping.Name, version);
+        _repoVersions.Value.UpdateVersion(mapping.Name, version.Sha, version.PackageVersion);
         _repoVersions.Value.SerializeToXml(_allVersionsFilePath);
 
         var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version.PackageVersion);
