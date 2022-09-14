@@ -17,6 +17,11 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+/// <summary>
+/// This class is able to update an individual repository within the VMR from one commit to another.
+/// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
+/// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
     // Message shown when synchronizing a single commit
@@ -42,7 +47,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private readonly ILogger<VmrUpdater> _logger;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVmrPatchHandler _patchHandler;
 
@@ -58,7 +62,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
-        _processManager = processManager;
         _remoteFactory = remoteFactory;
         _patchHandler = patchHandler;
     }

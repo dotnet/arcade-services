@@ -13,6 +13,11 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+/// <summary>
+/// This class is able to initialize an individual repository within the VMR for the first time.
+/// It pulls in the new sources adhering to cloaking rules, accommodating for patched files, resolving submodules.
+/// It can also initialize all other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// </summary>
 public class VmrInitializer : VmrManagerBase, IVmrInitializer
 {
     // Message shown when initializing an individual repo for the first time
