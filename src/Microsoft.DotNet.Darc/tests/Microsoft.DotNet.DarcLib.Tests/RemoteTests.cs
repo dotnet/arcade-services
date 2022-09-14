@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
         {
             Mock<IGitRepo> client = new Mock<IGitRepo>();
             Mock<IBarClient> barClient = new Mock<IBarClient>();
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
             MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
             {
                 DeleteSourceBranch = true,
@@ -81,7 +82,7 @@ Coherency Update:
 
             var logger = new NUnitLogger();
 
-            Remote remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(), logger);
+            Remote remote = new Remote(client.Object, gitFileManagerMock.Object, barClient.Object, logger);
 
             await remote.MergeDependencyPullRequestAsync(
                 "https://github.com/test/test2",

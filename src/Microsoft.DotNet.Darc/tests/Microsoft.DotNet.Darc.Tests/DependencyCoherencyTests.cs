@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
-using Octokit;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
@@ -70,7 +68,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            updates.Should().SatisfyRespectively(            u =>
+            updates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -105,7 +103,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            updates.Should().SatisfyRespectively(            u =>
+            updates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -136,7 +134,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            updates.Should().SatisfyRespectively(            u =>
+            updates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -181,7 +179,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -229,7 +227,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -241,7 +239,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            coherencyUpdates.Should().SatisfyRespectively(            u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depB);
                 u.To.Version.Should().Be("v10");
@@ -265,7 +263,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -303,7 +301,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -328,7 +326,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -365,7 +363,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depA);
                 u.To.Version.Should().Be("v2");
@@ -388,7 +386,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -432,7 +430,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            coherencyUpdates.Should().SatisfyRespectively(            u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depC);
                 u.To.Version.Should().Be("v1000");
@@ -458,7 +456,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -511,7 +509,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            coherencyUpdates.Should().SatisfyRespectively(            u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
             {
                 u.From.Should().Be(depC);
                 u.To.Version.Should().Be("v1000");
@@ -541,7 +539,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -589,7 +587,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -625,7 +623,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -662,7 +660,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -683,7 +681,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates = 
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
@@ -703,7 +701,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -734,7 +732,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
@@ -759,7 +757,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -796,7 +794,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
@@ -823,7 +821,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -849,7 +847,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
@@ -870,7 +868,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -896,14 +894,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }
@@ -921,7 +919,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -950,14 +948,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
@@ -980,7 +978,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1015,20 +1014,17 @@ namespace Microsoft.DotNet.Darc.Tests
                     }, 1)
                 });
 
-            // Repo has no feeds
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", new string[] { });
-
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
@@ -1051,7 +1047,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1090,14 +1087,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List <DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
@@ -1120,7 +1117,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1157,20 +1155,17 @@ namespace Microsoft.DotNet.Darc.Tests
                     }, 10)
                 });
 
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-                new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
-
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json");
                         }, u =>
@@ -1193,7 +1188,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1231,20 +1227,17 @@ namespace Microsoft.DotNet.Darc.Tests
                     }, 11)
                 });
 
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-                new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
-
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
@@ -1267,7 +1260,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1305,20 +1299,17 @@ namespace Microsoft.DotNet.Darc.Tests
                     }, 11)
                 });
 
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-                new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
-
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json");
                         }, u =>
@@ -1339,7 +1330,7 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-            Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Remote remote = new Remote(null, null, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1362,7 +1353,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
@@ -1383,7 +1374,8 @@ namespace Microsoft.DotNet.Darc.Tests
             // Initialize
             Mock<IBarClient> barClientMock = new Mock<IBarClient>();
             Mock<IGitRepo> gitRepoMock = new Mock<IGitRepo>();
-            Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+            Mock<IGitFileManager> gitFileManagerMock = new Mock<IGitFileManager>();
+            Remote remote = new Remote(gitRepoMock.Object, gitFileManagerMock.Object, barClientMock.Object, NullLogger.Instance);
 
             // Mock the remote used by build dependency graph to gather dependency details.
             Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1418,20 +1410,17 @@ namespace Microsoft.DotNet.Darc.Tests
                     }, 1)
                 });
 
-            // Repo has no feeds
-            RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", new string[] { });
-
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            coherencyUpdates.Should().SatisfyRespectively(                u =>
+            coherencyUpdates.Should().SatisfyRespectively(u =>
                 {
                     u.From.Should().Be(depB);
                     u.To.Version.Should().Be("v42");
                     u.To.Commit.Should().Be("commit5");
                     u.To.RepoUri.Should().Be(depB.RepoUri);
                     u.To.Name.Should().Be(depB.Name);
-                    u.To.Locations.Should().SatisfyRespectively(                        u =>
+                    u.To.Locations.Should().SatisfyRespectively(u =>
                         {
                             u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }, u =>
@@ -1498,22 +1487,6 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             Build build = CreateBuild(repo, commit, assets, buildId);
             barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(new List<Build> { build });
-        }
-
-        private void RepositoryHasFeeds(Mock<IGitRepo> barClientMock,
-            string repo, string commit, string[] feeds)
-        {
-            const string baseNugetConfig = @"<?xml version=""1.0"" encoding=""utf - 8""?>
-<configuration>
-<packageSources>
-<clear/>
-FEEDSHERE
-</packageSources>
-</configuration>";
-            string nugetConfig = baseNugetConfig.Replace("FEEDSHERE",
-                string.Join(Environment.NewLine, feeds.Select(feed => $@"<add key = ""{GetRandomId()}"" value = ""{feed}"" />")));
-
-            barClientMock.Setup(m => m.GetFileContentsAsync(VersionFiles.NugetConfig, repo, commit)).ReturnsAsync(nugetConfig);
         }
 
         private Random _randomIdGenerator = new Random();

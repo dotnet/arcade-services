@@ -24,6 +24,7 @@ namespace SubscriptionActorService.Tests
     {
         protected Mock<IBarClient> BarClient;
         protected Mock<IGitRepo> GitRepo;
+        protected Mock<IGitFileManager> GitFileManager;
         protected Mock<IRemoteFactory> RemoteFactory;
         protected Mock<IHostEnvironment> Env;
         protected Mock<Octokit.IGitHubClient> GithubClient;
@@ -89,8 +90,9 @@ namespace SubscriptionActorService.Tests
                        return Task.FromResult((IList<Check>) checksToReturn);
                    });
 
+            GitFileManager = new Mock<IGitFileManager>(MockBehavior.Strict);
 
-            MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
+            MockRemote = new Remote(GitRepo.Object, GitFileManager.Object, BarClient.Object, NullLogger.Instance);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
             Provider = services.BuildServiceProvider();

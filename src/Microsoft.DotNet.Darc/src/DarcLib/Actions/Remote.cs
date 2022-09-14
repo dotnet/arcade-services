@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.DarcLib
     public sealed class Remote : IRemote
     {
         private readonly IBarClient _barClient;
-        private readonly GitFileManager _fileManager;
+        private readonly IGitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
 
@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-        public Remote(IGitRepo gitClient, GitFileManager gitFileManager, IBarClient barClient, ILogger logger)
+        public Remote(IGitRepo gitClient, IGitFileManager gitFileManager, IBarClient barClient, ILogger logger)
         {
             _logger = logger;
             _barClient = barClient;
