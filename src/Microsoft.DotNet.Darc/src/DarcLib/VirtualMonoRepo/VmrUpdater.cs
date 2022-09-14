@@ -53,20 +53,23 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IVmrPatchProvider _patchProvider;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
+        IVmrPatchProvider patchProvider,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, patchProvider, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
+        _patchProvider = patchProvider;
     }
 
     public Task UpdateRepository(
@@ -91,7 +94,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var currentSha = GetCurrentVersion(mapping);
 
-        if (!await HasRemoteUpdates(mapping, currentSha))
+        if (targetRevision is null || targetRevision == HEAD && !await HasRemoteUpdates(mapping, currentSha))
         {
             throw new EmptySyncException($"No new remote changes detected for {mapping.Name}");
         }
@@ -286,7 +289,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         var patchPath = GetPatchFilePath(mapping);
-        await CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
+        await _patchProvider.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -305,7 +308,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await ApplyPatch(mapping, patchPath, cancellationToken);
+            await _patchProvider.ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
@@ -313,9 +316,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await UpdateGitmodules(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         Commit(commitMessage, author);

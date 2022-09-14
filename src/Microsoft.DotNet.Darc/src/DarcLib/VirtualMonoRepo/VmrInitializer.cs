@@ -24,18 +24,21 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
     
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IVmrPatchProvider _patchProvider;
     private readonly ILogger<VmrUpdater> _logger;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
+        IVmrPatchProvider patchProvider,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, patchProvider, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _dependencyTracker = dependencyTracker;
+        _patchProvider = patchProvider;
         _logger = logger;
     }
 
@@ -60,10 +63,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
         string patchPath = GetPatchFilePath(mapping);
-        await CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
+        await _patchProvider.CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await ApplyPatch(mapping, patchPath, cancellationToken);
+        await _patchProvider.ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
