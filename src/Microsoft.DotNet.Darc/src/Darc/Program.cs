@@ -27,6 +27,15 @@ namespace Microsoft.DotNet.Darc
         {
             InitializeTelemetry();
 
+            if (args.Contains("--debug"))
+            {
+                // Print header (version, sha, arguments)
+                var version = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location);
+                Console.WriteLine(
+                    $"[{version.ProductVersion} / {version.OriginalFilename}] " +
+                    "darc command issued: " + string.Join(' ', args));
+            }
+
             try
             {
                 Type[] options;
