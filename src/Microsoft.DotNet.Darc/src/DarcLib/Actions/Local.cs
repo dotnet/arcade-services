@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -86,7 +87,7 @@ namespace Microsoft.DotNet.DarcLib
                     List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                     filesToUpdate.AddRange(engCommonFiles);
 
-                    List<GitFile> localEngCommonFiles = await _gitClient.GetFilesAtCommitAsync(null, null, "eng/common");
+                    List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync("eng/common");
 
                     foreach (GitFile file in localEngCommonFiles)
                     {
@@ -106,8 +107,7 @@ namespace Microsoft.DotNet.DarcLib
                         }
                     }
                 }
-                catch (Exception exc) when 
-                (exc.Message == "Not Found")
+                catch (Exception exc) when (exc.Message == "Not Found")
                 {
                     _logger.LogWarning("Could not update 'eng/common'. Most likely this is a scenario " +
                         "where a packages folder was passed and the commit which generated them is not " +
@@ -164,6 +164,18 @@ namespace Microsoft.DotNet.DarcLib
         public void AddRemoteIfMissing(string repoDir, string repoUrl)
         {
             _gitClient.AddRemoteIfMissing(repoDir, repoUrl);
+        }
+
+        private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path)
+        {
+            string repoDir = LocalHelpers.GetRootDir(GitExecutable, _logger);
+            string sourceFolder = Path.Combine(repoDir, path);
+            var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
+            return files
+                .Select(file => new GitFile(
+                    file.Remove(0, repoDir.Length + 1).Replace("\\", "/"),
+                    File.ReadAllText(file)))
+                .ToList();
         }
     }
 }

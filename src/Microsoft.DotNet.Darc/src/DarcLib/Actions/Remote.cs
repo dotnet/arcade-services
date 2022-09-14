@@ -36,16 +36,16 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-        public Remote(IGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
+        public Remote(IGitRepo gitClient, ILocalGitRepo localGitRepo, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
         {
             _logger = logger;
             _barClient = barClient;
             _gitClient = gitClient;
             _versionDetailsParser = versionDetailsParser;
 
-            if (_gitClient != null)
+            if (localGitRepo != null)
             {
-                _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
+                _fileManager = new GitFileManager(localGitRepo, _versionDetailsParser, _logger);
             }
         }
 
