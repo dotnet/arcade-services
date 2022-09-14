@@ -23,7 +23,7 @@ public abstract class VmrManagerBase : IVmrManager
     protected const string HEAD = "HEAD";
 
     private readonly IVmrDependencyTracker _dependencyInfo;
-    private readonly IVmrPatchProvider _patchProvider;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -35,7 +35,7 @@ public abstract class VmrManagerBase : IVmrManager
 
     protected VmrManagerBase(
         IVmrDependencyTracker dependencyInfo,
-        IVmrPatchProvider patchProvider,
+        IVmrPatchHandler patchHandler,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
@@ -44,7 +44,7 @@ public abstract class VmrManagerBase : IVmrManager
     {
         _logger = logger;
         _dependencyInfo = dependencyInfo;
-        _patchProvider = patchProvider;
+        _patchHandler = patchHandler;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
         _versionDetailsParser = versionDetailsParser;
@@ -77,28 +77,6 @@ public abstract class VmrManagerBase : IVmrManager
         remoteRepo.Clone(mapping.DefaultRemote, mapping.DefaultRef, clonePath, checkoutSubmodules: false, null);
 
         return clonePath;
-    }
-
-    /// <summary>
-    /// Applies VMR patches onto files of given mapping's subrepository.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    protected async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
-    {
-        if (!mapping.VmrPatches.Any())
-        {
-            return;
-        }
-
-        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
-
-        foreach (var patchFile in mapping.VmrPatches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogDebug("Applying {patch}..", patchFile);
-            await _patchProvider.ApplyPatch(mapping, patchFile, cancellationToken);
-        }
     }
 
     /// <summary>

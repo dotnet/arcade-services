@@ -53,23 +53,23 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IVmrPatchProvider _patchProvider;
+    private readonly IVmrPatchHandler _patchHandler;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
-        IVmrPatchProvider patchProvider,
+        IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchProvider, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
-        _patchProvider = patchProvider;
+        _patchHandler = patchHandler;
     }
 
     public Task UpdateRepository(
@@ -289,7 +289,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         var patchPath = GetPatchFilePath(mapping);
-        await _patchProvider.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
+        await _patchHandler.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -308,14 +308,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await _patchProvider.ApplyPatch(mapping, patchPath, cancellationToken);
+            await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await ApplyVmrPatches(mapping, cancellationToken);
+        await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         Commit(commitMessage, author);

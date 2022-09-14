@@ -14,12 +14,9 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrPatchProvider
+public interface IVmrPatchHandler
 {
-    Task ApplyPatch(
-        SourceMapping mapping,
-        string patchPath,
-        CancellationToken cancellationToken);
+    Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken);
     
     Task CreatePatch(
         SourceMapping mapping,
@@ -28,22 +25,23 @@ public interface IVmrPatchProvider
         string sha2,
         string destPath,
         CancellationToken cancellationToken);
+
+    Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken);
 }
 
-public class VmrPatchProvider : IVmrPatchProvider
+public class VmrPatchHandler : IVmrPatchHandler
 {
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
-    private const string GitmodulesFileName = ".gitmodules";
 
     private readonly IVmrDependencyTracker _vmrInfo;
     private readonly IProcessManager _processManager;
-    private readonly ILogger<VmrPatchProvider> _logger;
+    private readonly ILogger<VmrPatchHandler> _logger;
 
-    public VmrPatchProvider(
+    public VmrPatchHandler(
         IVmrDependencyTracker dependencyInfo,
         IProcessManager processManager,
-        ILogger<VmrPatchProvider> logger)
+        ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = dependencyInfo;
         _processManager = processManager;
@@ -171,5 +169,28 @@ public class VmrPatchProvider : IVmrPatchProvider
         result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to clean the working tree");
         _logger.LogDebug("{output}", result.ToString());
+    }
+
+    /// <summary>
+    /// Applies VMR patches onto files of given mapping's subrepository.
+    /// These files are stored in the VMR and applied on top of the individual repos.
+    /// </summary>
+    /// <param name="mapping">Mapping</param>
+    public async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
+    {
+        if (!mapping.VmrPatches.Any())
+        {
+            return;
+        }
+
+        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
+
+        foreach (var patchFile in mapping.VmrPatches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _logger.LogDebug("Applying {patch}..", patchFile);
+            await ApplyPatch(mapping, patchFile, cancellationToken);
+        }
     }
 }

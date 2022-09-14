@@ -24,21 +24,21 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
     
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IVmrPatchProvider _patchProvider;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly ILogger<VmrUpdater> _logger;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
-        IVmrPatchProvider patchProvider,
+        IVmrPatchHandler patchHandler,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchProvider, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _dependencyTracker = dependencyTracker;
-        _patchProvider = patchProvider;
+        _patchHandler = patchHandler;
         _logger = logger;
     }
 
@@ -63,10 +63,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
         string patchPath = GetPatchFilePath(mapping);
-        await _patchProvider.CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
+        await _patchHandler.CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchProvider.ApplyPatch(mapping, patchPath, cancellationToken);
+        await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
