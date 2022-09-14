@@ -25,5 +25,5 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
         bool recursive,
         CancellationToken cancellationToken)
         =>
-        await vmrManager.InitializeRepository(mapping, targetRevision, recursive, cancellationToken);
+        await vmrManager.InitializeRepository(mapping, targetRevision, null, recursive, cancellationToken);
 }

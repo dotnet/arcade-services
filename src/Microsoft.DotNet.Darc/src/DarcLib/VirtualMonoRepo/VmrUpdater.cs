@@ -50,19 +50,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
 
     private readonly ILogger<VmrUpdater> _logger;
+    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
 
     public VmrUpdater(
+        IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
-        IVmrManagerConfiguration configuration,
-        IReadOnlyCollection<SourceMapping> mappings)
-        : base(processManager, remoteFactory, versionDetailsParser, logger, mappings, configuration.VmrPath, configuration.TmpPath)
+        IVmrManagerConfiguration configuration)
+        : base(dependencyTracker, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
+        _dependencyTracker = dependencyTracker;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
     }
@@ -70,22 +72,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     public Task UpdateRepository(
         SourceMapping mapping,
         string? targetRevision,
+        string? targetVersion,
         bool noSquash,
         bool updateDependencies,
         CancellationToken cancellationToken)
     {
         return updateDependencies
-            ? UpdateRepositoryRecursively(mapping, targetRevision, noSquash, cancellationToken)
-            : UpdateRepository(mapping, targetRevision, noSquash, cancellationToken);
+            ? UpdateRepositoryRecursively(mapping, targetRevision, targetVersion, noSquash, cancellationToken)
+            : UpdateRepository(mapping, targetRevision, targetVersion, noSquash, cancellationToken);
     }
 
     private async Task UpdateRepository(
         SourceMapping mapping,
         string? targetRevision,
+        string? targetVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var currentSha = await GetCurrentVersion(mapping);
+        var currentSha = GetCurrentVersion(mapping);
 
         if (!await HasRemoteUpdates(mapping, currentSha))
         {
@@ -172,6 +176,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     mapping,
                     currentSha,
                     commitToCopy.Sha,
+                    commitToCopy.Sha == targetCommit.Sha ? targetVersion : null,
                     clonePath,
                     message,
                     commitToCopy.Author,
@@ -201,6 +206,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 mapping,
                 currentSha,
                 targetRevision,
+                targetVersion,
                 clonePath,
                 message,
                 DotnetBotCommitSignature,
@@ -215,13 +221,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task UpdateRepositoryRecursively(
         SourceMapping mapping,
         string? targetRevision,
+        string? targetVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision)>();
-        reposToUpdate.Enqueue((mapping, targetRevision));
+        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
 
-        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision)>();
+        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
@@ -231,7 +238,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 mappingToUpdate.Name,
                 repoToUpdate.targetRevision ?? HEAD);
 
-            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, noSquash, cancellationToken);
+            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, repoToUpdate.targetVersion, noSquash, cancellationToken);
             updatedDependencies.Add(repoToUpdate);
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
@@ -241,14 +248,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     continue;
                 }
 
-                var dependencySha = await GetCurrentVersion(dependencyMapping);
+                var dependencySha = GetCurrentVersion(dependencyMapping);
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
                     continue;
                 }
 
-                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit));
+                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit, dependency.Version));
             }
         }
 
@@ -270,6 +277,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         SourceMapping mapping,
         string fromRevision,
         string toRevision,
+        string? targetVersion,
         string clonePath,
         string commitMessage,
         Signature author,
@@ -300,7 +308,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
-        await TagRepo(mapping, toRevision);
+        _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
+        Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
         await ApplyVmrPatches(mapping, cancellationToken);
@@ -347,6 +356,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
         localRepo.Checkout(clonePath, originalRevision);
 
+        var repoSourcesPath = _dependencyTracker.GetRepoSourcesPath(mapping);
+
         foreach (var patch in mapping.VmrPatches)
         {
             _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
@@ -359,7 +370,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     : patchedFile;
 
                 var originalFile = Path.Combine(clonePath, relativePath);
-                var destination = Path.Combine(SourcesPath, mapping.Name, relativePath);
+                var destination = Path.Combine(repoSourcesPath, relativePath);
 
                 _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
 
@@ -369,8 +380,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        using var repository = new Repository(VmrPath);
-        Commands.Stage(repository, $"{VmrSourcesPath}/{mapping.Name}");
+        using var repository = new Repository(_dependencyTracker.VmrPath);
+        Commands.Stage(repository, repoSourcesPath);
 
         _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
     }
@@ -399,19 +410,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return files;
     }
 
-    private async Task<string> GetCurrentVersion(SourceMapping mapping)
+    private string GetCurrentVersion(SourceMapping mapping)
     {
-        var tagFile = GetTagFilePath(mapping);
-        string currentSha;
-        try
+        var version = _dependencyTracker.GetDependencyVersion(mapping);
+
+        if (version is null)
         {
-            currentSha = (await File.ReadAllTextAsync(tagFile)).Trim();
-        }
-        catch (FileNotFoundException)
-        {
-            throw new InvalidOperationException($"Missing tag file for {mapping.Name} - please initialize the individual repo first");
+            throw new InvalidOperationException($"Repository {mapping.Name} has not been initialized yet");
         }
 
-        return currentSha;
+        return version.Sha;
     }
 }

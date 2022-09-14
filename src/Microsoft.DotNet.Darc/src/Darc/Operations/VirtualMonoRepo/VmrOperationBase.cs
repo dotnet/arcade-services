@@ -43,7 +43,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             return Constants.ErrorCode;
         }
 
-        var vmrManager = Provider.GetRequiredService<TVmrManager>();
+        TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
         IEnumerable<(SourceMapping Mapping, string? Revision)> reposToSync;
 
@@ -61,7 +61,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
 
             SourceMapping ResolveMapping(string repo)
             {
-                return vmrManager!.Mappings.FirstOrDefault(m => m.Name.Equals(repo, StringComparison.InvariantCultureIgnoreCase))
+                return vmrManager.Mappings.FirstOrDefault(m => m.Name.Equals(repo, StringComparison.InvariantCultureIgnoreCase))
                     ?? throw new Exception($"No mapping named '{repo}' found");
             }
 
