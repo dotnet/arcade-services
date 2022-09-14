@@ -73,7 +73,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await ApplyVmrPatches(mapping, cancellationToken);
+        await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         await UpdateGitmodules(cancellationToken);
