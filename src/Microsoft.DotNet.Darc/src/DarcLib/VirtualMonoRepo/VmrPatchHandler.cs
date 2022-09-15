@@ -163,13 +163,20 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             _logger.LogInformation("Creating diffs for submodules of {repo}..", mapping.Name);
 
-            patches.AddRange(await GetPatchesForSubmoduleChanges(
-                mapping,
-                destDir,
-                tmpPath,
-                relativePath,
-                submoduleChanges,
-                cancellationToken));
+            foreach (var change in submoduleChanges)
+            {
+                _logger.LogInformation("Inlining submodule {submodule} of {repo}..", change.Before.Name, mapping.Name);
+                
+                patches.AddRange(await GetPatchesForSubmoduleChange(
+                    mapping,
+                    destDir,
+                    tmpPath,
+                    relativePath,
+                    change,
+                    cancellationToken));
+
+                _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Before.Name, mapping.Name);
+            }
         }
 
         return patches;
@@ -390,72 +397,96 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="destDir">Directory where patches should be placed</param>
     /// <param name="tmpPath">Directory where submodules can be cloned temporarily</param>
     /// <param name="relativePath">Relative path where the currently processed repo/submodule is</param>
-    /// <param name="submoduleChanges">Changes in a submodule that the patches are created for</param>
+    /// <param name="change">Change in the submodule that the patches will be created for</param>
     /// <param name="cancellationToken">Cancellation is safe with regards to git operations</param>
     /// <returns>List of patch files with relatives path respective to the VMR</returns>
-    private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChanges(
+    private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
         SourceMapping mapping,
         string destDir,
         string tmpPath,
         string relativePath,
-        List<(GitSubmoduleInfo Before, GitSubmoduleInfo After)> submoduleChanges,
+        (GitSubmoduleInfo Before, GitSubmoduleInfo After) change,
         CancellationToken cancellationToken)
     {
-        var patches = new List<VmrIngestionPatch>();
-
         // Handle a case where submodule points to a different remote
-        var newChanges = new List<(GitSubmoduleInfo Before, GitSubmoduleInfo After)>();
-        foreach (var change in submoduleChanges)
+        if (change.Before.Url == change.After.Url)
         {
-            if (change.Before.Url == change.After.Url)
-            {
-                newChanges.Add(change);
-                continue;
-            }
-
-            // When submodule points somewhere else, remove the old, add the new
-            var empty = change.Before with
-            {
-                Commit = Constants.EmptyGitObject
-            };
-
-            newChanges.Add((change.Before, empty));
-            newChanges.Add((empty, change.After));
-        }
-
-        // Create patches for all submodules
-        foreach (var (before, after) in submoduleChanges)
-        {
-            var checkoutCommit = before.Commit == Constants.EmptyGitObject ? after.Commit : before.Commit;
-
-            var clonePath = Path.Combine(tmpPath, before.Name);
-            await CloneOrPull(before.Url, checkoutCommit, clonePath);
-
-            var submoduleMapping = new SourceMapping(
-                before.Name,
-                before.Url,
-                before.Commit,
-                mapping.Include.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
-                mapping.Exclude.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
-                Array.Empty<string>());
-
-            var submodulePath = before.Path;
-            if (!string.IsNullOrEmpty(relativePath))
-            {
-                submodulePath = relativePath + '/' + submodulePath;
-            }
-
-            patches.AddRange(await CreatePatchesRecursive(
-                submoduleMapping,
-                clonePath,
-                before.Commit,
-                after.Commit,
+            return await GetPatchesForSubmoduleChange(
+                mapping,
                 destDir,
                 tmpPath,
-                submodulePath,
-                cancellationToken));
+                relativePath,
+                change.Before,
+                change.After,
+                cancellationToken);
         }
+        
+        // When submodule points somewhere else, remove the old, add the new
+        var patches = new List<VmrIngestionPatch>();
+
+        patches.AddRange(await GetPatchesForSubmoduleChange(
+            mapping,
+            destDir,
+            tmpPath,
+            relativePath,
+            change.Before,
+            change.Before with
+            {
+                Commit = Constants.EmptyGitObject
+            },
+            cancellationToken));
+
+        patches.AddRange(await GetPatchesForSubmoduleChange(
+            mapping,
+            destDir,
+            tmpPath,
+            relativePath,
+            change.After with
+            {
+                Commit = Constants.EmptyGitObject
+            },
+            change.After,
+            cancellationToken));
 
         return patches;
+    }
+
+    private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
+        SourceMapping mapping,
+        string destDir,
+        string tmpPath,
+        string relativePath,
+        GitSubmoduleInfo before,
+        GitSubmoduleInfo after,
+        CancellationToken cancellationToken)
+    {
+        var checkoutCommit = before.Commit == Constants.EmptyGitObject ? after.Commit : before.Commit;
+
+        var clonePath = Path.Combine(tmpPath, before.Name);
+        await CloneOrPull(before.Url, checkoutCommit, clonePath);
+
+        var submoduleMapping = new SourceMapping(
+            before.Name,
+            before.Url,
+            before.Commit,
+            mapping.Include.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
+            mapping.Exclude.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
+            Array.Empty<string>());
+
+        var submodulePath = before.Path;
+        if (!string.IsNullOrEmpty(relativePath))
+        {
+            submodulePath = relativePath + '/' + submodulePath;
+        }
+
+        return await CreatePatchesRecursive(
+            submoduleMapping,
+            clonePath,
+            before.Commit,
+            after.Commit,
+            destDir,
+            tmpPath,
+            submodulePath,
+            cancellationToken);
     }
 }
