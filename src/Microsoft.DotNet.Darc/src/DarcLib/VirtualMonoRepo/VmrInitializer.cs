@@ -81,9 +81,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await UpdateGitmodules(cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
         // Commit but do not add files (they were added to index directly)
         var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
         Commit(message, DotnetBotCommitSignature);

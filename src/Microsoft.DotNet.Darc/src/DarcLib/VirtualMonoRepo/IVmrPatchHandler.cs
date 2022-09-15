@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -16,12 +17,13 @@ public interface IVmrPatchHandler
         string patchPath,
         CancellationToken cancellationToken);
     
-    Task CreatePatch(
+    Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
         string sha1,
         string sha2,
-        string destPath,
+        string destDir,
+        string tmpPath,
         CancellationToken cancellationToken);
 
     Task RestorePatchedFilesFromRepo(
@@ -34,3 +36,5 @@ public interface IVmrPatchHandler
         SourceMapping mapping,
         CancellationToken cancellationToken);
 }
+
+public record VmrIngestionPatch(string RelativeFolder, string PatchPath);
