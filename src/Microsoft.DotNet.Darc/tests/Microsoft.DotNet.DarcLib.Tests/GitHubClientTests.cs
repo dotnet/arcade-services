@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
     #region Fakes
     public class SimpleCacheEntry : ICacheEntry
     {
-        private object _key;
+        private readonly object _key;
         private object _value;
         private long? _size;
 
@@ -411,7 +411,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
 
         #region Functions for creating fake review data
 
-        private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetApprovingPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
+        private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetApprovingPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
         {
             var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
             var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
@@ -429,7 +429,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
             return data;
         }
 
-        private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetMixedPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
+        private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetMixedPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
         {
             var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
             var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
@@ -449,7 +449,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
             return data;
         }
 
-        private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetOnlyCommentsPullRequestData(string owner, string repoName, int requestId, int userCount)
+        private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetOnlyCommentsPullRequestData(string owner, string repoName, int requestId, int userCount)
         {
             var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
             var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
@@ -463,7 +463,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
             return data;
         }
 
-        private PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
+        private static PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
         {
             return new PullRequestReview(
                 0,
@@ -478,7 +478,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 reviewTime);
         }
 
-        private User GetFakeUser(string userId)
+        private static User GetFakeUser(string userId)
         {
             // We mostly only care about the user's login id (userId)", this ctor is huge, sorry about that.
             return new User(null, null, null, 0, null, DateTimeOffset.MinValue, DateTimeOffset.MinValue,
