@@ -14,7 +14,7 @@ public interface IVmrPatchHandler
 {
     Task ApplyPatch(
         SourceMapping mapping,
-        string patchPath,
+        VmrIngestionPatch patch,
         CancellationToken cancellationToken);
     
     Task<List<VmrIngestionPatch>> CreatePatches(
@@ -37,4 +37,9 @@ public interface IVmrPatchHandler
         CancellationToken cancellationToken);
 }
 
-public record VmrIngestionPatch(string RelativeFolder, string PatchPath);
+/// <summary>
+/// Patch that is created/applied during sync of the VMR.
+/// </summary>
+/// <param name="Path">Path where the patch is located</param>
+/// <param name="ApplicationPath">Relative path within the VMR to which the patch is applied onto</param>
+public record VmrIngestionPatch(string Path, string ApplicationPath);

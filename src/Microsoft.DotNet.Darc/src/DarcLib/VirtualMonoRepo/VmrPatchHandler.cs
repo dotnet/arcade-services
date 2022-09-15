@@ -98,7 +98,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var patchName = Path.Combine(destDir, $"{mapping.Name}-{sha1}-{sha2}.patch");
         var patches = new List<VmrIngestionPatch>
         {
-            new(relativePath, patchName)
+            new(patchName, relativePath)
         };
 
         List<(GitSubmoduleInfo Before, GitSubmoduleInfo After)> submoduleChanges = GetChangedSubmodules(repoPath, sha1, sha2);
@@ -188,7 +188,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="mapping">Mapping</param>
     /// <param name="patchPath">Path to the patch file with the diff</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    public async Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
+    public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
@@ -196,7 +196,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             .Replace("\\", "/")
             [1..];
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patchPath, destPath);
+        // When inlining submodules, we need to point the git apply there
+        destPath = patch.ApplicationPath
+            + (!string.IsNullOrEmpty(patch.ApplicationPath) && patch.ApplicationPath[^1] != '/' ? "/" : string.Empty)
+            + destPath;
+
+        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
@@ -222,7 +227,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--directory",
             destPath,
 
-            patchPath,
+            patch.Path,
         };
 
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
@@ -311,7 +316,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, patchFile, cancellationToken);
+            await ApplyPatch(mapping, new(patchFile, string.Empty), cancellationToken);
         }
     }
 

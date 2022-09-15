@@ -125,8 +125,6 @@ public abstract class VmrManagerBase : IVmrManager
         return result;
     }
 
-    protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
-
     protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
 
     /// <summary>

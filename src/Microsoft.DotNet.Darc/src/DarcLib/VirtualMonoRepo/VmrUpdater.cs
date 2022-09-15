@@ -50,20 +50,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVmrPatchHandler _patchHandler;
 
+    private readonly string _tmpPath;
+
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
         _remoteFactory = remoteFactory;
         _patchHandler = patchHandler;
+        _tmpPath = configuration.TmpPath;
     }
 
     public Task UpdateRepository(
@@ -280,29 +284,35 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         Signature author,
         CancellationToken cancellationToken)
     {
+        var patches = await _patchHandler.CreatePatches(
+            mapping,
+            clonePath,
+            fromRevision,
+            toRevision,
+            _tmpPath,
+            _tmpPath,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var patchPath = GetPatchFilePath(mapping);
-        await _patchHandler.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var info = new FileInfo(patchPath);
-        if (!info.Exists)
+        foreach (var patch in patches)
         {
-            throw new InvalidOperationException($"Failed to find the patch at {patchPath}");
-        }
+            var info = new FileInfo(patch.Path);
+            if (!info.Exists)
+            {
+                throw new InvalidOperationException($"Failed to find the patch at {patch.Path}");
+            }
+            
+            await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (info.Length == 0)
-        {
-            _logger.LogInformation("No changes for {repo} in given commits (maybe only excluded files changed?)", mapping.Name);
-        }
-        else
-        {
-            await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
+            if (info.Length == 0)
+            {
+                _logger.LogInformation("No changes for {repo} in given commits (maybe only excluded files changed?)", mapping.Name);
+            }
+            else
+            {
+                await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
+            }
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
