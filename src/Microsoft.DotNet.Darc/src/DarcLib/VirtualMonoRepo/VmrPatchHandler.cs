@@ -25,6 +25,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrPatchHandler : IVmrPatchHandler
 {
+    // These git attributes catn override cloaking of files when set it individual repositories
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
@@ -177,7 +178,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                     _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
                         change.Name, mapping.Name, change.Before, change.After);
                 }
-                
+
                 patches.AddRange(await GetPatchesForSubmoduleChange(
                     mapping,
                     destDir,
@@ -205,9 +206,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             [1..];
 
         // When inlining submodules, we need to point the git apply there
-        destPath = patch.ApplicationPath
-            + (!string.IsNullOrEmpty(patch.ApplicationPath) && patch.ApplicationPath[^1] != '/' ? "/" : string.Empty)
-            + destPath;
+        if (destPath[^1] != '/')
+        {
+            destPath += '/';
+        }
+
+        destPath += patch.ApplicationPath;
 
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
 
@@ -365,12 +369,12 @@ public class VmrPatchHandler : IVmrPatchHandler
         var submodulePaths = submodulesBefore
             .Concat(submodulesAfter)
             .Select(s => s.Path)
-            .Distinct()
-            .ToList();
+            .Distinct();
 
         var submoduleChanges = new List<SubmoduleChange>();
 
-        // Pair submodule state from sha1 and sha2, when submodule is added/removed, signal this with well known zero commit
+        // Pair submodule state from sha1 and sha2
+        // When submodule is added/removed, signal this with well known zero commit
         foreach (string path in submodulePaths)
         {
             GitSubmoduleInfo? before = submodulesBefore.FirstOrDefault(s => s.Path == path);
@@ -378,12 +382,10 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             if (before is null && after is not null) // Submodule was added
             {
-                // Well known empty commit ID signals missing submodule
                 submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
             }
             else if (before is not null && after is null) // Submodule was removed
             {
-                // Well known empty commit ID signals missing submodule
                 submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
             }
             else // Submodule was changed

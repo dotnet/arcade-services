@@ -294,6 +294,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Restore files to their individual repo states so that patches can be applied
+        await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
         foreach (var patch in patches)
         {
             var info = new FileInfo(patch.Path);
@@ -301,18 +305,25 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 throw new InvalidOperationException($"Failed to find the patch at {patch.Path}");
             }
-            
-            await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
 
             if (info.Length == 0)
             {
-                _logger.LogInformation("No changes for {repo} in given commits (maybe only excluded files changed?)", mapping.Name);
+                if (patches.Count == 1)
+                {
+                    _logger.LogInformation("No changes in {repo} between {current} and {next} (maybe only excluded files changed?)",
+                        mapping.Name, ShortenId(fromRevision), ShortenId(toRevision));
+                }
+                else
+                {
+                    _logger.LogInformation("No changes in {patch} (maybe only excluded files changed?)", patch.Path);
+                }
             }
             else
             {
                 await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
