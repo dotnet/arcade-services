@@ -88,35 +88,26 @@ public class VmrPatchHandler : IVmrPatchHandler
         string relativePath,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating diff in {path}..", destDir);
+        _logger.LogInformation("Creating patches in {path}..", destDir);
 
         if (repoPath.EndsWith(".git"))
         {
             repoPath = Path.GetDirectoryName(repoPath)!;
         }
 
-        var patchName = Path.Combine(destDir, $"{mapping.Name}-{sha1}-{sha2}.patch");
+        var patchName = Path.Combine(destDir, $"{mapping.Name}-{VmrManagerBase.ShortenId(sha1)}-{VmrManagerBase.ShortenId(sha2)}.patch");
         var patches = new List<VmrIngestionPatch>
         {
             new(patchName, relativePath)
         };
 
-        List<(GitSubmoduleInfo Before, GitSubmoduleInfo After)> submoduleChanges = GetChangedSubmodules(repoPath, sha1, sha2);
+        List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
 
         if (!mapping.Include.Any())
         {
             mapping = mapping with
             {
                 Include = new[] { "**/*" }
-            };
-        }
-
-        // Ignore submodules in the diff, they will be inlined via their own diffs
-        if (submoduleChanges.Any())
-        {
-            mapping = mapping with
-            {
-                Exclude = mapping.Exclude.Concat(submoduleChanges.Select(c => c.Before.Path)).ToArray()
             };
         }
 
@@ -133,6 +124,12 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{IgnoreAttribute}){p}"));
         args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{KeepAttribute}){p}"));
+
+        // Ignore submodules in the diff, they will be inlined via their own diffs
+        if (submoduleChanges.Any())
+        {
+            args.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}"));
+        }
 
         // Other git commands are executed from whichever folder and use `-C [path to repo]` 
         // However, here we must execute in repo's dir because attribute filters work against the working tree
@@ -157,7 +154,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var distance = (await _processManager.ExecuteGit(repoPath, countArgs, cancellationToken)).StandardOutput.Trim();
 
         _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
-            destDir, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(destDir));
+            patchName, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(patchName));
 
         if (submoduleChanges.Any())
         {
@@ -165,7 +162,21 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             foreach (var change in submoduleChanges)
             {
-                _logger.LogInformation("Inlining submodule {submodule} of {repo}..", change.Before.Name, mapping.Name);
+                if (change.Before == Constants.EmptyGitObject)
+                {
+                    _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
+                        change.Name, mapping.Name, change.Path, change.After);
+                }
+                else if (change.After == Constants.EmptyGitObject)
+                {
+                    _logger.LogInformation("Submodule {submodule} of {repo} was removed",
+                        change.Name, mapping.Name);
+                }
+                else
+                {
+                    _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
+                        change.Name, mapping.Name, change.Before, change.After);
+                }
                 
                 patches.AddRange(await GetPatchesForSubmoduleChange(
                     mapping,
@@ -175,7 +186,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                     change,
                     cancellationToken));
 
-                _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Before.Name, mapping.Name);
+                _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
             }
         }
 
@@ -185,9 +196,6 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    /// <param name="mapping">Mapping</param>
-    /// <param name="patchPath">Path to the patch file with the diff</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
         // We have to give git a relative path with forward slashes where to apply the patch
@@ -344,55 +352,57 @@ public class VmrPatchHandler : IVmrPatchHandler
         return files;
     }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote.Clone
-    private async Task CloneOrPull(string repoUri, string checkoutRef, string destPath)
-    {
-        if (Directory.Exists(destPath))
-        {
-            _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
-
-            _localGitRepo.Checkout(destPath, checkoutRef);
-
-            var result = await _processManager.ExecuteGit(destPath, "pull");
-            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {destPath}");
-            _logger.LogDebug("{output}", result.ToString());
-
-            return;
-        }
-
-        var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
-        remoteRepo.Clone(repoUri, checkoutRef, destPath, checkoutSubmodules: false, null);
-    }
-
     /// <summary>
     /// Finds all changes that happened for submodules between given commits.
     /// </summary>
     /// <param name="repoPath">Path to the local git repository</param>
     /// <returns>A pair of submodules (state in SHA1, state in SHA2) where additions/removals are marked by EmptyGitObject</returns>
-    private List<(GitSubmoduleInfo Before, GitSubmoduleInfo After)> GetChangedSubmodules(string repoPath, string sha1, string sha2)
+    private List<SubmoduleChange> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
     {
         List<GitSubmoduleInfo> submodulesBefore = _localGitRepo.GetGitSubmodules(repoPath, sha1);
         List<GitSubmoduleInfo> submodulesAfter = _localGitRepo.GetGitSubmodules(repoPath, sha2);
 
-        List<string> submoduleLocations = submodulesBefore
+        var submodulePaths = submodulesBefore
             .Concat(submodulesAfter)
             .Select(s => s.Path)
             .Distinct()
             .ToList();
 
+        var submoduleChanges = new List<SubmoduleChange>();
+
         // Pair submodule state from sha1 and sha2, when submodule is added/removed, signal this with well known zero commit
-        return submoduleLocations
-            .Select(path => (
-                Before: submodulesBefore.FirstOrDefault(s => s.Path == path) ?? submodulesAfter.First(s => s.Path == path) with
+        foreach (string path in submodulePaths)
+        {
+            GitSubmoduleInfo? before = submodulesBefore.FirstOrDefault(s => s.Path == path);
+            GitSubmoduleInfo? after = submodulesAfter.FirstOrDefault(s => s.Path == path);
+
+            if (before is null && after is not null) // Submodule was added
+            {
+                // Well known empty commit ID signals missing submodule
+                submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+            }
+            else if (before is not null && after is null) // Submodule was removed
+            {
+                // Well known empty commit ID signals missing submodule
+                submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+            }
+            else // Submodule was changed
+            {
+                // When submodule points to some new remote, we have to break it down to 2 changes: remove the old, add the new
+                // (this is what happened in the remote repo)
+                if (before!.Url != after!.Url)
                 {
-                    Commit = Constants.EmptyGitObject
-                },
-                After: submodulesAfter.FirstOrDefault(s => s.Path == path) ?? submodulesBefore.First(s => s.Path == path) with
+                    submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+                    submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+                }
+                else
                 {
-                    Commit = Constants.EmptyGitObject
-                }))
-            .Where(change => change.Before?.Commit != change.After?.Commit)
-            .ToList();
+                    submoduleChanges.Add(new(after.Name, path, after.Url, before.Commit, after.Commit));
+                }
+            }
+        }
+
+        return submoduleChanges;
     }
 
     /// <summary>
@@ -410,75 +420,23 @@ public class VmrPatchHandler : IVmrPatchHandler
         string destDir,
         string tmpPath,
         string relativePath,
-        (GitSubmoduleInfo Before, GitSubmoduleInfo After) change,
+        SubmoduleChange change,
         CancellationToken cancellationToken)
     {
-        // Handle a case where submodule points to a different remote
-        if (change.Before.Url == change.After.Url)
-        {
-            return await GetPatchesForSubmoduleChange(
-                mapping,
-                destDir,
-                tmpPath,
-                relativePath,
-                change.Before,
-                change.After,
-                cancellationToken);
-        }
-        
-        // When submodule points somewhere else, remove the old, add the new
-        var patches = new List<VmrIngestionPatch>();
+        var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
-        patches.AddRange(await GetPatchesForSubmoduleChange(
-            mapping,
-            destDir,
-            tmpPath,
-            relativePath,
-            change.Before,
-            change.Before with
-            {
-                Commit = Constants.EmptyGitObject
-            },
-            cancellationToken));
-
-        patches.AddRange(await GetPatchesForSubmoduleChange(
-            mapping,
-            destDir,
-            tmpPath,
-            relativePath,
-            change.After with
-            {
-                Commit = Constants.EmptyGitObject
-            },
-            change.After,
-            cancellationToken));
-
-        return patches;
-    }
-
-    private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
-        SourceMapping mapping,
-        string destDir,
-        string tmpPath,
-        string relativePath,
-        GitSubmoduleInfo before,
-        GitSubmoduleInfo after,
-        CancellationToken cancellationToken)
-    {
-        var checkoutCommit = before.Commit == Constants.EmptyGitObject ? after.Commit : before.Commit;
-
-        var clonePath = Path.Combine(tmpPath, before.Name);
-        await CloneOrPull(before.Url, checkoutCommit, clonePath);
+        var clonePath = Path.Combine(tmpPath, change.Name);
+        await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
         var submoduleMapping = new SourceMapping(
-            before.Name,
-            before.Url,
-            before.Commit,
-            mapping.Include.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
-            mapping.Exclude.Where(p => p.StartsWith(before.Path)).ToImmutableArray(),
+            change.Name,
+            change.Url,
+            change.Before,
+            mapping.Include.Where(p => p.StartsWith(change.Before)).ToImmutableArray(),
+            mapping.Exclude.Where(p => p.StartsWith(change.Before)).ToImmutableArray(),
             Array.Empty<string>());
 
-        var submodulePath = before.Path;
+        var submodulePath = change.Path;
         if (!string.IsNullOrEmpty(relativePath))
         {
             submodulePath = relativePath + '/' + submodulePath;
@@ -487,11 +445,33 @@ public class VmrPatchHandler : IVmrPatchHandler
         return await CreatePatchesRecursive(
             submoduleMapping,
             clonePath,
-            before.Commit,
-            after.Commit,
+            change.Before,
+            change.After,
             destDir,
             tmpPath,
             submodulePath,
             cancellationToken);
     }
+
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
+    private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
+    {
+        if (Directory.Exists(destPath))
+        {
+            _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
+
+            _localGitRepo.Checkout(destPath, checkoutRef);
+
+            var result = await _processManager.ExecuteGit(destPath, "fetch", "--all");
+            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {destPath}");
+            _logger.LogDebug("{output}", result.ToString());
+
+            return;
+        }
+
+        var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
+        remoteRepo.Clone(repoUri, checkoutRef, destPath, checkoutSubmodules: false, null);
+    }
+
+    private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
 }

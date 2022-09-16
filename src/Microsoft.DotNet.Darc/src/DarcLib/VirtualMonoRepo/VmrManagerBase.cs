@@ -172,5 +172,5 @@ public abstract class VmrManagerBase : IVmrManager
 
     protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
 
-    protected static string ShortenId(string commitSha) => commitSha[..7];
+    public static string ShortenId(string commitSha) => commitSha[..7];
 }
