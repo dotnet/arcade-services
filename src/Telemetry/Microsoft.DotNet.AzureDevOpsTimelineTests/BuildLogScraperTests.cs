@@ -43,11 +43,24 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 collection.AddSingleton(ExponentialRetry.Default);
                 collection.AddSingleton(new AzureDevOpsClientOptions
                 {
-                    MaxParallelRequests = 2
+                    Settings = new System.Collections.Generic.List<AzureDevOpsSettings>()
+                    {
+                        new AzureDevOpsSettings
+                        {
+                            MaxParallelRequests = 2
+                        }
+                    }
                 });
+
                 var options = new AzureDevOpsClientOptions
                 {
-                    MaxParallelRequests = 2
+                    Settings = new System.Collections.Generic.List<AzureDevOpsSettings>()
+                    {
+                        new AzureDevOpsSettings
+                        {
+                            MaxParallelRequests = 2
+                        }
+                    }
                 };
                 collection.AddSingleton<IOptions<AzureDevOpsClientOptions>>(Options.Create(options));
                 collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();

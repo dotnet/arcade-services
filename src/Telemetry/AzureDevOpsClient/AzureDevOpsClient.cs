@@ -32,19 +32,21 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             IOptions<AzureDevOpsClientOptions> options,
             IHttpClientFactory httpClientFactory)
         {
-            _baseUrl = options.Value.BaseUrl;
-            _organization = options.Value.Organization;
+            foreach(var option in options.Value.Settings) {
+                _baseUrl = option.BaseUrl;
+                _organization = option.Organization;
 
-            _httpClient = httpClientFactory.CreateClient();
-            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _parallelism = new SemaphoreSlim(options.Value.MaxParallelRequests, options.Value.MaxParallelRequests);
+                _httpClient = httpClientFactory.CreateClient();
+                _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                _parallelism = new SemaphoreSlim(option.MaxParallelRequests, option.MaxParallelRequests);
 
-            if (!string.IsNullOrEmpty(options.Value.AccessToken))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                    "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.Value.AccessToken}"))
-                );
+                if (!string.IsNullOrEmpty(option.AccessToken))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                        "Basic",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes($":{option.AccessToken}"))
+                    );
+                }
             }
         }
 
