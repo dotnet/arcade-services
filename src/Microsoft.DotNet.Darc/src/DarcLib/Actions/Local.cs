@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,9 +14,9 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class Local : ILocal
     {
-        private const string _branch = "current";
         private readonly GitFileManager _fileManager;
-        private readonly IGitRepo _gitClient;
+        private readonly ILocalGitRepo _gitClient;
+        private readonly IVersionDetailsParser _versionDetailsParser;
 
         private readonly ILogger _logger;
 
@@ -33,8 +32,9 @@ namespace Microsoft.DotNet.DarcLib
         {
             _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
             _logger = logger;
+            _versionDetailsParser = new VersionDetailsParser();
             _gitClient = new LocalGitClient(GitExecutable, _logger);
-            _fileManager = new GitFileManager(_gitClient, _logger);
+            _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
         {
-            return _fileManager.ParseVersionDetailsXml(fileContents, includePinned);
+            return _versionDetailsParser.ParseVersionDetailsXml(fileContents, includePinned);
         }
 
         /// <summary>

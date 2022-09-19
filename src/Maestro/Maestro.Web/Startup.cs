@@ -256,6 +256,7 @@ namespace Maestro.Web
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
+            services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
             services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
@@ -370,7 +371,11 @@ namespace Maestro.Web
                     ctx => IsGet(ctx) &&
                         ctx.Request.Path.StartsWithSegments("/api") &&
                         !ctx.Request.Path.Value.EndsWith("swagger.json"),
-                    a => { a.Run(ApiRedirectHandler); });
+                    a =>
+                    {
+                        app.UseAuthentication();
+                        a.Run(ApiRedirectHandler);
+                    });
             }
 
             app.Use(

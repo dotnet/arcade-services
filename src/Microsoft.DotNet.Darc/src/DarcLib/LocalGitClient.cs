@@ -7,19 +7,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Maestro.Contracts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class LocalGitClient : IGitRepo
+    public class LocalGitClient : ILocalGitRepo
     {
-        private ILogger _logger;
-        private string _gitExecutable;
+        private readonly ILogger _logger;
+        private readonly string _gitExecutable;
 
         /// <summary>
         ///     Construct a new local git client
@@ -29,33 +27,6 @@ namespace Microsoft.DotNet.DarcLib
         {
             _gitExecutable = gitExecutable;
             _logger = logger;
-        }
-
-        public bool AllowRetries { get; set; } = true;
-
-        public Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
-        {
-            throw new InvalidOperationException();
-        }
-
-        public Task DeleteBranchAsync(string repoUri, string branch)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HttpClient CreateHttpClient(string versionOverride = null)
-        {
-            throw new InvalidOperationException();
-        }
-
-        public Task<string> GetFileContentsAsync(string ownerAndRepo, string path)
-        {
-            return GetFileContentsAsync(path, null, null);
         }
 
         public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
@@ -85,16 +56,6 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
         {
             string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
@@ -113,66 +74,6 @@ namespace Microsoft.DotNet.DarcLib
                 ).ToList());
         }
 
-        public Task<string> GetLastCommitShaAsync(string ownerAndRepo, string branch)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Commit> GetCommitAsync(string owner, string sha)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> GetPullRequestBaseBranch(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IList<Review>> GetLatestPullRequestReviewsAsync(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> GetPullRequestRepo(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         ///     Updates local copies of the files.
         /// </summary>
@@ -180,7 +81,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Base path of the repo</param>
         /// <param name="branch">Unused</param>
         /// <param name="commitMessage">Unused</param>
-        /// <returns></returns>
         public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
             string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
@@ -288,38 +188,6 @@ namespace Microsoft.DotNet.DarcLib
                 throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
             }
             return content;
-        }
-
-        public string GetOwnerAndRepoFromRepoUri(string repoUri)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<int>> SearchPullRequestsAsync(
-            string repoUri,
-            string pullRequestBranch,
-            PrStatus status,
-            string keyword = null,
-            string author = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        ///     Clone a remote repository at the specified commit.
-        /// </summary>
-        /// <param name="repoUri">Remote git repo to clone</param>
-        /// <param name="commit">Tag, branch, or commit to clone at</param>
-        /// <param name="targetDirectory">Directory to clone into</param>
-        /// <param name="gitDirectory">Directory for the .git folder, or null for default</param>
-        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -500,32 +368,21 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
         /// </summary>
-        /// <param name="repoUrl"></param>
         public void AddRemoteIfMissing(string repoDir, string repoUrl)
         {
-            using (LibGit2Sharp.Repository repo = new LibGit2Sharp.Repository(repoDir))
+            using LibGit2Sharp.Repository repo = new LibGit2Sharp.Repository(repoDir);
+            if (repo.Network.Remotes.Any(remote => remote.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)))
             {
-                if (repo.Network.Remotes.Any(remote => remote.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    return;
-                }
-                _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
-                // remote names don't matter, make sure it's unique
-                string remoteName = Guid.NewGuid().ToString();
-                repo.Network.Remotes.Add(remoteName, repoUrl);
-                _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
-                LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
+                return;
             }
-        }
 
-        public Task<bool> RepoExistsAsync(string repoUri)
-        {
-            throw new NotImplementedException();
-        }
+            _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
 
-        public Task DeletePullRequestBranchAsync(string pullRequestUri)
-        {
-            throw new NotImplementedException();
+            // remote names don't matter, make sure it's unique
+            string remoteName = Guid.NewGuid().ToString();
+            repo.Network.Remotes.Add(remoteName, repoUrl);
+            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+            LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
         }
     }
 }

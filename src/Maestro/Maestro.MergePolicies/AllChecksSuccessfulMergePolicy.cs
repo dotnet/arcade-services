@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Microsoft.DotNet.DarcLib;
@@ -57,7 +58,12 @@ namespace Maestro.MergePolicies
 
             if (statuses.Contains(CheckState.Error))
             {
-                return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}");
+                StringBuilder listChecks = new StringBuilder();
+                foreach(var status in statuses[CheckState.Error])
+                {
+                    listChecks.AppendLine($"[{status.Name}]({status.Url})");
+                }
+                return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks.ToString()}");
             }
 
             if (statuses.Contains(CheckState.Pending))

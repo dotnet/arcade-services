@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Microsoft.DotNet.DarcLib.Tests
+namespace Microsoft.DotNet.DarcLib.Tests.Helpers
 {
     public class DarcManifestHelperTests
     {

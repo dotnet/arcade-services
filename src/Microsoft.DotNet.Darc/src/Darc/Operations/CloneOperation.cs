@@ -273,7 +273,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
                 IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-                repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
+                repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
             }
             // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
             else
@@ -314,7 +314,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
                 IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-                repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
+                repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
             }
             // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
             else
