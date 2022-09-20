@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <LangVersion>latest</LangVersion>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
     <Description>Darc CLI</Description>

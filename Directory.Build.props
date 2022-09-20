@@ -28,7 +28,8 @@
     -->   
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <WarningsAsErrors>true</WarningsAsErrors>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>preview</LangVersion>
+    <Nullable>annotations</Nullable>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <DebugType>Full</DebugType>

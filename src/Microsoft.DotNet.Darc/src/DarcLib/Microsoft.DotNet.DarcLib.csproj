@@ -6,7 +6,6 @@
     <IsPackable>true</IsPackable>
     <Description>Darc Library</Description>
     <PackageTags>Arcade Darc Dependency Flow</PackageTags>
-    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

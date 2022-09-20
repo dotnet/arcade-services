@@ -3,7 +3,6 @@
   <PropertyGroup>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the Maestro Api</Description>
-    <LangVersion>8.0</LangVersion>
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>MaestroApi</SwaggerClientName>

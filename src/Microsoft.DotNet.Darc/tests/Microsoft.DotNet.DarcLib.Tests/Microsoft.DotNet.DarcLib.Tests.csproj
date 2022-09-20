@@ -3,7 +3,6 @@
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
