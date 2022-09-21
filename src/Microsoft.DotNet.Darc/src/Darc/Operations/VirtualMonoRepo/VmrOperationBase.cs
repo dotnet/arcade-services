@@ -44,16 +44,16 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
 
         TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
-        IEnumerable<(SourceMapping Mapping, string? Revision)> reposToSync;
+        IEnumerable<(SourceMapping Mapping, string Revision)> reposToSync;
 
         // 'all' means sync all of the repos
         if (repositories.Count == 1 && repositories.First() == "all")
         {
-            reposToSync = vmrManager.Mappings.Select<SourceMapping, (SourceMapping Mapping, string? Revision)>(m => (m, null));
+            reposToSync = vmrManager.Mappings.Select<SourceMapping, (SourceMapping Mapping, string Revision)>(m => (m, null));
         }
         else
         {
-            IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
+            IEnumerable<(string Name, string Revision)> repoNamesWithRevisions = repositories
                 .Select(a => a.Split(':') is string[] parts && parts.Length == 2
                     ? (Name: parts[0], Revision: parts[1])
                     : (a, null));
@@ -99,14 +99,14 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
     protected abstract Task ExecuteInternalAsync(
         TVmrManager vmrManager,
         SourceMapping mapping,
-        string? targetRevision,
+        string targetRevision,
         bool recursive,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         TVmrManager vmrManager,
         SourceMapping mapping,
-        string? targetRevision,
+        string targetRevision,
         bool recursive,
         CancellationToken cancellationToken)
     {

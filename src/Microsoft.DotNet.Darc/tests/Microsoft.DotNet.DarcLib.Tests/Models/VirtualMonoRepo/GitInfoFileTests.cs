@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.DarcLib.Tests.Models.VirtualMonoRepo;
 [TestFixture]
 public class GitInfoFileTests
 {
-    private string? _outputFile;
+    private string _outputFile;
 
     [SetUp]
     public void SetUpOutputFile()

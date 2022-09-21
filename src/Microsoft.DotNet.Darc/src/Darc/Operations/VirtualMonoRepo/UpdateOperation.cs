@@ -23,7 +23,7 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
     protected override async Task ExecuteInternalAsync(
         IVmrUpdater vmrManager,
         SourceMapping mapping,
-        string? targetRevision,
+        string targetRevision,
         bool recursive,
         CancellationToken cancellationToken)
         =>

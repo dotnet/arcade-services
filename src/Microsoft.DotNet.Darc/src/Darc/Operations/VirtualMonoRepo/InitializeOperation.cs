@@ -20,7 +20,7 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
     protected override async Task ExecuteInternalAsync(
         IVmrInitializer vmrManager,
         SourceMapping mapping,
-        string? targetRevision,
+        string targetRevision,
         bool recursive,
         CancellationToken cancellationToken)
         =>

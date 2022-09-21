@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.Darc
                 cancellationSource.Cancel();
             }
 
-            Console.CancelKeyPress += new ConsoleCancelEventHandler((object? sender, ConsoleCancelEventArgs args) =>
+            Console.CancelKeyPress += new ConsoleCancelEventHandler((object sender, ConsoleCancelEventArgs args) =>
             {
                 args.Cancel = true;
                 listener.CancelledByKeyPress = true;
