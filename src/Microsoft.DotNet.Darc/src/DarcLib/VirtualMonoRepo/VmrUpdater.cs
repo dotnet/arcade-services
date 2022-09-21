@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -18,6 +17,11 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+/// <summary>
+/// This class is able to update an individual repository within the VMR from one commit to another.
+/// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
+/// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
+/// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
     // Message shown when synchronizing a single commit
@@ -41,32 +45,25 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {commitMessage}
         """;
 
-    /// <summary>
-    /// Matches output of `git apply --numstat` which lists files contained in a patch file.
-    /// Example output:
-    /// 0       14      /s/vmr/src/roslyn-analyzers/eng/Versions.props
-    /// -       -       /s/vmr/src/roslyn-analyzers/some-binary.dll
-    /// </summary>
-    private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
-
     private readonly ILogger<VmrUpdater> _logger;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IVmrPatchHandler _patchHandler;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
+        IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
-        _processManager = processManager;
         _remoteFactory = remoteFactory;
+        _patchHandler = patchHandler;
     }
 
     public Task UpdateRepository(
@@ -91,7 +88,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var currentSha = GetCurrentVersion(mapping);
 
-        if (!await HasRemoteUpdates(mapping, currentSha))
+        if (targetRevision is null || targetRevision == HEAD && !await HasRemoteUpdates(mapping, currentSha))
         {
             throw new EmptySyncException($"No new remote changes detected for {mapping.Name}");
         }
@@ -286,7 +283,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         var patchPath = GetPatchFilePath(mapping);
-        await CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
+        await _patchHandler.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -296,7 +293,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             throw new InvalidOperationException($"Failed to find the patch at {patchPath}");
         }
 
-        await RestorePatchedFilesFromRepo(mapping, fromRevision, cancellationToken);
+        await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (info.Length == 0)
@@ -305,17 +302,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await ApplyPatch(mapping, patchPath, cancellationToken);
+            await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await ApplyVmrPatches(mapping, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await UpdateGitmodules(cancellationToken);
+        await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         Commit(commitMessage, author);
@@ -329,85 +323,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var remoteRepo = await _remoteFactory.GetRemoteAsync(mapping.DefaultRemote, _logger);
         var lastCommit = await remoteRepo.GetLatestCommitAsync(mapping.DefaultRemote, mapping.DefaultRef);
         return !lastCommit.Equals(currentSha, StringComparison.InvariantCultureIgnoreCase);
-    }
-
-    /// <summary>
-    /// For all files for which we have patches in VMR, restore their original version from the repo.
-    /// This is because VMR contains already patched versions of these files and new updates from the repo wouldn't apply.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    /// <param name="originalRevision">Revision from which we were updating</param>
-    private async Task RestorePatchedFilesFromRepo(SourceMapping mapping, string originalRevision, CancellationToken cancellationToken)
-    {
-        if (!mapping.VmrPatches.Any())
-        {
-            return;
-        }
-
-        _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
-
-        // We checkout the clone to the given revision once for all its patches
-        var clonePath = GetClonePath(mapping);
-        if (!Directory.Exists(clonePath))
-        {
-            await CloneOrPull(mapping);
-        }
-
-        var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
-        localRepo.Checkout(clonePath, originalRevision);
-
-        var repoSourcesPath = _dependencyTracker.GetRepoSourcesPath(mapping);
-
-        foreach (var patch in mapping.VmrPatches)
-        {
-            _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
-
-            foreach (var patchedFile in await GetFilesInPatch(clonePath, patch, cancellationToken))
-            {
-                // git always works with forward slashes (even on Windows)
-                string relativePath = Path.DirectorySeparatorChar != '/'
-                    ? patchedFile.Replace('/', Path.DirectorySeparatorChar)
-                    : patchedFile;
-
-                var originalFile = Path.Combine(clonePath, relativePath);
-                var destination = Path.Combine(repoSourcesPath, relativePath);
-
-                _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
-
-                // Copy old revision to VMR
-                File.Copy(originalFile, destination, overwrite: true);
-            }
-        }
-
-        // Stage the restored files (all future patches are applied to index directly)
-        using var repository = new Repository(_dependencyTracker.VmrPath);
-        Commands.Stage(repository, repoSourcesPath);
-
-        _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
-    }
-
-    /// <summary>
-    /// Resolves a list of all files that are part of a given patch diff.
-    /// </summary>
-    /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
-    /// <param name="patchPath">Path to the patch file</param>
-    /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    private async Task<IReadOnlyCollection<string>> GetFilesInPatch(string repoPath, string patchPath, CancellationToken cancellationToken)
-    {
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "apply", "--numstat", patchPath }, cancellationToken);
-        result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
-
-        var files = new List<string>();
-        foreach (var line in result.StandardOutput.Split(Environment.NewLine))
-        {
-            var match = GitPatchSummaryLine.Match(line);
-            if (match.Success)
-            {
-                files.Add(match.Groups["file"].Value);
-            }
-        }
-
-        return files;
     }
 
     private string GetCurrentVersion(SourceMapping mapping)
