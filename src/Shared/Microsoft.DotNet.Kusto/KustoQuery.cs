@@ -8,30 +8,20 @@ namespace Microsoft.DotNet.Kusto
 {
     public class KustoQuery
     {
-        public KustoQuery()
-        {
-            Parameters = new List<KustoParameter>();
-            Options = new Dictionary<string, object>();
-        }
-
-        public KustoQuery(string text, IEnumerable<KustoParameter> parameters, Dictionary<string, object> options = null)
+        public KustoQuery(string text = null, IEnumerable<KustoParameter> parameters = null, IEnumerable<KustoQueryOption> options = null)
         {
             Text = text;
-            Parameters = parameters.ToList();
-            Options = options ?? new Dictionary<string, object>();
-        }
-
-        public KustoQuery(string text) : this(text, new List<KustoParameter>())
-        {
+            Parameters = parameters?.ToList() ?? new List<KustoParameter>();
+            Options = options?.ToList() ?? new List<KustoQueryOption>();
         }
 
         public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters)
         {
         }
 
-        public Dictionary<string, object> Options { get; }
+        public List<KustoQueryOption> Options { get; }
         public List<KustoParameter> Parameters { get; }
-        public string Text { get; set; } 
+        public string Text { get; set; }
 
         public void AddParameter(string name, object value, KustoDataType type)
         {
@@ -40,7 +30,7 @@ namespace Microsoft.DotNet.Kusto
 
         public void AddOption(string key, object value)
         {
-            Options.Add(key, value);
+            Options.Add(new KustoQueryOption(key, value));
         }
     }
 }

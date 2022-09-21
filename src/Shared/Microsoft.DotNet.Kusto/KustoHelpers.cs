@@ -156,7 +156,7 @@ namespace Microsoft.DotNet.Kusto
 
             foreach (var option in query.Options)
             {
-                properties.SetOption(option.Key, option.Value);
+                properties.SetOption(option.Name, option.Value);
             }
 
             return properties;

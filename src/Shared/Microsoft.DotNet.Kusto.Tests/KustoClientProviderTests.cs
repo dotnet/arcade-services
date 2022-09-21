@@ -50,6 +50,37 @@ namespace Microsoft.DotNet.Kusto.Tests
             properties.Should().ContainSingle();
             properties[0].Parameters.Should().BeEmpty();
         }
+
+        [Test]
+        public async Task PassQueryOptions()
+        {
+            var queryProvider = new Mock<ICslQueryProvider>();
+            var dbNames = new List<string>();
+            var queries = new List<string>();
+            var properties = new List<ClientRequestProperties>();
+            var reader = Mock.Of<IDataReader>();
+            queryProvider.Setup(q =>
+                    q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
+                .Returns(Task.FromResult(reader));
+
+            using (var client = new KustoClientProvider(MockOptionMonitor.Create(new KustoClientProviderOptions
+            { QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE", }),
+                       queryProvider.Object))
+            {
+                List<KustoQueryOption> options = new(){ new KustoQueryOption("optionName", 123) };
+                IDataReader result = await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery", options: options));
+                reader.Should().BeSameAs(result);
+            }
+
+            dbNames.Should().Equal(new[] { "TEST-DATABASE" });
+            queries.Should().Equal(new[] { "basicQuery" });
+            properties.Should().ContainSingle();
+            properties[0].Parameters.Should().BeEmpty();
+            properties[0].Options.Should().ContainSingle();
+            properties[0].Options.First().Key.Should().Be("optionName");
+            properties[0].Options.First().Value.Should().Be(123);
+        }
+
         [Test]
         public async Task AssignedToTextPropertyIsPassedPlainly()
         {
