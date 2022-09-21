@@ -9,7 +9,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public static class VmrRegistrations

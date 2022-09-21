@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPatchHandler

@@ -5,7 +5,6 @@
 using System.Collections.Generic;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrManager

@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface IVersionDetailsParser
@@ -50,7 +49,7 @@ public class VersionDetailsParser : IVersionDetailsParser
 
     public IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
-        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
+        XmlNodeList dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
         if (dependencyNodes == null)
         {
             throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
@@ -93,10 +92,10 @@ public class VersionDetailsParser : IVersionDetailsParser
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
             bool isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
-            XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
+            XmlNode sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
                 ?? dependency.SelectSingleNode(SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
 
-            SourceBuildInfo? sourceBuildInfo = null;
+            SourceBuildInfo sourceBuildInfo = null;
             if (sourceBuildNode is XmlElement sourceBuildElement)
             {
                 string repoName = sourceBuildElement.Attributes[RepoNameAttributeName]?.Value
@@ -132,7 +131,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
     {
         var result = false;
-        XmlAttribute? attribute = attributes[attributeName];
+        XmlAttribute attribute = attributes[attributeName];
         if (attribute is not null && !bool.TryParse(attribute.Value, out result))
         {
             throw new DarcException($"The '{attributeName}' attribute is set but the value " +

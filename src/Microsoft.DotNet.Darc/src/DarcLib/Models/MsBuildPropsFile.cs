@@ -10,7 +10,6 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Serialization;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models;
 
 public interface IMsBuildPropsFile

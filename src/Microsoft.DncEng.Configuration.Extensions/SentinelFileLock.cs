@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-#nullable disable // this is copied code, don't want to mess with it
 
 namespace Microsoft.DncEng.Configuration.Extensions
 {

@@ -8,10 +8,9 @@ using System.IO;
 using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public record VmrDependencyVersion(string Sha, string? PackageVersion);
+public record VmrDependencyVersion(string Sha, string PackageVersion);
 
 public interface IVmrDependencyTracker
 {
@@ -25,7 +24,7 @@ public interface IVmrDependencyTracker
 
     void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
 
-    VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
+    VmrDependencyVersion GetDependencyVersion(SourceMapping mapping);
 }
 
 /// <summary>
@@ -62,7 +61,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
+    public VmrDependencyVersion GetDependencyVersion(SourceMapping mapping)
         => _repoVersions.Value.GetVersion(mapping.Name);
 
     public void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)

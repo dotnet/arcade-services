@@ -4,7 +4,6 @@
 
 using System;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public class EmptySyncException : Exception

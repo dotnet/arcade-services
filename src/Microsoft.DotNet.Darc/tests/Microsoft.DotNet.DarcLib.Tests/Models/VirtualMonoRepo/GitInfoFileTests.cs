@@ -8,7 +8,6 @@ using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using NUnit.Framework;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.Models.VirtualMonoRepo;
 
 [TestFixture]

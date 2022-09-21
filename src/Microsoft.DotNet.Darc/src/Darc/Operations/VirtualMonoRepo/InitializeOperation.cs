@@ -8,7 +8,6 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class InitializeOperation : VmrOperationBase<IVmrInitializer>

@@ -12,7 +12,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public interface IProcessManager
@@ -21,7 +20,7 @@ public interface IProcessManager
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
-        string? workingDir = null,
+        string workingDir = null,
         CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken);
@@ -59,7 +58,7 @@ public class ProcessManager : IProcessManager
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
-        string? workingDir = null,
+        string workingDir = null,
         CancellationToken cancellationToken = default)
     {
         var processStartInfo = new ProcessStartInfo()

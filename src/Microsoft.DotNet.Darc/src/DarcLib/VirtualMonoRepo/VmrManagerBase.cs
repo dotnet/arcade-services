@@ -15,7 +15,6 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase : IVmrManager
@@ -195,11 +194,11 @@ public abstract class VmrManagerBase : IVmrManager
     protected static string PrepareCommitMessage(
         string template,
         SourceMapping mapping,
-        string? oldSha = null,
-        string? newSha = null,
-        string? additionalMessage = null)
+        string oldSha = null,
+        string newSha = null,
+        string additionalMessage = null)
     {
-        var replaces = new Dictionary<string, string?>
+        var replaces = new Dictionary<string, string>
         {
             { "name", mapping.Name },
             { "remote", mapping.DefaultRemote },
@@ -218,7 +217,7 @@ public abstract class VmrManagerBase : IVmrManager
         return template;
     }
 
-    protected static LibGit2Sharp.Commit GetCommit(Repository repository, string? sha)
+    protected static LibGit2Sharp.Commit GetCommit(Repository repository, string sha)
     {
         var commit = sha is null
             ? repository.Commits.FirstOrDefault()

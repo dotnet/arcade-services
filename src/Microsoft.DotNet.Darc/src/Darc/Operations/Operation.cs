@@ -8,7 +8,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Operations
 {
     public abstract class Operation : IDisposable

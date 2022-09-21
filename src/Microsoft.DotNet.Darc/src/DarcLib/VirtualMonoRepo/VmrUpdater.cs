@@ -14,7 +14,6 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
@@ -68,8 +67,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     public Task UpdateRepository(
         SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool noSquash,
         bool updateDependencies,
         CancellationToken cancellationToken)
@@ -81,8 +80,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task UpdateRepository(
         SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
@@ -155,7 +154,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Let's do the same in case we don't explicitly go one by one but we only have one commit..
         if (noSquash || commitsToCopy.Count == 1)
         {
-            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
+            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit commitToCopy))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -185,7 +184,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         else
         {
             var commitMessages = new StringBuilder();
-            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
+            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit commit))
             {
                 commitMessages
                     .AppendLine($"  - {commit.MessageShort}")
@@ -217,15 +216,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// </summary>
     private async Task UpdateRepositoryRecursively(
         SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        var reposToUpdate = new Queue<(SourceMapping mapping, string targetRevision, string targetVersion)>();
         reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
 
-        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        var updatedDependencies = new HashSet<(SourceMapping mapping, string targetRevision, string targetVersion)>();
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
@@ -274,7 +273,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         SourceMapping mapping,
         string fromRevision,
         string toRevision,
-        string? targetVersion,
+        string targetVersion,
         string clonePath,
         string commitMessage,
         Signature author,

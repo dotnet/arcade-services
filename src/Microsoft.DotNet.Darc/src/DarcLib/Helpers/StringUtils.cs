@@ -4,7 +4,6 @@
 
 using System.IO;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class StringUtils

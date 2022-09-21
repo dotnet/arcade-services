@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrInitializer : IVmrManager
@@ -23,8 +22,8 @@ public interface IVmrInitializer : IVmrManager
     /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeRepository(
         string mappingName,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
@@ -44,8 +43,8 @@ public interface IVmrInitializer : IVmrManager
     /// <param name="cancellationToken">Cancellation token</param>
     Task InitializeRepository(
         SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool initializeDependencies,
         CancellationToken cancellationToken);
 }

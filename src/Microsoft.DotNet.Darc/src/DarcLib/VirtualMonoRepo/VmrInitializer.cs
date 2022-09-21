@@ -10,7 +10,6 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
@@ -49,8 +48,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     public async Task InitializeRepository(
         SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        string targetRevision,
+        string targetVersion,
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {

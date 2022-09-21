@@ -11,7 +11,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface ISourceMappingParser
@@ -54,7 +53,7 @@ public class SourceMappingParser : ISourceMappingParser
             .ToImmutableArray();
     }
 
-    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting, string? patchesPath)
+    private static SourceMapping CreateMapping(SourceMappingSetting defaults, SourceMappingSetting setting, string patchesPath)
     {
         if (setting.Name is null)
         {
@@ -107,19 +106,19 @@ public class SourceMappingParser : ISourceMappingParser
             Exclude = Array.Empty<string>(),
         };
 
-        public string? PatchesPath { get; set; }
+        public string PatchesPath { get; set; }
 
         public List<SourceMappingSetting> Mappings { get; set; } = new();
     }
 
     private class SourceMappingSetting
     {
-        public string? Name { get; set; }
-        public string? Version { get; set; }
-        public string? DefaultRemote { get; set; }
-        public string? DefaultRef { get; set; }
-        public string[]? Include { get; set; }
-        public string[]? Exclude { get; set; }
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public string DefaultRemote { get; set; }
+        public string DefaultRef { get; set; }
+        public string[] Include { get; set; }
+        public string[] Exclude { get; set; }
         public bool IgnoreDefaults { get; set; }
     }
 }

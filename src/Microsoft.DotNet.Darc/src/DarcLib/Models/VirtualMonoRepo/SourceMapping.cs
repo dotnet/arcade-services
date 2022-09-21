@@ -4,7 +4,6 @@
 
 using System.Collections.Generic;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
 /// <summary>
@@ -17,4 +16,4 @@ public record SourceMapping(
     IReadOnlyCollection<string> Include,
     IReadOnlyCollection<string> Exclude,
     IReadOnlyCollection<string> VmrPatches,
-    string? Version = null);
+    string Version = null);

@@ -6,7 +6,6 @@ using System;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc
 {
     /// <summary>
