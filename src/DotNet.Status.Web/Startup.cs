@@ -81,6 +81,14 @@ namespace DotNet.Status.Web
                     .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
                     .SetDefaultKeyLifetime(TimeSpan.FromDays(14))
                     .SetApplicationName(typeof(Startup).FullName);
+
+                services.AddHsts(options =>
+                {
+                    options.IncludeSubDomains = true;
+                    // https://datatracker.ietf.org/doc/html/rfc6797#section-6.1.1 
+                    // Time after which clients should regard this host as HSTS
+                    options.MaxAge = TimeSpan.FromDays(30);
+                });
             }
 
             AddServices(services);
@@ -312,6 +320,7 @@ namespace DotNet.Status.Web
             {
                 app.UseExceptionHandler("/Error");
                 app.UseHttpsRedirection();
+                app.UseHsts();
             }
             app.UseAuthentication();
             app.UseRouting();
