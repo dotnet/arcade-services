@@ -68,7 +68,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 return result.GetDateTime(0);
             }
-            catch (SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named ")
+            catch (SemanticException e) when
+                (e.SemanticErrors.StartsWith("'where' operator: Failed to resolve") && (
+                 e.SemanticErrors.EndsWith("'Organization'") ||
+                 e.SemanticErrors.EndsWith("'Project'")))
             {
                 // A column isn't there, we probably reinitalized the tables
                 return null;

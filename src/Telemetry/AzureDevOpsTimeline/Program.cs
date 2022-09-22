@@ -34,7 +34,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                             services.Configure<AzureDevOpsTimelineOptions>("AzureDevOpsTimeline", (o, s) => s.Bind(o));
 
                             services.AddClientFactory<AzureDevOpsClientOptions, IAzureDevOpsClient, AzureDevOpsClient>();
-                            services.Configure<AzureDevOpsClientOptions>("build-monitor/dnceng", "AzureDevOpsSettings:build-monitor/dnceng", (o, s) => s.Bind(o));
                             services.Configure<AzureDevOpsClientOptions>("dnceng", "AzureDevOpsSettings:dnceng", (o, s) => s.Bind(o));
                             services.Configure<AzureDevOpsClientOptions>("dnceng-public", "AzureDevOpsSettings:dnceng-public", (o, s) => s.Bind(o));
 

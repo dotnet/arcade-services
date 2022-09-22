@@ -7,7 +7,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
     public class AzureDevOpsClientOptions
     {
         public string Organization { get; set; }
-        public int MaxParallelRequests { get; set; }
+        public int MaxParallelRequests { get; set; } = 4;
         public string AccessToken { get; set; }
     }
 }
