@@ -317,6 +317,7 @@ namespace DotNet.Status.Web
             {
                 app.UseExceptionHandler("/Error");
                 app.UseHttpsRedirection();
+                app.UseHsts();
             }
             app.UseAuthentication();
             app.UseRouting();
