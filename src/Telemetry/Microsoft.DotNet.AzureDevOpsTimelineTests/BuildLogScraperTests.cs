@@ -41,29 +41,13 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 mockHttpClientFactory.AddCannedResponse(mockRequest.url, mockRequest.content);
                 collection.AddSingleton<IHttpClientFactory>(mockHttpClientFactory);
                 collection.AddSingleton(ExponentialRetry.Default);
-                collection.AddSingleton(new AzureDevOpsClientOptions
-                {
-                    Settings = new System.Collections.Generic.List<AzureDevOpsSettings>()
-                    {
-                        new AzureDevOpsSettings
-                        {
-                            MaxParallelRequests = 2
-                        }
-                    }
-                });
 
                 var options = new AzureDevOpsClientOptions
                 {
-                    Settings = new System.Collections.Generic.List<AzureDevOpsSettings>()
-                    {
-                        new AzureDevOpsSettings
-                        {
-                            MaxParallelRequests = 2
-                        }
-                    }
+                    MaxParallelRequests = 2
                 };
-                collection.AddSingleton<IOptions<AzureDevOpsClientOptions>>(Options.Create(options));
-                collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+                collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>(provider =>
+                    new AzureDevOpsClient(options, provider.GetRequiredService<IHttpClientFactory>()));
             }
         }
 

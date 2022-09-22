@@ -20,28 +20,28 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         public List<AugmentedTimelineRecord> TimelineRecords { get; } = new List<AugmentedTimelineRecord>();
         public List<(int buildId, BuildRequestValidationResult validationResult)> TimelineValidationMessages { get; } = new List<(int buildId, BuildRequestValidationResult validationResult)>();
 
-        private readonly List<(string project, DateTimeOffset latestTime)> _latestTimes;
+        private readonly List<(string project, string organization, DateTimeOffset latestTime)> _latestTimes;
 
         public InMemoryTimelineTelemetryRepository()
         {
-            _latestTimes = new List<(string project, DateTimeOffset latestTime)>();
+            _latestTimes = new List<(string project, string organization, DateTimeOffset latestTime)>();
         }
 
-        public InMemoryTimelineTelemetryRepository(List<(string project, DateTimeOffset latestTime)> latestTimes)
+        public InMemoryTimelineTelemetryRepository(List<(string project, string organization, DateTimeOffset latestTime)> latestTimes)
         {
             _latestTimes = latestTimes;
         }
 
-        public Task<DateTimeOffset?> GetLatestTimelineBuild(string project)
+        public Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsInstance instance)
         {
-            DateTimeOffset candidate = _latestTimes.FirstOrDefault(latest => latest.project == project).latestTime;
+            DateTimeOffset candidate = _latestTimes.FirstOrDefault(latest => latest.project == instance.Project && latest.organization == instance.Organization).latestTime;
             if (candidate == default)
                 return Task.FromResult<DateTimeOffset?>(null);
             else
                 return Task.FromResult<DateTimeOffset?>(candidate);
         }
 
-        public Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds)
+        public Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds, string organization)
         {
             TimelineBuilds.AddRange(augmentedBuilds);
             return Task.CompletedTask;

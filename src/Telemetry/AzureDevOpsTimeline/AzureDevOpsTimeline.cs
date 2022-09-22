@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -28,9 +29,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     public sealed class AzureDevOpsTimeline : IServiceImplementation
     {
         private readonly ILogger<AzureDevOpsTimeline> _logger;
-        private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
+        private readonly AzureDevOpsTimelineOptions _options;
         private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
-        private readonly IAzureDevOpsClient _azureServer;
+        private readonly IClientFactory<IAzureDevOpsClient> _azureDevopsClientFactory;
         private readonly ISystemClock _systemClock;
         private readonly IBuildLogScraper _buildLogScraper;
 
@@ -38,77 +39,59 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             ILogger<AzureDevOpsTimeline> logger,
             IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
             ITimelineTelemetryRepository timelineTelemetryRepository,
-            IAzureDevOpsClient azureDevopsClient,
+            IClientFactory<IAzureDevOpsClient> azureDevopsClientFactory,
             ISystemClock systemClock,
             IBuildLogScraper buildLogScraper)
         {
             _logger = logger;
-            _options = options;
+            _options = options.Value;
             _timelineTelemetryRepository = timelineTelemetryRepository;
-            _azureServer = azureDevopsClient;
+            _azureDevopsClientFactory = azureDevopsClientFactory;
             _systemClock = systemClock;
             _buildLogScraper = buildLogScraper;
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
-            await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
-
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await RunLoop(cancellationToken);
-                }
-                catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "AzureDevOpsTimelineLoop failed with unhandled exception");
-                }
-
-                await Wait(_options.Value.Interval, cancellationToken, TimeSpan.FromHours(6));
+                await Task.Delay(TimeSpan.Parse(_options.InitialDelay), cancellationToken);
+                await RunLoop(cancellationToken);
+            }
+            catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "AzureDevOpsTimeline failed with unhandled exception");
             }
 
-            return TimeSpan.Zero;
-        }
-
-        private Task Wait(string duration, CancellationToken cancellationToken, TimeSpan defaultTime)
-        {
-            if (!TimeSpan.TryParse(duration, out TimeSpan interval))
-            {
-                interval = defaultTime;
-            }
-
-            _logger.LogTrace($"Delaying for {interval:g}...");
-            return Task.Delay(interval, cancellationToken);
+            return TimeSpan.Parse(_options.Interval);
         }
 
         private async Task RunLoop(CancellationToken cancellationToken)
         {
-            // Fetch them again, we just waited an hour
-            AzureDevOpsTimelineOptions options = _options.Value;
-
-            if (!int.TryParse(options.BuildBatchSize, out int buildBatchSize) || buildBatchSize < 1)
+            if (!int.TryParse(_options.BuildBatchSize, out int buildBatchSize) || buildBatchSize < 1)
             {
                 buildBatchSize = 1000;
             }
 
-            foreach (string project in options.AzureDevOpsProjects.Split(';'))
+            foreach (var instance in _options.Instances)
             {
-                await RunProject(project, buildBatchSize, cancellationToken);
+                await RunProject(instance, buildBatchSize, cancellationToken);
             }
         }
 
         public async Task RunProject(
-            string project,
+            AzureDevOpsInstance instance,
             int buildBatchSize,
             CancellationToken cancellationToken)
         {
+            using var _ = _logger.BeginScope("Reading instance {Organization}/{Project}", instance.Organization, instance.Project);
+                
             DateTimeOffset latest;
-            DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(project);
+            DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(instance);
 
             if (latestCandidate.HasValue)
             {
@@ -117,12 +100,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             else
             {
                 latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
-                _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
+                _logger.LogWarning("No previous time found, using {StartTime}", latest.LocalDateTime);
             }
 
-            _logger.LogInformation("Reading project {project}", project);
-            Build[] builds = await GetBuildsAsync(_azureServer, project, latest, buildBatchSize, cancellationToken);
-            _logger.LogTrace("... found {builds} builds...", builds.Length);
+            using var azDoClientRef = _azureDevopsClientFactory.GetClient(instance.Organization);
+            var azDoClient = azDoClientRef.Value;
+
+            Build[] builds = await GetBuildsAsync(azDoClient, instance.Project, latest, buildBatchSize, cancellationToken);
+            _logger.LogTrace("... found {BuildCount} builds...", builds.Length);
 
             if (builds.Length == 0)
             {
@@ -140,7 +125,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             Dictionary<Build, Task<Timeline>> tasks = builds
                 .ToDictionary(
                     build => build,
-                    build => _azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
+                    build => azDoClient.GetTimelineAsync(instance.Project, build.Id, cancellationToken)
                 );
 
             await Task.WhenAll(tasks.Select(s => s.Value));
@@ -154,7 +139,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 if (timeline is null)
                 {
-                    _logger.LogDebug("No timeline found for buildid {buildid}", build.Id);
+                    _logger.LogDebug("No timeline found for  {BuildId}", build.Id);
                     continue;
                 }
 
@@ -166,7 +151,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 retriedTimelineTasks.AddRange(
                     additionalTimelineIds.Select(
-                        timelineId => (build, _azureServer.GetTimelineAsync(project, build.Id, timelineId, cancellationToken))));
+                        timelineId => (build, azDoClient.GetTimelineAsync(instance.Project, build.Id, timelineId, cancellationToken))));
             }
 
             await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
@@ -202,7 +187,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 var issueCache = new List<AugmentedTimelineIssue>();
                 foreach (TimelineRecord record in timeline.Records)
                 {
-                    var augRecord = new AugmentedTimelineRecord(build.Id, timeline.Id, record);
+                    var augRecord = new AugmentedTimelineRecord
+                    {
+                        BuildId = build.Id,
+                        TimelineId = timeline.Id,
+                        Raw = record,
+                    };
                     recordCache.Add(record.Id, augRecord);
                     records.Add(augRecord);
                     if (record.Issues == null)
@@ -212,8 +202,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                     for (int iIssue = 0; iIssue < record.Issues.Length; iIssue++)
                     {
-                        var augIssue =
-                            new AugmentedTimelineIssue(build.Id, timeline.Id, record.Id, iIssue, record.Issues[iIssue]);
+                        var augIssue = new AugmentedTimelineIssue
+                        {
+                            BuildId = build.Id,
+                            TimelineId = timeline.Id,
+                            RecordId = record.Id,
+                            Index = iIssue,
+                            Raw = record.Issues[iIssue],
+                        };
                         augIssue.Bucket = GetBucket(augIssue);
                         issueCache.Add(augIssue);
                         issues.Add(augIssue);
@@ -241,7 +237,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             await AddImageNamesToRecordsAsync(records, cancellationToken);
 
             _logger.LogInformation("Saving TimelineBuilds...");
-            await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
+            await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds, instance.Organization);
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
             await _timelineTelemetryRepository.WriteTimelineValidationMessages(validationResults);
@@ -276,7 +272,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 _logger.LogInformation(e, "Unable to extract targetBranch from Build");
             }
 
-            return new AugmentedBuild(build, targetBranch);
+            return new AugmentedBuild
+            {
+                Build = build,
+                TargetBranch = targetBranch,
+            };
         }
 
         private static string GetBucket(AugmentedTimelineIssue augIssue)
@@ -329,7 +329,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private async Task AddImageNamesToRecordsAsync(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
         {
-            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
+            TimeSpan cancellationTime = TimeSpan.Parse(_options.LogScrapingTimeout ?? "00:10:00");
 
             try
             {
@@ -346,16 +346,16 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 await GetImageNames(records, combinedCancellationToken);
 
                 stopWatch.Stop();
-                _logger.LogInformation("Log scraping took {elapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
+                _logger.LogInformation("Log scraping took {ElapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                //Don't swallup up the app cancellation token, let it do its thing
+                //Don't swallow up the app cancellation token, let it do its thing
                 throw;
             }
             catch (Exception e)
             {
-                _logger.LogError("Exception thrown while getting image names: `{exception}`", e);
+                _logger.LogError(e, "Exception thrown while getting image names");
             }
         }
 
@@ -393,7 +393,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch(Exception e)
             {                
-                _logger.LogInformation("Log scraping had some failures `{exception}`, summary below", e);
+                _logger.LogInformation("Log scraping had some failures `{Exception}`, summary below", e);
             }
             int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
             int cancelledTasks = taskList.Count(task => task.IsCanceled);
@@ -424,7 +424,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch (Exception exception)
             {
-                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
+                _logger.LogInformation(exception, "Non critical exception thrown when trying to get log '{LogUrl}'", record.Raw.Log.Url);
                 throw;
             }
             finally
@@ -445,7 +445,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
             catch (Exception exception)
             {
-                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
+                _logger.LogInformation(exception, "Non critical exception thrown when trying to get log '{LogUrl}'", record.Raw.Log.Url);
                 throw;
             }
             finally

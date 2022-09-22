@@ -16,6 +16,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
@@ -47,11 +48,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             [ConfigureAllParameters]
             public static Func<IServiceProvider, InMemoryTimelineTelemetryRepository> Repository(
-                IServiceCollection collection, string project, DateTimeOffset latestTime)
+                IServiceCollection collection, string project, string organization, DateTimeOffset latestTime)
             {
                 collection.AddSingleton<ITimelineTelemetryRepository>(
                     s => new InMemoryTimelineTelemetryRepository(
-                        new List<(string project, DateTimeOffset latestTime)> { (project, latestTime) }
+                        new List<(string project, string organization, DateTimeOffset latestTime)> { (project, organization, latestTime) }
                     )
                 );
 
@@ -69,6 +70,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     {build.Build, build.Timelines.ToList()}
                 }, httpMessageHandler));
+                collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
+                    new SingleClientFactory<IAzureDevOpsClient>(provider.GetRequiredService<IAzureDevOpsClient>()));
                 collection.AddSingleton<IBuildLogScraper, BuildLogScraper>();
             }
         }
@@ -79,6 +82,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-03-04T05:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = "theTargetBranch";
             MockExceptionThrowingHandler httpMessageHandler = MockExceptionThrowingHandler.Create("Image: Build.Ubuntu.1804.Amd64", 1);
 
@@ -94,7 +98,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .WithHttpMessageHandler(httpMessageHandler)
                 .BuildAsync();
 
-            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(new AzureDevOpsInstance{ Project = azdoProjectName, Organization = azdoOrganizationName }, 1000, CancellationToken.None);
 
             testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
             testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);

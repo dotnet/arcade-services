@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
@@ -45,11 +46,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             [ConfigureAllParameters]
             public static Func<IServiceProvider, InMemoryTimelineTelemetryRepository> Repository(
-                IServiceCollection collection,string project, DateTimeOffset latestTime)
+                IServiceCollection collection, string project, string organization, DateTimeOffset latestTime)
             {
                 collection.AddSingleton<ITimelineTelemetryRepository>(
                     s => new InMemoryTimelineTelemetryRepository(
-                        new List<(string project, DateTimeOffset latestTime)> {(project, latestTime)}
+                        new List<(string project, string organization, DateTimeOffset latestTime)> {(project, organization, latestTime)}
                     )
                 );
 
@@ -67,6 +68,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 {
                     {build.Build, build.Timelines.ToList()}
                 }));
+                collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
+                    new SingleClientFactory<IAzureDevOpsClient>(provider.GetRequiredService<IAzureDevOpsClient>()));
                 collection.AddSingleton<IBuildLogScraper, BuildLogScraper>();
             }
         }
@@ -79,6 +82,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = "theTargetBranch";
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
@@ -93,7 +97,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(
+                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                1000,
+                CancellationToken.None);
 
             // Test results
             testData.Repository.TimelineBuilds.Should().SatisfyRespectively(
@@ -123,6 +130,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = "theTargetBranch";
 
             // Test input
@@ -141,7 +149,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject("public", 1000, CancellationToken.None);
+            await testData.Controller.RunProject(new AzureDevOpsInstance
+            {
+                Project = azdoProjectName,
+                Organization = azdoOrganizationName,
+            }, 1000, CancellationToken.None);
             
             // Test results
             testData.Repository.TimelineRecords
@@ -162,6 +174,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             // Test input
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = "theTargetBranch";
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
@@ -175,12 +188,15 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             // Test setup
             await using TestData testData = await TestData.Default
-                .WithRepository(azdoProjectName, timeDatum.AddHours(-1))
+                .WithRepository(azdoProjectName, azdoOrganizationName, timeDatum.AddHours(-1))
                 .WithBuild(build)
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(
+                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                1000,
+                CancellationToken.None);
 
             // Test results
             IEnumerable<TimelineRecord> expectedRecords = build.Timelines
@@ -197,6 +213,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = null;
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
@@ -211,7 +228,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(
+                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                1000,
+                CancellationToken.None);
 
             // Test results
             testData.Repository.TimelineBuilds.Should().SatisfyRespectively(
@@ -227,6 +247,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
         {
             DateTimeOffset timeDatum = DateTimeOffset.Parse("2021-01-01T01:00:00Z");
             string azdoProjectName = "public";
+            string azdoOrganizationName = "dnceng";
             string targetBranchName = "theTargetBranch";
 
             BuildAndTimeline build = BuildAndTimelineBuilder.NewPullRequestBuild(1, azdoProjectName, targetBranchName)
@@ -243,7 +264,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject(azdoProjectName, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(
+                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                1000,
+                CancellationToken.None);
 
             testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(3);
             testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);

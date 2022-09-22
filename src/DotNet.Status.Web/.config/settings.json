@@ -15,18 +15,29 @@
     "InstrumentationKey": "[vault(app-insights-instrumentation-key)]"
   },
   "AzureDevOps": {
-    "BaseUrl": "https://dev.azure.com",
+    "build-monitor/dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "[vault(dn-bot-dnceng-build-r-code-r-project-r-profile-r)]",
+      "MaxParallelRequests": 10
+    },
+    "dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "[vault(dn-bot-dnceng-workitems-rw)]",
+      "MaxParallelRequests": 10
+    },
+    "dnceng-public": {
+      "Organization": "dnceng-public",
+      "AccessToken": "[vault(dn-bot-dnceng-workitems-rw)]",
+      "MaxParallelRequests": 10
+    }
+  },
+  "Rca": {
     "Organization": "dnceng",
-    "Project": "internal",
-    "MaxParallelRequests": 10,
-    "AccessToken": "[vault(dn-bot-dnceng-workitems-rw)]"
+    "Project": "internal"
   },
   "BuildMonitor": {
     "Monitor": {
-      "BaseUrl": "https://dev.azure.com",
       "Organization": "dnceng",
-      "MaxParallelRequests": 10,
-      "AccessToken": "[vault(dn-bot-dnceng-build-r-code-r-project-r-profile-r)]",
       "Builds": [
         {
           "Project": "internal",

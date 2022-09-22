@@ -6,11 +6,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public class AzureDevOpsClientOptions
     {
-        public List<AzureDevOpsSettings> Settings { get; set; }
-    }
-    public class AzureDevOpsSettings
-    {
-        public string BaseUrl { get; set; }
         public string Organization { get; set; }
         public int MaxParallelRequests { get; set; }
         public string AccessToken { get; set; }

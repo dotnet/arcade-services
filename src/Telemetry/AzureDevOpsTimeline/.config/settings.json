@@ -2,39 +2,39 @@
   "HealthTableUri": "[vault(health-report-table-sas-uri)]",
   "KeyVaultUri": "",
 
-  "AzureDevOpsAccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-  "AzureDevOpsOrganization": "dnceng",
-  "AzureDevOpsProjects": "internal;public",
-  "AzureDevOpsUrl": "https://dev.azure.com",
-
-  "InitialDelay": "1:00:00",
-  "Interval": "1:00:00",
-  "BuildBatchSize": 1000,
-  "ParallelRequests": 4,
-
-  "LogScrapingTimeout": "0:10:00",
-
   "KustoTimelineTelemetry": {
     "IngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]",
     "Database": "engineeringdata"
   },
-
-  "AzureDevOpsSettings": {
-    "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-    "Settings": [
+  
+  "AzureDevOpsTimeline": {
+    "Instances": [
       {
-        "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-        "CollectionUri": "https://dev.azure.com/dnceng/",
-        "OrgId": "dnceng",
-        "MaxParallelRequests": 4
+        "Organization": "dnceng",
+        "Project": "internal"
       },
       {
-        "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
-        "CollectionUri": "https://dev.azure.com/dnceng-public",
-        "OrgId": "dnceng-public",
-        "MaxParallelRequests": 4
+        "Organization": "dnceng-public",
+        "Project": "public"
       }
-   ]
+    ],
+    "InitialDelay": "0:10:00",
+    "Interval": "0:50:00",
+    "BuildBatchSize": 1000,
+    "LogScrapingTimeout": "0:10:00"
+  },
+
+  "AzureDevOpsSettings": {
+    "dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "MaxParallelRequests": 4
+    },
+    "dnceng-public": {
+      "Organization": "dnceng-public",
+      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "MaxParallelRequests": 4
+    }
   }
 }

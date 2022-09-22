@@ -8,16 +8,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public class AugmentedTimelineRecord
     {
-        public AugmentedTimelineRecord(int buildId, string timelineId, TimelineRecord raw)
-        {
-            BuildId = buildId;
-            TimelineId = timelineId;
-            Raw = raw;
-        }
-
-        public int BuildId { get; }
-        public string TimelineId { get; }
-        public TimelineRecord Raw { get; }
+        public int BuildId { get; init; }
+        public string TimelineId { get; init; }
+        public TimelineRecord Raw { get; init; }
         public string AugmentedOrder { get; set; }
         public string ImageName { get; set; }
     }

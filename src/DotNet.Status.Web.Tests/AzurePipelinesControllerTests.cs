@@ -10,6 +10,7 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using FluentAssertions;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Moq;
 using Newtonsoft.Json;
@@ -413,10 +414,7 @@ namespace DotNet.Status.Web.Tests
                     {
                         options.Monitor = new BuildMonitorOptions.AzurePipelinesOptions
                         {
-                            BaseUrl = "https://example.test",
                             Organization = "dnceng",
-                            MaxParallelRequests = 10,
-                            AccessToken = "fake",
                             Builds = new[]
                             {
                                 new BuildMonitorOptions.AzurePipelinesOptions.BuildDescription
@@ -557,20 +555,9 @@ namespace DotNet.Status.Web.Tests
 
                 var exponentialRetryOptions = new ExponentialRetryOptions();
 
-                var mockAzureClientFactory = new Mock<IAzureDevOpsClientFactory>();
-                mockAzureClientFactory
-                    .Setup(
-                        m => m.CreateAzureDevOpsClient(
-                            It.IsAny<string>(),
-                            It.IsAny<string>(),
-                            It.IsAny<int>(),
-                            It.IsAny<string>()
-                        )
-                    )
-                    .Returns(mockAzureDevOpsClient.Object);
 
                 collection.AddSingleton(mockGithubClientFactory.Object);
-                collection.AddSingleton(mockAzureClientFactory.Object);
+                collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(new SingleClientFactory<IAzureDevOpsClient>(mockAzureDevOpsClient.Object));
                 collection.AddSingleton(mockHttpClientFactory.Object);
                 collection.AddSingleton(ExponentialRetry.Default);
 
