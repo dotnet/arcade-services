@@ -524,14 +524,9 @@ namespace DotNet.Status.Web.Tests
                     .Returns(Task.FromResult(mockGithubClient.Object));
                 mockGithubClientFactory.Setup(m => m.CreateGitHubAppClient()).Returns(mockGithubClient.Object);
 
-                var project = new[]
-                {
-                    new AzureDevOpsProject("test-project-id", "test-project-name", "", "", "", 0, "")
-                };
-
                 var mockAzureDevOpsClient = new Mock<IAzureDevOpsClient>();
-                mockAzureDevOpsClient.Setup(m => m.ListProjectsAsync(It.IsAny<CancellationToken>()))
-                    .Returns(Task.FromResult(project));
+                mockAzureDevOpsClient.Setup(m => m.GetProjectNameAsync("test-project-id"))
+                    .Returns(Task.FromResult("test-project-name"));
                 if (buildData != null)
                 {
                     var build = JsonConvert.DeserializeObject<Build>(buildData.ToString());
