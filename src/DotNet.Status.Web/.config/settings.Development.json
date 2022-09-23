@@ -40,5 +40,22 @@
   },
   "IssueMentionForwarding": {
     "TeamsWebHookUri": ""
+  },
+  "AzureDevOps": {
+    "build-monitor/dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    },
+    "dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    },
+    "dnceng-public": {
+      "Organization": "dnceng-public",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    }
   }
 }
