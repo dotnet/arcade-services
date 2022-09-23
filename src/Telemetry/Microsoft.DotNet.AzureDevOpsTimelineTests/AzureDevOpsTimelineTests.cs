@@ -98,7 +98,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             /// Test execution
             await testData.Controller.RunProject(
-                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                new AzureDevOpsProject {Project = azdoProjectName, Organization = azdoOrganizationName},
                 1000,
                 CancellationToken.None);
 
@@ -149,7 +149,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             /// Test execution
-            await testData.Controller.RunProject(new AzureDevOpsInstance
+            await testData.Controller.RunProject(new AzureDevOpsProject
             {
                 Project = azdoProjectName,
                 Organization = azdoOrganizationName,
@@ -194,7 +194,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             /// Test execution
             await testData.Controller.RunProject(
-                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                new AzureDevOpsProject {Project = azdoProjectName, Organization = azdoOrganizationName},
                 1000,
                 CancellationToken.None);
 
@@ -229,7 +229,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             /// Test execution
             await testData.Controller.RunProject(
-                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                new AzureDevOpsProject {Project = azdoProjectName, Organization = azdoOrganizationName},
                 1000,
                 CancellationToken.None);
 
@@ -265,7 +265,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 
             /// Test execution
             await testData.Controller.RunProject(
-                new AzureDevOpsInstance {Project = azdoProjectName, Organization = azdoOrganizationName},
+                new AzureDevOpsProject {Project = azdoProjectName, Organization = azdoOrganizationName},
                 1000,
                 CancellationToken.None);
 

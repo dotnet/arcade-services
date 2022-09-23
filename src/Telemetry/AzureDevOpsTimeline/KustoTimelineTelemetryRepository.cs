@@ -44,17 +44,17 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _database = options.Value.Database;
         }
 
-        public async Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsInstance instance)
+        public async Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsProject project)
         {
             try
             {
                 using IDataReader result = await _query.ExecuteQueryAsync(
                     _database,
-                    // This isn't use controlled, so I'm not worried about the Kusto injection
+                    // This isn't user controlled, so I'm not worried about the Kusto injection
                     $"""
                     TimelineBuilds
-                    | where coalesce(Organization, "dnceng") == '{instance.Organization}'
-                    | where Project == '{instance.Project}'
+                    | where coalesce(Organization, "dnceng") == '{project.Organization}'
+                    | where Project == '{project.Project}'
                     | summarize max(FinishTime)
                     """,
                     new ClientRequestProperties()

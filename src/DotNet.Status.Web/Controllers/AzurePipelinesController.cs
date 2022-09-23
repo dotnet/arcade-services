@@ -48,13 +48,6 @@ namespace DotNet.Status.Web.Controllers
             return _azureDevOpsClientFactory.GetClient($"build-monitor/{o.Organization}");
         }
 
-        private async Task<string> GetProjectNameAsync(IAzureDevOpsClient client, string id)
-        {
-            var projects = await client.ListProjectsAsync();
-            var map = projects.ToDictionary(p => p.Id, p => p.Name);
-            return map.GetValueOrDefault(id);
-        }
-
         [HttpPost]
         [Route("build-complete")]
         [ProducesResponseType((int) HttpStatusCode.NoContent)]
@@ -64,7 +57,7 @@ namespace DotNet.Status.Web.Controllers
                 buildEvent.Resource.Id,
                 buildEvent.Resource.Url);
             using var client = GetAzureDevOpsClient();
-            string projectName = await GetProjectNameAsync(client.Value, buildEvent.ResourceContainers.Project.Id);
+            string projectName = await client.Value.GetProjectNameAsync(buildEvent.ResourceContainers.Project.Id);
             if (string.IsNullOrEmpty(projectName))
             {
                 _logger.LogWarning(

@@ -6,14 +6,14 @@ using System.Collections.Generic;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
-    public class AzureDevOpsInstance
+    public class AzureDevOpsProject
     {
         public string Organization { get; set; }
         public string Project { get; set; }
     }
     public class AzureDevOpsTimelineOptions
     {
-        public List<AzureDevOpsInstance> Instances { get; set; }
+        public List<AzureDevOpsProject> Projects { get; set; }
         public string InitialDelay { get; set; }
         public string Interval { get; set; }
         public string BuildBatchSize { get; set; }

@@ -9,7 +9,7 @@
   },
   
   "AzureDevOpsTimeline": {
-    "Instances": [
+    "Projects": [
       {
         "Organization": "dnceng",
         "Project": "internal"

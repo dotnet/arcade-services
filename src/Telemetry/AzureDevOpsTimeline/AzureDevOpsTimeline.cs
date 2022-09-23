@@ -77,21 +77,21 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 buildBatchSize = 1000;
             }
 
-            foreach (var instance in _options.Instances)
+            foreach (var instance in _options.Projects)
             {
                 await RunProject(instance, buildBatchSize, cancellationToken);
             }
         }
 
         public async Task RunProject(
-            AzureDevOpsInstance instance,
+            AzureDevOpsProject project,
             int buildBatchSize,
             CancellationToken cancellationToken)
         {
-            using var _ = _logger.BeginScope("Reading instance {Organization}/{Project}", instance.Organization, instance.Project);
+            using var _ = _logger.BeginScope("Reading project {Organization}/{Project}", project.Organization, project.Project);
                 
             DateTimeOffset latest;
-            DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(instance);
+            DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(project);
 
             if (latestCandidate.HasValue)
             {
@@ -103,10 +103,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 _logger.LogWarning("No previous time found, using {StartTime}", latest.LocalDateTime);
             }
 
-            using var azDoClientRef = _azureDevopsClientFactory.GetClient(instance.Organization);
+            using var azDoClientRef = _azureDevopsClientFactory.GetClient(project.Organization);
             var azDoClient = azDoClientRef.Value;
 
-            Build[] builds = await GetBuildsAsync(azDoClient, instance.Project, latest, buildBatchSize, cancellationToken);
+            Build[] builds = await GetBuildsAsync(azDoClient, project.Project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {BuildCount} builds...", builds.Length);
 
             if (builds.Length == 0)
@@ -125,7 +125,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             Dictionary<Build, Task<Timeline>> tasks = builds
                 .ToDictionary(
                     build => build,
-                    build => azDoClient.GetTimelineAsync(instance.Project, build.Id, cancellationToken)
+                    build => azDoClient.GetTimelineAsync(project.Project, build.Id, cancellationToken)
                 );
 
             await Task.WhenAll(tasks.Select(s => s.Value));
@@ -151,7 +151,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 retriedTimelineTasks.AddRange(
                     additionalTimelineIds.Select(
-                        timelineId => (build, azDoClient.GetTimelineAsync(instance.Project, build.Id, timelineId, cancellationToken))));
+                        timelineId => (build, azDoClient.GetTimelineAsync(project.Project, build.Id, timelineId, cancellationToken))));
             }
 
             await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
@@ -237,7 +237,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             await AddImageNamesToRecordsAsync(azDoClient, records, cancellationToken);
 
             _logger.LogInformation("Saving TimelineBuilds...");
-            await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds, instance.Organization);
+            await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds, project.Organization);
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
             await _timelineTelemetryRepository.WriteTimelineValidationMessages(validationResults);

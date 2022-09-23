@@ -32,9 +32,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             _latestTimes = latestTimes;
         }
 
-        public Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsInstance instance)
+        public Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsProject project)
         {
-            DateTimeOffset candidate = _latestTimes.FirstOrDefault(latest => latest.project == instance.Project && latest.organization == instance.Organization).latestTime;
+            DateTimeOffset candidate = _latestTimes.FirstOrDefault(latest => latest.project == project.Project && latest.organization == project.Organization).latestTime;
             if (candidate == default)
                 return Task.FromResult<DateTimeOffset?>(null);
             else

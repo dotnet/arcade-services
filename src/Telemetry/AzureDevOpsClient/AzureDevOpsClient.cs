@@ -175,6 +175,13 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return null;
         }
 
+        public async Task<string> GetProjectNameAsync(string id)
+        {
+            var projects = await ListProjectsAsync();
+            var map = projects.ToDictionary(p => p.Id, p => p.Name);
+            return map.GetValueOrDefault(id);
+        }
+
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);

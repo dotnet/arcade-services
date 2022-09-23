@@ -98,7 +98,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .WithHttpMessageHandler(httpMessageHandler)
                 .BuildAsync();
 
-            await testData.Controller.RunProject(new AzureDevOpsInstance{ Project = azdoProjectName, Organization = azdoOrganizationName }, 1000, CancellationToken.None);
+            await testData.Controller.RunProject(new AzureDevOpsProject{ Project = azdoProjectName, Organization = azdoOrganizationName }, 1000, CancellationToken.None);
 
             testData.Repository.TimelineRecords.Count(record => !string.IsNullOrEmpty(record.ImageName)).Should().Be(1);
             testData.Repository.TimelineRecords.Count(record => string.IsNullOrEmpty(record.ImageName)).Should().Be(1);

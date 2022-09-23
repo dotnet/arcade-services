@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public interface ITimelineTelemetryRepository : IDisposable
     {
-        public Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsInstance instance);
+        public Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsProject project);
         public Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds, string organization);
         public Task WriteTimelineValidationMessages(IEnumerable<(int buildId, BuildRequestValidationResult validationResult)> validationResults);
         public Task WriteTimelineRecords(IEnumerable<AugmentedTimelineRecord> records);

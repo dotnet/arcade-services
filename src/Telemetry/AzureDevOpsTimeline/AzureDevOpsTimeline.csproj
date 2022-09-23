@@ -34,6 +34,4 @@
     <ProjectReference Include="..\AzureDevOpsClient\AzureDevOpsClient.csproj" />
   </ItemGroup>
 
-  <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
-
 </Project>
