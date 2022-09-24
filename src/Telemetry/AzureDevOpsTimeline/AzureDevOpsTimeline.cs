@@ -234,7 +234,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 }
             }
 
-            await AddImageNamesToRecordsAsync(azDoClient, records, cancellationToken);
+            await AddImageNamesToRecordsAsync(project, records, cancellationToken);
 
             _logger.LogInformation("Saving TimelineBuilds...");
             await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds, project.Organization);
@@ -327,7 +327,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
         }
 
-        private async Task AddImageNamesToRecordsAsync(IAzureDevOpsClient client, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+        private async Task AddImageNamesToRecordsAsync(AzureDevOpsProject project, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
         {
             TimeSpan cancellationTime = TimeSpan.Parse(_options.LogScrapingTimeout ?? "00:10:00");
 
@@ -343,7 +343,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 Stopwatch stopWatch = Stopwatch.StartNew();
 
-                await GetImageNames(client, records, combinedCancellationToken);
+                await GetImageNames(project, records, combinedCancellationToken);
 
                 stopWatch.Stop();
                 _logger.LogInformation("Log scraping took {ElapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
@@ -359,7 +359,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
         }
 
-        private async Task GetImageNames(IAzureDevOpsClient client, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+        private async Task GetImageNames(AzureDevOpsProject project, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
         {
             SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
 
@@ -374,14 +374,14 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 if (record.Raw.Name == "Initialize job")
                 {
-                    var childTask = GetImageName(client, record, throttleSemaphore, cancellationToken);
+                    var childTask = GetImageName(project, record, throttleSemaphore, cancellationToken);
                     taskList.Add(childTask);
                     continue;
                 }
 
                 if (record.Raw.Name == "Initialize containers")
                 {
-                    var childTask = GetDockerImageName(client, record, throttleSemaphore, cancellationToken);
+                    var childTask = GetDockerImageName(project, record, throttleSemaphore, cancellationToken);
                     taskList.Add(childTask);
                     continue;
                 }
@@ -401,7 +401,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger.LogInformation("Log scraping summary: {SuccessfulTasks} successful, {CancelledTasks} cancelled, {FailedTasks} failed", successfulTasks, cancelledTasks, failedTasks);
         }
         
-        private async Task GetImageName(IAzureDevOpsClient client, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        private async Task GetImageName(AzureDevOpsProject project, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
         {
             await throttleSemaphore.WaitAsync(cancellationToken);
 
@@ -411,11 +411,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
                 if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
                 {
-                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(client, record.Raw.Log.Url, cancellationToken);
+                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
                 }
                 else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
                 {
-                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(client, record.Raw.Log.Url, cancellationToken);
+                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
                 }
                 else
                 {
@@ -433,7 +433,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
         }
 
-        private async Task GetDockerImageName(IAzureDevOpsClient client, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        private async Task GetDockerImageName(AzureDevOpsProject project, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
         {
             await throttleSemaphore.WaitAsync(cancellationToken);
 
@@ -441,7 +441,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                record.ImageName = await _buildLogScraper.ExtractDockerImageNameAsync(client, record.Raw.Log.Url, cancellationToken);
+                record.ImageName = await _buildLogScraper.ExtractDockerImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
             }
             catch (Exception exception)
             {

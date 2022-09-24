@@ -10,6 +10,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
@@ -53,8 +54,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 };
                 collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>(provider =>
                     new AzureDevOpsClient(options, provider.GetRequiredService<IHttpClientFactory>()));
+                collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
+                    new SingleClientFactory<IAzureDevOpsClient>(provider.GetRequiredService<IAzureDevOpsClient>()));
             }
         }
+
+        private static readonly AzureDevOpsProject _project = new AzureDevOpsProject {Organization = "org", Project = "project"};
 
         [Test]
         public async Task BuildLogScraperShouldExtractMicrosoftHostedPoolImageName()
@@ -64,7 +69,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractOneESHostedPoolImageNameAsync(
-                testData.Client,
+                _project,
                 MockAzureClient.OneESLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.OneESImageName, imageName);
@@ -78,7 +83,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(
-                testData.Client,
+                _project,
                 MockAzureClient.MicrosoftHostedAgentLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.MicrosoftHostedAgentImageName, imageName);
@@ -92,7 +97,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractDockerImageNameAsync(
-                testData.Client,
+                _project,
                 MockAzureClient.DockerLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.DockerImageName, imageName);
@@ -107,8 +112,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .WithMockRequest((EmptyUrl, string.Empty))
                 .BuildAsync();
 
-            Assert.IsNull(await testData.Controller.ExtractOneESHostedPoolImageNameAsync(testData.Client, EmptyUrl, cancellationTokenSource.Token));
-            Assert.IsNull(await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(testData.Client, EmptyUrl, cancellationTokenSource.Token));
+            Assert.IsNull(await testData.Controller.ExtractOneESHostedPoolImageNameAsync(_project, EmptyUrl, cancellationTokenSource.Token));
+            Assert.IsNull(await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(_project, EmptyUrl, cancellationTokenSource.Token));
 
         }
     }

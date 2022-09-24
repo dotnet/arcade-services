@@ -10,8 +10,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public interface IBuildLogScraper
     {
-        Task<string> ExtractMicrosoftHostedPoolImageNameAsync(IAzureDevOpsClient client, string logUri, CancellationToken cancellationToken);
-        Task<string> ExtractOneESHostedPoolImageNameAsync(IAzureDevOpsClient client, string logUri, CancellationToken cancellationToken);
-        Task<string> ExtractDockerImageNameAsync(IAzureDevOpsClient client, string logUri, CancellationToken cancellationToken);
+        Task<string> ExtractMicrosoftHostedPoolImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken);
+        Task<string> ExtractOneESHostedPoolImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken);
+        Task<string> ExtractDockerImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken);
     }
 }
