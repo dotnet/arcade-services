@@ -57,7 +57,7 @@ namespace SubscriptionActorService
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult((IRemote)new Remote(null, null, new MaestroBarClient(_context), logger));
+            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
         }
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -101,12 +101,7 @@ namespace SubscriptionActorService
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
                 };
 
-                var gitFileManager = new GitFileManager(
-                    new LocalGitClient(gitExe, logger),
-                    new VersionDetailsParser(),
-                    logger);
-
-                return new Remote(gitClient, gitFileManager, new MaestroBarClient(_context), logger);
+                return new Remote(gitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
             }
         }
     }

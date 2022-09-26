@@ -73,6 +73,20 @@ namespace Microsoft.DotNet.DarcLib
 
         public bool AllowRetries { get; set; } = true;
 
+        /// <summary>
+        /// Retrieve the contents of a text file in a repo on a specific branch
+        /// </summary>
+        /// <param name="filePath">Path to file within the repo</param>
+        /// <param name="repoUri">Repository url</param>
+        /// <param name="branch">Branch or commit</param>
+        /// <returns>Content of file</returns>
+        public Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+            return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
+        }
+
         private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
@@ -876,7 +890,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <param name="input">String that must have 'shouldEndWith' at the end.</param>
         /// <param name="shouldEndWith">Character that must be present at end of 'input' string.</param>
         /// <returns>Input string appended with 'shouldEndWith'</returns>
-        private static string EnsureEndsWith(string input, char shouldEndWith)
+        private string EnsureEndsWith(string input, char shouldEndWith)
         {
             if (input == null) return null;
 
@@ -926,6 +940,18 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             Uri accountUri = new Uri($"https://dev.azure.com/{accountName}");
             var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
             return new VssConnection(accountUri, creds);
+        }
+
+        private (int threadId, int commentId) ParseCommentId(string commentId)
+        {
+            string[] parts = commentId.Split('-');
+            if (parts.Length != 2 || int.TryParse(parts[0], out int threadId) ||
+                int.TryParse(parts[1], out int commentIdValue))
+            {
+                throw new ArgumentException("The comment id '{commentId}' is in an invalid format", nameof(commentId));
+            }
+
+            return (threadId, commentIdValue);
         }
 
         /// <summary>
@@ -1463,6 +1489,25 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
             Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
+        }
+
+        /// <summary>
+        ///     Does not apply to remote repositories.
+        /// </summary>
+        /// <param name="commit">Ignored</param>
+        public void Checkout(string repoPath, string commit, bool force)
+        {
+            throw new NotImplementedException($"Cannot checkout a remote repo.");
+        }
+
+        /// <summary>
+        ///     Does not apply to remote repositories.
+        /// </summary>
+        /// <param name="repoDir">Ignored</param>
+        /// <param name="repoUrl">Ignored</param>
+        public void AddRemoteIfMissing(string repoDir, string repoUrl)
+        {
+            throw new NotImplementedException("Cannot add a remote to a remote repo.");
         }
 
         /// <summary>
