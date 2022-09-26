@@ -168,15 +168,6 @@ namespace Microsoft.DotNet.DarcLib
             return element;
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="itemsToUpdate"></param>
-        /// <param name="repoUri"></param>
-        /// <param name="branch"></param>
-        /// <param name="oldDependencies"></param>
-        /// <param name="incomingDotNetSdkVersion"></param>
-        /// <returns></returns>
         public async Task<GitFileContentContainer> UpdateDependencyFiles(
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
