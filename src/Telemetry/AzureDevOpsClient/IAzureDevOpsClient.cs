@@ -23,5 +23,6 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
         public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
         public Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken = default);
+        public Task<string> GetProjectNameAsync(string id);
     }
 }

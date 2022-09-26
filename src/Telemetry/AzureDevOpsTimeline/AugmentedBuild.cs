@@ -8,13 +8,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public class AugmentedBuild
     {
-        public AugmentedBuild(Build build, string targetBranch)
-        {
-            Build = build;
-            TargetBranch = targetBranch;
-        }
-
-        public Build Build { get; }
-        public string TargetBranch { get; }
+        public Build Build { get; init; }
+        public string TargetBranch { get; init; }
     }
 }

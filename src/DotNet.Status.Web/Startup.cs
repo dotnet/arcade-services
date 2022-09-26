@@ -36,6 +36,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Kusto;
 using Octokit;
 using AzureStorage = Microsoft.Azure.Storage;
@@ -101,9 +102,11 @@ namespace DotNet.Status.Web
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana"));
             services.Configure<AnnotationsOptions>(Configuration.GetSection("Annotations"));
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth"));
-            services.Configure<AzureDevOpsOptions>(Configuration.GetSection("AzureDevOps"));
+            services.Configure<AzureDevOpsOptions>("dnceng", Configuration.GetSection("AzureDevOps:dnceng"));
+            services.Configure<AzureDevOpsOptions>("dnceng-public", Configuration.GetSection("AzureDevOps:dnceng-public"));
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor"));
             services.Configure<KustoOptions>(Configuration.GetSection("Kusto"));
+            services.Configure<RcaOptions>(Configuration.GetSection("Rca"));
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -287,7 +290,7 @@ namespace DotNet.Status.Web
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
 
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
-            services.AddSingleton<IAzureDevOpsClientFactory, AzureDevOpsClientFactory>();
+            services.AddClientFactory<AzureDevOpsClientOptions, IAzureDevOpsClient, AzureDevOpsClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();

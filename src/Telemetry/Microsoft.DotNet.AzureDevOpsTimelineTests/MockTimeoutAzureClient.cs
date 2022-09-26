@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             return Task.FromResult(Builds.Keys.ToArray());
         }
 
-        public Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+        public Task<Internal.AzureDevOps.AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -79,6 +79,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
             response.EnsureSuccessStatusCode();
                 
             return await response.Content.ReadAsStringAsync();
+        }
+
+        public Task<string> GetProjectNameAsync(string id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

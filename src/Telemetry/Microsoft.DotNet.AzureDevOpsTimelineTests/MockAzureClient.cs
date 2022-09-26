@@ -102,7 +102,7 @@ Version: 20220223.1";
             throw new NotImplementedException();
         }
 
-        public Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+        public Task<Internal.AzureDevOps.AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -115,6 +115,11 @@ Version: 20220223.1";
         public Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken)
         {
             return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
+        }
+
+        public Task<string> GetProjectNameAsync(string id)
+        {
+            throw new NotImplementedException();
         }
     }
 }
