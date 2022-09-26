@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrPatchHandler : IVmrPatchHandler
 {
-    // These git attributes catn override cloaking of files when set it individual repositories
+    // These git attributes can override cloaking of files when set it individual repositories
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
@@ -427,7 +427,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
-        var clonePath = Path.Combine(tmpPath, change.Name);
+        var clonePath = Path.Combine(tmpPath, change.Name.Replace('/', '-'));
         await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
         var submoduleMapping = new SourceMapping(
