@@ -16,7 +16,7 @@ using System.Xml;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class GitFileManager : IGitFileManager
+    public class GitFileManager
     {
         private readonly ILocalGitRepo _gitClient;
         private readonly IVersionDetailsParser _versionDetailsParser;
@@ -168,6 +168,15 @@ namespace Microsoft.DotNet.DarcLib
             return element;
         }
 
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="itemsToUpdate"></param>
+        /// <param name="repoUri"></param>
+        /// <param name="branch"></param>
+        /// <param name="oldDependencies"></param>
+        /// <param name="incomingDotNetSdkVersion"></param>
+        /// <returns></returns>
         public async Task<GitFileContentContainer> UpdateDependencyFiles(
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
@@ -1436,8 +1445,8 @@ namespace Microsoft.DotNet.DarcLib
             }
             else
             {
-                _logger.LogError($"Unable to parse feed {feed} as a Maestro managed feed");
-                throw new ArgumentException($"feed {feed} is not a valid Maestro managed feed");
+                _logger.LogError($"Unable to parse feed { feed } as a Maestro managed feed");
+                throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed");
             }
         }
 

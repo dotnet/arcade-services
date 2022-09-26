@@ -23,7 +23,8 @@ namespace Microsoft.DotNet.DarcLib
     public sealed class Remote : IRemote
     {
         private readonly IBarClient _barClient;
-        private readonly IGitFileManager _fileManager;
+        private readonly IVersionDetailsParser _versionDetailsParser;
+        private readonly GitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
 
@@ -32,14 +33,20 @@ namespace Microsoft.DotNet.DarcLib
         //- **Foo**: from to 1.2.0
         //- **Bar**: from to 2.2.0
         //[DependencyUpdate]: <> (End)
-        private static readonly Regex DependencyUpdatesPattern = new(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
+        private static readonly Regex DependencyUpdatesPattern =
+            new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-        public Remote(IGitRepo gitClient, IGitFileManager gitFileManager, IBarClient barClient, ILogger logger)
+        public Remote(IGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
         {
             _logger = logger;
             _barClient = barClient;
             _gitClient = gitClient;
-            _fileManager = gitFileManager;
+            _versionDetailsParser = versionDetailsParser;
+
+            if (_gitClient != null)
+            {
+                _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
+            }
         }
 
         /// <summary>
@@ -252,7 +259,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="subscriptionId">ID of subscription.</param>
         /// <returns>New guid</returns>
-        private static Guid GetSubscriptionGuid(string subscriptionId)
+        private Guid GetSubscriptionGuid(string subscriptionId)
         {
             if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
             {
@@ -317,6 +324,17 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             _logger.LogInformation($"Getting reviews for pull request '{pullRequestUrl}'...");
             return await _gitClient.GetLatestPullRequestReviewsAsync(pullRequestUrl);
+        }
+
+        public async Task<IEnumerable<int>> SearchPullRequestsAsync(
+            string repoUri,
+            string pullRequestBranch,
+            PrStatus status,
+            string keyword = null,
+            string author = null)
+        {
+            CheckForValidGitClient();
+            return await _gitClient.SearchPullRequestsAsync(repoUri, pullRequestBranch, status, keyword, author);
         }
 
         public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
@@ -415,7 +433,7 @@ namespace Microsoft.DotNet.DarcLib
         ///         - None
         /// </remarks>
         /// <returns>Leaves of coherency trees</returns>
-        private static IEnumerable<DependencyDetail> CalculateLeavesOfCoherencyTrees(IEnumerable<DependencyDetail> dependencies)
+        private IEnumerable<DependencyDetail> CalculateLeavesOfCoherencyTrees(IEnumerable<DependencyDetail> dependencies)
         {
             // First find dependencies with coherent parent pointers.
             IEnumerable<DependencyDetail> leavesOfCoherencyTrees =
@@ -800,17 +818,19 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
 
+                DependencyGraphNode rootNode = null;
+
                 // Build the graph to find the assets if we don't have the root in the cache.
                 // The graph build is automatically broken when
                 // all the desired assets are found (breadth first search). This means the cache may or
                 // may not contain a complete graph for a given node. So, we first search the cache for the desired assets,
                 // then if not found (or if there was no cache), we then build the graph from that node.
-                bool nodeFromCache = nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out DependencyGraphNode rootNode);
+                bool nodeFromCache = nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode);
                 if (!nodeFromCache)
                 {
                     _logger.LogInformation($"Node not found in cache, starting graph build at " +
                         $"{currentDependency.RepoUri}@{currentDependency.Commit}");
-                    rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, nodeCache);
+                    rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, updateList, nodeCache);
                 }
 
                 // Now do the lookup to find the element in the tree for each item in the update list
@@ -869,6 +889,7 @@ namespace Microsoft.DotNet.DarcLib
         private async Task<DependencyGraphNode> BuildGraphAtDependencyAsync(
             IRemoteFactory remoteFactory,
             DependencyDetail rootDependency,
+            List<DependencyDetail> updateList,
             Dictionary<string, DependencyGraphNode> nodeCache)
         {
             DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
@@ -1038,12 +1059,15 @@ namespace Microsoft.DotNet.DarcLib
             CoherencyMode coherencyMode)
         {
             _logger.LogInformation($"Running coherency update using the {coherencyMode} algorithm");
-            return coherencyMode switch
+            switch (coherencyMode)
             {
-                CoherencyMode.Strict => await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory),
-                CoherencyMode.Legacy => await GetRequiredLegacyCoherencyUpdatesAsync(dependencies, remoteFactory),
-                _ => throw new NotImplementedException($"Coherency mode {coherencyMode} is not supported."),
-            };
+                case CoherencyMode.Strict:
+                    return await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
+                case CoherencyMode.Legacy:
+                    return await GetRequiredLegacyCoherencyUpdatesAsync(dependencies, remoteFactory);
+                default:
+                    throw new NotImplementedException($"Coherency mode {coherencyMode} is not supported.");
+            }
         }
 
         /// <summary>
@@ -1446,9 +1470,11 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger.LogInformation("Reading dotnet version from global.json succeeded!");
 
-            if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
+            SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion);
+
+            if (dotnetVersion == null)
             {
-                _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
+                _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
             }
 
             return dotnetVersion;
