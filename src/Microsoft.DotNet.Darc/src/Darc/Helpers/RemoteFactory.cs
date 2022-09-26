@@ -5,7 +5,6 @@
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
-using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -68,7 +67,12 @@ namespace Microsoft.DotNet.Darc.Helpers
                                                     darcSettings.BuildAssetRegistryBaseUri);
             }
 
-            return new Remote(gitClient, barClient, new VersionDetailsParser(), logger);
+            var gitFileManager = new GitFileManager(
+                new LocalGitClient(options.GitLocation, logger),
+                new VersionDetailsParser(),
+                logger);
+
+            return new Remote(gitClient, gitFileManager, barClient, logger);
         }
 
         /// <summary>
@@ -91,12 +95,12 @@ namespace Microsoft.DotNet.Darc.Helpers
         /// <returns>New remote</returns>
         public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         {
-            return Task.FromResult(GetRemote(this._options, repoUrl, logger));
+            return Task.FromResult(GetRemote(_options, repoUrl, logger));
         }
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult(GetRemote(this._options, null, logger));
+            return Task.FromResult(GetRemote(_options, null, logger));
         }
     }
 }

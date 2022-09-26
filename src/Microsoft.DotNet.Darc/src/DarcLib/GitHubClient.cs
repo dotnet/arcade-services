@@ -2,14 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Octokit;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -18,9 +13,14 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Services.Utility;
 using Maestro.Contracts;
-using System.Collections.Immutable;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -29,9 +29,6 @@ namespace Microsoft.DotNet.DarcLib
         private const string GitHubApiUri = "https://api.github.com";
         private const string DarcLibVersion = "1.0.0";
         private static readonly ProductHeaderValue _product;
-
-        private static readonly string CommentMarker =
-            "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
@@ -68,19 +65,6 @@ namespace Microsoft.DotNet.DarcLib
         public virtual IGitHubClient Client => _lazyClient.Value;
 
         public bool AllowRetries { get; set; } = true;
-
-
-        /// <summary>
-        ///     Add a comment to the discussion of an existing pull request or issue (the APIs are the same)
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="issueNumber">Issue or PR id</param>
-        /// <param name="message">Contents of the message (ideally in markdown format)</param>
-        public async Task AddIssueComment(string repoUri, int issueNumber, string message)
-        {
-            (string owner, string repo) = ParseRepoUri(repoUri);
-            await Client.Issue.Comment.Create(owner, repo, issueNumber, message);
-        }
 
 
         /// <summary>
@@ -184,7 +168,7 @@ namespace Microsoft.DotNet.DarcLib
                     _logger,
                     body)) { }
 
-                    _logger.LogInformation($"Branch '{newBranch}' created in repo '{repoUri}'!");
+                _logger.LogInformation($"Branch '{newBranch}' created in repo '{repoUri}'!");
 
                 return;
             }
@@ -399,7 +383,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
-            
+
             var mergePullRequest = new MergePullRequest
             {
                 CommitMessage = mergeCommitMessage,
@@ -416,31 +400,11 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Create a new comment, or update the last comment with an updated message,
-        ///     if that comment was created by Darc.
-        /// </summary>
-        /// <param name="pullRequestUrl">Url of pull request</param>
-        /// <param name="message">Message to post</param>
-        public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
-        {
-            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id)).LastOrDefault();
-            if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
-            {
-                await Client.Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
-            }
-            else
-            {
-                await Client.Issue.Comment.Create(owner, repo, id, message + CommentMarker);
-            }
-        }
-
-        /// <summary>
         ///     Returns the ID used to identify the maestro merge policies checks in a PR
         /// </summary>
         /// <param name="mergePolicyName">Name of the merge policy</param>
         /// <param name="sha">Sha of the latest commit in the PR</param>
-        private string CheckRunId(MergePolicyEvaluationResult result, string sha)
+        private static string CheckRunId(MergePolicyEvaluationResult result, string sha)
         {
             return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
         }
@@ -450,13 +414,13 @@ namespace Microsoft.DotNet.DarcLib
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             // Get the sha of the latest commit for the current PR
             string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha;
-            if (prSha == null) 
+            if (prSha == null)
             {
                 throw new InvalidOperationException("We cannot find the sha of the pull request");
             }
 
             // Get a list of all the merge policies checks runs for the current PR
-            List <CheckRun> existingChecksRuns = 
+            List<CheckRun> existingChecksRuns =
                 (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
                 .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
@@ -469,7 +433,7 @@ namespace Microsoft.DotNet.DarcLib
                 await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
             }
             foreach (var updatedCheckRun in toBeUpdated)
-            {                
+            {
                 MergePolicyEvaluationResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
                 CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
                 await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
@@ -487,7 +451,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="result">The evaluation of the merge policy</param>
         /// <param name="sha">Sha of the latest commit</param>
         /// <returns>The new check run</returns>
-        private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
+        private static NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
         {
             var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha);
             newCheckRun.ExternalId = CheckRunId(result, sha);
@@ -501,7 +465,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
         /// <param name="eval">The result of that updated check run</param>
         /// <returns>The updated CheckRun</returns>
-        private CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
+        private static CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
         {
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
             UpdateCheckRun(updatedCheckRun, eval);
@@ -513,7 +477,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="checkRun">The check run that needs to be deleted</param>
         /// <returns>The deleted check run</returns>
-        private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
+        private static CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
         {
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
             updatedCheckRun.CompletedAt = checkRun.CompletedAt;
@@ -527,7 +491,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
         /// <param name="result">The result of that new check run</param>
-        private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
+        private static void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
         {
             var output = FormatOutput(result);
             newCheckRun.Output = output;
@@ -559,7 +523,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
         /// <param name="result">The result of that new check run</param>
-        private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
+        private static void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
         {
             var output = FormatOutput(result);
             newUpdateCheckRun.Output = output;
@@ -680,7 +644,7 @@ namespace Microsoft.DotNet.DarcLib
                                             blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
                                             break;
                                         }
-                                        catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
+                                        catch (Exception e) when ((e is ForbiddenException || e is AbuseException) && attempts < maxAttempts)
                                         {
                                             // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
                                             int retryAfterSeconds = 60;
@@ -696,8 +660,8 @@ namespace Microsoft.DotNet.DarcLib
                                     }
 
                                     return blob;
-                                    
-                                    },
+
+                                },
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
                                 ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
 
@@ -758,45 +722,11 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>New http client</returns
         private HttpClient CreateHttpClient()
         {
-            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {BaseAddress = new Uri(GitHubApiUri)};
+            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) { BaseAddress = new Uri(GitHubApiUri) };
             client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
             client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
 
             return client;
-        }
-
-        /// <summary>
-        ///     Determine whether a file exists in a repo at a specified branch and
-        ///     returns the SHA of the file if it does.
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
-        /// <returns>Sha of file or null if the file does not exist.</returns>
-        public async Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
-        {
-            string commit;
-            (string owner, string repo) = ParseRepoUri(repoUri);
-            HttpResponseMessage response;
-
-            try
-            {
-                JObject content;
-                using (response = await this.ExecuteRemoteGitCommandAsync(
-                    HttpMethod.Get,
-                    $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
-                    _logger))
-                {
-                    content = JObject.Parse(await response.Content.ReadAsStringAsync());
-                }
-                commit = content["sha"].ToString();
-
-                return commit;
-            }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
-            {
-                return null;
-            }
         }
 
         /// <summary>
@@ -863,8 +793,8 @@ namespace Microsoft.DotNet.DarcLib
 
                 return content["sha"].ToString();
             }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
-                || exc.Message.Contains(((int)HttpStatusCode.UnprocessableEntity).ToString()))
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString())
+                || exc.Message.Contains(((int) HttpStatusCode.UnprocessableEntity).ToString()))
             {
                 return null;
             }
@@ -918,7 +848,7 @@ namespace Microsoft.DotNet.DarcLib
                 new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
         }
 
-        private ReviewState TranslateReviewState(PullRequestReviewState state)
+        private static ReviewState TranslateReviewState(PullRequestReviewState state)
         {
             switch (state)
             {
@@ -942,7 +872,7 @@ namespace Microsoft.DotNet.DarcLib
         private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
         {
             var status = await Client.Repository.Status.GetCombined(owner, repo, @ref);
-            
+
             return status.Statuses.Select(
                     s =>
                     {
@@ -1020,7 +950,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private Octokit.GitHubClient CreateGitHubClient()
         {
-            return new Octokit.GitHubClient(_product) {Credentials = new Octokit.Credentials(_personalAccessToken)};
+            return new Octokit.GitHubClient(_product) { Credentials = new Octokit.Credentials(_personalAccessToken) };
         }
 
         private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
@@ -1170,13 +1100,13 @@ namespace Microsoft.DotNet.DarcLib
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
             return CommitFilesAsync(
-                filesToCommit, 
-                repoUri, 
-                branch, 
-                commitMessage, 
-                _logger, 
+                filesToCommit,
+                repoUri,
+                branch,
+                commitMessage,
+                _logger,
                 _personalAccessToken,
-                Constants.DarcBotName, 
+                Constants.DarcBotName,
                 Constants.DarcBotEmail);
         }
 
@@ -1230,25 +1160,6 @@ namespace Microsoft.DotNet.DarcLib
         public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
             Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
-        }
-
-        /// <summary>
-        ///     Does not apply to remote repositories.
-        /// </summary>
-        /// <param name="commit">Ignored</param>
-        public void Checkout(string repoPath, string commit, bool force)
-        {
-            throw new NotImplementedException($"Cannot checkout a remote repo.");
-        }
-
-        /// <summary>
-        ///     Does not apply to remote repositories.
-        /// </summary>
-        /// <param name="repoDir">Ignored</param>
-        /// <param name="repoUrl">Ignored</param>
-        public void AddRemoteIfMissing(string repoDir, string repoUrl)
-        {
-            throw new NotImplementedException($"Cannot add a remote to a remote repo.");
         }
 
         /// <summary>

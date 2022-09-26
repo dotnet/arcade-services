@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface IGitRepo : ILocalGitRepo
+    public interface IGitRepo
     {
         /// <summary>
         /// Specifies whether functions with a retry field should employ retries
@@ -125,6 +125,19 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         Task<Commit> GetCommitAsync(string repoUri, string sha);
 
+        /// <summary>
+        ///     Updates local copies of the files.
+        /// </summary>
+        /// <param name="filesToCommit">Files to update locally</param>
+        /// <param name="repoUri">Base path of the repo</param>
+        /// <param name="branch">Unused</param>
+        /// <param name="commitMessage">Unused</param>
+        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
+
+        /// <summary>
+        /// Gets a list of file under a given path in a given revision.
+        /// </summary>
+        Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
 
         /// <summary>
         /// Retrieve the list of status checks on a PR.

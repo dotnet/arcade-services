@@ -49,7 +49,7 @@ namespace Maestro.DataProviders
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger));
+            return Task.FromResult((IRemote)new Remote(null, null, new MaestroBarClient(Context, KustoClientProvider), logger));
         }
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -84,7 +84,12 @@ namespace Maestro.DataProviders
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
                 };
 
-                return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
+                var gitFileManager = new GitFileManager(
+                    new LocalGitClient("git", logger),
+                    _versionDetailsParser,
+                    logger);
+
+                return new Remote(gitClient, gitFileManager, new MaestroBarClient(Context, KustoClientProvider), logger);
             }
         }
     }
