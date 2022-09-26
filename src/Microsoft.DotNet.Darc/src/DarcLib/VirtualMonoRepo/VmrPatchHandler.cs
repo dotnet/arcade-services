@@ -69,7 +69,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="tmpPath">Directory where submodules can be cloned temporarily</param>
     /// <param name="cancellationToken">Cancellation is safe with regards to git operations</param>
     /// <returns>List of patch files that can be applied on the VMR</returns>
-    public Task<List<VmrIngestionPatch>> CreatePatches(
+    public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
         string sha1,
@@ -77,7 +77,15 @@ public class VmrPatchHandler : IVmrPatchHandler
         string destDir,
         string tmpPath,
         CancellationToken cancellationToken)
-        => CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
+    {
+        _logger.LogInformation("Creating patches in {path}..", destDir);
+
+        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
+
+        _logger.LogInformation("{count} patches created", patches.Count);
+
+        return patches;
+    }
 
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
@@ -89,8 +97,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         string relativePath,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating patches in {path}..", destDir);
-
         if (repoPath.EndsWith(".git"))
         {
             repoPath = Path.GetDirectoryName(repoPath)!;
