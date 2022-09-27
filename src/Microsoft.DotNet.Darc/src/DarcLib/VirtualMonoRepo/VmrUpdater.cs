@@ -120,7 +120,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
         {
             FirstParentOnly = true,
-            IncludeReachableFrom = mapping.DefaultRef,
+            IncludeReachableFrom = targetRevision,
         });
 
         // Will contain SHAs in the order as we want to apply them
@@ -148,18 +148,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        // When no path between two commits is found, force synchronization between arbitrary commits
-        // For this case, do not copy the commit with the same author so it doesn't seem like one commit
-        // from the individual repo
-        bool arbitraryCommits = commitsToCopy.Count == 0;
-        if (arbitraryCommits)
+        if (commitsToCopy.Count == 0)
         {
-            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(targetRevision));
+            // TODO: https://github.com/dotnet/arcade/issues/10550 - enable synchronization between arbitrary commits
+            throw new EmptySyncException($"Found no commits between {currentSha} and {targetRevision} " +
+                $"when synchronizing {mapping.Name}");
         }
 
         // When we go one by one, we basically "copy" the commits.
         // Let's do the same in case we don't explicitly go one by one but we only have one commit..
-        if ((noSquash || commitsToCopy.Count == 1) && !arbitraryCommits)
+        if (noSquash || commitsToCopy.Count == 1)
         {
             while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
             {
@@ -310,10 +308,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             if (info.Length == 0)
             {
-                if (patches.Count == 1)
-                {
-                    _logger.LogDebug("No changes in {patch} (maybe only excluded files changed?)", patch.Path);
-                }
+                _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
             }
             else
             {

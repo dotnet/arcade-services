@@ -251,15 +251,27 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
-
+        
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
-        // This will end up having the working tree all staged
+        // This will end up having the working tree match what is staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
         result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed($"Failed to clean the working tree");
-        _logger.LogDebug("{output}", result.ToString());
+
+        if (result.Succeeded)
+        {
+            _logger.LogDebug("{output}", result.ToString());
+            return;
+        }
+
+        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+        // We can just remove the working tree folder then
+        if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
+        {
+            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
+            Directory.Delete(destPath, true);
+        }
     }
 
     /// <summary>
