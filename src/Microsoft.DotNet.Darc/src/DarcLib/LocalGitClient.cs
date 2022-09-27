@@ -37,11 +37,11 @@ namespace Microsoft.DotNet.DarcLib
                 string parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
                 if (Directory.Exists(parentTwoDirectoriesUp))
                 {
-                    throw new DependencyFileNotFoundException("Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
+                    throw new DependencyFileNotFoundException($"Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
                 }
                 else
                 {
-                    throw new InvalidOperationException("Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
+                    throw new InvalidOperationException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
                 }
             }
 
