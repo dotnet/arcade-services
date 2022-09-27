@@ -114,6 +114,14 @@ namespace Microsoft.DncEng.PatGenerator
         test = 0b1000_0000_0000_0000_0000_0000,
         [ScopeDescription("test", "rw", "Test Management (read and write)")]
         test_write = 0b1_0000_0000_0000_0000_0000_0000 | test,
+
+        // Project - Bits 0b1110_0000_0000_0000_0000_0000_0000
+        [ScopeDescription("project", "r", "Project and Team (read)")]
+        project = 0b0010_0000_0000_0000_0000_0000_0000,
+        [ScopeDescription("project", "rw", "Project and Team (read and write)")]
+        project_write = 0b0100_0000_0000_0000_0000_0000_0000 | project,
+        [ScopeDescription("project", "rwm", "Project and Team (read, write and manage)")]
+        project_manage = 0b1000_0000_0000_0000_0000_0000_0000 | project_write,
     }
 
     public static class AzureDevOpsPATScopesExtensions
