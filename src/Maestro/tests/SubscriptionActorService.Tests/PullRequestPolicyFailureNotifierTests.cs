@@ -23,7 +23,7 @@ namespace SubscriptionActorService.Tests
     public class PullRequestPolicyFailureNotifierTests
     {
         protected Mock<IBarClient> BarClient;
-        protected Mock<IGitRepo> GitRepo;
+        protected Mock<IRemoteGitRepo> GitRepo;
         protected Mock<IRemoteFactory> RemoteFactory;
         protected Mock<IHostEnvironment> Env;
         protected Mock<Octokit.IGitHubClient> GithubClient;
@@ -73,7 +73,7 @@ namespace SubscriptionActorService.Tests
                               select subscription).FirstOrDefault());
                      });
 
-            GitRepo = new Mock<IGitRepo>(MockBehavior.Strict);
+            GitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
             GitRepo.Setup(g => g.GetPullRequestChecksAsync(It.IsAny<string>()))
                    .Returns((string fakePrsUrl) =>
                    {

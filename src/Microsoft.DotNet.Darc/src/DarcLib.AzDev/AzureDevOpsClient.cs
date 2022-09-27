@@ -23,7 +23,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class AzureDevOpsClient : RemoteRepoBase, IGitRepo, IAzureDevOpsClient
+    public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsClient
     {
         private const string DefaultApiVersion = "5.0";
 

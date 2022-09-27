@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.DarcLib
         private readonly IBarClient _barClient;
         private readonly IVersionDetailsParser _versionDetailsParser;
         private readonly GitFileManager _fileManager;
-        private readonly IGitRepo _gitClient;
+        private readonly IRemoteGitRepo _gitClient;
         private readonly ILogger _logger;
 
         //[DependencyUpdate]: <> (Begin)
@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-        public Remote(IGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
+        public Remote(IRemoteGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
         {
             _logger = logger;
             _barClient = barClient;

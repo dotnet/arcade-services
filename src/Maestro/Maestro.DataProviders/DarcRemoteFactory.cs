@@ -62,7 +62,7 @@ namespace Maestro.DataProviders
                 string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
                 Uri normalizedRepoUri = new Uri(normalizedUrl);
 
-                IGitRepo gitClient;
+                IRemoteGitRepo gitClient;
 
                 long installationId = await Context.GetInstallationId(normalizedUrl);
 

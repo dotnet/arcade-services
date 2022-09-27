@@ -24,7 +24,7 @@ using System.Collections.Immutable;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class GitHubClient : RemoteRepoBase, IGitRepo
+    public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         private const string GitHubApiUri = "https://api.github.com";
         private const string DarcLibVersion = "1.0.0";
