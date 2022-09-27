@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface IGitRepo : ILocalGitRepo
+    public interface IGitRepo
     {
         /// <summary>
         /// Specifies whether functions with a retry field should employ retries
@@ -125,6 +125,29 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         Task<Commit> GetCommitAsync(string repoUri, string sha);
 
+        /// <summary>
+        ///     Retrieve the contents of a repository file as a string
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="branch">Branch to get file contents from</param>
+        /// <returns>File contents or throws on file not found.</returns>
+        Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch);
+
+        /// <summary>
+        /// Gets a list of file under a given path in a given revision.
+        /// </summary>
+        Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+
+        /// <summary>
+        ///     Commit or update a set of files to a repo
+        /// </summary>
+        /// <param name="filesToCommit">Files to comit</param>
+        /// <param name="repoUri">Remote repository URI</param>
+        /// <param name="branch">Branch to push to</param>
+        /// <param name="commitMessage">Commit message</param>
+        /// <returns></returns>
+        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
 
         /// <summary>
         /// Retrieve the list of status checks on a PR.

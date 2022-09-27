@@ -24,13 +24,18 @@ namespace Microsoft.DotNet.DarcLib
         ///     Updates local copies of the files.
         /// </summary>
         /// <param name="filesToCommit">Files to update locally</param>
-        /// <param name="repoUri">Base path of the repo</param>
+        /// <param name="repoDir">Base path of the repo</param>
         /// <param name="branch">Unused</param>
         /// <param name="commitMessage">Unused</param>
-        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
+        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoDir, string branch, string commitMessage);
 
-        Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch);
+        Task<string> GetFileContentsAsync(string relativeFilePath, string repoDir, string branch);
 
-        Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+        /// <summary>
+        /// Parses the .gitmodule file and retrieves a list of git submodules registered in a given repository.
+        /// </summary>
+        /// <param name="repoDir">Path to a git repository</param>
+        /// <param name="commit">Which commit the info is retrieved for</param>
+        List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit);
     }
 }

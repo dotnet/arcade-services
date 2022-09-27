@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class GitFileManager
     {
-        private readonly ILocalGitRepo _gitClient;
+        private readonly IGitRepo _gitClient;
         private readonly IVersionDetailsParser _versionDetailsParser;
         private readonly ILogger _logger;
 
@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.DarcLib
         private const string MaestroRepoSpecificBeginComment = "  Begin: Package sources from";
         private const string MaestroRepoSpecificEndComment = "  End: Package sources from";
 
-        public GitFileManager(ILocalGitRepo gitRepo, IVersionDetailsParser versionDetailsParser, ILogger logger)
+        public GitFileManager(IGitRepo gitRepo, IVersionDetailsParser versionDetailsParser, ILogger logger)
         {
             _gitClient = gitRepo;
             _versionDetailsParser = versionDetailsParser;

@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -29,9 +30,9 @@ namespace Microsoft.DotNet.DarcLib
             _logger = logger;
         }
 
-        public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
+        public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoDir, string branch)
         {
-            string fullPath = Path.Combine(repoUri, relativeFilePath);
+            string fullPath = Path.Combine(repoDir, relativeFilePath);
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
             {
                 string parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
@@ -54,24 +55,6 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await streamReader.ReadToEndAsync();
             }
-        }
-
-        public Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
-        {
-            string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
-            string sourceFolder = Path.Combine(repoDir, path);
-            return Task.Run(() => Directory.GetFiles(
-                sourceFolder,
-                "*.*",
-                SearchOption.AllDirectories).Select(
-                    file =>
-                    {
-                        return new GitFile(
-                            file.Remove(0, repoDir.Length + 1).Replace("\\", "/"),
-                            File.ReadAllText(file)
-                            );
-                    }
-                ).ToList());
         }
 
         /// <summary>
@@ -383,6 +366,23 @@ namespace Microsoft.DotNet.DarcLib
             repo.Network.Remotes.Add(remoteName, repoUrl);
             _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
             LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
+        }
+
+        public List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit)
+        {
+            if (commit == Constants.EmptyGitObject)
+            {
+                return new();
+            }
+
+            var repository = new Repository(repoDir);
+
+            // I haven't found a way to do this with LibGit2Sharp without checking out the commit
+            Commands.Checkout(repository, commit);
+
+            return repository.Submodules
+                .Select(s => new GitSubmoduleInfo(s.Name, s.Path, s.Url, s.IndexCommitId.Sha))
+                .ToList();
         }
     }
 }
