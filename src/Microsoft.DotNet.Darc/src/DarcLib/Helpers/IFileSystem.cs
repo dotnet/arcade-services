@@ -8,6 +8,8 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public interface IFileSystem
 {
+    char DirectorySeparatorChar { get; }
+
     void WriteToFile(string path, string content);
 
     bool FileExists(string path);
@@ -15,6 +17,8 @@ public interface IFileSystem
     bool DirectoryExists(string path);
 
     void CreateDirectory(string path);
+
+    void DeleteDirectory(string path, bool recursive);
 
     string? GetFileName(string? path);
 

@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -232,7 +231,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _fileSystem.CreateDirectory(destPath);
 
-        IEnumerable<string> args = new[]
+        var args = new[]
         {
             "apply",
 
@@ -321,7 +320,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
 
                 // Copy old revision to VMR
-                File.Copy(originalFile, destination, overwrite: true);
+                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
             }
         }
 
