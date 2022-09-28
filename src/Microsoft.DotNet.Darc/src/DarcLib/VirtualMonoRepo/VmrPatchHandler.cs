@@ -41,6 +41,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly ILocalGitRepo _localGitRepo;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IProcessManager _processManager;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
     public VmrPatchHandler(
@@ -48,12 +49,14 @@ public class VmrPatchHandler : IVmrPatchHandler
         ILocalGitRepo localGitRepo,
         IRemoteFactory remoteFactory,
         IProcessManager processManager,
+        IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = dependencyInfo;
         _localGitRepo = localGitRepo;
         _remoteFactory = remoteFactory;
         _processManager = processManager;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -99,10 +102,10 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         if (repoPath.EndsWith(".git"))
         {
-            repoPath = Path.GetDirectoryName(repoPath)!;
+            repoPath = _fileSystem.GetDirectoryName(repoPath)!;
         }
 
-        var patchName = Path.Combine(destDir, $"{mapping.Name}-{DarcLib.Commit.GetShortSha(sha1)}-{DarcLib.Commit.GetShortSha(sha2)}.patch");
+        var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
         var patches = new List<VmrIngestionPatch>
         {
             new(patchName, relativePath)
@@ -175,7 +178,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             if (change.Before == Constants.EmptyGitObject)
             {
                 _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
-                    change.Name, mapping.Name, change.Path, DarcLib.Commit.GetShortSha(change.After));
+                    change.Name, mapping.Name, change.Path, Commit.GetShortSha(change.After));
             }
             else if (change.After == Constants.EmptyGitObject)
             {
@@ -185,7 +188,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             else
             {
                 _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
-                    change.Name, mapping.Name, DarcLib.Commit.GetShortSha(change.Before), DarcLib.Commit.GetShortSha(change.After));
+                    change.Name, mapping.Name, Commit.GetShortSha(change.Before), Commit.GetShortSha(change.After));
             }
 
             patches.AddRange(await GetPatchesForSubmoduleChange(
@@ -227,7 +230,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
-        Directory.CreateDirectory(destPath);
+        _fileSystem.CreateDirectory(destPath);
 
         IEnumerable<string> args = new[]
         {
@@ -272,7 +275,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
         {
             _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
-            Directory.Delete(destPath, true);
+            _fileSystem.DeleteDirectory(destPath, true);
         }
     }
 
@@ -308,12 +311,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             foreach (var patchedFile in await GetFilesInPatch(clonePath, patch, cancellationToken))
             {
                 // git always works with forward slashes (even on Windows)
-                string relativePath = Path.DirectorySeparatorChar != '/'
-                    ? patchedFile.Replace('/', Path.DirectorySeparatorChar)
+                string relativePath = _fileSystem.DirectorySeparatorChar != '/'
+                    ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
                     : patchedFile;
 
-                var originalFile = Path.Combine(clonePath, relativePath);
-                var destination = Path.Combine(repoSourcesPath, relativePath);
+                var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
+                var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
 
                 _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
 
@@ -447,7 +450,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
-        var clonePath = Path.Combine(tmpPath, change.Name.Replace('/', '-'));
+        var clonePath = _fileSystem.PathCombine(tmpPath, change.Name.Replace('/', '-'));
         await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
         var submoduleMapping = new SourceMapping(
@@ -478,7 +481,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
     private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
     {
-        if (Directory.Exists(destPath))
+        if (_fileSystem.DirectoryExists(destPath))
         {
             _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
 
