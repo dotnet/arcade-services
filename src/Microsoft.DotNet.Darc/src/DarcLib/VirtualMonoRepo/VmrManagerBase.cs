@@ -86,7 +86,7 @@ public abstract class VmrManagerBase : IVmrManager
         using var repository = new Repository(_dependencyInfo.VmrPath);
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
-        _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
+        _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -147,8 +147,8 @@ public abstract class VmrManagerBase : IVmrManager
             { "remote", mapping.DefaultRemote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? string.Empty : ShortenId(oldSha) },
-            { "newShaShort", newSha is null ? string.Empty : ShortenId(newSha) },
+            { "oldShaShort", oldSha is null ? string.Empty : DarcLib.Commit.GetShortSha(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : DarcLib.Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
         };
 
@@ -170,6 +170,4 @@ public abstract class VmrManagerBase : IVmrManager
     }
 
     protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
-
-    public static string ShortenId(string commitSha) => commitSha[..7];
 }

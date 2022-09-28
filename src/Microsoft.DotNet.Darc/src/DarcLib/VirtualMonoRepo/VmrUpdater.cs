@@ -164,7 +164,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 cancellationToken.ThrowIfCancellationRequested();
 
                 _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                    mapping.Name, ShortenId(currentSha), ShortenId(commitToCopy.Id.Sha));
+                    mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
 
                 var message = PrepareCommitMessage(
                     SingleCommitMessage,

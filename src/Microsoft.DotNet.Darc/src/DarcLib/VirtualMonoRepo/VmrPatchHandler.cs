@@ -102,7 +102,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             repoPath = Path.GetDirectoryName(repoPath)!;
         }
 
-        var patchName = Path.Combine(destDir, $"{mapping.Name}-{VmrManagerBase.ShortenId(sha1)}-{VmrManagerBase.ShortenId(sha2)}.patch");
+        var patchName = Path.Combine(destDir, $"{mapping.Name}-{DarcLib.Commit.GetShortSha(sha1)}-{DarcLib.Commit.GetShortSha(sha2)}.patch");
         var patches = new List<VmrIngestionPatch>
         {
             new(patchName, relativePath)
@@ -163,38 +163,40 @@ public class VmrPatchHandler : IVmrPatchHandler
         _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
             patchName, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(patchName));
 
-        if (submoduleChanges.Any())
+        if (!submoduleChanges.Any())
         {
-            _logger.LogInformation("Creating diffs for submodules of {repo}..", mapping.Name);
+            return patches;
+        }
+        
+        _logger.LogInformation("Creating diffs for submodules of {repo}..", mapping.Name);
 
-            foreach (var change in submoduleChanges)
+        foreach (var change in submoduleChanges)
+        {
+            if (change.Before == Constants.EmptyGitObject)
             {
-                if (change.Before == Constants.EmptyGitObject)
-                {
-                    _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
-                        change.Name, mapping.Name, change.Path, change.After);
-                }
-                else if (change.After == Constants.EmptyGitObject)
-                {
-                    _logger.LogInformation("Submodule {submodule} of {repo} was removed",
-                        change.Name, mapping.Name);
-                }
-                else
-                {
-                    _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
-                        change.Name, mapping.Name, change.Before, change.After);
-                }
-
-                patches.AddRange(await GetPatchesForSubmoduleChange(
-                    mapping,
-                    destDir,
-                    tmpPath,
-                    relativePath,
-                    change,
-                    cancellationToken));
-
-                _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
+                _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
+                    change.Name, mapping.Name, change.Path, DarcLib.Commit.GetShortSha(change.After));
             }
+            else if (change.After == Constants.EmptyGitObject)
+            {
+                _logger.LogInformation("Submodule {submodule} of {repo} was removed",
+                    change.Name, mapping.Name);
+            }
+            else
+            {
+                _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
+                    change.Name, mapping.Name, DarcLib.Commit.GetShortSha(change.Before), DarcLib.Commit.GetShortSha(change.After));
+            }
+
+            patches.AddRange(await GetPatchesForSubmoduleChange(
+                mapping,
+                destDir,
+                tmpPath,
+                relativePath,
+                change,
+                cancellationToken));
+
+            _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
         }
 
         return patches;
