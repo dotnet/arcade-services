@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.DarcLib
         void Checkout(string repoDir, string commit, bool force = false);
 
         /// <summary>
-        /// Parses the .gitmodule file and retrieves a list of git submodules registered in a given repository.
+        /// Returns a list of git submodules registered in a given repository.
         /// </summary>
         /// <param name="repoDir">Path to a git repository</param>
         /// <param name="commit">Which commit the info is retrieved for</param>

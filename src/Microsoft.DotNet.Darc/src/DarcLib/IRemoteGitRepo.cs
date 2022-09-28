@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib
         /// Specifies whether functions with a retry field should employ retries
         /// Should default to true
         /// </summary>
-        public bool AllowRetries { get; set; }
+        bool AllowRetries { get; set; }
 
         /// <summary>
         /// Checks that a repository exists
