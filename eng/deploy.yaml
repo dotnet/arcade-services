@@ -247,7 +247,6 @@ stages:
     demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
-  condition: always()
   variables:
   - group: ${{ parameters.StatusVariableGroup }}
   - group: ${{ parameters.VariableGroup }}
@@ -261,6 +260,7 @@ stages:
   jobs:
   - job: notifyEndDeployment
     displayName: Notify deployment end
+    condition: always()
     pool: server
     steps:
     - task: InvokeRESTAPI@1

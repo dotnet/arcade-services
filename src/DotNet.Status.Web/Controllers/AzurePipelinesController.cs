@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
-using Microsoft.DotNet.Services.Utility;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -27,15 +26,13 @@ namespace DotNet.Status.Web.Controllers
     public class AzurePipelinesController : ControllerBase
     {
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
-        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
+        private readonly IClientFactory<IAzureDevOpsClient> _azureDevOpsClientFactory;
         private readonly IOptionsSnapshot<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
-        private readonly Lazy<IAzureDevOpsClient> _clientLazy;
-        private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
-            IAzureDevOpsClientFactory azureDevOpsClientFactory,
+            IClientFactory<IAzureDevOpsClient> azureDevOpsClientFactory,
             IOptionsSnapshot<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger)
         {
@@ -43,28 +40,12 @@ namespace DotNet.Status.Web.Controllers
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _options = options;
             _logger = logger;
-            _clientLazy = new Lazy<IAzureDevOpsClient>(BuildAzureDevOpsClient);
-            _projectMapping = new Lazy<Task<Dictionary<string,string>>>(GetProjectMappingInternal);
         }
 
-        private IAzureDevOpsClient Client => _clientLazy.Value;
-
-        private IAzureDevOpsClient BuildAzureDevOpsClient()
+        private Reference<IAzureDevOpsClient> GetAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
-            return _azureDevOpsClientFactory.CreateAzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
-        }
-
-        private async Task<Dictionary<string, string>> GetProjectMappingInternal()
-        {
-            var projects = await Client.ListProjectsAsync();
-            return projects.ToDictionary(p => p.Id, p => p.Name);
-        }
-
-        private async Task<string> GetProjectNameAsync(string id)
-        {
-            Dictionary<string, string> mapping = await _projectMapping.Value;
-            return mapping.GetValueOrDefault(id);
+            return _azureDevOpsClientFactory.GetClient($"build-monitor/{o.Organization}");
         }
 
         [HttpPost]
@@ -75,7 +56,8 @@ namespace DotNet.Status.Web.Controllers
             _logger.LogInformation("Build complete notification for build '{buildId}', URL: {buildUrl}",
                 buildEvent.Resource.Id,
                 buildEvent.Resource.Url);
-            string projectName = await GetProjectNameAsync(buildEvent.ResourceContainers.Project.Id);
+            using var client = GetAzureDevOpsClient();
+            string projectName = await client.Value.GetProjectNameAsync(buildEvent.ResourceContainers.Project.Id);
             if (string.IsNullOrEmpty(projectName))
             {
                 _logger.LogWarning(
@@ -89,7 +71,7 @@ namespace DotNet.Status.Web.Controllers
             _logger.LogInformation("Resolved build '{buildId}' for project '{project}, fetching build details",
                 buildEvent.Resource.Id,
                 projectName);
-            Build build = await Client.GetBuildAsync(projectName, buildEvent.Resource.Id);
+            Build build = await client.Value.GetBuildAsync(projectName, buildEvent.Resource.Id);
 
             if (IsIgnoredReason(build) ||
                 IsIgnoredStatus(build))
@@ -97,7 +79,7 @@ namespace DotNet.Status.Web.Controllers
                 return NoContent();
             }
 
-            await ProcessBuildNotificationsAsync(build);
+            await ProcessBuildNotificationsAsync(client.Value, build);
 
             return NoContent();
         }
@@ -145,7 +127,7 @@ namespace DotNet.Status.Web.Controllers
             }
         }
 
-        private async Task ProcessBuildNotificationsAsync(Build build)
+        private async Task ProcessBuildNotificationsAsync(IAzureDevOpsClient client, Build build)
         {
             const string fullBranchPrefix = "refs/heads/";
             foreach (var monitor in _options.Value.Monitor.Builds)
@@ -190,10 +172,10 @@ namespace DotNet.Status.Web.Controllers
                     build.SourceBranch);
                 
                 _logger.LogInformation("Fetching timeline messages...");
-                string timelineMessage = await BuildTimelineMessage(build);
+                string timelineMessage = await BuildTimelineMessage(client, build);
                 
                 _logger.LogInformation("Fetching changes messages...");
-                string changesMessage = await BuildChangesMessage(build);
+                string changesMessage = await BuildChangesMessage(client, build);
 
                 BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues.SingleOrDefault(i => string.Equals(monitor.IssuesId, i.Id, StringComparison.OrdinalIgnoreCase));
 
@@ -316,9 +298,9 @@ namespace DotNet.Status.Web.Controllers
             }
         }
 
-        private async Task<string> BuildChangesMessage(Build build)
+        private async Task<string> BuildChangesMessage(IAzureDevOpsClient client, Build build)
         {
-            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
+            (BuildChange[] changes, int truncatedChangeCount) = await client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
             StringBuilder b = new StringBuilder();
             foreach (BuildChange change in changes.OrEmpty())
             {
@@ -329,7 +311,7 @@ namespace DotNet.Status.Web.Controllers
                     Uri.IsWellFormedUriString(change.Location, UriKind.Absolute))
                 {
                     // Azure DevOps Repositories don't include a display URL, we need to go fetch it ourselves
-                    BuildChangeDetail changeDetail = await Client.GetChangeDetails(change.Location);
+                    BuildChangeDetail changeDetail = await client.GetChangeDetails(change.Location);
                     url = changeDetail.Links.Web.Href;
                 }
 
@@ -363,9 +345,9 @@ namespace DotNet.Status.Web.Controllers
             return b.ToString();
         }
 
-        private async Task<string> BuildTimelineMessage(Build build)
+        private async Task<string> BuildTimelineMessage(IAzureDevOpsClient client, Build build)
         {
-            Timeline timeline = await Client.GetTimelineAsync(build.Project.Name, build.Id, CancellationToken.None);
+            Timeline timeline = await client.GetTimelineAsync(build.Project.Name, build.Id, CancellationToken.None);
             StringBuilder builder = new StringBuilder();
             IEnumerable<TimelineRecord> stages = timeline?.Records.OrEmpty().Where(r => r.Type == "Stage");
             foreach (TimelineRecord stage in stages.OrEmpty())

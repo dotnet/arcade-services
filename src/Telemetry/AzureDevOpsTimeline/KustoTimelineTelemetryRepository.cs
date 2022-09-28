@@ -44,14 +44,19 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _database = options.Value.Database;
         }
 
-        public async Task<DateTimeOffset?> GetLatestTimelineBuild(string project)
+        public async Task<DateTimeOffset?> GetLatestTimelineBuild(AzureDevOpsProject project)
         {
             try
             {
                 using IDataReader result = await _query.ExecuteQueryAsync(
                     _database,
-                    // This isn't use controlled, so I'm not worried about the Kusto injection
-                    $"TimelineBuilds | where Project == '{project}' | summarize max(FinishTime)",
+                    // This isn't user controlled, so I'm not worried about the Kusto injection
+                    $"""
+                    TimelineBuilds
+                    | where coalesce(Organization, "dnceng") == '{project.Organization}'
+                    | where Project == '{project.Project}'
+                    | summarize max(FinishTime)
+                    """,
                     new ClientRequestProperties()
                 );
 
@@ -60,19 +65,20 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 {
                     return null;
                 }
-                else
-                {
-                    return result.GetDateTime(0);
-                }
+
+                return result.GetDateTime(0);
             }
-            catch (SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
+            catch (SemanticException e) when
+                (e.SemanticErrors.StartsWith("'where' operator: Failed to resolve") && (
+                 e.SemanticErrors.EndsWith("'Organization'") ||
+                 e.SemanticErrors.EndsWith("'Project'")))
             {
-                // The Project column isn't there, we probably reinitalized the tables
+                // A column isn't there, we probably reinitalized the tables
                 return null;
             }
         }
 
-        public async Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds)
+        public async Task WriteTimelineBuilds(IEnumerable<AugmentedBuild> augmentedBuilds, string organization)
         {
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
                 _ingest,
@@ -96,6 +102,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Definition", $"{b.Build.Definition?.Path}\\{b.Build.Definition?.Name}", KustoDataType.String),
                     new KustoValue("SourceBranch", GitHelpers.NormalizeBranchName(b.Build.SourceBranch), KustoDataType.String),
                     new KustoValue("TargetBranch", GitHelpers.NormalizeBranchName(b.TargetBranch), KustoDataType.String),
+                    new KustoValue("Organization", organization, KustoDataType.String),
                 });
         }
 

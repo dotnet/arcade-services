@@ -10,6 +10,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
 {
@@ -35,24 +36,30 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 return s => s.GetRequiredService<BuildLogScraper>();
             }
 
+            public static Func<IServiceProvider, IAzureDevOpsClient> Client(IServiceCollection collection)
+            {
+                return s => s.GetRequiredService<IAzureDevOpsClient>();
+            }
+
             public static void Build(IServiceCollection collection, (string url, string content) mockRequest)
             {
                 var mockHttpClientFactory = new MockHttpClientFactory();
                 mockHttpClientFactory.AddCannedResponse(mockRequest.url, mockRequest.content);
                 collection.AddSingleton<IHttpClientFactory>(mockHttpClientFactory);
                 collection.AddSingleton(ExponentialRetry.Default);
-                collection.AddSingleton(new AzureDevOpsClientOptions
-                {
-                    MaxParallelRequests = 2
-                });
+
                 var options = new AzureDevOpsClientOptions
                 {
                     MaxParallelRequests = 2
                 };
-                collection.AddSingleton<IOptions<AzureDevOpsClientOptions>>(Options.Create(options));
-                collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+                collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>(provider =>
+                    new AzureDevOpsClient(options, provider.GetRequiredService<IHttpClientFactory>()));
+                collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
+                    new SingleClientFactory<IAzureDevOpsClient>(provider.GetRequiredService<IAzureDevOpsClient>()));
             }
         }
+
+        private static readonly AzureDevOpsProject _project = new AzureDevOpsProject {Organization = "org", Project = "project"};
 
         [Test]
         public async Task BuildLogScraperShouldExtractMicrosoftHostedPoolImageName()
@@ -62,6 +69,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractOneESHostedPoolImageNameAsync(
+                _project,
                 MockAzureClient.OneESLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.OneESImageName, imageName);
@@ -75,6 +83,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(
+                _project,
                 MockAzureClient.MicrosoftHostedAgentLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.MicrosoftHostedAgentImageName, imageName);
@@ -88,6 +97,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .BuildAsync();
 
             var imageName = await testData.Controller.ExtractDockerImageNameAsync(
+                _project,
                 MockAzureClient.DockerLogUrl,
                 CancellationToken.None);
             Assert.AreEqual(MockAzureClient.DockerImageName, imageName);
@@ -102,8 +112,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                 .WithMockRequest((EmptyUrl, string.Empty))
                 .BuildAsync();
 
-            Assert.IsNull(await testData.Controller.ExtractOneESHostedPoolImageNameAsync(EmptyUrl, cancellationTokenSource.Token));
-            Assert.IsNull(await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(EmptyUrl, cancellationTokenSource.Token));
+            Assert.IsNull(await testData.Controller.ExtractOneESHostedPoolImageNameAsync(_project, EmptyUrl, cancellationTokenSource.Token));
+            Assert.IsNull(await testData.Controller.ExtractMicrosoftHostedPoolImageNameAsync(_project, EmptyUrl, cancellationTokenSource.Token));
 
         }
     }

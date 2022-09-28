@@ -6,16 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -24,26 +19,21 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
     public sealed class AzureDevOpsClient : IAzureDevOpsClient
     {
         private readonly HttpClient _httpClient;
-        private readonly string _baseUrl;
-        private readonly string _organization;
         private readonly SemaphoreSlim _parallelism;
 
         public AzureDevOpsClient(
-            IOptions<AzureDevOpsClientOptions> options,
+            AzureDevOpsClientOptions options,
             IHttpClientFactory httpClientFactory)
         {
-            _baseUrl = options.Value.BaseUrl;
-            _organization = options.Value.Organization;
-
             _httpClient = httpClientFactory.CreateClient();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _parallelism = new SemaphoreSlim(options.Value.MaxParallelRequests, options.Value.MaxParallelRequests);
-
-            if (!string.IsNullOrEmpty(options.Value.AccessToken))
+            _httpClient.BaseAddress = new Uri($"https://dev.azure.com/{options.Organization}/");
+            _parallelism = new SemaphoreSlim(options.MaxParallelRequests, options.MaxParallelRequests);
+            if (!string.IsNullOrEmpty(options.AccessToken))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
                     "Basic",
-                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.Value.AccessToken}"))
+                    Convert.ToBase64String(Encoding.UTF8.GetBytes($":{options.AccessToken}"))
                 );
             }
         }
@@ -59,7 +49,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append("/build/builds?");
+            builder.Append("build/builds?");
             builder.Append($"continuationToken={continuationToken}&");
             builder.Append("queryOrder=finishTimeAscending&");
             
@@ -104,14 +94,14 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 
         public async Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
         {
-            JsonResult result = await GetJsonResult($"{_baseUrl}/{_organization}/_apis/projects?api-version=5.1", cancellationToken);
+            JsonResult result = await GetJsonResult($"_apis/projects?api-version=5.1", cancellationToken);
             return JsonConvert.DeserializeObject<AzureDevOpsArrayOf<AzureDevOpsProject>>(result.Body).Value;
         }
 
         public async Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append($"/build/builds/{buildId}?api-version=5.1");
+            builder.Append($"build/builds/{buildId}?api-version=5.1");
             JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
             return JsonConvert.DeserializeObject<Build>(jsonResult.Body);
         }
@@ -119,7 +109,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         public async Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append($"/build/builds/{buildId}/changes?$top=10&api-version=5.1");
+            builder.Append($"build/builds/{buildId}/changes?$top=10&api-version=5.1");
             JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
             var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
             return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);
@@ -128,14 +118,14 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private async Task<string> GetTimelineRaw(string project, int buildId, CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append($"/build/builds/{buildId}/timeline?api-version=5.0");
+            builder.Append($"build/builds/{buildId}/timeline?api-version=5.0");
             return (await GetJsonResult(builder.ToString(), cancellationToken)).Body;
         }
 
         private async Task<string> GetTimelineRaw(string project, int buildId, string id, CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append($"/build/builds/{buildId}/timeline/{id}?api-version=5.0");
+            builder.Append($"build/builds/{buildId}/timeline/{id}?api-version=5.0");
             return (await GetJsonResult(builder.ToString(), cancellationToken)).Body;
         }
 
@@ -185,10 +175,17 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
             return null;
         }
 
+        public async Task<string> GetProjectNameAsync(string id)
+        {
+            var projects = await ListProjectsAsync();
+            var map = projects.ToDictionary(p => p.Id, p => p.Name);
+            return map.GetValueOrDefault(id);
+        }
+
         private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
-            builder.Append($"/wit/workitems/${type}?api-version=6.0");
+            builder.Append($"wit/workitems/${type}?api-version=6.0");
 
             List<JsonPatchDocument> patchDocuments = new List<JsonPatchDocument>();
             foreach(var field in fields)
@@ -222,7 +219,7 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
         private StringBuilder GetProjectApiRootBuilder(string project)
         {
             var builder = new StringBuilder();
-            builder.Append($"{_baseUrl}/{_organization}/{project}/_apis");
+            builder.Append($"{project}/_apis/");
             return builder;
         }
 

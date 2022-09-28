@@ -8,20 +8,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
     public class AugmentedTimelineIssue
     {
-        public AugmentedTimelineIssue(int buildId, string timelineId, string recordId, int index, TimelineIssue raw)
-        {
-            BuildId = buildId;
-            TimelineId = timelineId;
-            RecordId = recordId;
-            Index = index;
-            Raw = raw;
-        }
-
-        public int BuildId { get; }
-        public string TimelineId { get; }
-        public string RecordId { get; }
-        public int Index { get; }
-        public TimelineIssue Raw { get; }
+        public int BuildId { get; init; }
+        public string TimelineId { get; init; }
+        public string RecordId { get; init; }
+        public int Index { get; init; }
+        public TimelineIssue Raw { get; init; }
         public string AugmentedIndex { get; set; }
         public string Bucket { get; set; }
     }

@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -16,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
-using Microsoft.DotNet.Services.Utility;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -31,28 +30,28 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
-        private readonly IAzureDevOpsClientFactory _azureDevOpsClientFactory;
-        private readonly IOptions<AzureDevOpsOptions> _azureDevOpsOptions;
+        private readonly IClientFactory<IAzureDevOpsClient> _azureDevOpsClientFactory;
         private readonly ITimelineIssueTriage _timelineIssueTriage;
         private readonly ITeamMentionForwarder _teamMentionForwarder;
         private readonly ISystemClock _systemClock;
+        private readonly IOptionsSnapshot<RcaOptions> _rcaOptions;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
-            IAzureDevOpsClientFactory azureDevOpsClientFactory,
+            IClientFactory<IAzureDevOpsClient> azureDevOpsClientFactory,
             ITimelineIssueTriage timelineIssueTriage,
-            IOptions<AzureDevOpsOptions> azureDevOpsOptions,
             ILogger<GitHubHookController> logger,
             ITeamMentionForwarder teamMentionForwarder,
-            ISystemClock systemClock)
+            ISystemClock systemClock,
+            IOptionsSnapshot<RcaOptions> rcaOptions)
         {
             _githubOptions = githubOptions;
             _logger = logger;
             _teamMentionForwarder = teamMentionForwarder;
             _systemClock = systemClock;
+            _rcaOptions = rcaOptions;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
-            _azureDevOpsOptions = azureDevOpsOptions;
             _azureDevOpsClientFactory = azureDevOpsClientFactory;
             _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
@@ -251,15 +250,11 @@ namespace DotNet.Status.Web.Controllers
                 assignee = data.Sender.Login;
             }
 
-            _logger.LogInformation("Opening RCA work item in Azure Boards {org}/{project}", _azureDevOpsOptions.Value.Organization, _azureDevOpsOptions.Value.Project);
+            _logger.LogInformation("Opening RCA work item in Azure Boards {org}/{project}", _rcaOptions.Value.Organization, _rcaOptions.Value.Project);
             
             // The RCA template has all of the sections that we want to be filled out, so we don't need to specify the text here
-            IAzureDevOpsClient azureDevOpsClient = _azureDevOpsClientFactory.CreateAzureDevOpsClient(
-                _azureDevOpsOptions.Value.BaseUrl,
-                _azureDevOpsOptions.Value.Organization,
-                _azureDevOpsOptions.Value.MaxParallelRequests,
-                _azureDevOpsOptions.Value.AccessToken);
-            WorkItem workItem = await azureDevOpsClient.CreateRcaWorkItem(_azureDevOpsOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
+            using var azureDevOpsClient = _azureDevOpsClientFactory.GetClient(_rcaOptions.Value.Organization);
+            WorkItem workItem = await azureDevOpsClient.Value.CreateRcaWorkItem(_rcaOptions.Value.Project, $"RCA: {issueTitle} ({issueNumber})");
             _logger.LogInformation("Successfully opened work item {number}: {url}", workItem.Id, workItem.Links.Html.Href);
 
             string issueRepo = data.Repository.Name;

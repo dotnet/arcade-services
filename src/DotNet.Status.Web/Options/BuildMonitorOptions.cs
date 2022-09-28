@@ -11,10 +11,7 @@ namespace DotNet.Status.Web.Options
 
         public class AzurePipelinesOptions
         {
-            public string BaseUrl { get; set; }
             public string Organization { get; set; }
-            public int MaxParallelRequests { get; set; }
-            public string AccessToken { get; set; }
             public BuildDescription[] Builds { get; set; }
 
             public class BuildDescription

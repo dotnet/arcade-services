@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Internal;
 using System.Net.Http;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -30,19 +31,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         services =>
                         {
                             services.AddDefaultJsonConfiguration();
-                            services.Configure<AzureDevOpsTimelineOptions>((o, p) =>
-                            {
-                                var c = p.GetRequiredService<IConfiguration>();
-                                o.AzureDevOpsAccessToken = c["AzureDevOpsAccessToken"];
-                                o.AzureDevOpsProjects = c["AzureDevOpsProjects"];
-                                o.AzureDevOpsOrganization = c["AzureDevOpsOrganization"];
-                                o.AzureDevOpsUrl = c["AzureDevOpsUrl"];
-                                o.ParallelRequests = c["ParallelRequests"];
-                                o.InitialDelay = c["InitialDelay"];
-                                o.Interval = c["Interval"];
-                                o.BuildBatchSize = c["BuildBatchSize"];
-                                o.LogScrapingTimeout = c["LogScrapingTimeout"];
-                            });
+                            services.Configure<AzureDevOpsTimelineOptions>("AzureDevOpsTimeline", (o, s) => s.Bind(o));
+
+                            services.AddClientFactory<AzureDevOpsClientOptions, IAzureDevOpsClient, AzureDevOpsClient>();
+                            services.Configure<AzureDevOpsClientOptions>("dnceng", "AzureDevOpsSettings:dnceng", (o, s) => s.Bind(o));
+                            services.Configure<AzureDevOpsClientOptions>("dnceng-public", "AzureDevOpsSettings:dnceng-public", (o, s) => s.Bind(o));
 
                             services.Configure<KustoTimelineTelemetryOptions>("KustoTimelineTelemetry", (o, s) =>
                             {

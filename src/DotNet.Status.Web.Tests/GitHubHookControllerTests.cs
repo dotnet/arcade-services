@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebHooks.Filters;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Services.Utility;
@@ -917,7 +918,8 @@ namespace DotNet.Status.Web.Tests
                 services.AddSingleton<IHttpClientFactory>(mockClientFactory);
 
                 services.AddSingleton(Mock.Of<IGitHubApplicationClientFactory>());
-                services.AddSingleton(Mock.Of<IAzureDevOpsClientFactory>());
+                services.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
+                    new SingleClientFactory<IAzureDevOpsClient>(Mock.Of<IAzureDevOpsClient>()));
                 services.Configure<AzureDevOpsOptions>(o => 
                 {
                     o.Project = "project";
