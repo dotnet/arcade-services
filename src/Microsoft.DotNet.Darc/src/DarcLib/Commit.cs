@@ -16,5 +16,7 @@ namespace Microsoft.DotNet.DarcLib
         public string Author { get; }
         public string Sha { get; }
         public string Message { get; }
+
+        public static string GetShortSha(string commitSha) => commitSha[..7];
     }
 }

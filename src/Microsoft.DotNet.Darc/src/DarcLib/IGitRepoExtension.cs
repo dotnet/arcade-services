@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.DarcLib
 {
     public static class IGitRepoExtension
     {
-        public static string GetDecodedContent(this IGitRepo gitRepo, string encodedContent)
+        public static string GetDecodedContent(this IRemoteGitRepo gitRepo, string encodedContent)
         {
             try
             {
@@ -33,7 +33,7 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public static byte[] GetContentBytes(this IGitRepo gitRepo, string content)
+        public static byte[] GetContentBytes(this IRemoteGitRepo gitRepo, string content)
         {
             string decodedContent = GetDecodedContent(gitRepo, content);
             return Encoding.UTF8.GetBytes(decodedContent);

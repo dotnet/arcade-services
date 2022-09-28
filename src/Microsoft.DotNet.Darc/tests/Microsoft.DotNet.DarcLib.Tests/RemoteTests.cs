@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
         [Test]
         public async Task ValidateCommitMessageTest()
         {
-            Mock<IGitRepo> client = new Mock<IGitRepo>();
+            Mock<IRemoteGitRepo> client = new Mock<IRemoteGitRepo>();
             Mock<IBarClient> barClient = new Mock<IBarClient>();
             MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
             {

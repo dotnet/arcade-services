@@ -50,20 +50,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVmrPatchHandler _patchHandler;
 
+    private readonly string _tmpPath;
+
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
     {
         _logger = logger;
         _dependencyTracker = dependencyTracker;
         _remoteFactory = remoteFactory;
         _patchHandler = patchHandler;
+        _tmpPath = configuration.TmpPath;
     }
 
     public Task UpdateRepository(
@@ -116,7 +120,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
         {
             FirstParentOnly = true,
-            IncludeReachableFrom = mapping.DefaultRef,
+            IncludeReachableFrom = targetRevision,
         });
 
         // Will contain SHAs in the order as we want to apply them
@@ -144,23 +148,25 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        if (commitsToCopy.Count == 0)
+        // When no path between two commits is found, force synchronization between arbitrary commits
+        // For this case, do not copy the commit with the same author so it doesn't seem like one commit
+        // from the individual repo
+        bool arbitraryCommits = commitsToCopy.Count == 0;
+        if (arbitraryCommits)
         {
-            // TODO: https://github.com/dotnet/arcade/issues/10550 - enable synchronization between arbitrary commits
-            throw new EmptySyncException($"Found no commits between {currentSha} and {targetRevision} " +
-                $"when synchronizing {mapping.Name}");
+            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(targetRevision));
         }
 
         // When we go one by one, we basically "copy" the commits.
         // Let's do the same in case we don't explicitly go one by one but we only have one commit..
-        if (noSquash || commitsToCopy.Count == 1)
+        if ((noSquash || commitsToCopy.Count == 1) && !arbitraryCommits)
         {
             while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                    mapping.Name, ShortenId(currentSha), ShortenId(commitToCopy.Id.Sha));
+                    mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
 
                 var message = PrepareCommitMessage(
                     SingleCommitMessage,
@@ -280,29 +286,38 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         Signature author,
         CancellationToken cancellationToken)
     {
+        var patches = await _patchHandler.CreatePatches(
+            mapping,
+            clonePath,
+            fromRevision,
+            toRevision,
+            _tmpPath,
+            _tmpPath,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var patchPath = GetPatchFilePath(mapping);
-        await _patchHandler.CreatePatch(mapping, clonePath, fromRevision, toRevision, patchPath, cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var info = new FileInfo(patchPath);
-        if (!info.Exists)
-        {
-            throw new InvalidOperationException($"Failed to find the patch at {patchPath}");
-        }
-
+        // Restore files to their individual repo states so that patches can be applied
         await _patchHandler.RestorePatchedFilesFromRepo(mapping, clonePath, fromRevision, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (info.Length == 0)
+        foreach (var patch in patches)
         {
-            _logger.LogInformation("No changes for {repo} in given commits (maybe only excluded files changed?)", mapping.Name);
-        }
-        else
-        {
-            await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
+            var info = new FileInfo(patch.Path);
+            if (!info.Exists)
+            {
+                throw new InvalidOperationException($"Failed to find the patch at {patch.Path}");
+            }
+
+            if (info.Length == 0)
+            {
+                _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
+            }
+            else
+            {
+                await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));

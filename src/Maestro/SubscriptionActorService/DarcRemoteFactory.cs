@@ -76,7 +76,7 @@ namespace SubscriptionActorService
                 {
                     temporaryRepositoryRoot = _tempFiles.GetFilePath("repos");
                 }
-                IGitRepo gitClient;
+                IRemoteGitRepo gitClient;
 
                 long installationId = await _context.GetInstallationId(normalizedUrl);
 

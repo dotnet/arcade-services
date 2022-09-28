@@ -23,7 +23,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class AzureDevOpsClient : RemoteRepoBase, IGitRepo, IAzureDevOpsClient
+    public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsClient
     {
         private const string DefaultApiVersion = "5.0";
 
@@ -890,7 +890,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <param name="input">String that must have 'shouldEndWith' at the end.</param>
         /// <param name="shouldEndWith">Character that must be present at end of 'input' string.</param>
         /// <returns>Input string appended with 'shouldEndWith'</returns>
-        private string EnsureEndsWith(string input, char shouldEndWith)
+        private static string EnsureEndsWith(string input, char shouldEndWith)
         {
             if (input == null) return null;
 
@@ -940,18 +940,6 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             Uri accountUri = new Uri($"https://dev.azure.com/{accountName}");
             var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
             return new VssConnection(accountUri, creds);
-        }
-
-        private (int threadId, int commentId) ParseCommentId(string commentId)
-        {
-            string[] parts = commentId.Split('-');
-            if (parts.Length != 2 || int.TryParse(parts[0], out int threadId) ||
-                int.TryParse(parts[1], out int commentIdValue))
-            {
-                throw new ArgumentException("The comment id '{commentId}' is in an invalid format", nameof(commentId));
-            }
-
-            return (threadId, commentIdValue);
         }
 
         /// <summary>

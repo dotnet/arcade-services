@@ -24,7 +24,7 @@ using System.Collections.Immutable;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class GitHubClient : RemoteRepoBase, IGitRepo
+    public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         private const string GitHubApiUri = "https://api.github.com";
         private const string DarcLibVersion = "1.0.0";
@@ -68,20 +68,6 @@ namespace Microsoft.DotNet.DarcLib
         public virtual IGitHubClient Client => _lazyClient.Value;
 
         public bool AllowRetries { get; set; } = true;
-
-
-        /// <summary>
-        ///     Add a comment to the discussion of an existing pull request or issue (the APIs are the same)
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="issueNumber">Issue or PR id</param>
-        /// <param name="message">Contents of the message (ideally in markdown format)</param>
-        public async Task AddIssueComment(string repoUri, int issueNumber, string message)
-        {
-            (string owner, string repo) = ParseRepoUri(repoUri);
-            await Client.Issue.Comment.Create(owner, repo, issueNumber, message);
-        }
-
 
         /// <summary>
         ///     Retrieve the contents of a repository file as a string
@@ -1071,7 +1057,7 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task GetCommitMapForPathAsync(
+        private async Task GetCommitMapForPathAsync(
             string repoUri,
             string branch,
             string assetsProducedInCommit,
@@ -1230,25 +1216,6 @@ namespace Microsoft.DotNet.DarcLib
         public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
         {
             Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
-        }
-
-        /// <summary>
-        ///     Does not apply to remote repositories.
-        /// </summary>
-        /// <param name="commit">Ignored</param>
-        public void Checkout(string repoPath, string commit, bool force)
-        {
-            throw new NotImplementedException($"Cannot checkout a remote repo.");
-        }
-
-        /// <summary>
-        ///     Does not apply to remote repositories.
-        /// </summary>
-        /// <param name="repoDir">Ignored</param>
-        /// <param name="repoUrl">Ignored</param>
-        public void AddRemoteIfMissing(string repoDir, string repoUrl)
-        {
-            throw new NotImplementedException($"Cannot add a remote to a remote repo.");
         }
 
         /// <summary>

@@ -45,7 +45,7 @@ namespace Microsoft.DotNet.Darc.Helpers
                 temporaryRepositoryRoot = Path.GetTempPath();
             }
 
-            IGitRepo gitClient = null;
+            IRemoteGitRepo gitClient = null;
             if (darcSettings.GitType == GitRepoType.GitHub)
             {
                 gitClient = new GitHubClient(options.GitLocation, darcSettings.GitRepoPersonalAccessToken,

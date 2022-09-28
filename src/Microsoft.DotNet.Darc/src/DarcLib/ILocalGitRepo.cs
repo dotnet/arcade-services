@@ -3,11 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface ILocalGitRepo
+    public interface ILocalGitRepo : IGitRepo
     {
         /// <summary>
         ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
@@ -21,16 +20,10 @@ namespace Microsoft.DotNet.DarcLib
         void Checkout(string repoDir, string commit, bool force = false);
 
         /// <summary>
-        ///     Updates local copies of the files.
+        /// Returns a list of git submodules registered in a given repository.
         /// </summary>
-        /// <param name="filesToCommit">Files to update locally</param>
-        /// <param name="repoUri">Base path of the repo</param>
-        /// <param name="branch">Unused</param>
-        /// <param name="commitMessage">Unused</param>
-        Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
-
-        Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch);
-
-        Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+        /// <param name="repoDir">Path to a git repository</param>
+        /// <param name="commit">Which commit the info is retrieved for</param>
+        List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit);
     }
 }
