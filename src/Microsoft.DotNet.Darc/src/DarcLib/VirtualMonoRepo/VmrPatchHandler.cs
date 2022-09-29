@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -298,8 +297,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
 
-        var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
-        localRepo.Checkout(clonePath, originalRevision);
+        _localGitRepo.Checkout(clonePath, originalRevision);
 
         var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
 
@@ -325,8 +323,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        using var repository = new Repository(_vmrInfo.VmrPath);
-        Commands.Stage(repository, repoSourcesPath);
+        _localGitRepo.Stage(_vmrInfo.VmrPath, repoSourcesPath);
 
         _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
     }
