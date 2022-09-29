@@ -461,12 +461,21 @@ public class VmrPatchHandler : IVmrPatchHandler
         var clonePath = _fileSystem.PathCombine(tmpPath, change.Name.Replace('/', '-'));
         await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
+        // We are only interested in filters specific to submodule's path
+        ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
+        {
+            return filters
+                .Where(p => p.StartsWith(change.Path))
+                .Select(p => p.Substring(change.Path.Length).TrimStart('/'))
+                .ToImmutableArray();
+        }
+
         var submoduleMapping = new SourceMapping(
             change.Name,
             change.Url,
             change.Before,
-            mapping.Include.Where(p => p.StartsWith(change.Before)).ToImmutableArray(),
-            mapping.Exclude.Where(p => p.StartsWith(change.Before)).ToImmutableArray(),
+            GetSubmoduleFilters(mapping.Include),
+            GetSubmoduleFilters(mapping.Exclude),
             Array.Empty<string>());
 
         var submodulePath = change.Path;

@@ -35,8 +35,19 @@ public class VmrPatchHandlerTests
         DefaultRemote: "https://github.com/dotnet/test-repo",
         DefaultRef: "main",
         Include: new[] { "*.*", "src/*" },
-        Exclude: new[] { "*.dll", "*.exe", "src/**/tests/**/*.*" },
-        VmrPatches: new[] { "patches/test-repo-patch1.patch", "patches/test-repo-patch2.patch" });
+        Exclude: new[]
+        { 
+            "*.dll", 
+            "*.exe", 
+            "src/**/tests/**/*.*", 
+            "submodules/external-1/LICENSE.md",
+        },
+        VmrPatches: new[]
+        {
+            "patches/test-repo-patch1.patch",
+            "patches/test-repo-patch2.patch",
+            "submodules/external-1/eng/build.sh", // patch for a submodule
+        });
 
     [SetUp]
     public void SetUp()
@@ -50,6 +61,7 @@ public class VmrPatchHandlerTests
             .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
 
         _localGitRepo.Reset();
+        _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
 
         _remoteFactory.Reset();
 
@@ -202,8 +214,6 @@ public class VmrPatchHandlerTests
         const string sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
         string expectedPatchName = $"/tmp/patches/{IndividualRepoName}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
 
-        _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
-
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
@@ -214,25 +224,13 @@ public class VmrPatchHandlerTests
             "/tmp",
             CancellationToken.None);
 
+        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, sha1, sha2, null);
+
         // Verify
         _processManager
             .Verify(x => x.ExecuteGit(
                 clonePath,
-                new List<string>()
-                {
-                    "diff",
-                    "--patch",
-                    "--binary",
-                    "--output",
-                    expectedPatchName,
-                    $"{sha1}..{sha2}",
-                    "--",
-                    ":(glob,attr:!vmr-ignore)*.*",
-                    ":(glob,attr:!vmr-ignore)src/*",
-                    ":(exclude,glob,attr:!vmr-preserve)*.dll",
-                    ":(exclude,glob,attr:!vmr-preserve)*.exe",
-                    ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
-                },
+                expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         
@@ -281,26 +279,13 @@ public class VmrPatchHandlerTests
             "/tmp",
             CancellationToken.None);
 
+        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, sha1, sha2, new[] { "submodules/external-1" });
+
         // Verify
         _processManager
             .Verify(x => x.ExecuteGit(
                 clonePath,
-                new List<string>()
-                {
-                    "diff",
-                    "--patch",
-                    "--binary",
-                    "--output",
-                    expectedPatchName,
-                    $"{sha1}..{sha2}",
-                    "--",
-                    ":(glob,attr:!vmr-ignore)*.*",
-                    ":(glob,attr:!vmr-ignore)src/*",
-                    ":(exclude,glob,attr:!vmr-preserve)*.dll",
-                    ":(exclude,glob,attr:!vmr-preserve)*.exe",
-                    ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
-                    ":(exclude)submodules/external-1",
-                },
+                expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -311,9 +296,83 @@ public class VmrPatchHandlerTests
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
     }
-        //remote
-        //    .Verify(x => x.Clone("https://github.com/dotnet/external-1", submoduleSha, "/tmp/external-1", false, null), Times.Never);
 
+    [Test]
+    public async Task CreatePatchesWithSubmoduleAddedTest()
+    {
+        // Setup
+        const string clonePath = "/tmp/test-repo";
+        const string sha1 = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
+        const string sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
+        const string submoduleSha = "839e1e3b415fc2747dde68f47d940faa414020ec";
+
+        var submoduleInfo = new GitSubmoduleInfo(
+            "external-1",
+            "submodules/external-1",
+            "https://github.com/dotnet/external-1",
+            submoduleSha);
+        
+        string expectedPatchName = $"/tmp/patches/{IndividualRepoName}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
+        string expectedSubmodulePatchName = $"/tmp/patches/{submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(submoduleSha)}.patch";
+
+        // Return the same info for both
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(clonePath, sha1))
+            .Returns(new List<GitSubmoduleInfo>());
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(clonePath, sha2))
+            .Returns(new List<GitSubmoduleInfo> { submoduleInfo });
+
+        var remote = new Mock<IRemote>();
+
+        _remoteFactory
+            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-1", It.IsAny<ILogger>()))
+            .ReturnsAsync(remote.Object);
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            clonePath,
+            sha1,
+            sha2,
+            "/tmp/patches",
+            "/tmp",
+            CancellationToken.None);
+
+        // Verify diff for the individual repo
+        var expectedArgs = GetExpectedGitDiffArguments(
+            expectedPatchName, sha1, sha2, new[] { "submodules/external-1" });
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                clonePath,
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+        
+        expectedArgs = GetExpectedGitDiffArguments(
+            expectedSubmodulePatchName, Constants.EmptyGitObject, submoduleSha, null)
+            .Take(7)
+            .Append(":(glob,attr:!vmr-ignore)**/*")
+            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+
+        // Verify diff for the submodule
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/external-1",
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        remote.Verify(
+            x => x.Clone("https://github.com/dotnet/external-1", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Once);
+
+        patches.Should().HaveCount(2);
+        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
+        patches.Last().Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName, submoduleInfo.Path));
+    }
 
     private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
     {
@@ -326,5 +385,36 @@ public class VmrPatchHandlerTests
     {
         _processManager
             .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+    }
+
+    private static IEnumerable<string> GetExpectedGitDiffArguments(
+        string patchPath,
+        string sha1,
+        string sha2,
+        IEnumerable<string>? submodules)
+    {
+        var args = new List<string>()
+        {
+            "diff",
+            "--patch",
+            "--binary",
+            "--output",
+            patchPath,
+            $"{sha1}..{sha2}",
+            "--",
+            ":(glob,attr:!vmr-ignore)*.*",
+            ":(glob,attr:!vmr-ignore)src/*",
+            ":(exclude,glob,attr:!vmr-preserve)*.dll",
+            ":(exclude,glob,attr:!vmr-preserve)*.exe",
+            ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
+            ":(exclude,glob,attr:!vmr-preserve)submodules/external-1/LICENSE.md",
+        };
+
+        if (submodules != null)
+        {
+            args.AddRange(submodules.Select(s => $":(exclude){s}"));
+        }
+        
+        return args;
     }
 }
