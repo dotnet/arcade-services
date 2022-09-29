@@ -104,6 +104,34 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
+    public async Task VmrPatchesAreAppliedTest()
+    {
+        // Act
+        await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
+
+        foreach (var patch in _testRepoMapping.VmrPatches)
+        {
+            // Verify
+            VerifyGitCall(new[]
+            {
+                "apply",
+                "--cached",
+                "--ignore-space-change",
+                "--directory",
+                $"src/{IndividualRepoName}/",
+                patch,
+            });
+        }
+
+        VerifyGitCall(new[]
+        {
+            "checkout",
+            $"src/{IndividualRepoName}/",
+        },
+        Times.Exactly(_testRepoMapping.VmrPatches.Count));
+    }
+
+    [Test]
     public async Task PatchedFilesAreRestoredTest()
     {
         // Setup
