@@ -142,10 +142,9 @@ public class VmrPatchHandler : IVmrPatchHandler
         // Other git commands are executed from whichever folder and use `-C [path to repo]` 
         // However, here we must execute in repo's dir because attribute filters work against the working tree
         // We also need to do call this from the repo root and not from repo/.git
-        var result = await _processManager.Execute(
-            _processManager.GitExecutable,
+        var result = await _processManager.ExecuteGit(
+            repoPath,
             args,
-            workingDir: repoPath,
             cancellationToken: cancellationToken);
 
         result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
@@ -162,7 +161,10 @@ public class VmrPatchHandler : IVmrPatchHandler
         var distance = (await _processManager.ExecuteGit(repoPath, countArgs, cancellationToken)).StandardOutput.Trim();
 
         _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
-            patchName, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(patchName));
+            patchName,
+            distance == "0" ? "?" : distance,
+            distance == "1" ? string.Empty : "s",
+            StringUtils.GetHumanReadableFileSize(patchName));
 
         if (!submoduleChanges.Any())
         {

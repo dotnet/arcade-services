@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -128,7 +130,7 @@ public class VmrPatchHandlerTests
             "checkout",
             $"src/{IndividualRepoName}/",
         },
-        Times.Exactly(_testRepoMapping.VmrPatches.Count));
+        times: Times.Exactly(_testRepoMapping.VmrPatches.Count));
     }
 
     [Test]
@@ -189,6 +191,55 @@ public class VmrPatchHandlerTests
                 true));
         }
     }
+    
+    [Test]
+    public async Task CreatePatchesWithNoSubmodulesTest()
+    {
+        // Setup
+        const string clonePath = "/tmp/test-repo";
+        const string sha1 = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
+        const string sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
+        string expectedPatchName = $"/tmp/patches/{IndividualRepoName}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
+
+        _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            clonePath,
+            sha1,
+            sha2,
+            "/tmp/patches",
+            "/tmp",
+            CancellationToken.None);
+
+        // Verify
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                clonePath,
+                new List<string>()
+                {
+                    "diff",
+                    "--patch",
+                    "--binary",
+                    "--output",
+                    expectedPatchName,
+                    $"{sha1}..{sha2}",
+                    "--",
+                    ":(glob,attr:!vmr-ignore)*.*",
+                    ":(glob,attr:!vmr-ignore)src/*",
+                    ":(exclude,glob,attr:!vmr-preserve)*.dll",
+                    ":(exclude,glob,attr:!vmr-preserve)*.exe",
+                    ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
+                },
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+        
+        patches.Should().ContainSingle();
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
+    }
+
+    // (x => x.GetGitSubmodules(It.IsAny<string>(), It.IsAny<string>())
 
     private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
     {
@@ -197,9 +248,9 @@ public class VmrPatchHandlerTests
             .ReturnsAsync(result);
     }
 
-    private void VerifyGitCall(string[] expectedArguments, Times? times = null)
+    private void VerifyGitCall(string[] expectedArguments, string repoDir = VmrPath, Times? times = null)
     {
         _processManager
-            .Verify(x => x.ExecuteGit(VmrPath, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 }
