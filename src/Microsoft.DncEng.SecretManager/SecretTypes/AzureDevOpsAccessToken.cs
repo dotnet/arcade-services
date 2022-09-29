@@ -7,22 +7,25 @@ using Microsoft.DncEng.CommandLineLib;
 namespace Microsoft.DncEng.SecretManager.SecretTypes
 {
     [Name("azure-devops-access-token")]
-    public class AzureDevOpsAccessToken : GitHubAccountInteractiveSecretType<AzureDevOpsAccessToken.Parameters>
+    public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Parameters>
     {
         private readonly TimeSpan _rotateBeforeExpiration = TimeSpan.FromDays(-15);
 
         public class Parameters
         {
-            public string Name { get; set; }
-            public string Organization { get; set; }
-            public SecretReference GitHubBotAccountSecret { get; set; }
+            public string Organizations { get; set; }
             public SecretReference DomainAccountSecret { get; set; }
-            public string GitHubBotAccountName { get; set; }
             public string DomainAccountName { get; set; }
+            public string Scopes { get; set; }
         }
 
-        public AzureDevOpsAccessToken(ISystemClock clock, IConsole console) : base(clock, console)
+        public ISystemClock Clock { get; }
+        public IConsole Console { get; }
+
+        public AzureDevOpsAccessToken(ISystemClock clock, IConsole console)
         {
+            Clock = clock;
+            Console = console;
         }
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
@@ -32,13 +35,20 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 throw new HumanInterventionRequiredException($"User intervention required for creation or rotation of an Azure DevOps access token.");
             }
 
-            string helpUrl = $"https://dev.azure.com/{parameters.Organization}/_usersSettings/tokens";
+            if (string.IsNullOrEmpty(parameters.Organizations))
+            {
+                throw new ArgumentException("Organizations is required.");
+            }
 
-            if (parameters.GitHubBotAccountSecret != null)
-                await ShowGitHubLoginInformation(context, parameters.GitHubBotAccountSecret, helpUrl, parameters.GitHubBotAccountName);
+            if (string.IsNullOrEmpty(parameters.Scopes))
+            {
+                throw new ArgumentException("Scopes is required.");
+            }
 
-            if (parameters.DomainAccountSecret != null)
-                await ShowDomainAccountInformation(helpUrl, context, parameters.DomainAccountSecret, parameters.DomainAccountName);
+            string patGeneratorParams = $"--scopes {parameters.Scopes} --organizations {parameters.Organizations} --name {context.SecretName} --expires-in 180";
+
+            var password = await context.GetSecretValue(parameters.DomainAccountSecret);
+            Console.WriteLine($"Please run `dotnet pat-generator {patGeneratorParams}`\nLog in using account {parameters.DomainAccountName} and password: {password}");
 
             var expiration = await Console.PromptAndValidateAsync("PAT expiration (M/d/yyyy)",
                 "PAT expiration format must be M/d/yyyy.",
@@ -49,14 +59,6 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
                 value => value != null && value.Length >= 52);
 
             return new SecretData(pat, expiration, expiration.Add(_rotateBeforeExpiration));
-        }
-
-        protected async Task ShowDomainAccountInformation(string helpUrl, RotationContext context, SecretReference domainAccountSecret, string domainAccountName)
-        {
-            var passwordReference = new SecretReference { Name = domainAccountSecret.Name, Location = domainAccountSecret.Location };
-            var password = await context.GetSecretValue(passwordReference);
-
-            Console.WriteLine($"Please login to {helpUrl} using account {domainAccountName} and password: {password}");
         }
     }
 }
