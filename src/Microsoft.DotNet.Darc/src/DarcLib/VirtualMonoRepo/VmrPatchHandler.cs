@@ -136,7 +136,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         // Ignore submodules in the diff, they will be inlined via their own diffs
         if (submoduleChanges.Any())
         {
-            args.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}"));
+            args.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
         }
 
         // Other git commands are executed from whichever folder and use `-C [path to repo]` 
@@ -458,6 +458,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
+        // TODO: Here is a bug where if we have a submodule URL change, we need to have a different destPath because we need to clone a different URL
+        // TODO: So the destPath should be decided by the URL rather than the submodule name
         var clonePath = _fileSystem.PathCombine(tmpPath, change.Name.Replace('/', '-'));
         await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
