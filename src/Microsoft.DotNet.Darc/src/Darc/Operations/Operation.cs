@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Console;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations
@@ -38,7 +40,11 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             services ??= new ServiceCollection();
-            services.AddLogging(b => b.AddConsole().AddFilter(l => l >= level));
+            services.AddLogging(b => b
+                .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
+                .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
+                .SetMinimumLevel(level));
+            
             services.AddSingleton(options);
 
             Provider = services.BuildServiceProvider();
