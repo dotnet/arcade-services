@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -458,9 +460,10 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
 
-        // TODO: Here is a bug where if we have a submodule URL change, we need to have a different destPath because we need to clone a different URL
-        // TODO: So the destPath should be decided by the URL rather than the submodule name
-        var clonePath = _fileSystem.PathCombine(tmpPath, change.Name.Replace('/', '-'));
+        // Clone path of submodules needs to be derived from the URL
+        // We can't use the path from the submodule as we could be changing the remote of the submodule
+        var urlHash = CreateMD5(change.Url);
+        var clonePath = _fileSystem.PathCombine(tmpPath, urlHash);
         await CloneOrFetch(change.Url, checkoutCommit, clonePath);
 
         // We are only interested in filters specific to submodule's path
@@ -518,4 +521,12 @@ public class VmrPatchHandler : IVmrPatchHandler
     }
 
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
+
+    public static string CreateMD5(string input)
+    {
+        using var md5 = MD5.Create();
+        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+        byte[] hashBytes = md5.ComputeHash(inputBytes);
+        return Convert.ToHexString(hashBytes);
+    }
 }

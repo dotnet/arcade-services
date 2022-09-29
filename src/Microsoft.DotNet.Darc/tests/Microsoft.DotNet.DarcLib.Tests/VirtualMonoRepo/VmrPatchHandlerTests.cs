@@ -347,7 +347,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -356,9 +356,11 @@ public class VmrPatchHandlerTests
             x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
 
-        patches.Should().HaveCount(2);
-        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
-        patches.Last().Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path));
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName, string.Empty),
+            new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path),
+        });
     }
 
     [Test]
@@ -385,7 +387,7 @@ public class VmrPatchHandlerTests
 
         // Pretend the submodule was already cloned - no clone should happen then
         _fileSystem
-            .Setup(x => x.DirectoryExists("/tmp/external-1"))
+            .Setup(x => x.DirectoryExists("/tmp/D8FC6934CE892A82EE79D572E24A7512"))
             .Returns(true);
 
         // Act
@@ -418,7 +420,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -429,13 +431,15 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 new[] { "fetch", "--all" }),
                 Times.AtLeastOnce);
 
-        patches.Should().HaveCount(2);
-        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
-        patches.Last().Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path));
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName, string.Empty),
+            new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path),
+        });
     }
 
     [Test]
@@ -461,7 +465,7 @@ public class VmrPatchHandlerTests
 
         // Pretend the submodule was already cloned - no clone should happen then
         _fileSystem
-            .Setup(x => x.DirectoryExists("/tmp/external-1"))
+            .Setup(x => x.DirectoryExists("/tmp/D8FC6934CE892A82EE79D572E24A7512"))
             .Returns(true);
 
         // Act
@@ -494,7 +498,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -505,13 +509,15 @@ public class VmrPatchHandlerTests
         
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 new[] { "fetch", "--all" }),
                 Times.AtLeastOnce);
 
-        patches.Should().HaveCount(2);
-        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
-        patches.Last().Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path));
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName, string.Empty),
+            new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path),
+        });
     }
 
     [Test]
@@ -571,20 +577,20 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
         
         expectedArgs = GetExpectedGitDiffArguments(
-            expectedSubmodulePatchName1, Constants.EmptyGitObject, SubmoduleSha2, null)
+            expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
             .Take(7)
             .Append(":(glob,attr:!vmr-ignore)**/*")
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/external-2",
+                "/tmp/44B69A1449124AD460A08091672021B6",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -597,10 +603,12 @@ public class VmrPatchHandlerTests
             x => x.Clone("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
 
-        patches.Should().HaveCount(2);
-        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
-        patches.ElementAt(1).Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName1, _submoduleInfo.Path));
-        patches.ElementAt(2).Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName2, _submoduleInfo.Path));
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName, string.Empty),
+            new VmrIngestionPatch(expectedSubmodulePatchName1, _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedSubmodulePatchName2, _submoduleInfo.Path),
+        });
     }
 
     private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
