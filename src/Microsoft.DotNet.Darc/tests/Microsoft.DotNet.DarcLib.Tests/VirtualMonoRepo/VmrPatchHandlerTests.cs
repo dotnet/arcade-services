@@ -10,6 +10,7 @@ using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -239,7 +240,80 @@ public class VmrPatchHandlerTests
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
     }
 
-    // (x => x.GetGitSubmodules(It.IsAny<string>(), It.IsAny<string>())
+    [Test]
+    public async Task CreatePatchesWithSubmoduleWithoutChangesTest()
+    {
+        // Setup
+        const string clonePath = "/tmp/test-repo";
+        const string sha1 = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
+        const string sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
+        const string submoduleSha = "839e1e3b415fc2747dde68f47d940faa414020ec";
+        string expectedPatchName = $"/tmp/patches/{IndividualRepoName}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
+
+        var submoduleInfo = new GitSubmoduleInfo(
+            "external-1",
+            "submodules/external-1",
+            "https://github.com/dotnet/external-1",
+            submoduleSha);
+
+        // Return the same info for both
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(clonePath, sha1))
+            .Returns(new List<GitSubmoduleInfo> { submoduleInfo });
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(clonePath, sha2))
+            .Returns(new List<GitSubmoduleInfo> { submoduleInfo });
+
+        var remote = new Mock<IRemote>();
+
+        _remoteFactory
+            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-1", It.IsAny<ILogger>()))
+            .ReturnsAsync(remote.Object);
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            clonePath,
+            sha1,
+            sha2,
+            "/tmp/patches",
+            "/tmp",
+            CancellationToken.None);
+
+        // Verify
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                clonePath,
+                new List<string>()
+                {
+                    "diff",
+                    "--patch",
+                    "--binary",
+                    "--output",
+                    expectedPatchName,
+                    $"{sha1}..{sha2}",
+                    "--",
+                    ":(glob,attr:!vmr-ignore)*.*",
+                    ":(glob,attr:!vmr-ignore)src/*",
+                    ":(exclude,glob,attr:!vmr-preserve)*.dll",
+                    ":(exclude,glob,attr:!vmr-preserve)*.exe",
+                    ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
+                    ":(exclude)submodules/external-1",
+                },
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        remote.Verify(
+            x => x.Clone("https://github.com/dotnet/external-1", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Never);
+
+        patches.Should().ContainSingle();
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
+    }
+        //remote
+        //    .Verify(x => x.Clone("https://github.com/dotnet/external-1", submoduleSha, "/tmp/external-1", false, null), Times.Never);
+
 
     private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
     {

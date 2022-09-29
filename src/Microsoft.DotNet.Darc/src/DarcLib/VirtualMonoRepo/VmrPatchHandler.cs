@@ -175,6 +175,12 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         foreach (var change in submoduleChanges)
         {
+            if (change.Before == change.After)
+            {
+                _logger.LogInformation("No changes for submodule {submodule} of {repo}", change.Name, mapping.Name);
+                continue;
+            }
+
             if (change.Before == Constants.EmptyGitObject)
             {
                 _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
@@ -401,28 +407,32 @@ public class VmrPatchHandler : IVmrPatchHandler
             GitSubmoduleInfo? before = submodulesBefore.FirstOrDefault(s => s.Path == path);
             GitSubmoduleInfo? after = submodulesAfter.FirstOrDefault(s => s.Path == path);
 
-            if (before is null && after is not null) // Submodule was added
+            // Submodule was added
+            if (before is null && after is not null)
             {
                 submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+                continue;
             }
-            else if (before is not null && after is null) // Submodule was removed
+
+            // Submodule was removed
+            if (before is not null && after is null)
             {
                 submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+                continue;
             }
-            else // Submodule was changed
+
+            // When submodule points to some new remote, we have to break it down to 2 changes: remove the old, add the new
+            // (this is what happened in the remote repo)
+            if (before!.Url != after!.Url)
             {
-                // When submodule points to some new remote, we have to break it down to 2 changes: remove the old, add the new
-                // (this is what happened in the remote repo)
-                if (before!.Url != after!.Url)
-                {
-                    submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
-                    submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
-                }
-                else
-                {
-                    submoduleChanges.Add(new(after.Name, path, after.Url, before.Commit, after.Commit));
-                }
+                submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+                submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+                continue;
             }
+
+            // Submodule was not changed or points to a new commit
+            // We want to include it both ways though as we need to ignore it when diffing
+            submoduleChanges.Add(new(after.Name, path, after.Url, before.Commit, after.Commit));
         }
 
         return submoduleChanges;
