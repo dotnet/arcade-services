@@ -264,7 +264,7 @@ public class VmrPatchHandlerTests
         var remote = new Mock<IRemote>();
 
         _remoteFactory
-            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-1", It.IsAny<ILogger>()))
+            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
             .ReturnsAsync(remote.Object);
 
         // Act
@@ -288,7 +288,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         remote.Verify(
-            x => x.Clone("https://github.com/dotnet/external-1", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Never);
 
         patches.Should().ContainSingle();
@@ -314,7 +314,7 @@ public class VmrPatchHandlerTests
         var remote = new Mock<IRemote>();
 
         _remoteFactory
-            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-1", It.IsAny<ILogger>()))
+            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
             .ReturnsAsync(remote.Object);
 
         // Act
@@ -353,7 +353,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         remote.Verify(
-            x => x.Clone("https://github.com/dotnet/external-1", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
 
         patches.Should().HaveCount(2);
@@ -366,7 +366,7 @@ public class VmrPatchHandlerTests
     {
         // Setup
         string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
@@ -380,7 +380,7 @@ public class VmrPatchHandlerTests
         var remote = new Mock<IRemote>();
 
         _remoteFactory
-            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-1", It.IsAny<ILogger>()))
+            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
             .ReturnsAsync(remote.Object);
 
         // Pretend the submodule was already cloned - no clone should happen then
@@ -424,8 +424,90 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         remote.Verify(
-            x => x.Clone("https://github.com/dotnet/external-1", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Never);
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/external-1",
+                new[] { "fetch", "--all" }),
+                Times.AtLeastOnce);
+
+        patches.Should().HaveCount(2);
+        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));
+        patches.Last().Should().Be(new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path));
+    }
+
+    [Test]
+    public async Task CreatePatchesWithSubmoduleCommitChangedTest()
+    {
+        // Setup
+        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
+
+        var remote = new Mock<IRemote>();
+
+        _remoteFactory
+            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
+            .ReturnsAsync(remote.Object);
+
+        // Pretend the submodule was already cloned - no clone should happen then
+        _fileSystem
+            .Setup(x => x.DirectoryExists("/tmp/external-1"))
+            .Returns(true);
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            ClonePath,
+            Sha1,
+            Sha2,
+            PatchDir,
+            "/tmp",
+            CancellationToken.None);
+
+        // Verify diff for the individual repo
+        var expectedArgs = GetExpectedGitDiffArguments(
+            expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                ClonePath,
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        expectedArgs = GetExpectedGitDiffArguments(
+            expectedSubmodulePatchName, SubmoduleSha1, SubmoduleSha2, null)
+            .Take(7)
+            .Append(":(glob,attr:!vmr-ignore)**/*")
+            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+
+        // Verify diff for the submodule
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/external-1",
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        remote.Verify(
+            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Never);
+        
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/external-1",
+                new[] { "fetch", "--all" }),
+                Times.AtLeastOnce);
 
         patches.Should().HaveCount(2);
         patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName, string.Empty));

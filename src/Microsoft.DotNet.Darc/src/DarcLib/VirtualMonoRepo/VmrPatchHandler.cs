@@ -466,7 +466,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             return filters
                 .Where(p => p.StartsWith(change.Path))
-                .Select(p => p.Substring(change.Path.Length).TrimStart('/'))
+                .Select(p => p[change.Path.Length..].TrimStart('/'))
                 .ToImmutableArray();
         }
 
