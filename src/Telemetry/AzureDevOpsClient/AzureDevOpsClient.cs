@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -18,13 +19,17 @@ namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public sealed class AzureDevOpsClient : IAzureDevOpsClient
     {
+        private readonly ILogger<AzureDevOpsClient> _logger;
         private readonly HttpClient _httpClient;
         private readonly SemaphoreSlim _parallelism;
 
         public AzureDevOpsClient(
             AzureDevOpsClientOptions options,
+            ILogger<AzureDevOpsClient> logger,
             IHttpClientFactory httpClientFactory)
         {
+            _logger = logger;
+            _logger.LogInformation("Constructing AzureDevOpsClient for org {organization}", options.Organization);
             _httpClient = httpClientFactory.CreateClient();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.BaseAddress = new Uri($"https://dev.azure.com/{options.Organization}/");

@@ -45,6 +45,7 @@ namespace DotNet.Status.Web.Controllers
         private Reference<IAzureDevOpsClient> GetAzureDevOpsClient()
         {
             BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
+            _logger.LogInformation("Getting AzureDevOpsClient for org {organization}", o.Organization);
             return _azureDevOpsClientFactory.GetClient($"build-monitor/{o.Organization}");
         }
 

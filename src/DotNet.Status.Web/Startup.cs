@@ -102,8 +102,8 @@ namespace DotNet.Status.Web
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana"));
             services.Configure<AnnotationsOptions>(Configuration.GetSection("Annotations"));
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth"));
-            services.Configure<AzureDevOpsOptions>("dnceng", Configuration.GetSection("AzureDevOps:dnceng"));
-            services.Configure<AzureDevOpsOptions>("build-monitor/dnceng", Configuration.GetSection("AzureDevOps:build-monitor/dnceng"));
+            services.Configure<AzureDevOpsClientOptions>("dnceng", Configuration.GetSection("AzureDevOps:dnceng"));
+            services.Configure<AzureDevOpsClientOptions>("build-monitor/dnceng", Configuration.GetSection("AzureDevOps:build-monitor/dnceng"));
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor"));
             services.Configure<KustoOptions>(Configuration.GetSection("Kusto"));
             services.Configure<RcaOptions>(Configuration.GetSection("Rca"));

@@ -53,7 +53,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
                     MaxParallelRequests = 2
                 };
                 collection.AddSingleton<IAzureDevOpsClient, AzureDevOpsClient>(provider =>
-                    new AzureDevOpsClient(options, provider.GetRequiredService<IHttpClientFactory>()));
+                    new AzureDevOpsClient(options, provider.GetRequiredService<ILogger<AzureDevOpsClient>>(), provider.GetRequiredService<IHttpClientFactory>()));
                 collection.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
                     new SingleClientFactory<IAzureDevOpsClient>(provider.GetRequiredService<IAzureDevOpsClient>()));
             }
