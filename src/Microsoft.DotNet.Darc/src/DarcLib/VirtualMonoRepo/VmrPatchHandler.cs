@@ -185,7 +185,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             if (change.Before == Constants.EmptyGitObject)
             {
-                _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} / {sha}",
+                _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} @ {sha}",
                     change.Name, mapping.Name, change.Path, Commit.GetShortSha(change.After));
             }
             else if (change.After == Constants.EmptyGitObject)
@@ -283,7 +283,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
         {
             _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
-            _fileSystem.DeleteDirectory(destPath, true);
+            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, destPath), true);
         }
     }
 
