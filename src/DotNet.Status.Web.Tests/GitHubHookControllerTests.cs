@@ -920,14 +920,6 @@ namespace DotNet.Status.Web.Tests
                 services.AddSingleton(Mock.Of<IGitHubApplicationClientFactory>());
                 services.AddSingleton<IClientFactory<IAzureDevOpsClient>>(provider =>
                     new SingleClientFactory<IAzureDevOpsClient>(Mock.Of<IAzureDevOpsClient>()));
-                services.Configure<AzureDevOpsOptions>(o => 
-                {
-                    o.Project = "project";
-                    o.Organization = "organization";
-                    o.BaseUrl = TestAzdoWebHookUri;
-                    o.MaxParallelRequests = 10;
-                    o.AccessToken = "token";
-                });
                 services.AddSingleton(Mock.Of<ITimelineIssueTriage>());
 
 
