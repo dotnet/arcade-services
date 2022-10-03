@@ -81,11 +81,11 @@ public class VmrPatchHandler : IVmrPatchHandler
         string tmpPath,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating patches in {path}..", destDir);
+        _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
         var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
 
-        _logger.LogInformation("{count} patches created", patches.Count);
+        _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
         return patches;
     }
