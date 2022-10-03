@@ -475,8 +475,20 @@ public class VmrPatchHandler : IVmrPatchHandler
                 .ToImmutableArray();
         }
 
+        static string SanitizeName(string mappingName)
+        {
+            mappingName = mappingName.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1];
+
+            if (mappingName.EndsWith(".git"))
+            {
+                mappingName = mappingName[..^4];
+            }
+            
+            return mappingName;
+        }
+
         var submoduleMapping = new SourceMapping(
-            change.Name.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1],
+            SanitizeName(change.Name),
             change.Url,
             change.Before,
             GetSubmoduleFilters(mapping.Include),
