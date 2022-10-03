@@ -476,7 +476,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var submoduleMapping = new SourceMapping(
-            change.Name,
+            change.Name.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1],
             change.Url,
             change.Before,
             GetSubmoduleFilters(mapping.Include),
