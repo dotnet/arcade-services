@@ -1,7 +1,6 @@
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class IssueOrPullRequestCommentChanges
 {
-    public class IssueOrPullRequestCommentChanges
-    {
-        public IssueOrPullRequestCommentChangesBody Body { get; set; }
-    }
+    public IssueOrPullRequestCommentChangesBody Body { get; set; }
 }

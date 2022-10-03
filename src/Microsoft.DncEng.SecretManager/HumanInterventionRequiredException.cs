@@ -1,12 +1,11 @@
 using System;
 
-namespace Microsoft.DncEng.SecretManager
+namespace Microsoft.DncEng.SecretManager;
+
+public class HumanInterventionRequiredException : Exception
 {
-    public class HumanInterventionRequiredException : Exception
+    public HumanInterventionRequiredException(string message)
+        :base(message)
     {
-        public HumanInterventionRequiredException(string message)
-            :base(message)
-        {
-        }
     }
 }

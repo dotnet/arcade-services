@@ -4,19 +4,18 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.AzureDevOpsTimeline;
+
+public class AzureDevOpsProject
 {
-    public class AzureDevOpsProject
-    {
-        public string Organization { get; set; }
-        public string Project { get; set; }
-    }
-    public class AzureDevOpsTimelineOptions
-    {
-        public List<AzureDevOpsProject> Projects { get; set; }
-        public string InitialDelay { get; set; }
-        public string Interval { get; set; }
-        public string BuildBatchSize { get; set; }
-        public string LogScrapingTimeout { get; set; }
-    }
+    public string Organization { get; set; }
+    public string Project { get; set; }
+}
+public class AzureDevOpsTimelineOptions
+{
+    public List<AzureDevOpsProject> Projects { get; set; }
+    public string InitialDelay { get; set; }
+    public string Interval { get; set; }
+    public string BuildBatchSize { get; set; }
+    public string LogScrapingTimeout { get; set; }
 }

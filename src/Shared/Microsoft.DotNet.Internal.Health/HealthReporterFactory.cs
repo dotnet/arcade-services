@@ -6,108 +6,107 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public class HealthReporterFactory : IHealthReporterFactory
 {
-    public class HealthReporterFactory : IHealthReporterFactory
+    private readonly IInstanceAccessor _instance;
+    private readonly IEnumerable<IHealthReportProvider> _providers;
+
+    public HealthReporterFactory(
+        IInstanceAccessor instance,
+        IEnumerable<IHealthReportProvider> providers)
     {
-        private readonly IInstanceAccessor _instance;
-        private readonly IEnumerable<IHealthReportProvider> _providers;
+        _instance = instance;
+        _providers = providers;
+    }
 
-        public HealthReporterFactory(
-            IInstanceAccessor instance,
-            IEnumerable<IHealthReportProvider> providers)
+    private class ExternalHealthReport : IExternalHealthReporter
+    {
+        private readonly HealthReporterFactory _factory;
+        private readonly string _serviceName;
+
+        public ExternalHealthReport(HealthReporterFactory factory, string serviceName)
         {
-            _instance = instance;
-            _providers = providers;
+            _factory = factory;
+            _serviceName = serviceName;
         }
 
-        private class ExternalHealthReport : IExternalHealthReporter
+        public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
         {
-            private readonly HealthReporterFactory _factory;
-            private readonly string _serviceName;
-
-            public ExternalHealthReport(HealthReporterFactory factory, string serviceName)
-            {
-                _factory = factory;
-                _serviceName = serviceName;
-            }
-
-            public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
-            {
-                return _factory.UpdateStatusAsync(_serviceName, null, subStatus, status, message);
-            }
-
-            public Task<IList<HealthReport>> GetServiceStatusAsync()
-            {
-                return _factory.GetServiceStatusAsync(_serviceName);
-            }
+            return _factory.UpdateStatusAsync(_serviceName, null, subStatus, status, message);
         }
 
-        private async Task<IList<HealthReport>> GetServiceStatusAsync(string serviceName)
+        public Task<IList<HealthReport>> GetServiceStatusAsync()
         {
-            var results = await Task.WhenAll(_providers.Select(p => p.GetAllStatusAsync(serviceName))).ConfigureAwait(false);
-            return results.FirstOrDefault(r => r != null && r.Count > 0);
+            return _factory.GetServiceStatusAsync(_serviceName);
+        }
+    }
+
+    private async Task<IList<HealthReport>> GetServiceStatusAsync(string serviceName)
+    {
+        var results = await Task.WhenAll(_providers.Select(p => p.GetAllStatusAsync(serviceName))).ConfigureAwait(false);
+        return results.FirstOrDefault(r => r != null && r.Count > 0);
+    }
+
+    private Task UpdateStatusAsync(
+        string serviceName,
+        string instance,
+        string subStatusName,
+        HealthStatus status,
+        string message)
+    {
+        return Task.WhenAll(_providers.Select(p => p.UpdateStatusAsync(serviceName, instance, subStatusName, status, message)));
+    }
+
+    private class ServiceHealthReport<T> : IServiceHealthReporter<T>
+    {
+        private readonly HealthReporterFactory _factory;
+
+        public ServiceHealthReport(HealthReporterFactory factory)
+        {
+            _factory = factory;
         }
 
-        private Task UpdateStatusAsync(
-            string serviceName,
-            string instance,
-            string subStatusName,
-            HealthStatus status,
-            string message)
+        public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
         {
-            return Task.WhenAll(_providers.Select(p => p.UpdateStatusAsync(serviceName, instance, subStatusName, status, message)));
+            return _factory.UpdateStatusAsync(typeof(T).FullName, null, subStatus, status, message);
+        }
+    }
+
+    private class InstanceHealthReport<T> : IInstanceHealthReporter<T>
+    {
+        private readonly HealthReporterFactory _factory;
+
+        public InstanceHealthReport(HealthReporterFactory factory)
+        {
+            _factory = factory;
         }
 
-        private class ServiceHealthReport<T> : IServiceHealthReporter<T>
+        public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
         {
-            private readonly HealthReporterFactory _factory;
-
-            public ServiceHealthReport(HealthReporterFactory factory)
-            {
-                _factory = factory;
-            }
-
-            public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
-            {
-                return _factory.UpdateStatusAsync(typeof(T).FullName, null, subStatus, status, message);
-            }
+            return _factory.UpdateStatusAsync(
+                typeof(T).FullName,
+                _factory._instance.GetCurrentInstanceName(),
+                subStatus,
+                status,
+                message
+            );
         }
+    }
 
-        private class InstanceHealthReport<T> : IInstanceHealthReporter<T>
-        {
-            private readonly HealthReporterFactory _factory;
+    public IServiceHealthReporter<T> ForService<T>()
+    {
+        return new ServiceHealthReport<T>(this);
+    }
 
-            public InstanceHealthReport(HealthReporterFactory factory)
-            {
-                _factory = factory;
-            }
-
-            public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
-            {
-                return _factory.UpdateStatusAsync(
-                    typeof(T).FullName,
-                    _factory._instance.GetCurrentInstanceName(),
-                    subStatus,
-                    status,
-                    message
-                );
-            }
-        }
-
-        public IServiceHealthReporter<T> ForService<T>()
-        {
-            return new ServiceHealthReport<T>(this);
-        }
-
-        public IInstanceHealthReporter<T> ForInstance<T>()
-        {
-            return new InstanceHealthReport<T>(this);
-        }
+    public IInstanceHealthReporter<T> ForInstance<T>()
+    {
+        return new InstanceHealthReport<T>(this);
+    }
         
-        public IExternalHealthReporter ForExternal(string serviceName)
-        {
-            return new ExternalHealthReport(this, serviceName);
-        }
+    public IExternalHealthReporter ForExternal(string serviceName)
+    {
+        return new ExternalHealthReport(this, serviceName);
     }
 }

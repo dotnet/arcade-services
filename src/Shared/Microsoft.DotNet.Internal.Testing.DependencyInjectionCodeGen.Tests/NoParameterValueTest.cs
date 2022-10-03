@@ -8,35 +8,34 @@ using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests;
+
+public partial class NoParameterValueTest
 {
-    public partial class NoParameterValueTest
+    private const string TestValue = "TEST-NoParameterValueTest";
+
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
     {
-        private const string TestValue = "TEST-NoParameterValueTest";
-
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
+        public static Func<IServiceProvider, Injectable> Injectable(IServiceCollection collection)
         {
-            public static Func<IServiceProvider, Injectable> Injectable(IServiceCollection collection)
-            {
-                collection.AddSingleton(s => new Injectable(TestValue));
-                return s => s.GetRequiredService<Injectable>();
-            }
-        }
-
-        [Test]
-        public void Validate()
-        {
-            using TestData testData = TestData.Default.Build();
-            testData.Injectable.Value.Should().Be(TestValue);
+            collection.AddSingleton(s => new Injectable(TestValue));
+            return s => s.GetRequiredService<Injectable>();
         }
     }
 
-    //public partial class NoParameterValueTest
-    //{
-    //    [TestDependencyInjectionSetup]
-    //    private static class TestDataConfig
-    //    {
-    //    }
-    //}
+    [Test]
+    public void Validate()
+    {
+        using TestData testData = TestData.Default.Build();
+        testData.Injectable.Value.Should().Be(TestValue);
+    }
 }
+
+//public partial class NoParameterValueTest
+//{
+//    [TestDependencyInjectionSetup]
+//    private static class TestDataConfig
+//    {
+//    }
+//}

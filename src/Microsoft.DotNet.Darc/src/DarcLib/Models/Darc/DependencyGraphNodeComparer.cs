@@ -4,19 +4,18 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class DependencyGraphNodeComparer : IEqualityComparer<DependencyGraphNode>
-    {
-        public bool Equals(DependencyGraphNode x, DependencyGraphNode y)
-        {
-            return x.Commit == y.Commit &&
-                   x.Repository == y.Repository;
-        }
+namespace Microsoft.DotNet.DarcLib;
 
-        public int GetHashCode(DependencyGraphNode obj)
-        {
-            return (obj.Commit, obj.Repository).GetHashCode();
-        }
+public class DependencyGraphNodeComparer : IEqualityComparer<DependencyGraphNode>
+{
+    public bool Equals(DependencyGraphNode x, DependencyGraphNode y)
+    {
+        return x.Commit == y.Commit &&
+               x.Repository == y.Repository;
+    }
+
+    public int GetHashCode(DependencyGraphNode obj)
+    {
+        return (obj.Commit, obj.Repository).GetHashCode();
     }
 }

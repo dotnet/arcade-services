@@ -3,17 +3,16 @@
 // See the LICENSE file in the project root for more information.
 using Microsoft.DotNet.Kusto;
 
-namespace Maestro.DataProviders
-{
-    public class MultiProjectKustoQuery
-    {
-        public MultiProjectKustoQuery(KustoQuery internalQuery, KustoQuery publicQuery)
-        {
-            Internal = internalQuery;
-            Public = publicQuery;
-        }
+namespace Maestro.DataProviders;
 
-        public KustoQuery Internal { get; set; }
-        public KustoQuery Public { get; set; }
+public class MultiProjectKustoQuery
+{
+    public MultiProjectKustoQuery(KustoQuery internalQuery, KustoQuery publicQuery)
+    {
+        Internal = internalQuery;
+        Public = publicQuery;
     }
+
+    public KustoQuery Internal { get; set; }
+    public KustoQuery Public { get; set; }
 }

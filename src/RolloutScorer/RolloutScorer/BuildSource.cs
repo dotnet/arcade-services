@@ -1,10 +1,9 @@
 using Newtonsoft.Json;
 
-namespace RolloutScorer
+namespace RolloutScorer;
+
+public class BuildSource
 {
-    public class BuildSource
-    {
-        [JsonProperty("comment")]
-        public string Comment { get; set; }
-    }
+    [JsonProperty("comment")]
+    public string Comment { get; set; }
 }

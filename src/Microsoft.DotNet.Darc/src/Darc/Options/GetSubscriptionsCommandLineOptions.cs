@@ -5,14 +5,13 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
+class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
 {
-    [Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
-    class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+    public override Operation GetOperation()
     {
-        public override Operation GetOperation()
-        {
-            return new GetSubscriptionsOperation(this);
-        }
+        return new GetSubscriptionsOperation(this);
     }
 }

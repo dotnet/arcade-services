@@ -10,36 +10,35 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public static class Program
 {
-    public static class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
-        {
-            Host.CreateDefaultBuilder()
-                .ConfigureWebHostDefaults(host =>
+        Host.CreateDefaultBuilder()
+            .ConfigureWebHostDefaults(host =>
+            {
+                host.UseStartup<Startup>()
+                    .UseUrls("http://localhost:5000/")
+                    .CaptureStartupErrors(true);
+            })
+            .UseContentRoot(Directory.GetCurrentDirectory())
+            .ConfigureAppConfiguration((host, config) =>
+            {
+                config
+                    .AddDefaultJsonConfiguration(host.HostingEnvironment, serviceProvider: null)
+                    .AddUserSecrets(Assembly.GetEntryAssembly())
+                    .AddEnvironmentVariables()
+                    .AddCommandLine(args);
+            })
+            .ConfigureLogging(
+                builder =>
                 {
-                    host.UseStartup<Startup>()
-                        .UseUrls("http://localhost:5000/")
-                        .CaptureStartupErrors(true);
+                    builder.AddFilter(level => level > LogLevel.Debug);
+                    builder.AddConsole();
                 })
-                .UseContentRoot(Directory.GetCurrentDirectory())
-                .ConfigureAppConfiguration((host, config) =>
-                {
-                    config
-                        .AddDefaultJsonConfiguration(host.HostingEnvironment, serviceProvider: null)
-                        .AddUserSecrets(Assembly.GetEntryAssembly())
-                        .AddEnvironmentVariables()
-                        .AddCommandLine(args);
-                })
-                .ConfigureLogging(
-                    builder =>
-                    {
-                        builder.AddFilter(level => level > LogLevel.Debug);
-                        builder.AddConsole();
-                    })
-                .Build()
-                .Run();
-        }
+            .Build()
+            .Run();
     }
 }

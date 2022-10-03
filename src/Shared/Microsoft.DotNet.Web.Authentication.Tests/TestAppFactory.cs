@@ -8,57 +8,56 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Web.Authentication.Tests
+namespace Microsoft.DotNet.Web.Authentication.Tests;
+
+public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
 {
-    public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
+    private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+    private Action<IServiceCollection> _configureServices;
+    private Action<IApplicationBuilder> _configureBuilder;
+
+    public void ConfigureServices(Action<IServiceCollection> configureServices)
     {
-        private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        private Action<IServiceCollection> _configureServices;
-        private Action<IApplicationBuilder> _configureBuilder;
+        _configureServices += configureServices;
+    }
 
-        public void ConfigureServices(Action<IServiceCollection> configureServices)
+    public void ConfigureBuilder(Action<IApplicationBuilder> configureBuilder)
+    {
+        _configureBuilder += configureBuilder;
+    }
+
+    protected override IWebHostBuilder CreateWebHostBuilder()
+    {
+        return WebHost.CreateDefaultBuilder<EmptyTestStartup>(Array.Empty<string>());
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        Directory.CreateDirectory(_rootPath);
+        builder.UseContentRoot(_rootPath).UseWebRoot(_rootPath);
+        builder.ConfigureLogging(l =>
         {
-            _configureServices += configureServices;
+            l.SetMinimumLevel(LogLevel.Trace);
+            l.AddProvider(new NUnitLogger());
+        });
+        if (_configureServices != null)
+            builder.ConfigureServices(_configureServices);
+        if (_configureBuilder != null)
+            builder.Configure(_configureBuilder);
+        base.ConfigureWebHost(builder);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        try
+        {
+            Directory.Delete(_rootPath, true);
+        }
+        catch
+        {
+            // Really don't care
         }
 
-        public void ConfigureBuilder(Action<IApplicationBuilder> configureBuilder)
-        {
-            _configureBuilder += configureBuilder;
-        }
-
-        protected override IWebHostBuilder CreateWebHostBuilder()
-        {
-            return WebHost.CreateDefaultBuilder<EmptyTestStartup>(Array.Empty<string>());
-        }
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            Directory.CreateDirectory(_rootPath);
-            builder.UseContentRoot(_rootPath).UseWebRoot(_rootPath);
-            builder.ConfigureLogging(l =>
-            {
-                l.SetMinimumLevel(LogLevel.Trace);
-                l.AddProvider(new NUnitLogger());
-            });
-            if (_configureServices != null)
-                builder.ConfigureServices(_configureServices);
-            if (_configureBuilder != null)
-                builder.Configure(_configureBuilder);
-            base.ConfigureWebHost(builder);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            try
-            {
-                Directory.Delete(_rootPath, true);
-            }
-            catch
-            {
-                // Really don't care
-            }
-
-            base.Dispose(disposing);
-        }
+        base.Dispose(disposing);
     }
 }

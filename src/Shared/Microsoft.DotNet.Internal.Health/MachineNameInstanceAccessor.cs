@@ -4,13 +4,12 @@
 
 using System;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public class MachineNameInstanceAccessor : IInstanceAccessor
 {
-    public class MachineNameInstanceAccessor : IInstanceAccessor
+    public string GetCurrentInstanceName()
     {
-        public string GetCurrentInstanceName()
-        {
-            return Environment.MachineName;
-        }
+        return Environment.MachineName;
     }
 }

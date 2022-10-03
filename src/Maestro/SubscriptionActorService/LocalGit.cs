@@ -1,25 +1,24 @@
 using System;
 using System.IO;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+public interface ILocalGit
 {
-    public interface ILocalGit
-    {
-        string GetPathToLocalGit();
-    }
+    string GetPathToLocalGit();
+}
 
-    public class LocalGit : ILocalGit
+public class LocalGit : ILocalGit
+{
+    public string GetPathToLocalGit()
     {
-        public string GetPathToLocalGit()
+        var gitExePath = Path.Join(AppContext.BaseDirectory, "git-portable", "bin", "git.exe");
+        if (!File.Exists(gitExePath))
         {
-            var gitExePath = Path.Join(AppContext.BaseDirectory, "git-portable", "bin", "git.exe");
-            if (!File.Exists(gitExePath))
-            {
-                throw new InvalidOperationException(
-                    $"Portable git not found at path {gitExePath}, the build needs to be configured to publish it inside the service package.");
-            }
-
-            return gitExePath;
+            throw new InvalidOperationException(
+                $"Portable git not found at path {gitExePath}, the build needs to be configured to publish it inside the service package.");
         }
+
+        return gitExePath;
     }
 }

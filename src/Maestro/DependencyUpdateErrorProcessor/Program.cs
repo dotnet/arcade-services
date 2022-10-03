@@ -14,20 +14,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace DependencyUpdateErrorProcessor
+namespace DependencyUpdateErrorProcessor;
+
+public static class Program
 {
-    public static class Program
+    /// <summary>
+    /// This is the entry point of the service host process.
+    /// </summary>
+    private static void Main()
     {
-        /// <summary>
-        /// This is the entry point of the service host process.
-        /// </summary>
-        private static void Main()
-        {
-            ServiceHost.Run(
-                host =>
-                {
-                    host.RegisterStatefulService<DependencyUpdateErrorProcessor>("DependencyUpdateErrorProcessorType");
-                });
-        }
+        ServiceHost.Run(
+            host =>
+            {
+                host.RegisterStatefulService<DependencyUpdateErrorProcessor>("DependencyUpdateErrorProcessorType");
+            });
     }
 }

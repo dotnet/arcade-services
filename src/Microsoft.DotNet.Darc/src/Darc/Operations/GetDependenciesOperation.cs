@@ -10,65 +10,64 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class GetDependenciesOperation : Operation
 {
-    internal class GetDependenciesOperation : Operation
+    private GetDependenciesCommandLineOptions _options;
+
+    public GetDependenciesOperation(GetDependenciesCommandLineOptions options)
+        : base(options)
     {
-        private GetDependenciesCommandLineOptions _options;
+        _options = options;
+    }
 
-        public GetDependenciesOperation(GetDependenciesCommandLineOptions options)
-            : base(options)
+    public override async Task<int> ExecuteAsync()
+    {
+        Local local = new Local(Logger);
+
+        try
         {
-            _options = options;
-        }
+            IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
 
-        public override async Task<int> ExecuteAsync()
-        {
-            Local local = new Local(Logger);
-
-            try
+            if (!string.IsNullOrEmpty(_options.Name))
             {
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
+                DependencyDetail dependency = dependencies.Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
 
-                if (!string.IsNullOrEmpty(_options.Name))
+                if (dependency == null)
                 {
-                    DependencyDetail dependency = dependencies.Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
-
-                    if (dependency == null)
-                    {
-                        throw new Exception($"A dependency with name '{_options.Name}' was not found...");
-                    }
-
-                    LogDependency(dependency);
+                    throw new Exception($"A dependency with name '{_options.Name}' was not found...");
                 }
 
-                foreach (DependencyDetail dependency in dependencies)
-                {
-                    LogDependency(dependency);
-
-                    Console.WriteLine();
-                }
-
-                return Constants.SuccessCode;
+                LogDependency(dependency);
             }
-            catch (Exception exc)
+
+            foreach (DependencyDetail dependency in dependencies)
             {
-                if (!string.IsNullOrEmpty(_options.Name))
-                {
-                    Logger.LogError(exc, $"Something failed while querying for local dependency '{_options.Name}'.");
-                }
-                else
-                {
-                    Logger.LogError(exc, "Something failed while querying for local dependencies.");
-                }
+                LogDependency(dependency);
+
+                Console.WriteLine();
+            }
+
+            return Constants.SuccessCode;
+        }
+        catch (Exception exc)
+        {
+            if (!string.IsNullOrEmpty(_options.Name))
+            {
+                Logger.LogError(exc, $"Something failed while querying for local dependency '{_options.Name}'.");
+            }
+            else
+            {
+                Logger.LogError(exc, "Something failed while querying for local dependencies.");
+            }
                 
-                return Constants.ErrorCode;
-            }
+            return Constants.ErrorCode;
         }
+    }
 
-        private void LogDependency(DependencyDetail dependency)
-        {
-            Console.Write(UxHelpers.DependencyToString(dependency));
-        }
+    private void LogDependency(DependencyDetail dependency)
+    {
+        Console.Write(UxHelpers.DependencyToString(dependency));
     }
 }

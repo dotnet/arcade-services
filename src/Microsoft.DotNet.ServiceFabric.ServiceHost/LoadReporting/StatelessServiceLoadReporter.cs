@@ -1,19 +1,18 @@
 using System.Fabric;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class StatelessServiceLoadReporter : IServiceLoadReporter
 {
-    public class StatelessServiceLoadReporter : IServiceLoadReporter
+    private readonly IStatelessServicePartition _partition;
+
+    public StatelessServiceLoadReporter(IStatelessServicePartition partition)
     {
-        private readonly IStatelessServicePartition _partition;
+        _partition = partition;
+    }
 
-        public StatelessServiceLoadReporter(IStatelessServicePartition partition)
-        {
-            _partition = partition;
-        }
-
-        public void ReportLoad(string name, int value)
-        {
-            _partition.ReportLoad(new[] {new LoadMetric(name, value)});
-        }
+    public void ReportLoad(string name, int value)
+    {
+        _partition.ReportLoad(new[] {new LoadMetric(name, value)});
     }
 }

@@ -11,77 +11,76 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
-{
-    class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
-    {
-        DefaultChannelStatusCommandLineOptions _options;
+namespace Microsoft.DotNet.Darc.Operations;
 
-        public DefaultChannelStatusOperation(DefaultChannelStatusCommandLineOptions options)
-            : base(options)
+class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
+{
+    DefaultChannelStatusCommandLineOptions _options;
+
+    public DefaultChannelStatusOperation(DefaultChannelStatusCommandLineOptions options)
+        : base(options)
+    {
+        _options = options;
+    }
+
+    /// <summary>
+    /// Implements the default channel enable/disable operation
+    /// </summary>
+    /// <param name="options"></param>
+    public override async Task<int> ExecuteAsync()
+    {
+        if ((_options.Enable && _options.Disable) ||
+            (!_options.Enable && !_options.Disable))
         {
-            _options = options;
+            Console.WriteLine("Please specify either --enable or --disable");
+            return Constants.ErrorCode;
         }
 
-        /// <summary>
-        /// Implements the default channel enable/disable operation
-        /// </summary>
-        /// <param name="options"></param>
-        public override async Task<int> ExecuteAsync()
+        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+        try
         {
-            if ((_options.Enable && _options.Disable) ||
-                (!_options.Enable && !_options.Disable))
+            DefaultChannel resolvedChannel = await ResolveSingleChannel();
+            if (resolvedChannel == null)
             {
-                Console.WriteLine("Please specify either --enable or --disable");
                 return Constants.ErrorCode;
             }
 
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-            try
+            bool enabled;
+            if (_options.Enable)
             {
-                DefaultChannel resolvedChannel = await ResolveSingleChannel();
-                if (resolvedChannel == null)
+                if (resolvedChannel.Enabled)
                 {
+                    Console.WriteLine($"Default channel association is already enabled");
                     return Constants.ErrorCode;
                 }
-
-                bool enabled;
-                if (_options.Enable)
-                {
-                    if (resolvedChannel.Enabled)
-                    {
-                        Console.WriteLine($"Default channel association is already enabled");
-                        return Constants.ErrorCode;
-                    }
-                    enabled = true;
-                }
-                else
-                {
-                    if (!resolvedChannel.Enabled)
-                    {
-                        Console.WriteLine($"Default channel association is already disabled");
-                        return Constants.ErrorCode;
-                    }
-                    enabled = false;
-                }
-
-                await remote.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
-
-                Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
-
-                return Constants.SuccessCode;
+                enabled = true;
             }
-            catch (AuthenticationException e)
+            else
             {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
+                if (!resolvedChannel.Enabled)
+                {
+                    Console.WriteLine($"Default channel association is already disabled");
+                    return Constants.ErrorCode;
+                }
+                enabled = false;
             }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Error: Failed enable/disable default channel association.");
-                return Constants.ErrorCode;
-            }
+
+            await remote.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
+
+            Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
+
+            return Constants.SuccessCode;
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed enable/disable default channel association.");
+            return Constants.ErrorCode;
         }
     }
 }

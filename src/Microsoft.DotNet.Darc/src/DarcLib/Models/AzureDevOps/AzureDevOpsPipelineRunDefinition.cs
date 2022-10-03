@@ -4,14 +4,13 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps
+namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps;
+
+public class AzureDevOpsPipelineRunDefinition
 {
-    public class AzureDevOpsPipelineRunDefinition
-    {
-        public AzureDevOpsRunResourcesParameters Resources { get; set; }
+    public AzureDevOpsRunResourcesParameters Resources { get; set; }
 
-        public Dictionary<string, string> TemplateParameters { get; set; }
+    public Dictionary<string, string> TemplateParameters { get; set; }
 
-        public Dictionary<string, AzureDevOpsVariable> Variables { get; set; }
-    }
+    public Dictionary<string, AzureDevOpsVariable> Variables { get; set; }
 }

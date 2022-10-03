@@ -2,17 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class Review
-    {
-        public Review(ReviewState state, string url)
-        {
-            Status = state;
-            Url = url;
-        }
+namespace Microsoft.DotNet.DarcLib;
 
-        public ReviewState Status { get; }
-        public string Url { get; }
+public class Review
+{
+    public Review(ReviewState state, string url)
+    {
+        Status = state;
+        Url = url;
     }
+
+    public ReviewState Status { get; }
+    public string Url { get; }
 }

@@ -15,177 +15,176 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.DotNet.Web.Authentication.AccessToken
+namespace Microsoft.DotNet.Web.Authentication.AccessToken;
+
+public static class PersonalAccessTokenUtilities
 {
-    public static class PersonalAccessTokenUtilities
+    public static int TokenIdByteCount => sizeof(int);
+    public static int CalculateTokenSizeForPasswordSize(int passwordSize) => TokenIdByteCount + passwordSize;
+
+    public static string EncodeToken(int tokenId, byte[] password)
     {
-        public static int TokenIdByteCount => sizeof(int);
-        public static int CalculateTokenSizeForPasswordSize(int passwordSize) => TokenIdByteCount + passwordSize;
-
-        public static string EncodeToken(int tokenId, byte[] password)
-        {
-            byte[] tokenIdBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(tokenId));
-            byte[] outputBytes = tokenIdBytes.Concat(password).ToArray();
-            return WebEncoders.Base64UrlEncode(outputBytes);
-        }
-
-        public static string EncodePasswordBytes(byte[] passwordBytes)
-        {
-            return WebEncoders.Base64UrlEncode(passwordBytes);
-        }
+        byte[] tokenIdBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(tokenId));
+        byte[] outputBytes = tokenIdBytes.Concat(password).ToArray();
+        return WebEncoders.Base64UrlEncode(outputBytes);
     }
 
-    public class PersonalAccessTokenAuthenticationHandler<TUser> :
-        AuthenticationHandler<PersonalAccessTokenAuthenticationOptions<TUser>> where TUser : class
+    public static string EncodePasswordBytes(byte[] passwordBytes)
     {
-        public PersonalAccessTokenAuthenticationHandler(
-            IOptionsMonitor<PersonalAccessTokenAuthenticationOptions<TUser>> options,
-            ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock,
-            IPasswordHasher<TUser> passwordHasher,
-            SignInManager<TUser> signInManager) : base(options, logger, encoder, clock)
+        return WebEncoders.Base64UrlEncode(passwordBytes);
+    }
+}
+
+public class PersonalAccessTokenAuthenticationHandler<TUser> :
+    AuthenticationHandler<PersonalAccessTokenAuthenticationOptions<TUser>> where TUser : class
+{
+    public PersonalAccessTokenAuthenticationHandler(
+        IOptionsMonitor<PersonalAccessTokenAuthenticationOptions<TUser>> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock,
+        IPasswordHasher<TUser> passwordHasher,
+        SignInManager<TUser> signInManager) : base(options, logger, encoder, clock)
+    {
+        PasswordHasher = passwordHasher;
+        SignInManager = signInManager;
+    }
+
+    public IPasswordHasher<TUser> PasswordHasher { get; }
+    public SignInManager<TUser> SignInManager { get; }
+
+    public new PersonalAccessTokenEvents<TUser> Events
+    {
+        get => (PersonalAccessTokenEvents<TUser>) base.Events;
+        set => base.Events = value;
+    }
+
+    public int TokenByteCount => PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(Options.PasswordSize);
+
+    protected override Task<object> CreateEventsAsync()
+    {
+        return Task.FromResult<object>(new PersonalAccessTokenEvents<TUser>());
+    }
+
+    private byte[] GeneratePassword()
+    {
+        var bytes = new byte[Options.PasswordSize];
+        using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
         {
-            PasswordHasher = passwordHasher;
-            SignInManager = signInManager;
+            rng.GetBytes(bytes);
         }
 
-        public IPasswordHasher<TUser> PasswordHasher { get; }
-        public SignInManager<TUser> SignInManager { get; }
+        return bytes;
+    }
 
-        public new PersonalAccessTokenEvents<TUser> Events
+    private (int tokenId, string password)? DecodeToken(string input)
+    {
+        byte[] tokenBytes = WebEncoders.Base64UrlDecode(input);
+        if (tokenBytes.Length != TokenByteCount)
         {
-            get => (PersonalAccessTokenEvents<TUser>) base.Events;
-            set => base.Events = value;
-        }
-
-        public int TokenByteCount => PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(Options.PasswordSize);
-
-        protected override Task<object> CreateEventsAsync()
-        {
-            return Task.FromResult<object>(new PersonalAccessTokenEvents<TUser>());
-        }
-
-        private byte[] GeneratePassword()
-        {
-            var bytes = new byte[Options.PasswordSize];
-            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(bytes);
-            }
-
-            return bytes;
-        }
-
-        private (int tokenId, string password)? DecodeToken(string input)
-        {
-            byte[] tokenBytes = WebEncoders.Base64UrlDecode(input);
-            if (tokenBytes.Length != TokenByteCount)
-            {
-                return null;
-            }
-
-            int tokenId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(tokenBytes, 0));
-            string password = WebEncoders.Base64UrlEncode(tokenBytes, PersonalAccessTokenUtilities.TokenIdByteCount, Options.PasswordSize);
-            return (tokenId, password);
-        }
-
-        public async Task<(int id, string value)> CreateToken(TUser user, string name)
-        {
-            byte[] passwordBytes = GeneratePassword();
-            string password = PersonalAccessTokenUtilities.EncodePasswordBytes(passwordBytes);
-            string hash = PasswordHasher.HashPassword(user, password);
-            var context = new SetTokenHashContext<TUser>(Context, user, name, hash);
-            int tokenId = await Events.SetTokenHash(context);
-            return (tokenId, PersonalAccessTokenUtilities.EncodeToken(tokenId, passwordBytes));
-        }
-
-        public async Task<TUser> VerifyToken(string token)
-        {
-            (int tokenId, string password)? decoded = DecodeToken(token);
-            if (!decoded.HasValue)
-            {
-                return null;
-            }
-
-            (int tokenId, string password) = decoded.Value;
-
-            var context = new GetTokenHashContext<TUser>(Context, tokenId);
-            await Events.GetTokenHash(context);
-            if (!context.Succeeded)
-            {
-                return null;
-            }
-
-            string hash = context.Hash;
-            TUser user = context.User;
-
-            PasswordVerificationResult result = PasswordHasher.VerifyHashedPassword(user, hash, password);
-
-            if (result == PasswordVerificationResult.Success ||
-                result == PasswordVerificationResult.SuccessRehashNeeded)
-            {
-                return user;
-            }
-
             return null;
         }
 
-        protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+        int tokenId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(tokenBytes, 0));
+        string password = WebEncoders.Base64UrlEncode(tokenBytes, PersonalAccessTokenUtilities.TokenIdByteCount, Options.PasswordSize);
+        return (tokenId, password);
+    }
+
+    public async Task<(int id, string value)> CreateToken(TUser user, string name)
+    {
+        byte[] passwordBytes = GeneratePassword();
+        string password = PersonalAccessTokenUtilities.EncodePasswordBytes(passwordBytes);
+        string hash = PasswordHasher.HashPassword(user, password);
+        var context = new SetTokenHashContext<TUser>(Context, user, name, hash);
+        int tokenId = await Events.SetTokenHash(context);
+        return (tokenId, PersonalAccessTokenUtilities.EncodeToken(tokenId, passwordBytes));
+    }
+
+    public async Task<TUser> VerifyToken(string token)
+    {
+        (int tokenId, string password)? decoded = DecodeToken(token);
+        if (!decoded.HasValue)
         {
-            try
+            return null;
+        }
+
+        (int tokenId, string password) = decoded.Value;
+
+        var context = new GetTokenHashContext<TUser>(Context, tokenId);
+        await Events.GetTokenHash(context);
+        if (!context.Succeeded)
+        {
+            return null;
+        }
+
+        string hash = context.Hash;
+        TUser user = context.User;
+
+        PasswordVerificationResult result = PasswordHasher.VerifyHashedPassword(user, hash, password);
+
+        if (result == PasswordVerificationResult.Success ||
+            result == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            return user;
+        }
+
+        return null;
+    }
+
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        try
+        {
+            string token = GetToken();
+            if (string.IsNullOrEmpty(token))
             {
-                string token = GetToken();
-                if (string.IsNullOrEmpty(token))
-                {
-                    return AuthenticateResult.NoResult();
-                }
-
-                TUser user = await VerifyToken(token);
-
-                if (user == null)
-                {
-                    return AuthenticateResult.Fail("Invalid Token");
-                }
-
-                ClaimsPrincipal principal = await SignInManager.CreateUserPrincipalAsync(user);
-                var ticket = new AuthenticationTicket(principal, Scheme.Name);
-                var context = new PersonalAccessTokenValidatePrincipalContext<TUser>(
-                    Context,
-                    Scheme,
-                    Options,
-                    ticket,
-                    user);
-                await Events.ValidatePrincipal(context);
-                if (context.Principal == null)
-                {
-                    return AuthenticateResult.Fail("No principal.");
-                }
-
-                return AuthenticateResult.Success(
-                    new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name));
+                return AuthenticateResult.NoResult();
             }
-            catch (Exception ex)
+
+            TUser user = await VerifyToken(token);
+
+            if (user == null)
             {
-                return AuthenticateResult.Fail(ex);
+                return AuthenticateResult.Fail("Invalid Token");
+            }
+
+            ClaimsPrincipal principal = await SignInManager.CreateUserPrincipalAsync(user);
+            var ticket = new AuthenticationTicket(principal, Scheme.Name);
+            var context = new PersonalAccessTokenValidatePrincipalContext<TUser>(
+                Context,
+                Scheme,
+                Options,
+                ticket,
+                user);
+            await Events.ValidatePrincipal(context);
+            if (context.Principal == null)
+            {
+                return AuthenticateResult.Fail("No principal.");
+            }
+
+            return AuthenticateResult.Success(
+                new AuthenticationTicket(context.Principal, context.Properties, Scheme.Name));
+        }
+        catch (Exception ex)
+        {
+            return AuthenticateResult.Fail(ex);
+        }
+    }
+
+    private string GetToken()
+    {
+        string authorization = Request.Headers["Authorization"];
+
+        if (!string.IsNullOrEmpty(authorization))
+        {
+            string authPrefix = Options.TokenName + " ";
+
+            if (authorization.StartsWith(authPrefix))
+            {
+                return authorization.Substring(authPrefix.Length).Trim();
             }
         }
 
-        private string GetToken()
-        {
-            string authorization = Request.Headers["Authorization"];
-
-            if (!string.IsNullOrEmpty(authorization))
-            {
-                string authPrefix = Options.TokenName + " ";
-
-                if (authorization.StartsWith(authPrefix))
-                {
-                    return authorization.Substring(authPrefix.Length).Trim();
-                }
-            }
-
-            return Events.GetTokenFromRequest(Request);
-        }
+        return Events.GetTokenFromRequest(Request);
     }
 }

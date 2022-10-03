@@ -4,18 +4,17 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsCommit
 {
-    public class AzureDevOpsCommit
+    public AzureDevOpsCommit(List<AzureDevOpsChange> changes, string commitComment)
     {
-        public AzureDevOpsCommit(List<AzureDevOpsChange> changes, string commitComment)
-        {
-            Changes = changes;
-            Comment = commitComment;
-        }
-
-        public List<AzureDevOpsChange> Changes { get; set; }
-
-        public string Comment { get; set; }
+        Changes = changes;
+        Comment = commitComment;
     }
+
+    public List<AzureDevOpsChange> Changes { get; set; }
+
+    public string Comment { get; set; }
 }

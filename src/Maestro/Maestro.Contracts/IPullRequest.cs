@@ -4,12 +4,11 @@
 
 using System.Collections.Generic;
 
-namespace Maestro.Contracts
-{
-    public interface IPullRequest
-    {
-        string Url { get; set; }
+namespace Maestro.Contracts;
 
-        List<DependencyUpdateSummary> RequiredUpdates { get; set; }
-    }
+public interface IPullRequest
+{
+    string Url { get; set; }
+
+    List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 }

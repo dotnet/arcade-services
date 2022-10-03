@@ -12,46 +12,45 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class SetGoalOperation : Operation
 {
-    internal class SetGoalOperation : Operation
+    private SetGoalCommandLineOptions _options;
+
+    public SetGoalOperation(SetGoalCommandLineOptions options)
+        : base(options)
     {
-        private SetGoalCommandLineOptions _options;
+        _options = options;
+    }
 
-        public SetGoalOperation(SetGoalCommandLineOptions options)
-            : base(options)
+    /// <summary>
+    ///  Sets Goal in minutes for a definition in a Channel.
+    /// </summary>
+    /// <returns>Process exit code.</returns>
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            _options = options;
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            Goal goalInfo = await remote.SetGoalAsync(_options.Channel, _options.DefinitionId, _options.Minutes);
+            Console.Write(goalInfo.Minutes);
+            return Constants.SuccessCode;
         }
-
-        /// <summary>
-        ///  Sets Goal in minutes for a definition in a Channel.
-        /// </summary>
-        /// <returns>Process exit code.</returns>
-        public override async Task<int> ExecuteAsync()
+        catch (AuthenticationException e)
         {
-            try
-            {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-                Goal goalInfo = await remote.SetGoalAsync(_options.Channel, _options.DefinitionId, _options.Minutes);
-                Console.Write(goalInfo.Minutes);
-                return Constants.SuccessCode;
-            }
-            catch (AuthenticationException e)
-            {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
-            }
-            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
-            {
-                Logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
-                return Constants.ErrorCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
-                return Constants.ErrorCode;
-            }
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
+        {
+            Logger.LogError(e, $"Cannot find Channel '{_options.Channel}'.");
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Unable to create goal for Channel : '{_options.Channel}' and DefinitionId : '{_options.DefinitionId}'.");
+            return Constants.ErrorCode;
         }
     }
 }

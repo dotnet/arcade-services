@@ -5,20 +5,19 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Monitoring.Sdk
+namespace Microsoft.DotNet.Monitoring.Sdk;
+
+internal static class HttpResponseExtensions
 {
-    internal static class HttpResponseExtensions
+    public static async Task EnsureSuccessWithContentAsync(this HttpResponseMessage message)
     {
-        public static async Task EnsureSuccessWithContentAsync(this HttpResponseMessage message)
-        {
-            if (message.IsSuccessStatusCode)
-                return;
+        if (message.IsSuccessStatusCode)
+            return;
 
-            string content = await message.Content.ReadAsStringAsync();
-            if (content.Length > 1000)
-                content = content.Substring(0, 1000) + "...";
+        string content = await message.Content.ReadAsStringAsync();
+        if (content.Length > 1000)
+            content = content.Substring(0, 1000) + "...";
 
-            throw new HttpRequestException($"Response status code does not indicate success: {(int) message.StatusCode} ({message.ReasonPhrase}): Body: {content}");
-        }
+        throw new HttpRequestException($"Response status code does not indicate success: {(int) message.StatusCode} ({message.ReasonPhrase}): Body: {content}");
     }
 }

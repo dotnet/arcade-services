@@ -5,45 +5,44 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("update-dependencies", HelpText = "Update local dependencies from a channel, build or local list of packages.")]
+class UpdateDependenciesCommandLineOptions : CommandLineOptions
 {
-    [Verb("update-dependencies", HelpText = "Update local dependencies from a channel, build or local list of packages.")]
-    class UpdateDependenciesCommandLineOptions : CommandLineOptions
+    [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
+    [RedactFromLogging]
+    public int BARBuildId { get; set; }
+
+    [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
+    public string Channel { get; set; }
+
+    [Option('n', "name", HelpText = "Optional name of dependency to update. Otherwise all " +
+                                    "dependencies existing on 'channel' are updated.")]
+    public string Name { get; set; }
+
+    [Option('v', "version", HelpText = "The new version of dependency --name.")]
+    public string Version { get; set; }
+
+    [Option("source-repo", HelpText = "Only update dependencies whose source uri contains this string.")]
+    public string SourceRepository { get; set; }
+
+    [Option("packages-folder", HelpText = "An optional path to a folder which contains the NuGet " +
+                                          "packages whose versions will be used to update existing dependencies.")]
+    [RedactFromLogging]
+    public string PackagesFolder { get; set; }
+
+    [Option("dry-run", HelpText = "Show what will be updated, but make no changes.")]
+    public bool DryRun { get; set; }
+
+    [Option("coherency-only", HelpText = "Only do coherency updates.")]
+    public bool CoherencyOnly { get; set; }
+
+    [Option("legacy-coherency", HelpText = "Use 'legacy' coherency mode (default is 'strict')")]
+    public bool LegacyCoherency { get; set; }
+
+    public override Operation GetOperation()
     {
-        [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
-        [RedactFromLogging]
-        public int BARBuildId { get; set; }
-
-        [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
-        public string Channel { get; set; }
-
-        [Option('n', "name", HelpText = "Optional name of dependency to update. Otherwise all " +
-            "dependencies existing on 'channel' are updated.")]
-        public string Name { get; set; }
-
-        [Option('v', "version", HelpText = "The new version of dependency --name.")]
-        public string Version { get; set; }
-
-        [Option("source-repo", HelpText = "Only update dependencies whose source uri contains this string.")]
-        public string SourceRepository { get; set; }
-
-        [Option("packages-folder", HelpText = "An optional path to a folder which contains the NuGet " +
-            "packages whose versions will be used to update existing dependencies.")]
-        [RedactFromLogging]
-        public string PackagesFolder { get; set; }
-
-        [Option("dry-run", HelpText = "Show what will be updated, but make no changes.")]
-        public bool DryRun { get; set; }
-
-        [Option("coherency-only", HelpText = "Only do coherency updates.")]
-        public bool CoherencyOnly { get; set; }
-
-        [Option("legacy-coherency", HelpText = "Use 'legacy' coherency mode (default is 'strict')")]
-        public bool LegacyCoherency { get; set; }
-
-        public override Operation GetOperation()
-        {
-            return new UpdateDependenciesOperation(this);
-        }
+        return new UpdateDependenciesOperation(this);
     }
 }

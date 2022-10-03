@@ -7,30 +7,29 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace Maestro.Web.Api.v2018_07_16.Models
-{
-    public class Channel
-    {
-        public Channel([NotNull] Data.Models.Channel other)
-        {
-            if (other == null)
-            {
-                throw new ArgumentNullException(nameof(other));
-            }
+namespace Maestro.Web.Api.v2018_07_16.Models;
 
-            Id = other.Id;
-            Name = other.Name;
-            Classification = other.Classification;
+public class Channel
+{
+    public Channel([NotNull] Data.Models.Channel other)
+    {
+        if (other == null)
+        {
+            throw new ArgumentNullException(nameof(other));
         }
 
-        public int Id { get; }
-
-        [Required]
-        public string Name { get; }
-
-        [Required]
-        public string Classification { get; }
-
-        public List<ReleasePipeline> ReleasePipelines { get; }
+        Id = other.Id;
+        Name = other.Name;
+        Classification = other.Classification;
     }
+
+    public int Id { get; }
+
+    [Required]
+    public string Name { get; }
+
+    [Required]
+    public string Classification { get; }
+
+    public List<ReleasePipeline> ReleasePipelines { get; }
 }

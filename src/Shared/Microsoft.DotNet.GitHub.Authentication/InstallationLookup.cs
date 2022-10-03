@@ -4,19 +4,18 @@
 
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.GitHub.Authentication
-{
-    public interface IInstallationLookup
-    {
-        Task<long> GetInstallationId(string repositoryUrl);
-        Task<bool> IsOrganizationSupported(string org);
-    }
+namespace Microsoft.DotNet.GitHub.Authentication;
 
-    public static class InstallationLookup
+public interface IInstallationLookup
+{
+    Task<long> GetInstallationId(string repositoryUrl);
+    Task<bool> IsOrganizationSupported(string org);
+}
+
+public static class InstallationLookup
+{
+    public static Task<long> GetInstallationId(this IInstallationLookup lookup, string organization, string repository)
     {
-        public static Task<long> GetInstallationId(this IInstallationLookup lookup, string organization, string repository)
-        {
-            return lookup.GetInstallationId(GitHubHelper.GetRepositoryUrl(organization, repository));
-        }
+        return lookup.GetInstallationId(GitHubHelper.GetRepositoryUrl(organization, repository));
     }
 }

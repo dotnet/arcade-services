@@ -3,16 +3,16 @@ using System.IO;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace Microsoft.DncEng.SecretManager.Tests
+namespace Microsoft.DncEng.SecretManager.Tests;
+
+public class SecretManifestTests
 {
-    public class SecretManifestTests
+    [Test]
+    public void CanDeserialize()
     {
-        [Test]
-        public void CanDeserialize()
-        {
-            var subscription = "007ae47e-f491-4706-a4ad-288c235dd30e";
-            var vaultName = "pizza";
-            var testManifest = $@"
+        var subscription = "007ae47e-f491-4706-a4ad-288c235dd30e";
+        var vaultName = "pizza";
+        var testManifest = $@"
 storageLocation:
   type: key-vault
   parameters:
@@ -44,61 +44,60 @@ secrets:
       c: six
 ";
 
-            var parsed = SecretManifest.ParseWithoutImports(new StringReader(testManifest));
+        var parsed = SecretManifest.ParseWithoutImports(new StringReader(testManifest));
 
-            parsed.Should().BeEquivalentTo(new
+        parsed.Should().BeEquivalentTo(new
+        {
+            StorageLocation = new
             {
-                StorageLocation = new
+                Type = "key-vault",
+                Parameters = new Dictionary<string, string>
                 {
-                    Type = "key-vault",
+                    ["subscription"] = subscription,
+                    ["name"] = vaultName,
+                },
+            },
+            Keys = new Dictionary<string, object>
+            {
+                ["key1"] = new
+                {
+                    Type = "one",
+                    Size = 1,
+                },
+                ["key2"] = new
+                {
+                    Type = "two",
+                    Size = 2,
+                },
+            },
+            Secrets = new Dictionary<string, object>
+            {
+                ["secret1"] = new
+                {
+                    Type = "three",
+                    Owner = "sally",
+                    Description = "the first secret",
                     Parameters = new Dictionary<string, string>
                     {
-                        ["subscription"] = subscription,
-                        ["name"] = vaultName,
+                        ["one"] = "1",
+                        ["two"] = "ni",
+                        ["three"] = "san"
                     },
                 },
-                Keys = new Dictionary<string, object>
+                ["secret2"] = new
                 {
-                    ["key1"] = new
+                    Type = "four",
+                    Owner = "bob",
+                    Description = "the second secret",
+                    Parameters = new Dictionary<string, string>
                     {
-                        Type = "one",
-                        Size = 1,
-                    },
-                    ["key2"] = new
-                    {
-                        Type = "two",
-                        Size = 2,
-                    },
-                },
-                Secrets = new Dictionary<string, object>
-                {
-                    ["secret1"] = new
-                    {
-                        Type = "three",
-                        Owner = "sally",
-                        Description = "the first secret",
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["one"] = "1",
-                            ["two"] = "ni",
-                            ["three"] = "san"
-                        },
-                    },
-                    ["secret2"] = new
-                    {
-                        Type = "four",
-                        Owner = "bob",
-                        Description = "the second secret",
-                        Parameters = new Dictionary<string, string>
-                        {
-                            ["a"] = "yon",
-                            ["b"] = "cinco",
-                            ["c"] = "six"
-                        },
+                        ["a"] = "yon",
+                        ["b"] = "cinco",
+                        ["c"] = "six"
                     },
                 },
-            });
-        }
-
+            },
+        });
     }
+
 }

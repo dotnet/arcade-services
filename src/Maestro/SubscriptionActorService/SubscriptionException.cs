@@ -5,27 +5,26 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+/// <summary>
+///     Exception thrown when there is a failure updating a subscription that should be surfaced to users.
+/// </summary>
+public class SubscriptionException : Exception
 {
-    /// <summary>
-    ///     Exception thrown when there is a failure updating a subscription that should be surfaced to users.
-    /// </summary>
-    public class SubscriptionException : Exception
+    public SubscriptionException(string message) : this(message, null)
     {
-        public SubscriptionException(string message) : this(message, null)
-        {
-        }
+    }
 
-        public SubscriptionException() : this("There was a problem updating the subscription.")
-        {
-        }
+    public SubscriptionException() : this("There was a problem updating the subscription.")
+    {
+    }
 
-        protected SubscriptionException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
+    protected SubscriptionException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
 
-        public SubscriptionException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+    public SubscriptionException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }

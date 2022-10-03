@@ -4,21 +4,20 @@
 
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.GitHub.Authentication
-{
-    public interface IGitHubTokenProvider
-    {
-        Task<string> GetTokenForInstallationAsync(long installationId);
-        Task<string> GetTokenForRepository(string repositoryUrl);
-        string GetTokenForApp();
-        string GetTokenForApp(string name);
-    }
+namespace Microsoft.DotNet.GitHub.Authentication;
 
-    public static class GitHubTokenProviderExtensions
+public interface IGitHubTokenProvider
+{
+    Task<string> GetTokenForInstallationAsync(long installationId);
+    Task<string> GetTokenForRepository(string repositoryUrl);
+    string GetTokenForApp();
+    string GetTokenForApp(string name);
+}
+
+public static class GitHubTokenProviderExtensions
+{
+    public static Task<string> GetTokenForRepository(this IGitHubTokenProvider provider, string organization, string repository)
     {
-        public static Task<string> GetTokenForRepository(this IGitHubTokenProvider provider, string organization, string repository)
-        {
-            return provider.GetTokenForRepository(GitHubHelper.GetRepositoryUrl(organization, repository));
-        }
+        return provider.GetTokenForRepository(GitHubHelper.GetRepositoryUrl(organization, repository));
     }
 }

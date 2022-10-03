@@ -7,96 +7,95 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests;
+
+[TestFixture]
+public class DelegatedStatelessWebServiceStartupTests
 {
-    [TestFixture]
-    public class DelegatedStatelessWebServiceStartupTests
+    [Test]
+    public void CallsForwardedToResolvedStartup()
     {
-        [Test]
-        public void CallsForwardedToResolvedStartup()
-        {
-            var collection = new ServiceCollection();
-            collection.AddSingleton<MyStartup>();
-            ServiceProvider provider = collection.BuildServiceProvider();
-            var delegated = new DelegatedStatelessWebServiceStartup<MyStartup>(
-                provider,
-                new HostEnvironment("TESTING", "TestApp", Path.GetTempPath(), null),
-                service => service.AddSingleton(new OuterTest("Test string"))
-            );
+        var collection = new ServiceCollection();
+        collection.AddSingleton<MyStartup>();
+        ServiceProvider provider = collection.BuildServiceProvider();
+        var delegated = new DelegatedStatelessWebServiceStartup<MyStartup>(
+            provider,
+            new HostEnvironment("TESTING", "TestApp", Path.GetTempPath(), null),
+            service => service.AddSingleton(new OuterTest("Test string"))
+        );
 
-            var innerCollection = new ServiceCollection();
+        var innerCollection = new ServiceCollection();
 
-            delegated.ConfigureServices(innerCollection);
+        delegated.ConfigureServices(innerCollection);
 
-            ServiceProvider innerProvider = innerCollection.BuildServiceProvider();
+        ServiceProvider innerProvider = innerCollection.BuildServiceProvider();
 
-            var outer = innerProvider.GetService<OuterTest>();
-            outer.Should().NotBeNull();
-            outer.Value.Should().Be("Test string");
-            var inner = innerProvider.GetService<InnerTest>();
-            inner.Should().NotBeNull();
-            inner.Value.Should().Be("Test string:Inner");
+        var outer = innerProvider.GetService<OuterTest>();
+        outer.Should().NotBeNull();
+        outer.Value.Should().Be("Test string");
+        var inner = innerProvider.GetService<InnerTest>();
+        inner.Should().NotBeNull();
+        inner.Value.Should().Be("Test string:Inner");
 
-            var appBuilder = new ApplicationBuilder(innerProvider);
-            delegated.Configure(appBuilder);
-            RequestDelegate built = appBuilder.Build();
-            var ctx = new DefaultHttpContext();
-            built(ctx);
+        var appBuilder = new ApplicationBuilder(innerProvider);
+        delegated.Configure(appBuilder);
+        RequestDelegate built = appBuilder.Build();
+        var ctx = new DefaultHttpContext();
+        built(ctx);
 
-            ctx.Response.Headers.TryGetValue("TestHeader", out var headerValues).Should().BeTrue();
-            headerValues.ToString().Should().Be("TestHeaderValue");
-        }
+        ctx.Response.Headers.TryGetValue("TestHeader", out var headerValues).Should().BeTrue();
+        headerValues.ToString().Should().Be("TestHeaderValue");
+    }
 
-        [Test]
-        public void RequiresIStartup()
-        {
-            var collection = new ServiceCollection();
-            ServiceProvider provider = collection.BuildServiceProvider();
-            (((Func<object>)(() =>
+    [Test]
+    public void RequiresIStartup()
+    {
+        var collection = new ServiceCollection();
+        ServiceProvider provider = collection.BuildServiceProvider();
+        (((Func<object>)(() =>
                 new DelegatedStatelessWebServiceStartup<DelegatedStatelessWebServiceStartupTests>(
                     provider,
                     null,
                     service => { }
                 )
-))).Should().ThrowExactly<InvalidOperationException>();
-        }
+            ))).Should().ThrowExactly<InvalidOperationException>();
+    }
 
-        private class MyStartup : IStartup
+    private class MyStartup : IStartup
+    {
+        public void Configure(IApplicationBuilder app)
         {
-            public void Configure(IApplicationBuilder app)
+            app.Use(async (ctx, next) =>
             {
-                app.Use(async (ctx, next) =>
-                {
-                    ctx.Response.Headers.Add("TestHeader", "TestHeaderValue");
-                    await next();
-                });
-            }
-
-            public IServiceProvider ConfigureServices(IServiceCollection services)
-            {
-                services.AddSingleton<InnerTest>();
-                return services.BuildServiceProvider();
-            }
+                ctx.Response.Headers.Add("TestHeader", "TestHeaderValue");
+                await next();
+            });
         }
 
-        private class OuterTest
+        public IServiceProvider ConfigureServices(IServiceCollection services)
         {
-            public OuterTest(string value)
-            {
-                Value = value;
-            }
-
-            public string Value { get; }
+            services.AddSingleton<InnerTest>();
+            return services.BuildServiceProvider();
         }
+    }
 
-        private class InnerTest
+    private class OuterTest
+    {
+        public OuterTest(string value)
         {
-            public InnerTest(OuterTest outer)
-            {
-                Value = outer.Value + ":Inner";
-            }
-
-            public string Value { get; }
+            Value = value;
         }
+
+        public string Value { get; }
+    }
+
+    private class InnerTest
+    {
+        public InnerTest(OuterTest outer)
+        {
+            Value = outer.Value + ":Inner";
+        }
+
+        public string Value { get; }
     }
 }

@@ -9,134 +9,133 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public class Repository
 {
-    public class Repository
+    // 450 is short enough to work well in SQL indexes,
+    // and long enough to hold any repository or branch that we need to store.
+    public const int RepositoryNameLength = 450;
+    public const int BranchNameLength = 450;
+
+    [MaxLength(RepositoryNameLength)]
+    public string RepositoryName { get; set; }
+
+    public long InstallationId { get; set; }
+
+    public List<RepositoryBranch> Branches { get; set; }
+}
+
+public class RepositoryBranch
+{
+    [MaxLength(Repository.RepositoryNameLength)]
+    public string RepositoryName { get; set; }
+
+    public Repository Repository { get; set; }
+
+    [MaxLength(Repository.BranchNameLength)]
+    public string BranchName { get; set; }
+
+    [Column("Policy")]
+    public string PolicyString { get; set; }
+
+    [NotMapped]
+    public Policy PolicyObject
     {
-        // 450 is short enough to work well in SQL indexes,
-        // and long enough to hold any repository or branch that we need to store.
-        public const int RepositoryNameLength = 450;
-        public const int BranchNameLength = 450;
-
-        [MaxLength(RepositoryNameLength)]
-        public string RepositoryName { get; set; }
-
-        public long InstallationId { get; set; }
-
-        public List<RepositoryBranch> Branches { get; set; }
+        get => PolicyString == null ? null : JsonConvert.DeserializeObject<Policy>(PolicyString);
+        set => PolicyString = value == null ? null : JsonConvert.SerializeObject(value);
     }
 
-    public class RepositoryBranch
+    public class Policy
     {
-        [MaxLength(Repository.RepositoryNameLength)]
-        public string RepositoryName { get; set; }
+        public List<MergePolicyDefinition> MergePolicies { get; set; }
+    }
+}
 
-        public Repository Repository { get; set; }
+public class RepositoryBranchUpdate
+{
+    [MaxLength(Repository.RepositoryNameLength)]
+    [Required]
+    public string RepositoryName { get; set; }
 
-        [MaxLength(Repository.BranchNameLength)]
-        public string BranchName { get; set; }
+    [MaxLength(Repository.BranchNameLength)]
+    [Required]
+    public string BranchName { get; set; }
 
-        [Column("Policy")]
-        public string PolicyString { get; set; }
+    public RepositoryBranch RepositoryBranch { get; set; }
 
-        [NotMapped]
-        public Policy PolicyObject
+    /// <summary>
+    ///     **true** if the update succeeded; **false** otherwise.
+    /// </summary>
+    public bool Success { get; set; }
+
+    /// <summary>
+    ///     A message describing what the subscription was trying to do.
+    ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
+    /// </summary>
+    public string Action { get; set; }
+
+    /// <summary>
+    ///     The error that occured, if any.
+    /// </summary>
+    public string ErrorMessage { get; set; }
+
+    /// <summary>
+    ///     The method that was called.
+    /// </summary>
+    public string Method { get; set; }
+
+    /// <summary>
+    ///     The parameters to the called method.
+    /// </summary>
+    public string Arguments { get; set; }
+}
+
+public class RepositoryBranchUpdateHistory
+{
+    [MaxLength(Repository.RepositoryNameLength)]
+    [Required]
+    public string RepositoryName { get; set; }
+
+    [MaxLength(Repository.BranchNameLength)]
+    [Required]
+    public string BranchName
+    {
+        get
         {
-            get => PolicyString == null ? null : JsonConvert.DeserializeObject<Policy>(PolicyString);
-            set => PolicyString = value == null ? null : JsonConvert.SerializeObject(value);
+            return GitHelpers.NormalizeBranchName(_branch);
         }
-
-        public class Policy
+        set
         {
-            public List<MergePolicyDefinition> MergePolicies { get; set; }
+            _branch = GitHelpers.NormalizeBranchName(value);
         }
     }
 
-    public class RepositoryBranchUpdate
-    {
-        [MaxLength(Repository.RepositoryNameLength)]
-        [Required]
-        public string RepositoryName { get; set; }
+    /// <summary>
+    ///     **true** if the update succeeded; **false** otherwise.
+    /// </summary>
+    public bool Success { get; set; }
 
-        [MaxLength(Repository.BranchNameLength)]
-        [Required]
-        public string BranchName { get; set; }
+    /// <summary>
+    ///     A message describing what the subscription was trying to do.
+    ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
+    /// </summary>
+    public string Action { get; set; }
 
-        public RepositoryBranch RepositoryBranch { get; set; }
+    /// <summary>
+    ///     The error that occured, if any.
+    /// </summary>
+    public string ErrorMessage { get; set; }
 
-        /// <summary>
-        ///     **true** if the update succeeded; **false** otherwise.
-        /// </summary>
-        public bool Success { get; set; }
+    /// <summary>
+    ///     The method that was called.
+    /// </summary>
+    public string Method { get; set; }
 
-        /// <summary>
-        ///     A message describing what the subscription was trying to do.
-        ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
-        /// </summary>
-        public string Action { get; set; }
+    /// <summary>
+    ///     The parameters to the called method.
+    /// </summary>
+    public string Arguments { get; set; }
 
-        /// <summary>
-        ///     The error that occured, if any.
-        /// </summary>
-        public string ErrorMessage { get; set; }
-
-        /// <summary>
-        ///     The method that was called.
-        /// </summary>
-        public string Method { get; set; }
-
-        /// <summary>
-        ///     The parameters to the called method.
-        /// </summary>
-        public string Arguments { get; set; }
-    }
-
-    public class RepositoryBranchUpdateHistory
-    {
-        [MaxLength(Repository.RepositoryNameLength)]
-        [Required]
-        public string RepositoryName { get; set; }
-
-        [MaxLength(Repository.BranchNameLength)]
-        [Required]
-        public string BranchName
-        {
-            get
-            {
-                return GitHelpers.NormalizeBranchName(_branch);
-            }
-            set
-            {
-                _branch = GitHelpers.NormalizeBranchName(value);
-            }
-        }
-
-        /// <summary>
-        ///     **true** if the update succeeded; **false** otherwise.
-        /// </summary>
-        public bool Success { get; set; }
-
-        /// <summary>
-        ///     A message describing what the subscription was trying to do.
-        ///     e.g. 'Updating dependencies from dotnet/coreclr in dotnet/corefx'
-        /// </summary>
-        public string Action { get; set; }
-
-        /// <summary>
-        ///     The error that occured, if any.
-        /// </summary>
-        public string ErrorMessage { get; set; }
-
-        /// <summary>
-        ///     The method that was called.
-        /// </summary>
-        public string Method { get; set; }
-
-        /// <summary>
-        ///     The parameters to the called method.
-        /// </summary>
-        public string Arguments { get; set; }
-
-        private string _branch;
-    }
+    private string _branch;
 }

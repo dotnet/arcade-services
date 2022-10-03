@@ -18,99 +18,98 @@ using NUnit.Framework;
 
 using Asset = Maestro.Contracts.Asset;
 
-namespace SubscriptionActorService.Tests
+namespace SubscriptionActorService.Tests;
+
+[TestFixture, NonParallelizable]
+public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
-    [TestFixture, NonParallelizable]
-    public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
+    private Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors;
+
+    [SetUp]
+    public void SubscriptionActorTests_SetUp()
     {
-        private Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors;
+        PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
+    }
 
-        [SetUp]
-        public void SubscriptionActorTests_SetUp()
-        {
-            PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
-        }
+    protected override void RegisterServices(IServiceCollection services)
+    {
+        var proxyFactory = new Mock<IActorProxyFactory<IPullRequestActor>>();
+        proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+            .Returns((ActorId actorId) =>
+            {
+                Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
+                    actorId,
+                    CreateMock<IPullRequestActor>);
+                return mock.Object;
+            });
+        services.AddSingleton(proxyFactory.Object);
+        base.RegisterServices(services);
+    }
 
-        protected override void RegisterServices(IServiceCollection services)
-        {
-            var proxyFactory = new Mock<IActorProxyFactory<IPullRequestActor>>();
-            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
-                .Returns((ActorId actorId) =>
+    internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
+    {
+        await Execute(
+            async provider =>
+            {
+                var actorId = new ActorId(forSubscription.Id);
+                var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
+                actor.Initialize(actorId, StateManager, Reminders);
+                await actor.UpdateAsync(andForBuild.Id);
+            });
+    }
+
+    private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
+    {
+        var updatedAssets = new List<List<Asset>>();
+        PullRequestActors.Should()
+            .ContainKey(forActor)
+            .WhichValue.Verify(
+                a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
+        updatedAssets.Should()
+            .BeEquivalentTo(
+                new List<List<Asset>>
                 {
-                    Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
-                        actorId,
-                        CreateMock<IPullRequestActor>);
-                    return mock.Object;
+                    withBuild.Assets.Select(
+                            a => new Asset
+                            {
+                                Name = a.Name,
+                                Version = a.Version
+                            })
+                        .ToList()
                 });
-            services.AddSingleton(proxyFactory.Object);
-            base.RegisterServices(services);
-        }
+    }
 
-        internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
-        {
-            await Execute(
-                async provider =>
-                {
-                    var actorId = new ActorId(forSubscription.Id);
-                    var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
-                    actor.Initialize(actorId, StateManager, Reminders);
-                    await actor.UpdateAsync(andForBuild.Id);
-                });
-        }
+    [Test]
+    public async Task BatchableEveryBuildSubscription()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b = GivenANewBuild(true);
 
-        private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
-        {
-            var updatedAssets = new List<List<Asset>>();
-            PullRequestActors.Should()
-                .ContainKey(forActor)
-                .WhichValue.Verify(
-                    a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
-            updatedAssets.Should()
-                .BeEquivalentTo(
-                    new List<List<Asset>>
-                    {
-                        withBuild.Assets.Select(
-                                a => new Asset
-                                {
-                                    Name = a.Name,
-                                    Version = a.Version
-                                })
-                            .ToList()
-                    });
-        }
+        await WhenUpdateAsyncIsCalled(Subscription, b);
+        ThenUpdateAssetsAsyncShouldHaveBeenCalled(
+            PullRequestActorId.Create(Subscription.TargetRepository, Subscription.TargetBranch),
+            b);
+    }
 
-        [Test]
-        public async Task BatchableEveryBuildSubscription()
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = true,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
+    [Test]
+    public async Task NotBatchableEveryBuildSubscription()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build b = GivenANewBuild(true);
 
-            await WhenUpdateAsyncIsCalled(Subscription, b);
-            ThenUpdateAssetsAsyncShouldHaveBeenCalled(
-                PullRequestActorId.Create(Subscription.TargetRepository, Subscription.TargetBranch),
-                b);
-        }
-
-        [Test]
-        public async Task NotBatchableEveryBuildSubscription()
-        {
-            GivenATestChannel();
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = false,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build b = GivenANewBuild(true);
-
-            await WhenUpdateAsyncIsCalled(Subscription, b);
-            ThenUpdateAssetsAsyncShouldHaveBeenCalled(new ActorId(Subscription.Id), b);
-        }
+        await WhenUpdateAsyncIsCalled(Subscription, b);
+        ThenUpdateAssetsAsyncShouldHaveBeenCalled(new ActorId(Subscription.Id), b);
     }
 }

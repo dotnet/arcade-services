@@ -11,42 +11,41 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public static class IGitRepoExtension
 {
-    public static class IGitRepoExtension
+    public static string GetDecodedContent(this IRemoteGitRepo gitRepo, string encodedContent)
     {
-        public static string GetDecodedContent(this IRemoteGitRepo gitRepo, string encodedContent)
+        try
         {
-            try
+            byte[] content = Convert.FromBase64String(encodedContent);
+            // We can't use Encoding.UTF8.GetString here because that returns a string containing a BOM if one exists in the bytes.
+            using (var str = new MemoryStream(content, false))
+            using (var reader = new StreamReader(str))
             {
-                byte[] content = Convert.FromBase64String(encodedContent);
-                // We can't use Encoding.UTF8.GetString here because that returns a string containing a BOM if one exists in the bytes.
-                using (var str = new MemoryStream(content, false))
-                using (var reader = new StreamReader(str))
-                {
-                    return reader.ReadToEnd();
-                }
-            }
-            catch (FormatException)
-            {
-                return encodedContent;
+                return reader.ReadToEnd();
             }
         }
+        catch (FormatException)
+        {
+            return encodedContent;
+        }
+    }
 
-        public static byte[] GetContentBytes(this IRemoteGitRepo gitRepo, string content)
-        {
-            string decodedContent = GetDecodedContent(gitRepo, content);
-            return Encoding.UTF8.GetBytes(decodedContent);
-        }
+    public static byte[] GetContentBytes(this IRemoteGitRepo gitRepo, string content)
+    {
+        string decodedContent = GetDecodedContent(gitRepo, content);
+        return Encoding.UTF8.GetBytes(decodedContent);
+    }
 
-        const string refsHeadsPrefix = "refs/heads/";
-        public static string NormalizeBranchName(string branch)
+    const string refsHeadsPrefix = "refs/heads/";
+    public static string NormalizeBranchName(string branch)
+    {
+        if (branch != null && branch.StartsWith(refsHeadsPrefix))
         {
-            if (branch != null && branch.StartsWith(refsHeadsPrefix))
-            {
-                return branch.Substring(refsHeadsPrefix.Length);
-            }
-            return branch;
+            return branch.Substring(refsHeadsPrefix.Length);
         }
-}
+        return branch;
+    }
 }

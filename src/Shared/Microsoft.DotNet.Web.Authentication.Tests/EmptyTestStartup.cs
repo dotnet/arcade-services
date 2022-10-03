@@ -1,6 +1,5 @@
-namespace Microsoft.DotNet.Web.Authentication.Tests
+namespace Microsoft.DotNet.Web.Authentication.Tests;
+
+public class EmptyTestStartup
 {
-    public class EmptyTestStartup
-    {
-    }
 }

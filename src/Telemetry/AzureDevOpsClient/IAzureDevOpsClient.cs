@@ -10,19 +10,18 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.AzureDevOps
+namespace Microsoft.DotNet.Internal.AzureDevOps;
+
+public interface IAzureDevOpsClient
 {
-    public interface IAzureDevOpsClient
-    {
-        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = default, int? limit = default);
-        public Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default);
-        public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default);
-        public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default);
-        public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken);
-        public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
-        public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
-        public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
-        public Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken = default);
-        public Task<string> GetProjectNameAsync(string id);
-    }
+    public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = default, int? limit = default);
+    public Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default);
+    public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default);
+    public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default);
+    public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken);
+    public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
+    public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
+    public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
+    public Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken = default);
+    public Task<string> GetProjectNameAsync(string id);
 }

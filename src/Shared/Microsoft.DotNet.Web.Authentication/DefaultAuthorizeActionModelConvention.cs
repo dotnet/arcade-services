@@ -9,33 +9,32 @@ using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace Microsoft.DotNet.Web.Authentication
+namespace Microsoft.DotNet.Web.Authentication;
+
+public class DefaultAuthorizeActionModelConvention : IActionModelConvention
 {
-    public class DefaultAuthorizeActionModelConvention : IActionModelConvention
+    public DefaultAuthorizeActionModelConvention(string policyName)
     {
-        public DefaultAuthorizeActionModelConvention(string policyName)
+        Filter = new AuthorizeFilter(policyName);
+    }
+
+    public AuthorizeFilter Filter { get; }
+
+    public void Apply(ActionModel action)
+    {
+        // ASP.NET 3.1 broke IAllowAnonymousFilter, just find the attribute ourselves
+        // Otherwise it takes like 500 lines of code
+        if (action.ActionMethod?.GetCustomAttributes(true).Any(a => a is IAllowAnonymous || a is IAuthorizeData) ?? false)
         {
-            Filter = new AuthorizeFilter(policyName);
+            return;
         }
 
-        public AuthorizeFilter Filter { get; }
-
-        public void Apply(ActionModel action)
+        IEnumerable<object> attributes = action.Controller.Attributes.Concat(action.Attributes);
+        if (attributes.Any(a => a is IAllowAnonymous || a is IAuthorizeData))
         {
-            // ASP.NET 3.1 broke IAllowAnonymousFilter, just find the attribute ourselves
-            // Otherwise it takes like 500 lines of code
-            if (action.ActionMethod?.GetCustomAttributes(true).Any(a => a is IAllowAnonymous || a is IAuthorizeData) ?? false)
-            {
-                return;
-            }
-
-            IEnumerable<object> attributes = action.Controller.Attributes.Concat(action.Attributes);
-            if (attributes.Any(a => a is IAllowAnonymous || a is IAuthorizeData))
-            {
-                return;
-            }
-
-            action.Filters.Add(Filter);
+            return;
         }
+
+        action.Filters.Add(Filter);
     }
 }

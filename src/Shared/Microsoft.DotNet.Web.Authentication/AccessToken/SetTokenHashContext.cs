@@ -4,22 +4,21 @@
 
 using Microsoft.AspNetCore.Http;
 
-namespace Microsoft.DotNet.Web.Authentication.AccessToken
+namespace Microsoft.DotNet.Web.Authentication.AccessToken;
+
+public class SetTokenHashContext<TUser>
 {
-    public class SetTokenHashContext<TUser>
+    public SetTokenHashContext(HttpContext httpContext, TUser user, string name, string hash)
     {
-        public SetTokenHashContext(HttpContext httpContext, TUser user, string name, string hash)
-        {
-            HttpContext = httpContext;
-            User = user;
-            Name = name;
-            Hash = hash;
-        }
-
-        public HttpContext HttpContext { get; }
-
-        public TUser User { get; }
-        public string Name { get; }
-        public string Hash { get; }
+        HttpContext = httpContext;
+        User = user;
+        Name = name;
+        Hash = hash;
     }
+
+    public HttpContext HttpContext { get; }
+
+    public TUser User { get; }
+    public string Name { get; }
+    public string Hash { get; }
 }

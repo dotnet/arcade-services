@@ -12,57 +12,56 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace FeedCleanerService
+namespace FeedCleanerService;
+
+public static class Program
 {
-    public static class Program
+    /// <summary>
+    ///     This is the entry point of the service host process.
+    /// </summary>
+    private static void Main()
     {
-        /// <summary>
-        ///     This is the entry point of the service host process.
-        /// </summary>
-        private static void Main()
-        {
-            ServiceHost.Run(
-                host =>
-                {
-                    host.RegisterStatelessService<FeedCleanerService>("FeedCleanerServiceType");
-                    host.ConfigureServices(Configure);
-                });
-        }
+        ServiceHost.Run(
+            host =>
+            {
+                host.RegisterStatelessService<FeedCleanerService>("FeedCleanerServiceType");
+                host.ConfigureServices(Configure);
+            });
+    }
 
-        public static void Configure(IServiceCollection services)
+    public static void Configure(IServiceCollection services)
+    {
+        services.Configure<FeedCleanerOptions>((options, provider) =>
         {
-            services.Configure<FeedCleanerOptions>((options, provider) =>
+            var config1 = provider.GetRequiredService<IConfiguration>();
+            options.Enabled = config1.GetSection("FeedCleaner").GetValue<bool>("Enabled");
+            var releaseFeedsTokenMap = config1.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
+            foreach (IConfigurationSection token1 in releaseFeedsTokenMap)
             {
-                var config1 = provider.GetRequiredService<IConfiguration>();
-                options.Enabled = config1.GetSection("FeedCleaner").GetValue<bool>("Enabled");
-                var releaseFeedsTokenMap = config1.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
-                foreach (IConfigurationSection token1 in releaseFeedsTokenMap)
-                {
-                    options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
-                }
+                options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
+            }
 
-                var azdoAccountTokenMap = config1.GetSection("AzureDevOps:Tokens").GetChildren();
-                foreach (IConfigurationSection token2 in azdoAccountTokenMap)
-                {
-                    options.AzdoAccounts.Add(token2.GetValue<string>("Account"));
-                }
-            });
-            services.AddDefaultJsonConfiguration();
-            services.AddBuildAssetRegistry((provider, options) =>
+            var azdoAccountTokenMap = config1.GetSection("AzureDevOps:Tokens").GetChildren();
+            foreach (IConfigurationSection token2 in azdoAccountTokenMap)
             {
-                var config = provider.GetRequiredService<IConfiguration>();
-                options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
-            });
-            services.AddAzureDevOpsTokenProvider();
-            services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
+                options.AzdoAccounts.Add(token2.GetValue<string>("Account"));
+            }
+        });
+        services.AddDefaultJsonConfiguration();
+        services.AddBuildAssetRegistry((provider, options) =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            options.UseSqlServerWithRetry(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+        });
+        services.AddAzureDevOpsTokenProvider();
+        services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+            foreach (IConfigurationSection token in tokenMap)
             {
-                var config = provider.GetRequiredService<IConfiguration>();
-                var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                foreach (IConfigurationSection token in tokenMap)
-                {
-                    options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-                }
-            });
-        }
+                options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+            }
+        });
     }
 }

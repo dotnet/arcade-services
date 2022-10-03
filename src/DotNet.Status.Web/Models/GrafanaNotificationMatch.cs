@@ -4,12 +4,11 @@
 
 using System.Collections.Immutable;
 
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class GrafanaNotificationMatch
 {
-    public class GrafanaNotificationMatch
-    {
-        public string Metric { get; set; }
-        public ImmutableDictionary<string, string> Tags { get; set; }
-        public double Value { get; set; }
-    }
+    public string Metric { get; set; }
+    public ImmutableDictionary<string, string> Tags { get; set; }
+    public double Value { get; set; }
 }

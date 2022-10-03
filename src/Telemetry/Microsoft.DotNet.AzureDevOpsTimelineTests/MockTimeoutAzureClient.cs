@@ -11,79 +11,78 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
+namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests;
+
+public class MockTimeoutAzureClient : IAzureDevOpsClient
 {
-    public class MockTimeoutAzureClient : IAzureDevOpsClient
+    public IDictionary<Build, List<Timeline>> Builds { get; }
+
+    private HttpClient _httpClient;
+
+    public MockTimeoutAzureClient(Dictionary<Build, List<Timeline>> builds, HttpMessageHandler httpMessageHandler)
     {
-        public IDictionary<Build, List<Timeline>> Builds { get; }
+        Builds = builds;
+        _httpClient = new HttpClient(httpMessageHandler); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
+    }
 
-        private HttpClient _httpClient;
+    public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 
-        public MockTimeoutAzureClient(Dictionary<Build, List<Timeline>> builds, HttpMessageHandler httpMessageHandler)
-        {
-            Builds = builds;
-            _httpClient = new HttpClient(httpMessageHandler); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
-        }
+    public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 
-        public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+    public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 
-        public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+    public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 
-        public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+    public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Builds
+            .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
+            .Value.OrderByDescending(timeline => timeline.LastChangedOn).First());
+    }
 
-        public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+    public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(Builds
+            .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
+            .Value.Single(timeline => timeline.Id == timelineId));
+    }
 
-        public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Builds
-                .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
-                .Value.OrderByDescending(timeline => timeline.LastChangedOn).First());
-        }
+    public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, int? limit = null)
+    {
+        return Task.FromResult(Builds.Keys.ToArray());
+    }
 
-        public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Builds
-                .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
-                .Value.Single(timeline => timeline.Id == timelineId));
-        }
+    public Task<Internal.AzureDevOps.AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
 
-        public Task<Build[]> ListBuilds(string project, CancellationToken cancellationToken, DateTimeOffset? minTime = null, int? limit = null)
-        {
-            return Task.FromResult(Builds.Keys.ToArray());
-        }
+    public async Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
-        public Task<Internal.AzureDevOps.AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
 
-        public async Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken)
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-
-            using var response = await _httpClient.SendAsync(request, cancellationToken);
-
-            response.EnsureSuccessStatusCode();
+        response.EnsureSuccessStatusCode();
                 
-            return await response.Content.ReadAsStringAsync();
-        }
+        return await response.Content.ReadAsStringAsync();
+    }
 
-        public Task<string> GetProjectNameAsync(string id)
-        {
-            throw new NotImplementedException();
-        }
+    public Task<string> GetProjectNameAsync(string id)
+    {
+        throw new NotImplementedException();
     }
 }

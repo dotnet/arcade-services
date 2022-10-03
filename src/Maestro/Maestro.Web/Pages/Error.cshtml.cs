@@ -6,22 +6,21 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Maestro.Web.Pages
+namespace Maestro.Web.Pages;
+
+public class ErrorModel : PageModel
 {
-    public class ErrorModel : PageModel
+    public new int StatusCode { get; set; }
+
+    public string ErrorMessage { get; set; }
+
+    public void OnGet(int code)
     {
-        public new int StatusCode { get; set; }
-
-        public string ErrorMessage { get; set; }
-
-        public void OnGet(int code)
+        StatusCode = code;
+        ErrorMessage = HttpContext.Items["ErrorMessage"]?.ToString();
+        if (string.IsNullOrEmpty(ErrorMessage))
         {
-            StatusCode = code;
-            ErrorMessage = HttpContext.Items["ErrorMessage"]?.ToString();
-            if (string.IsNullOrEmpty(ErrorMessage))
-            {
-                ErrorMessage = "Unable to process request.";
-            }
+            ErrorMessage = "Unable to process request.";
         }
     }
 }

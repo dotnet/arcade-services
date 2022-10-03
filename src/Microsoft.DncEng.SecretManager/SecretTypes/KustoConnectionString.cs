@@ -28,18 +28,17 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
             var connectionString = new StringBuilder();
             connectionString.Append($"Data Source={parameters.DataSource}");
-            if (!string.IsNullOrEmpty(parameters.InitialCatalog))
-            {
-                connectionString.Append($";Initial Catalog={parameters.InitialCatalog}");
-            }
-
-            connectionString.Append($";AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret.Value}");
-            if (!string.IsNullOrWhiteSpace(parameters.AdditionalParameters))
-            {
-                connectionString.Append($";{parameters.AdditionalParameters}");
-            }
-
-            return new SecretData(connectionString.ToString(), adAppSecret.ExpiresOn, adAppSecret.NextRotationOn);
+        if (!string.IsNullOrEmpty(parameters.InitialCatalog))
+        {
+            connectionString.Append($";Initial Catalog={parameters.InitialCatalog}");
         }
+
+        connectionString.Append($";AAD Federated Security=True;Application Client Id={adAppId};Application Key={adAppSecret.Value}");
+        if (!string.IsNullOrWhiteSpace(parameters.AdditionalParameters))
+        {
+            connectionString.Append($";{parameters.AdditionalParameters}");
+        }
+
+        return new SecretData(connectionString.ToString(), adAppSecret.ExpiresOn, adAppSecret.NextRotationOn);
     }
 }

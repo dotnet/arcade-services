@@ -2,20 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsBuild
 {
-    public class AzureDevOpsBuild
-    {
-        public long Id { get; set; }
+    public long Id { get; set; }
 
-        public string BuildNumber { get; set; }
+    public string BuildNumber { get; set; }
 
-        public AzureDevOpsBuildDefinition Definition { get; set; }
+    public AzureDevOpsBuildDefinition Definition { get; set; }
 
-        public AzureDevOpsProject Project { get; set; }
+    public AzureDevOpsProject Project { get; set; }
 
-        public string Status { get; set; }
+    public string Status { get; set; }
 
-        public string Result { get; set; }
-    }
+    public string Result { get; set; }
 }

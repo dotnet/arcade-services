@@ -12,29 +12,28 @@ using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Remoting.Runtime;
 using Microsoft.ServiceFabric.Services.Remoting.V2.FabricTransport.Runtime;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
-{
-    public static class ServiceHostRemoting
-    {
-        internal static IServiceRemotingListener CreateServiceRemotingListener<TImplementation>(
-            ServiceContext context,
-            Type[] ifaces,
-            IServiceProvider container)
-        {
-            var client = container.GetRequiredService<TelemetryClient>();
-            Type firstIface = ifaces[0];
-            Type[] additionalIfaces = ifaces.Skip(1).ToArray();
-            var gen = new ProxyGenerator();
-            var impl = (IService) gen.CreateInterfaceProxyWithTargetInterface(
-                firstIface,
-                additionalIfaces,
-                (object) null,
-                new InvokeInNewScopeInterceptor<TImplementation>(container),
-                new LoggingServiceInterceptor(context, client));
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
 
-            return new FabricTransportServiceRemotingListener(
-                context,
-                new ActivityServiceRemotingMessageDispatcher(context, impl, null));
-        }
+public static class ServiceHostRemoting
+{
+    internal static IServiceRemotingListener CreateServiceRemotingListener<TImplementation>(
+        ServiceContext context,
+        Type[] ifaces,
+        IServiceProvider container)
+    {
+        var client = container.GetRequiredService<TelemetryClient>();
+        Type firstIface = ifaces[0];
+        Type[] additionalIfaces = ifaces.Skip(1).ToArray();
+        var gen = new ProxyGenerator();
+        var impl = (IService) gen.CreateInterfaceProxyWithTargetInterface(
+            firstIface,
+            additionalIfaces,
+            (object) null,
+            new InvokeInNewScopeInterceptor<TImplementation>(container),
+            new LoggingServiceInterceptor(context, client));
+
+        return new FabricTransportServiceRemotingListener(
+            context,
+            new ActivityServiceRemotingMessageDispatcher(context, impl, null));
     }
 }

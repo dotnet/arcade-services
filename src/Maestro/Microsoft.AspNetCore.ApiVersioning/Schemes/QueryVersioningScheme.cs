@@ -6,42 +6,41 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Schemes
+namespace Microsoft.AspNetCore.ApiVersioning.Schemes;
+
+public class QueryVersioningScheme : IVersioningScheme
 {
-    public class QueryVersioningScheme : IVersioningScheme
+    public QueryVersioningScheme(string parameterName)
     {
-        public QueryVersioningScheme(string parameterName)
+        ParameterName = parameterName;
+    }
+
+    public string ParameterName { get; }
+
+    public void Apply(SelectorModel model, string version)
+    {
+        AttributeRouteModel attributeRouteModel = model.AttributeRouteModel;
+        attributeRouteModel.Template = "api/" + attributeRouteModel.Template;
+        model.ActionConstraints.Add(new Constraint(ParameterName, version));
+    }
+
+    private class Constraint : IActionConstraint
+    {
+        private readonly string _parameterName;
+        private readonly string _version;
+
+        public Constraint(string parameterName, string version)
         {
-            ParameterName = parameterName;
+            _parameterName = parameterName;
+            _version = version;
         }
 
-        public string ParameterName { get; }
-
-        public void Apply(SelectorModel model, string version)
+        public bool Accept(ActionConstraintContext context)
         {
-            AttributeRouteModel attributeRouteModel = model.AttributeRouteModel;
-            attributeRouteModel.Template = "api/" + attributeRouteModel.Template;
-            model.ActionConstraints.Add(new Constraint(ParameterName, version));
+            IQueryCollection query = context.RouteContext.HttpContext.Request.Query;
+            return query[_parameterName].ToString() == _version;
         }
 
-        private class Constraint : IActionConstraint
-        {
-            private readonly string _parameterName;
-            private readonly string _version;
-
-            public Constraint(string parameterName, string version)
-            {
-                _parameterName = parameterName;
-                _version = version;
-            }
-
-            public bool Accept(ActionConstraintContext context)
-            {
-                IQueryCollection query = context.RouteContext.HttpContext.Request.Query;
-                return query[_parameterName].ToString() == _version;
-            }
-
-            public int Order { get; } = 100;
-        }
+        public int Order { get; } = 100;
     }
 }

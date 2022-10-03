@@ -4,25 +4,24 @@
 
 using System;
 
-namespace SubscriptionActorService.Tests
+namespace SubscriptionActorService.Tests;
+
+public class Disposable : IDisposable
 {
-    public class Disposable : IDisposable
+    private readonly Action _dispose;
+
+    private Disposable(Action dispose)
     {
-        private readonly Action _dispose;
+        _dispose = dispose;
+    }
 
-        private Disposable(Action dispose)
-        {
-            _dispose = dispose;
-        }
+    public void Dispose()
+    {
+        _dispose();
+    }
 
-        public void Dispose()
-        {
-            _dispose();
-        }
-
-        public static IDisposable Create(Action onDispose)
-        {
-            return new Disposable(onDispose);
-        }
+    public static IDisposable Create(Action onDispose)
+    {
+        return new Disposable(onDispose);
     }
 }
