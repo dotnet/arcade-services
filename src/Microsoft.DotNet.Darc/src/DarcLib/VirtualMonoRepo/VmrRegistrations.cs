@@ -47,6 +47,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
         {
             var configuration = sp.GetRequiredService<IVmrManagerConfiguration>();

@@ -242,6 +242,12 @@ namespace Microsoft.DotNet.DarcLib
                 throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
             }
         }
+        
+        public void Stage(string repoDir, string pathToStage)
+        {
+            using var repository = new Repository(repoDir);
+            Commands.Stage(repository, pathToStage);
+        }
 
         private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
         {

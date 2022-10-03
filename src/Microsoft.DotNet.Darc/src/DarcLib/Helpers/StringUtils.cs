@@ -12,6 +12,12 @@ public class StringUtils
     public static string GetHumanReadableFileSize(string path)
     {
         var file = new FileInfo(path);
+
+        if (!file.Exists)
+        {
+            return "0 B";
+        }
+
         var size = file.Length;
 
         // Get absolute value
