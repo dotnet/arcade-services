@@ -37,4 +37,26 @@ public interface IFileSystem
     Stream GetFileStream(string path, FileMode mode, FileAccess access);
 
     FileAttributes GetAttributes(string path);
+
+    IFileInfo GetFileInfo(string path);
+}
+
+public interface IFileInfo
+{
+    long Length { get; }
+    bool Exists { get; }
+}
+
+public class FileInfoWrapper : IFileInfo
+{
+    private readonly FileInfo _fileInfo;
+
+    public FileInfoWrapper(string path)
+    {
+        _fileInfo = new(path);
+    }
+
+    public long Length => _fileInfo.Length;
+
+    public bool Exists => _fileInfo.Exists;
 }

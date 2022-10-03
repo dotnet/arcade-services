@@ -302,21 +302,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var patch in patches)
         {
-            var info = new FileInfo(patch.Path);
-            if (!info.Exists)
-            {
-                throw new InvalidOperationException($"Failed to find the patch at {patch.Path}");
-            }
-
-            if (info.Length == 0)
-            {
-                _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
-            }
-            else
-            {
-                await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
-            }
-
+            await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 

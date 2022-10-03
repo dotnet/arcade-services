@@ -218,6 +218,19 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// </summary>
     public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
+        var info = _fileSystem.GetFileInfo(patch.Path);
+        if (!info.Exists)
+        {
+            _logger.LogError("Failed to find a patch which was expected at {path}", patch.Path);
+            return;
+        }
+
+        if (info.Length == 0)
+        {
+            _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
+            return;
+        }
+
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
             .Replace(_vmrInfo.VmrPath, null)

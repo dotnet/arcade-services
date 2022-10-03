@@ -108,6 +108,7 @@ public class VmrPatchHandlerTests
     {
         // Setup
         var patch = new VmrIngestionPatch("{PatchDir}/test-repo.patch", string.Empty);
+        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
         await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
@@ -133,6 +134,9 @@ public class VmrPatchHandlerTests
     [Test]
     public async Task VmrPatchesAreAppliedTest()
     {
+        // Setup
+        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
+
         // Act
         await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
 

@@ -42,4 +42,6 @@ public class FileSystem : IFileSystem
     public Stream GetFileStream(string path, FileMode mode, FileAccess access) => new FileStream(path, mode, access);
 
     public FileAttributes GetAttributes(string path) => File.GetAttributes(path);
+
+    public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
 }
