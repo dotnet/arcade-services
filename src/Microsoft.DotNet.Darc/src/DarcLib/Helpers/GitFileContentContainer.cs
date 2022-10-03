@@ -4,36 +4,35 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class GitFileContentContainer
 {
-    public class GitFileContentContainer
+    public GitFile VersionDetailsXml { get; set; }
+
+    public GitFile VersionProps { get; set; }
+
+    public GitFile GlobalJson { get; set; }
+
+    public GitFile NugetConfig { get; set; }
+
+    public GitFile DotNetToolsJson { get; set; }
+
+    public List<GitFile> GetFilesToCommit()
     {
-        public GitFile VersionDetailsXml { get; set; }
-
-        public GitFile VersionProps { get; set; }
-
-        public GitFile GlobalJson { get; set; }
-
-        public GitFile NugetConfig { get; set; }
-
-        public GitFile DotNetToolsJson { get; set; }
-
-        public List<GitFile> GetFilesToCommit()
+        var gitHubCommitsMap = new List<GitFile>
         {
-            var gitHubCommitsMap = new List<GitFile>
-            {
-                VersionDetailsXml,
-                VersionProps,
-                GlobalJson,
-                NugetConfig
-            };
+            VersionDetailsXml,
+            VersionProps,
+            GlobalJson,
+            NugetConfig
+        };
 
-            if (DotNetToolsJson != null)
-            {
-                gitHubCommitsMap.Add(DotNetToolsJson);
-            }
-
-            return gitHubCommitsMap;
+        if (DotNetToolsJson != null)
+        {
+            gitHubCommitsMap.Add(DotNetToolsJson);
         }
+
+        return gitHubCommitsMap;
     }
 }

@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.Kusto
+namespace Microsoft.DotNet.Kusto;
+
+public class KustoClientProviderOptions
 {
-    public class KustoClientProviderOptions
-    {
-        public string QueryConnectionString { get; set; }
-        public string Database { get; set; }
-    }
+    public string QueryConnectionString { get; set; }
+    public string Database { get; set; }
 }

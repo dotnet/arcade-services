@@ -11,46 +11,45 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class UpdateBuildOperation : Operation
 {
-    internal class UpdateBuildOperation : Operation
+    UpdateBuildCommandLineOptions _options;
+    public UpdateBuildOperation(UpdateBuildCommandLineOptions options)
+        : base(options)
     {
-        UpdateBuildCommandLineOptions _options;
-        public UpdateBuildOperation(UpdateBuildCommandLineOptions options)
-            : base(options)
+        _options = options;
+    }
+
+    public async override Task<int> ExecuteAsync()
+    {
+        if (!(_options.Released ^ _options.NotReleased))
         {
-            _options = options;
+            Console.WriteLine("Please specify either --released or --not-released.");
+            return Constants.ErrorCode;
         }
 
-        public async override Task<int> ExecuteAsync()
+        try
         {
-            if (!(_options.Released ^ _options.NotReleased))
-            {
-                Console.WriteLine("Please specify either --released or --not-released.");
-                return Constants.ErrorCode;
-            }
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-            try
-            {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            Build updatedBuild = await remote.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 
-                Build updatedBuild = await remote.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
-
-                Console.WriteLine($"Updated build {_options.Id} with new information.");
-                Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
-            }
-            catch (AuthenticationException e)
-            {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, $"Error: Failed to update build with id '{_options.Id}'");
-                return Constants.ErrorCode;
-            }
-
-            return Constants.SuccessCode;
+            Console.WriteLine($"Updated build {_options.Id} with new information.");
+            Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
         }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, $"Error: Failed to update build with id '{_options.Id}'");
+            return Constants.ErrorCode;
+        }
+
+        return Constants.SuccessCode;
     }
 }

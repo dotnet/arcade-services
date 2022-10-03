@@ -4,55 +4,54 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen;
+
+internal class ConfigMethod
 {
-    internal class ConfigMethod
+    public ConfigMethod(
+        string name,
+        List<ConfigParameters> parameters,
+        string returnTypeSymbol,
+        bool configureAllParameters,
+        bool isConfigurationAsync,
+        bool isFetchAsync,
+        bool hasFetch)
     {
-        public ConfigMethod(
-            string name,
-            List<ConfigParameters> parameters,
-            string returnTypeSymbol,
-            bool configureAllParameters,
-            bool isConfigurationAsync,
-            bool isFetchAsync,
-            bool hasFetch)
+        Name = name;
+        Parameters = parameters;
+        if (returnTypeSymbol != null)
         {
-            Name = name;
-            Parameters = parameters;
-            if (returnTypeSymbol != null)
+            if (returnTypeSymbol.StartsWith("("))
             {
-                if (returnTypeSymbol.StartsWith("("))
-                {
-                    ReturnTypeSymbol = returnTypeSymbol;
-                }
-                else
-                {
-                    ReturnTypeSymbol = "global::" + returnTypeSymbol;
-                }
+                ReturnTypeSymbol = returnTypeSymbol;
             }
-            ConfigureAllParameters = configureAllParameters;
-            IsConfigurationAsync = isConfigurationAsync;
-            IsFetchAsync = isFetchAsync;
-            HasFetch = hasFetch;
+            else
+            {
+                ReturnTypeSymbol = "global::" + returnTypeSymbol;
+            }
+        }
+        ConfigureAllParameters = configureAllParameters;
+        IsConfigurationAsync = isConfigurationAsync;
+        IsFetchAsync = isFetchAsync;
+        HasFetch = hasFetch;
+    }
+
+    public string Name { get; }
+    public List<ConfigParameters> Parameters { get; }
+    public string ReturnTypeSymbol { get; }
+    public bool HasFetch { get; }
+    public bool ConfigureAllParameters { get; }
+    public bool IsConfigurationAsync { get; }
+    public bool IsFetchAsync { get; }
+
+    public string GetItemName(TestDataClassWriter.NameFormat format)
+    {
+        string name = Name;
+        if (name.StartsWith("Get"))
+        {
+            name = name.Substring(3);
         }
 
-        public string Name { get; }
-        public List<ConfigParameters> Parameters { get; }
-        public string ReturnTypeSymbol { get; }
-        public bool HasFetch { get; }
-        public bool ConfigureAllParameters { get; }
-        public bool IsConfigurationAsync { get; }
-        public bool IsFetchAsync { get; }
-
-        public string GetItemName(TestDataClassWriter.NameFormat format)
-        {
-            string name = Name;
-            if (name.StartsWith("Get"))
-            {
-                name = name.Substring(3);
-            }
-
-            return TestDataClassWriter.FormatName(format, name);
-        }
+        return TestDataClassWriter.FormatName(format, name);
     }
 }

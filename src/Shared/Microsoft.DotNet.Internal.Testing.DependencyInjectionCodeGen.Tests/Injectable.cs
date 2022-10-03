@@ -5,29 +5,28 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests;
+
+public class Injectable : IDisposable, IAsyncDisposable
 {
-    public class Injectable : IDisposable, IAsyncDisposable
+    public Injectable(string value)
     {
-        public Injectable(string value)
-        {
-            Value = value;
-        }
+        Value = value;
+    }
 
-        public string Value { get; }
+    public string Value { get; }
 
-        public bool IsSyncDisposeCalled { get; private set; }
-        public bool IsAsyncDisposeCalled { get; private set; }
+    public bool IsSyncDisposeCalled { get; private set; }
+    public bool IsAsyncDisposeCalled { get; private set; }
 
-        public void Dispose()
-        {
-            IsSyncDisposeCalled = true;
-        }
+    public void Dispose()
+    {
+        IsSyncDisposeCalled = true;
+    }
 
-        public ValueTask DisposeAsync()
-        {
-            IsAsyncDisposeCalled = true;
-            return default;
-        }
+    public ValueTask DisposeAsync()
+    {
+        IsAsyncDisposeCalled = true;
+        return default;
     }
 }

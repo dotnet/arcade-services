@@ -4,10 +4,9 @@
 
 using System;
 
-namespace Microsoft.AspNetCore.ApiVersioning
+namespace Microsoft.AspNetCore.ApiVersioning;
+
+[AttributeUsage(AttributeTargets.Method)]
+public class ApiRemovedAttribute : Attribute
 {
-    [AttributeUsage(AttributeTargets.Method)]
-    public class ApiRemovedAttribute : Attribute
-    {
-    }
 }

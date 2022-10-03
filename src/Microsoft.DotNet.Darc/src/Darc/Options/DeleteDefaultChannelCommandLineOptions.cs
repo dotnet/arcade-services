@@ -5,14 +5,13 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("delete-default-channel", HelpText = "Remove a default channel association.")]
+internal class DeleteDefaultChannelCommandLineOptions : DefaultChannelStatusCommandLineOptions
 {
-    [Verb("delete-default-channel", HelpText = "Remove a default channel association.")]
-    internal class DeleteDefaultChannelCommandLineOptions : DefaultChannelStatusCommandLineOptions
+    public override Operation GetOperation()
     {
-        public override Operation GetOperation()
-        {
-            return new DeleteDefaultChannelOperation(this);
-        }
+        return new DeleteDefaultChannelOperation(this);
     }
 }

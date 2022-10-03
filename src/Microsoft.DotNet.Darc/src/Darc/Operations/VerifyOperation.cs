@@ -10,41 +10,40 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class VerifyOperation : Operation
 {
-    internal class VerifyOperation : Operation
+    VerifyCommandLineOptions _options;
+    public VerifyOperation(VerifyCommandLineOptions options)
+        : base(options)
     {
-        VerifyCommandLineOptions _options;
-        public VerifyOperation(VerifyCommandLineOptions options)
-            : base(options)
-        {
-            _options = options;
-        }
+        _options = options;
+    }
 
-        /// <summary>
-        /// Verify that the repository has a correct dependency structure.
-        /// </summary>
-        /// <param name="options">Command line options</param>
-        /// <returns>Process exit code.</returns>
-        public override async Task<int> ExecuteAsync()
-        {
-            Local local = new Local(Logger);
+    /// <summary>
+    /// Verify that the repository has a correct dependency structure.
+    /// </summary>
+    /// <param name="options">Command line options</param>
+    /// <returns>Process exit code.</returns>
+    public override async Task<int> ExecuteAsync()
+    {
+        Local local = new Local(Logger);
 
-            try
+        try
+        {
+            if (!(await local.Verify()))
             {
-                if (!(await local.Verify()))
-                {
-                    Console.WriteLine("Dependency verification failed.");
-                    return Constants.ErrorCode;
-                }
-                Console.WriteLine("Dependency verification succeeded.");
-                return Constants.SuccessCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Error: Failed to verify repository dependency state.");
+                Console.WriteLine("Dependency verification failed.");
                 return Constants.ErrorCode;
             }
+            Console.WriteLine("Dependency verification succeeded.");
+            return Constants.SuccessCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed to verify repository dependency state.");
+            return Constants.ErrorCode;
         }
     }
 }

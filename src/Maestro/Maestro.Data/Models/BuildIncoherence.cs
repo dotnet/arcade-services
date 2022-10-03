@@ -5,17 +5,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+[Table("BuildIncoherencies")]
+public class BuildIncoherence
 {
-    [Table("BuildIncoherencies")]
-    public class BuildIncoherence
-    {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string Version { get; set; }
-        public string Repository { get; set; }
-        public string Commit { get; set; }
-    }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Version { get; set; }
+    public string Repository { get; set; }
+    public string Commit { get; set; }
 }

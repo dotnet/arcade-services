@@ -9,90 +9,89 @@ using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Newtonsoft.Json;
 
-namespace Maestro.Web.Api.v2019_01_16.Models
+namespace Maestro.Web.Api.v2019_01_16.Models;
+
+public class BuildData
 {
-    public class BuildData
+    [Required]
+    public string Commit { get; set; }
+
+    public List<v2018_07_16.Models.AssetData> Assets { get; set; }
+
+    public List<BuildRef> Dependencies { get; set; }
+
+    public int? AzureDevOpsBuildId { get; set; }
+
+    public int? AzureDevOpsBuildDefinitionId { get; set; }
+
+    [Required]
+    public string AzureDevOpsAccount { get; set; }
+
+    [Required]
+    public string AzureDevOpsProject { get; set; }
+
+    [Required]
+    public string AzureDevOpsBuildNumber { get; set; }
+
+    [Required]
+    public string AzureDevOpsRepository { get; set; }
+
+    [Required]
+    public string AzureDevOpsBranch { get; set; }
+
+    public string GitHubRepository { get; set; }
+
+    public string GitHubBranch { get; set; }
+
+    public bool PublishUsingPipelines
     {
-        [Required]
-        public string Commit { get; set; }
-
-        public List<v2018_07_16.Models.AssetData> Assets { get; set; }
-
-        public List<BuildRef> Dependencies { get; set; }
-
-        public int? AzureDevOpsBuildId { get; set; }
-
-        public int? AzureDevOpsBuildDefinitionId { get; set; }
-
-        [Required]
-        public string AzureDevOpsAccount { get; set; }
-
-        [Required]
-        public string AzureDevOpsProject { get; set; }
-
-        [Required]
-        public string AzureDevOpsBuildNumber { get; set; }
-
-        [Required]
-        public string AzureDevOpsRepository { get; set; }
-
-        [Required]
-        public string AzureDevOpsBranch { get; set; }
-
-        public string GitHubRepository { get; set; }
-
-        public string GitHubBranch { get; set; }
-
-        public bool PublishUsingPipelines
+        get
         {
-            get
-            {
-                return true;
-            }
-
-            set { }
+            return true;
         }
 
-        public bool Released { get; set; }
-
-        public Data.Models.Build ToDb()
-        {
-            return new Data.Models.Build
-            {
-                GitHubRepository = GitHubRepository,
-                GitHubBranch = GitHubBranch,
-                AzureDevOpsBuildId = AzureDevOpsBuildId,
-                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
-                AzureDevOpsAccount = AzureDevOpsAccount,
-                AzureDevOpsProject = AzureDevOpsProject,
-                AzureDevOpsBuildNumber = AzureDevOpsBuildNumber,
-                AzureDevOpsRepository = AzureDevOpsRepository,
-                AzureDevOpsBranch = AzureDevOpsBranch,
-                Commit = Commit,
-                Assets = Assets?.Select(a => a.ToDb()).ToList(),
-                Released = Released
-            };
-        }
+        set { }
     }
 
-    public class BuildRef
+    public bool Released { get; set; }
+
+    public Data.Models.Build ToDb()
     {
-        [JsonConstructor]
-        public BuildRef(int buildId, bool isProduct)
+        return new Data.Models.Build
         {
-            BuildId = buildId;
-            IsProduct = isProduct;
-        }
-
-        public BuildRef(int buildId, bool isProduct, double timeToInclusionInMinutes)
-        {
-            BuildId = buildId;
-            IsProduct = isProduct;
-            TimeToInclusionInMinutes = timeToInclusionInMinutes;
-        }
-
-        public int BuildId { get; }
-        public bool IsProduct { get; }
-        public double TimeToInclusionInMinutes { get; set; }
+            GitHubRepository = GitHubRepository,
+            GitHubBranch = GitHubBranch,
+            AzureDevOpsBuildId = AzureDevOpsBuildId,
+            AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
+            AzureDevOpsAccount = AzureDevOpsAccount,
+            AzureDevOpsProject = AzureDevOpsProject,
+            AzureDevOpsBuildNumber = AzureDevOpsBuildNumber,
+            AzureDevOpsRepository = AzureDevOpsRepository,
+            AzureDevOpsBranch = AzureDevOpsBranch,
+            Commit = Commit,
+            Assets = Assets?.Select(a => a.ToDb()).ToList(),
+            Released = Released
+        };
     }
+}
+
+public class BuildRef
+{
+    [JsonConstructor]
+    public BuildRef(int buildId, bool isProduct)
+    {
+        BuildId = buildId;
+        IsProduct = isProduct;
+    }
+
+    public BuildRef(int buildId, bool isProduct, double timeToInclusionInMinutes)
+    {
+        BuildId = buildId;
+        IsProduct = isProduct;
+        TimeToInclusionInMinutes = timeToInclusionInMinutes;
+    }
+
+    public int BuildId { get; }
+    public bool IsProduct { get; }
+    public double TimeToInclusionInMinutes { get; set; }
 }

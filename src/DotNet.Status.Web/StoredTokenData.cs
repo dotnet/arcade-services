@@ -4,25 +4,24 @@
 
 using System;
 
-namespace DotNet.Status.Web
-{
-    public class StoredTokenData
-    {
-        public StoredTokenData(long userId, long tokenId, DateTimeOffset issued, DateTimeOffset expiration, string description, RevocationStatus revocationStatus)
-        {
-            UserId = userId;
-            TokenId = tokenId;
-            Issued = issued;
-            Expiration = expiration;
-            Description = description;
-            RevocationStatus = revocationStatus;
-        }
+namespace DotNet.Status.Web;
 
-        public long UserId { get; }
-        public long TokenId { get; }
-        public DateTimeOffset Issued { get; }
-        public DateTimeOffset Expiration { get; }
-        public string Description { get; }
-        public RevocationStatus RevocationStatus { get; }
+public class StoredTokenData
+{
+    public StoredTokenData(long userId, long tokenId, DateTimeOffset issued, DateTimeOffset expiration, string description, RevocationStatus revocationStatus)
+    {
+        UserId = userId;
+        TokenId = tokenId;
+        Issued = issued;
+        Expiration = expiration;
+        Description = description;
+        RevocationStatus = revocationStatus;
     }
+
+    public long UserId { get; }
+    public long TokenId { get; }
+    public DateTimeOffset Issued { get; }
+    public DateTimeOffset Expiration { get; }
+    public string Description { get; }
+    public RevocationStatus RevocationStatus { get; }
 }

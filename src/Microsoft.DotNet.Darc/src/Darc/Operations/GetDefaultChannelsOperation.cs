@@ -13,66 +13,65 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+/// <summary>
+/// Implements an operation to get information about the default channel associations.
+/// </summary>
+internal class GetDefaultChannelsOperation : Operation
 {
-    /// <summary>
-    /// Implements an operation to get information about the default channel associations.
-    /// </summary>
-    internal class GetDefaultChannelsOperation : Operation
+    GetDefaultChannelsCommandLineOptions _options;
+    public GetDefaultChannelsOperation(GetDefaultChannelsCommandLineOptions options)
+        : base(options)
     {
-        GetDefaultChannelsCommandLineOptions _options;
-        public GetDefaultChannelsOperation(GetDefaultChannelsCommandLineOptions options)
-            : base(options)
-        {
-            _options = options;
-        }
+        _options = options;
+    }
 
-        /// <summary>
-        /// Retrieve information about the default association between builds of a specific branch/repo
-        /// and a channel.
-        /// </summary>
-        /// <returns></returns>
-        public override async Task<int> ExecuteAsync()
+    /// <summary>
+    /// Retrieve information about the default association between builds of a specific branch/repo
+    /// and a channel.
+    /// </summary>
+    /// <returns></returns>
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            try
-            {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync())
-                    .Where(defaultChannel =>
-                    {
-                        return (string.IsNullOrEmpty(_options.SourceRepository) ||
+            IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync())
+                .Where(defaultChannel =>
+                {
+                    return (string.IsNullOrEmpty(_options.SourceRepository) ||
                             defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(_options.Branch) ||
+                           (string.IsNullOrEmpty(_options.Branch) ||
                             defaultChannel.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(_options.Channel) ||
+                           (string.IsNullOrEmpty(_options.Channel) ||
                             defaultChannel.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
-                    })
-                    .OrderBy(df => df.Repository);
+                })
+                .OrderBy(df => df.Repository);
 
-                if (defaultChannels.Count() == 0)
-                {
-                    Console.WriteLine("No matching channels were found.");
-                }
-
-                // Write out a simple list of each channel's name
-                foreach (DefaultChannel defaultChannel in defaultChannels)
-                {
-                    Console.WriteLine(UxHelpers.GetDefaultChannelDescriptionString(defaultChannel));
-                }
-
-                return Constants.SuccessCode;
-            }
-            catch (AuthenticationException e)
+            if (defaultChannels.Count() == 0)
             {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
+                Console.WriteLine("No matching channels were found.");
             }
-            catch (Exception e)
+
+            // Write out a simple list of each channel's name
+            foreach (DefaultChannel defaultChannel in defaultChannels)
             {
-                Logger.LogError(e, "Error: Failed to retrieve default channel information.");
-                return Constants.ErrorCode;
+                Console.WriteLine(UxHelpers.GetDefaultChannelDescriptionString(defaultChannel));
             }
+
+            return Constants.SuccessCode;
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed to retrieve default channel information.");
+            return Constants.ErrorCode;
         }
     }
 }

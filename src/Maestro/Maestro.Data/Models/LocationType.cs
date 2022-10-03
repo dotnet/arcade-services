@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public enum LocationType
 {
-    public enum LocationType
-    {
-        None = 0,
-        NugetFeed,
-        Container
-    }
+    None = 0,
+    NugetFeed,
+    Container
 }

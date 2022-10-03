@@ -6,34 +6,33 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
-namespace Microsoft.DotNet.Web.Authentication.AccessToken
+namespace Microsoft.DotNet.Web.Authentication.AccessToken;
+
+public class PersonalAccessTokenEvents<TUser>
 {
-    public class PersonalAccessTokenEvents<TUser>
+    public Func<SetTokenHashContext<TUser>, Task<int>> OnSetTokenHash { get; set; } = context =>
+        throw new NotImplementedException("An implementation of SetTokenHash must be provided.");
+
+    public Func<GetTokenHashContext<TUser>, Task> OnGetTokenHash { get; set; } = context =>
+        throw new NotImplementedException("An implementation of GetTokenHash must be provided.");
+
+    public Func<HttpRequest, string> GetTokenFromRequest { get; set; } = req => null;
+
+    public Func<PersonalAccessTokenValidatePrincipalContext<TUser>, Task> OnValidatePrincipal { get; set; } =
+        context => Task.CompletedTask;
+
+    public virtual Task<int> SetTokenHash(SetTokenHashContext<TUser> context)
     {
-        public Func<SetTokenHashContext<TUser>, Task<int>> OnSetTokenHash { get; set; } = context =>
-            throw new NotImplementedException("An implementation of SetTokenHash must be provided.");
+        return OnSetTokenHash(context);
+    }
 
-        public Func<GetTokenHashContext<TUser>, Task> OnGetTokenHash { get; set; } = context =>
-            throw new NotImplementedException("An implementation of GetTokenHash must be provided.");
+    public virtual Task GetTokenHash(GetTokenHashContext<TUser> context)
+    {
+        return OnGetTokenHash(context);
+    }
 
-        public Func<HttpRequest, string> GetTokenFromRequest { get; set; } = req => null;
-
-        public Func<PersonalAccessTokenValidatePrincipalContext<TUser>, Task> OnValidatePrincipal { get; set; } =
-            context => Task.CompletedTask;
-
-        public virtual Task<int> SetTokenHash(SetTokenHashContext<TUser> context)
-        {
-            return OnSetTokenHash(context);
-        }
-
-        public virtual Task GetTokenHash(GetTokenHashContext<TUser> context)
-        {
-            return OnGetTokenHash(context);
-        }
-
-        public virtual Task ValidatePrincipal(PersonalAccessTokenValidatePrincipalContext<TUser> context)
-        {
-            return OnValidatePrincipal(context);
-        }
+    public virtual Task ValidatePrincipal(PersonalAccessTokenValidatePrincipalContext<TUser> context)
+    {
+        return OnValidatePrincipal(context);
     }
 }

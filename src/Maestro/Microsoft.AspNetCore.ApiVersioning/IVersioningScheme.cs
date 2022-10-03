@@ -4,10 +4,9 @@
 
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
-namespace Microsoft.AspNetCore.ApiVersioning
+namespace Microsoft.AspNetCore.ApiVersioning;
+
+public interface IVersioningScheme
 {
-    public interface IVersioningScheme
-    {
-        void Apply(SelectorModel model, string version);
-    }
+    void Apply(SelectorModel model, string version);
 }

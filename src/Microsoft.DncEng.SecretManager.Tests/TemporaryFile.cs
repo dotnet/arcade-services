@@ -2,28 +2,27 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Microsoft.DncEng.SecretManager.Tests
+namespace Microsoft.DncEng.SecretManager.Tests;
+
+public class TemporaryFile : IDisposable
 {
-    public class TemporaryFile : IDisposable
+    public string FilePath { get; }
+
+    public TemporaryFile()
     {
-        public string FilePath { get; }
+        FilePath = Path.GetTempFileName();
+    }
 
-        public TemporaryFile()
-        {
-            FilePath = Path.GetTempFileName();
-        }
+    public async Task WriteAllTextAsync(string text)
+    {
+        await File.WriteAllTextAsync(FilePath, text);
+    }
 
-        public async Task WriteAllTextAsync(string text)
+    public void Dispose()
+    {
+        if (!string.IsNullOrEmpty(FilePath))
         {
-            await File.WriteAllTextAsync(FilePath, text);
-        }
-
-        public void Dispose()
-        {
-            if (!string.IsNullOrEmpty(FilePath))
-            {
-                File.Delete(FilePath);
-            }
+            File.Delete(FilePath);
         }
     }
 }

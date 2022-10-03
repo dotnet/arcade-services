@@ -5,23 +5,22 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace SubscriptionActorService.Tests
+namespace SubscriptionActorService.Tests;
+
+[TestFixture]
+public class DependencyRegistrationTests
 {
-    [TestFixture]
-    public class DependencyRegistrationTests
+    [Test]
+    public void AreDependenciesRegistered()
     {
-        [Test]
-        public void AreDependenciesRegistered()
-        {
-            DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
-                    {
-                        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
-                        ServiceHost.ConfigureDefaultServices(s);
-                        Program.Configure(s);
-                        s.AddScoped<SubscriptionActor>();
-                        s.AddScoped<PullRequestActor>();
-                    },
-                    out string message).Should().BeTrue(message);
-        }
+        DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
+                ServiceHost.ConfigureDefaultServices(s);
+                Program.Configure(s);
+                s.AddScoped<SubscriptionActor>();
+                s.AddScoped<PullRequestActor>();
+            },
+            out string message).Should().BeTrue(message);
     }
 }

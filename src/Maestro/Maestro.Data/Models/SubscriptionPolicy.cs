@@ -4,14 +4,13 @@
 
 using System.Collections.Generic;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public class SubscriptionPolicy
 {
-    public class SubscriptionPolicy
-    {
-        public bool Batchable { get; set; }
+    public bool Batchable { get; set; }
 
-        public UpdateFrequency UpdateFrequency { get; set; }
+    public UpdateFrequency UpdateFrequency { get; set; }
 
-        public List<MergePolicyDefinition> MergePolicies { get; set; }
-    }
+    public List<MergePolicyDefinition> MergePolicies { get; set; }
 }

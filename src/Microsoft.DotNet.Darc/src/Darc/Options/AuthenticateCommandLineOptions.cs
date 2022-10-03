@@ -5,17 +5,16 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
-{
-    [Verb("authenticate", HelpText = "Stores the VSTS and GitHub tokens required for remote operations.")]
-    internal class AuthenticateCommandLineOptions : CommandLineOptions
-    {
-        [Option("clear", HelpText = "Clear any settings to defaults.")]
-        public bool Clear { get; set; }
+namespace Microsoft.DotNet.Darc.Options;
 
-        public override Operation GetOperation()
-        {
-            return new AuthenticateOperation(this);
-        }
+[Verb("authenticate", HelpText = "Stores the VSTS and GitHub tokens required for remote operations.")]
+internal class AuthenticateCommandLineOptions : CommandLineOptions
+{
+    [Option("clear", HelpText = "Clear any settings to defaults.")]
+    public bool Clear { get; set; }
+
+    public override Operation GetOperation()
+    {
+        return new AuthenticateOperation(this);
     }
 }

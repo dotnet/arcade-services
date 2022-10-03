@@ -5,14 +5,13 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("get-channels", HelpText = "Get a list of channels.")]
+internal class GetChannelsCommandLineOptions : CommandLineOptions
 {
-    [Verb("get-channels", HelpText = "Get a list of channels.")]
-    internal class GetChannelsCommandLineOptions : CommandLineOptions
+    public override Operation GetOperation()
     {
-        public override Operation GetOperation()
-        {
-            return new GetChannelsOperation(this);
-        }
+        return new GetChannelsOperation(this);
     }
 }

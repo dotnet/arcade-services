@@ -14,43 +14,42 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Web.Authentication.GitHub
+namespace Microsoft.DotNet.Web.Authentication.GitHub;
+
+public static class GitHubAuthenticationExtensions
 {
-    public static class GitHubAuthenticationExtensions
+    public static AuthenticationBuilder AddGitHubOAuth(this AuthenticationBuilder auth, IConfigurationSection section, string scheme)
     {
-        public static AuthenticationBuilder AddGitHubOAuth(this AuthenticationBuilder auth, IConfigurationSection section, string scheme)
-        {
-            auth.Services.Configure<GitHubAuthenticationOptions>(scheme, section);
-            auth.Services.AddSingleton<GitHubClaimResolver>();
-            auth.Services.TryAddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-            return auth.AddOAuth<GitHubAuthenticationOptions, GitHubAuthenticationHandler>(
-                scheme,
-                options =>
+        auth.Services.Configure<GitHubAuthenticationOptions>(scheme, section);
+        auth.Services.AddSingleton<GitHubClaimResolver>();
+        auth.Services.TryAddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        return auth.AddOAuth<GitHubAuthenticationOptions, GitHubAuthenticationHandler>(
+            scheme,
+            options =>
+            {
+                options.Events = new OAuthEvents
                 {
-                    options.Events = new OAuthEvents
+                    OnCreatingTicket = async context =>
                     {
-                        OnCreatingTicket = async context =>
-                        {
-                            GitHubClaimResolver resolver = context.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
-                            IEnumerable<Claim> memberClaims = await resolver.GetMembershipClaims(
-                                context.AccessToken,
-                                context.HttpContext.RequestAborted
-                            );
-                            context.Identity.AddClaims(memberClaims);
-                        },
-                        OnRemoteFailure = context =>
-                        {
-                            var logger = context.HttpContext.RequestServices
-                                .GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
-                            logger.LogError(context.Failure, "Github authentication failed.");
-                            var res = context.HttpContext.Response;
-                            res.StatusCode = (int) HttpStatusCode.Forbidden;
-                            context.HandleResponse();
-                            context.HttpContext.Items["ErrorMessage"] = "Authentication failed.";
-                            return Task.CompletedTask;
-                        },
-                    };
-                });
-        }
+                        GitHubClaimResolver resolver = context.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
+                        IEnumerable<Claim> memberClaims = await resolver.GetMembershipClaims(
+                            context.AccessToken,
+                            context.HttpContext.RequestAborted
+                        );
+                        context.Identity.AddClaims(memberClaims);
+                    },
+                    OnRemoteFailure = context =>
+                    {
+                        var logger = context.HttpContext.RequestServices
+                            .GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
+                        logger.LogError(context.Failure, "Github authentication failed.");
+                        var res = context.HttpContext.Response;
+                        res.StatusCode = (int) HttpStatusCode.Forbidden;
+                        context.HandleResponse();
+                        context.HttpContext.Items["ErrorMessage"] = "Authentication failed.";
+                        return Task.CompletedTask;
+                    },
+                };
+            });
     }
 }

@@ -14,56 +14,55 @@ using Microsoft.Extensions.Options;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Services.Remoting;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+[PublicAPI]
+public static class ServiceFabricServiceCollectionExtensions
 {
-    [PublicAPI]
-    public static class ServiceFabricServiceCollectionExtensions
+    /// <summary>
+    ///     Adds a service fabric service remoting proxy to the IServiceCollection if an implementation of the interface
+    ///     doesn't already exist.
+    /// </summary>
+    /// <typeparam name="TService"></typeparam>
+    /// <param name="services"></param>
+    /// <param name="serviceUri"></param>
+    /// <returns></returns>
+    public static IServiceCollection TryAddServiceFabricService<TService>(
+        this IServiceCollection services,
+        string serviceUri) where TService : class, IService
     {
-        /// <summary>
-        ///     Adds a service fabric service remoting proxy to the IServiceCollection if an implementation of the interface
-        ///     doesn't already exist.
-        /// </summary>
-        /// <typeparam name="TService"></typeparam>
-        /// <param name="services"></param>
-        /// <param name="serviceUri"></param>
-        /// <returns></returns>
-        public static IServiceCollection TryAddServiceFabricService<TService>(
-            this IServiceCollection services,
-            string serviceUri) where TService : class, IService
-        {
-            services.TryAddSingleton(
-                provider => ServiceHostProxy.Create<TService>(
-                    new Uri(serviceUri),
-                    provider.GetRequiredService<TelemetryClient>(),
-                    provider.GetRequiredService<ServiceContext>()));
-            return services;
-        }
+        services.TryAddSingleton(
+            provider => ServiceHostProxy.Create<TService>(
+                new Uri(serviceUri),
+                provider.GetRequiredService<TelemetryClient>(),
+                provider.GetRequiredService<ServiceContext>()));
+        return services;
+    }
 
-        /// <summary>
-        ///     Adds a service fabric service remoting proxy to the IServiceCollection
-        /// </summary>
-        /// <typeparam name="TService"></typeparam>
-        /// <param name="services"></param>
-        /// <param name="serviceUri"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddServiceFabricService<TService>(
-            this IServiceCollection services,
-            string serviceUri) where TService : class, IService
-        {
-            services.AddSingleton(
-                provider => ServiceHostProxy.Create<TService>(
-                    new Uri(serviceUri),
-                    provider.GetRequiredService<TelemetryClient>(),
-                    provider.GetRequiredService<ServiceContext>()));
-            return services;
-        }
+    /// <summary>
+    ///     Adds a service fabric service remoting proxy to the IServiceCollection
+    /// </summary>
+    /// <typeparam name="TService"></typeparam>
+    /// <param name="services"></param>
+    /// <param name="serviceUri"></param>
+    /// <returns></returns>
+    public static IServiceCollection AddServiceFabricService<TService>(
+        this IServiceCollection services,
+        string serviceUri) where TService : class, IService
+    {
+        services.AddSingleton(
+            provider => ServiceHostProxy.Create<TService>(
+                new Uri(serviceUri),
+                provider.GetRequiredService<TelemetryClient>(),
+                provider.GetRequiredService<ServiceContext>()));
+        return services;
+    }
 
-        public static IServiceCollection RegisterOptionsForConfigurationChangeNotifications<TOptions>(this IServiceCollection services, [CanBeNull] string name, IConfiguration config)
-        {
-            name ??= Options.DefaultName;
-            return services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(
-                new ConfigurationChangeTokenSource<TOptions>(name, config));
+    public static IServiceCollection RegisterOptionsForConfigurationChangeNotifications<TOptions>(this IServiceCollection services, [CanBeNull] string name, IConfiguration config)
+    {
+        name ??= Options.DefaultName;
+        return services.AddSingleton<IOptionsChangeTokenSource<TOptions>>(
+            new ConfigurationChangeTokenSource<TOptions>(name, config));
 
-        }
     }
 }

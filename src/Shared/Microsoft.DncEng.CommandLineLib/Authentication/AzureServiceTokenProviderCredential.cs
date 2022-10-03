@@ -5,42 +5,41 @@ using Azure.Core;
 using Azure.Identity;
 using Microsoft.Azure.Services.AppAuthentication;
 
-namespace Microsoft.DncEng.CommandLineLib.Authentication
+namespace Microsoft.DncEng.CommandLineLib.Authentication;
+
+public class AzureServiceTokenProviderCredential : TokenCredential
 {
-    public class AzureServiceTokenProviderCredential : TokenCredential
+    private readonly AzureServiceTokenProvider _tokenProvider = new AzureServiceTokenProvider();
+
+    private readonly Func<string[], string> _scopesToResource = (Func<string[], string>)
+        typeof(DeviceCodeCredential).Assembly
+            .GetType("Azure.Identity.ScopeUtilities")!
+            .GetMethod("ScopesToResource")!
+            .CreateDelegate(typeof(Func<string[], string>));
+
+    private readonly string _tenantId;
+
+    public AzureServiceTokenProviderCredential(string tenantId)
     {
-        private readonly AzureServiceTokenProvider _tokenProvider = new AzureServiceTokenProvider();
+        _tenantId = tenantId;
+    }
 
-        private readonly Func<string[], string> _scopesToResource = (Func<string[], string>)
-            typeof(DeviceCodeCredential).Assembly
-                        .GetType("Azure.Identity.ScopeUtilities")!
-                    .GetMethod("ScopesToResource")!
-                .CreateDelegate(typeof(Func<string[], string>));
-
-        private readonly string _tenantId;
-
-        public AzureServiceTokenProviderCredential(string tenantId)
+    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
+        try
         {
-            _tenantId = tenantId;
+            string resource = _scopesToResource(requestContext.Scopes);
+            AppAuthenticationResult result = await _tokenProvider.GetAuthenticationResultAsync(resource, _tenantId, cancellationToken);
+            return new AccessToken(result.AccessToken, result.ExpiresOn);
         }
-
-        public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        catch (AzureServiceTokenProviderException ex)
         {
-            try
-            {
-                string resource = _scopesToResource(requestContext.Scopes);
-                AppAuthenticationResult result = await _tokenProvider.GetAuthenticationResultAsync(resource, _tenantId, cancellationToken);
-                return new AccessToken(result.AccessToken, result.ExpiresOn);
-            }
-            catch (AzureServiceTokenProviderException ex)
-            {
-                throw new CredentialUnavailableException("AzureServiceTokenProviderCredential unable to authenticate", ex);
-            }
+            throw new CredentialUnavailableException("AzureServiceTokenProviderCredential unable to authenticate", ex);
         }
+    }
 
-        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
-        {
-            return Task.Run(async () => await GetTokenAsync(requestContext, cancellationToken), cancellationToken).GetAwaiter().GetResult();
-        }
+    public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
+        return Task.Run(async () => await GetTokenAsync(requestContext, cancellationToken), cancellationToken).GetAwaiter().GetResult();
     }
 }

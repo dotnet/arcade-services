@@ -26,271 +26,140 @@ using Moq;
 using NUnit.Framework;
 using static Maestro.Web.Api.v2020_02_20.Models.DefaultChannel;
 
-namespace Maestro.Web.Tests
+namespace Maestro.Web.Tests;
+
+[TestFixture]
+public partial class DefaultChannelsController20200220Tests
 {
-    [TestFixture]
-    public partial class DefaultChannelsController20200220Tests
+    [Test]
+    public async Task CreateAndGetDefaultChannel()
     {
-        [Test]
-        public async Task CreateAndGetDefaultChannel()
+        using TestData data = await TestData.Default.BuildAsync();
+        string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
+        string classification = "TEST-CLASSIFICATION";
+        string repository = "FAKE-REPOSITORY";
+        string branch = "FAKE-BRANCH";
+
+        Channel channel1, channel2;
         {
-            using TestData data = await TestData.Default.BuildAsync();
-            string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
-            string classification = "TEST-CLASSIFICATION";
-            string repository = "FAKE-REPOSITORY";
-            string branch = "FAKE-BRANCH";
-
-            Channel channel1, channel2;
-            {
-                var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-                channel1 = (Channel) ((ObjectResult) result).Value;
-                result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-                channel2 = (Channel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel defaultChannel;
-            {
-                DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
-                {
-                    Branch = branch,
-                    ChannelId = channel2.Id,
-                    Enabled = true,
-                    Repository = repository
-                };
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel singleChannelGetDefaultChannel;
-            {
-                IActionResult result = await data.DefaultChannelsController.Get(defaultChannel.Id);
-                result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult) result;
-                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<DefaultChannel>();
-                singleChannelGetDefaultChannel = ((DefaultChannel) objResult.Value);
-            }
-            singleChannelGetDefaultChannel.Id.Should().Be(defaultChannel.Id);
-
-            List<DefaultChannel> listOfInsertedDefaultChannels;
-            {
-                IActionResult result = data.DefaultChannelsController.List(repository, branch, channel2.Id);
-                result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult) result;
-                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
-            }
-
-            listOfInsertedDefaultChannels.Should().ContainSingle();
-            listOfInsertedDefaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+            var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
+            channel1 = (Channel) ((ObjectResult) result).Value;
+            result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
+            channel2 = (Channel) ((ObjectResult) result).Value;
         }
 
-        [Test]
-        public async Task UpdateDefaultChannel()
+        DefaultChannel defaultChannel;
         {
-            using TestData data = await TestData.Default.BuildAsync();
-            string channelName = "TEST-CHANNEL-TO-UPDATE";
-            string classification = "TEST-CLASSIFICATION";
-            string repository = "FAKE-REPOSITORY";
-            string branch = "FAKE-BRANCH";
-
-            Channel channel1, channel2;
-            {
-                var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-                channel1 = (Channel) ((ObjectResult) result).Value;
-                result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-                channel2 = (Channel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel defaultChannel;
-            {
-                DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
-                {
-                    Branch = branch,
-                    ChannelId = channel1.Id,
-                    Enabled = true,
-                    Repository = repository
-                };
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel updatedDefaultChannel;
-            {
-                DefaultChannelUpdateData defaultChannelUpdateData = new DefaultChannelUpdateData()
-                {
-                    Branch = $"{branch}-UPDATED",
-                    ChannelId = channel2.Id,
-                    Enabled = false,
-                    Repository = $"NEW-{repository}"
-                };
-                var result = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-                updatedDefaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            List<DefaultChannel> defaultChannels;
-            {
-                IActionResult result = data.DefaultChannelsController.List($"NEW-{repository}", $"{branch}-UPDATED", channel2.Id, false);
-                result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult) result;
-                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
-            }
-
-            defaultChannels.Should().ContainSingle();
-            defaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
-        }
-
-        [Test]
-        public async Task DefaultChannelRegularExpressionMatching()
-        {
-            using TestData data = await TestData.Default.BuildAsync();
-            string channelName = "TEST-CHANNEL-REGEX-FOR-DEFAULT";
-            string classification = "TEST-CLASSIFICATION";
-            string repository = "FAKE-REPOSITORY";
-            string branch = "-regex:FAKE-BRANCH-REGEX-.*";
-
-            Channel channel;
-            {
-                var result = await data.ChannelsController.CreateChannel($"{channelName}", classification);
-                channel = (Channel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel defaultChannel;
-            {
-                DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
-                {
-                    Branch = branch,
-                    ChannelId = channel.Id,
-                    Enabled = true,
-                    Repository = repository
-                };
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            string[] branchesThatMatch = new string[] { "FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2" };
-            string[] branchesThatDontMatch = new string[] { "I-DONT-MATCH", "REAL-BRANCH-REGEX" };
-
-            foreach (string branchName in branchesThatMatch)
-            {
-                List<DefaultChannel> defaultChannels;
-                {
-                    IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
-                    result.Should().BeAssignableTo<ObjectResult>();
-                    var objResult = (ObjectResult) result;
-                    objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-                    objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                    defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
-                }
-                defaultChannels.Should().ContainSingle();
-                defaultChannels.Single().Channel.Id.Should().Be(channel.Id);
-            }
-
-            foreach (string branchName in branchesThatDontMatch)
-            {
-                List<DefaultChannel> defaultChannels;
-                {
-                    IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
-                    result.Should().BeAssignableTo<ObjectResult>();
-                    var objResult = (ObjectResult) result;
-                    objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-                    objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                    defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
-                }
-                defaultChannels.Should().BeEmpty();
-            }
-        }
-
-        [Test]
-        public async Task TryToAddNonExistentChannel()
-        {
-            using TestData data = await TestData.Default.BuildAsync();
-            string repository = "FAKE-REPOSITORY";
-            string branch = "FAKE-BRANCH";
-
             DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
             {
                 Branch = branch,
-                ChannelId = 404,
+                ChannelId = channel2.Id,
                 Enabled = true,
                 Repository = repository
             };
             var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            result.Should().BeOfType<NotFoundObjectResult>("Asking for a non-existent channel should give a not-found-object type result");
+            defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
         }
 
-        [Test]
-        public async Task TryToGetOrUpdateNonExistentChannel()
+        DefaultChannel singleChannelGetDefaultChannel;
         {
-            string channelName = "TEST-CHANNEL-TO-UPDATE";
-            string classification = "TEST-CLASSIFICATION";
-            string repository = "FAKE-NON-EXISTENT-REPOSITORY-MISSING-CHANNEL-UPDATE";
-            string branch = "FAKE-BRANCH-MISSING-CHANNEL-UPDATE";
+            IActionResult result = await data.DefaultChannelsController.Get(defaultChannel.Id);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult) result;
+            objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<DefaultChannel>();
+            singleChannelGetDefaultChannel = ((DefaultChannel) objResult.Value);
+        }
+        singleChannelGetDefaultChannel.Id.Should().Be(defaultChannel.Id);
 
-            using TestData data = await TestData.Default.BuildAsync();
-            DefaultChannelUpdateData defaultChannelThatDoesntExistUpdateData = new DefaultChannelUpdateData()
+        List<DefaultChannel> listOfInsertedDefaultChannels;
+        {
+            IActionResult result = data.DefaultChannelsController.List(repository, branch, channel2.Id);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult) result;
+            objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+            listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
+        }
+
+        listOfInsertedDefaultChannels.Should().ContainSingle();
+        listOfInsertedDefaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+    }
+
+    [Test]
+    public async Task UpdateDefaultChannel()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        string channelName = "TEST-CHANNEL-TO-UPDATE";
+        string classification = "TEST-CLASSIFICATION";
+        string repository = "FAKE-REPOSITORY";
+        string branch = "FAKE-BRANCH";
+
+        Channel channel1, channel2;
+        {
+            var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
+            channel1 = (Channel) ((ObjectResult) result).Value;
+            result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
+            channel2 = (Channel) ((ObjectResult) result).Value;
+        }
+
+        DefaultChannel defaultChannel;
+        {
+            DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
             {
                 Branch = branch,
-                ChannelId = 404,
-                Enabled = false,
+                ChannelId = channel1.Id,
+                Enabled = true,
                 Repository = repository
             };
-            // First: non-existent default channel
-            var expectedFailResult = await data.DefaultChannelsController.Update(404, defaultChannelThatDoesntExistUpdateData);
-            expectedFailResult.Should().BeOfType<NotFoundResult>("Asking for a non-existent channel should give a not-found type result");
+            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+            defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
+        }
 
-            // Second: Extant default, non-existent channel.
-            Channel channel;
-            {
-                var result = await data.ChannelsController.CreateChannel(channelName, classification);
-                channel = (Channel) ((ObjectResult) result).Value;
-            }
-
-            DefaultChannel defaultChannel;
-            {
-                DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
-                {
-                    Branch = branch,
-                    ChannelId = channel.Id,
-                    Enabled = true,
-                    Repository = repository
-                };
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
+        DefaultChannel updatedDefaultChannel;
+        {
             DefaultChannelUpdateData defaultChannelUpdateData = new DefaultChannelUpdateData()
             {
                 Branch = $"{branch}-UPDATED",
-                ChannelId = 404,
+                ChannelId = channel2.Id,
                 Enabled = false,
                 Repository = $"NEW-{repository}"
             };
-            var secondExpectedFailResult = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-            secondExpectedFailResult.Should().BeOfType<NotFoundObjectResult>("Updating a default channel for a non-existent channel should give a not-found type result");
-            // Try to get a default channel that just doesn't exist at all.
-            var thirdExpectedFailResult = await data.DefaultChannelsController.Get(404);
-            thirdExpectedFailResult.Should().BeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
+            var result = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
+            updatedDefaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
         }
 
-        [Test]
-        public async Task AddDuplicateDefaultChannels()
+        List<DefaultChannel> defaultChannels;
         {
-            using TestData data = await TestData.Default.BuildAsync();
-            string channelName = "TEST-CHANNEL-DUPLICATE-ENTRY-SCENARIO";
-            string classification = "TEST-CLASSIFICATION";
-            string repository = "FAKE-REPOSITORY";
-            string branch = "FAKE-BRANCH";
+            IActionResult result = data.DefaultChannelsController.List($"NEW-{repository}", $"{branch}-UPDATED", channel2.Id, false);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult) result;
+            objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+            defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
+        }
 
-            Channel channel;
-            {
-                var result = await data.ChannelsController.CreateChannel(channelName, classification);
-                channel = (Channel) ((ObjectResult) result).Value;
-            }
+        defaultChannels.Should().ContainSingle();
+        defaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+    }
 
+    [Test]
+    public async Task DefaultChannelRegularExpressionMatching()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        string channelName = "TEST-CHANNEL-REGEX-FOR-DEFAULT";
+        string classification = "TEST-CLASSIFICATION";
+        string repository = "FAKE-REPOSITORY";
+        string branch = "-regex:FAKE-BRANCH-REGEX-.*";
+
+        Channel channel;
+        {
+            var result = await data.ChannelsController.CreateChannel($"{channelName}", classification);
+            channel = (Channel) ((ObjectResult) result).Value;
+        }
+
+        DefaultChannel defaultChannel;
+        {
             DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
             {
                 Branch = branch,
@@ -298,66 +167,196 @@ namespace Maestro.Web.Tests
                 Enabled = true,
                 Repository = repository
             };
-
-            DefaultChannel defaultChannel;
-            {
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            defaultChannel.Should().NotBeNull();
-
-            DefaultChannel defaultChannelDuplicateAdd;
-            {
-                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannelDuplicateAdd = (DefaultChannel) ((ObjectResult) result).Value;
-            }
-
-            // Adding the same thing twice should succeed, as well as provide the correct object in return.
-            defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
+            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+            defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
         }
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfiguration
+        string[] branchesThatMatch = new string[] { "FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2" };
+        string[] branchesThatDontMatch = new string[] { "I-DONT-MATCH", "REAL-BRANCH-REGEX" };
+
+        foreach (string branchName in branchesThatMatch)
         {
-            public static async Task Dependencies(IServiceCollection collection)
+            List<DefaultChannel> defaultChannels;
             {
-                string connectionString = await SharedData.Database.GetConnectionString();
+                IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
+                result.Should().BeAssignableTo<ObjectResult>();
+                var objResult = (ObjectResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+                defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
+            }
+            defaultChannels.Should().ContainSingle();
+            defaultChannels.Single().Channel.Id.Should().Be(channel.Id);
+        }
+
+        foreach (string branchName in branchesThatDontMatch)
+        {
+            List<DefaultChannel> defaultChannels;
+            {
+                IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
+                result.Should().BeAssignableTo<ObjectResult>();
+                var objResult = (ObjectResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
+                defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
+            }
+            defaultChannels.Should().BeEmpty();
+        }
+    }
+
+    [Test]
+    public async Task TryToAddNonExistentChannel()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        string repository = "FAKE-REPOSITORY";
+        string branch = "FAKE-BRANCH";
+
+        DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
+        {
+            Branch = branch,
+            ChannelId = 404,
+            Enabled = true,
+            Repository = repository
+        };
+        var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+        result.Should().BeOfType<NotFoundObjectResult>("Asking for a non-existent channel should give a not-found-object type result");
+    }
+
+    [Test]
+    public async Task TryToGetOrUpdateNonExistentChannel()
+    {
+        string channelName = "TEST-CHANNEL-TO-UPDATE";
+        string classification = "TEST-CLASSIFICATION";
+        string repository = "FAKE-NON-EXISTENT-REPOSITORY-MISSING-CHANNEL-UPDATE";
+        string branch = "FAKE-BRANCH-MISSING-CHANNEL-UPDATE";
+
+        using TestData data = await TestData.Default.BuildAsync();
+        DefaultChannelUpdateData defaultChannelThatDoesntExistUpdateData = new DefaultChannelUpdateData()
+        {
+            Branch = branch,
+            ChannelId = 404,
+            Enabled = false,
+            Repository = repository
+        };
+        // First: non-existent default channel
+        var expectedFailResult = await data.DefaultChannelsController.Update(404, defaultChannelThatDoesntExistUpdateData);
+        expectedFailResult.Should().BeOfType<NotFoundResult>("Asking for a non-existent channel should give a not-found type result");
+
+        // Second: Extant default, non-existent channel.
+        Channel channel;
+        {
+            var result = await data.ChannelsController.CreateChannel(channelName, classification);
+            channel = (Channel) ((ObjectResult) result).Value;
+        }
+
+        DefaultChannel defaultChannel;
+        {
+            DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
+            {
+                Branch = branch,
+                ChannelId = channel.Id,
+                Enabled = true,
+                Repository = repository
+            };
+            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+            defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
+        }
+
+        DefaultChannelUpdateData defaultChannelUpdateData = new DefaultChannelUpdateData()
+        {
+            Branch = $"{branch}-UPDATED",
+            ChannelId = 404,
+            Enabled = false,
+            Repository = $"NEW-{repository}"
+        };
+        var secondExpectedFailResult = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
+        secondExpectedFailResult.Should().BeOfType<NotFoundObjectResult>("Updating a default channel for a non-existent channel should give a not-found type result");
+        // Try to get a default channel that just doesn't exist at all.
+        var thirdExpectedFailResult = await data.DefaultChannelsController.Get(404);
+        thirdExpectedFailResult.Should().BeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
+    }
+
+    [Test]
+    public async Task AddDuplicateDefaultChannels()
+    {
+        using TestData data = await TestData.Default.BuildAsync();
+        string channelName = "TEST-CHANNEL-DUPLICATE-ENTRY-SCENARIO";
+        string classification = "TEST-CLASSIFICATION";
+        string repository = "FAKE-REPOSITORY";
+        string branch = "FAKE-BRANCH";
+
+        Channel channel;
+        {
+            var result = await data.ChannelsController.CreateChannel(channelName, classification);
+            channel = (Channel) ((ObjectResult) result).Value;
+        }
+
+        DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
+        {
+            Branch = branch,
+            ChannelId = channel.Id,
+            Enabled = true,
+            Repository = repository
+        };
+
+        DefaultChannel defaultChannel;
+        {
+            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+            defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
+        }
+
+        defaultChannel.Should().NotBeNull();
+
+        DefaultChannel defaultChannelDuplicateAdd;
+        {
+            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+            defaultChannelDuplicateAdd = (DefaultChannel) ((ObjectResult) result).Value;
+        }
+
+        // Adding the same thing twice should succeed, as well as provide the correct object in return.
+        defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
+    }
+
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfiguration
+    {
+        public static async Task Dependencies(IServiceCollection collection)
+        {
+            string connectionString = await SharedData.Database.GetConnectionString();
                 
-                collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
-                collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
-                {
-                    EnvironmentName = Environments.Development
-                });
-                collection.AddBuildAssetRegistry(options =>
-                {
-                    options.UseSqlServer(connectionString);
-                    options.EnableServiceProviderCaching(false);
-                });
-                collection.AddSingleton<DefaultChannelsController>();
-                collection.AddSingleton<ChannelsController>();
-                collection.AddSingleton(Mock.Of<IRemoteFactory>());
-                collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
-            }
+            collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
+            collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
+            {
+                EnvironmentName = Environments.Development
+            });
+            collection.AddBuildAssetRegistry(options =>
+            {
+                options.UseSqlServer(connectionString);
+                options.EnableServiceProviderCaching(false);
+            });
+            collection.AddSingleton<DefaultChannelsController>();
+            collection.AddSingleton<ChannelsController>();
+            collection.AddSingleton(Mock.Of<IRemoteFactory>());
+            collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
+        }
             
-            public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
-            {
-                collection.AddSingleton<ISystemClock, TestClock>();
-                return s => (TestClock) s.GetRequiredService<ISystemClock>();
-            }
+        public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
+        {
+            collection.AddSingleton<ISystemClock, TestClock>();
+            return s => (TestClock) s.GetRequiredService<ISystemClock>();
+        }
 
-            public static Func<IServiceProvider, ChannelsController> ChannelsController(IServiceCollection collection)
-            {
-                collection.AddSingleton<ChannelsController>();
-                return s => s.GetRequiredService<ChannelsController>();
-            }
+        public static Func<IServiceProvider, ChannelsController> ChannelsController(IServiceCollection collection)
+        {
+            collection.AddSingleton<ChannelsController>();
+            return s => s.GetRequiredService<ChannelsController>();
+        }
 
-            public static Func<IServiceProvider, DefaultChannelsController> DefaultChannelsController(
-                IServiceCollection collection)
-            {
-                collection.AddSingleton<DefaultChannelsController>();
-                return s => s.GetRequiredService<DefaultChannelsController>();
-            }
+        public static Func<IServiceProvider, DefaultChannelsController> DefaultChannelsController(
+            IServiceCollection collection)
+        {
+            collection.AddSingleton<DefaultChannelsController>();
+            return s => s.GetRequiredService<DefaultChannelsController>();
         }
     }
 }

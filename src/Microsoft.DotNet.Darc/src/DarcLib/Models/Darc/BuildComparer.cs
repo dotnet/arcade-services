@@ -5,18 +5,17 @@
 using Microsoft.DotNet.Maestro.Client.Models;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class BuildComparer : IEqualityComparer<Build>
-    {
-        public bool Equals(Build x, Build y)
-        {
-            return x.Id == y.Id;
-        }
+namespace Microsoft.DotNet.DarcLib;
 
-        public int GetHashCode(Build obj)
-        {
-            return obj.Id;
-        }
+public class BuildComparer : IEqualityComparer<Build>
+{
+    public bool Equals(Build x, Build y)
+    {
+        return x.Id == y.Id;
+    }
+
+    public int GetHashCode(Build obj)
+    {
+        return obj.Id;
     }
 }

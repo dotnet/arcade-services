@@ -17,23 +17,22 @@ using Microsoft.ServiceFabric.Data.Collections;
 using Newtonsoft.Json.Linq;
 using Octokit;
 
-namespace DependencyUpdateErrorProcessor
-{
-    /// <summary>
-    /// An instance of this class is created for each service replica by the Service Fabric runtime.
-    /// </summary>
-    public sealed class DependencyUpdateErrorProcessor : IServiceImplementation
-    {
-        public DependencyUpdateErrorProcessor() { }
+namespace DependencyUpdateErrorProcessor;
 
-        /// <summary>
-        /// This will run after the MaxValue is reached. In this case it will never run.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(TimeSpan.MaxValue);
-        }
+/// <summary>
+/// An instance of this class is created for each service replica by the Service Fabric runtime.
+/// </summary>
+public sealed class DependencyUpdateErrorProcessor : IServiceImplementation
+{
+    public DependencyUpdateErrorProcessor() { }
+
+    /// <summary>
+    /// This will run after the MaxValue is reached. In this case it will never run.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(TimeSpan.MaxValue);
     }
 }

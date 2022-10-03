@@ -4,11 +4,10 @@
 
 using System.Threading.Tasks;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public interface IMergePolicyInfo
 {
-    public interface IMergePolicyInfo
-    {
-        string Name { get; }
-        string DisplayName { get; }
-    }
+    string Name { get; }
+    string DisplayName { get; }
 }

@@ -6,30 +6,29 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Data;
 
-namespace ServiceFabricMocks
+namespace ServiceFabricMocks;
+
+public class MockTransaction : ITransaction
 {
-    public class MockTransaction : ITransaction
+    public Task CommitAsync()
     {
-        public Task CommitAsync()
-        {
-            return Task.FromResult(true);
-        }
+        return Task.FromResult(true);
+    }
 
-        public void Abort()
-        {
-        }
+    public void Abort()
+    {
+    }
 
-        public long TransactionId => 0L;
+    public long TransactionId => 0L;
 
-        public long CommitSequenceNumber => throw new NotImplementedException();
+    public long CommitSequenceNumber => throw new NotImplementedException();
 
-        public void Dispose()
-        {
-        }
+    public void Dispose()
+    {
+    }
 
-        public Task<long> GetVisibilitySequenceNumberAsync()
-        {
-            return Task.FromResult(0L);
-        }
+    public Task<long> GetVisibilitySequenceNumberAsync()
+    {
+        return Task.FromResult(0L);
     }
 }

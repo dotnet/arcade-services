@@ -5,32 +5,31 @@
 using System.Threading.Tasks;
 using Octokit;
 
-namespace Microsoft.DotNet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication;
+
+public class GitHubApplicationClientFactory : IGitHubApplicationClientFactory
 {
-    public class GitHubApplicationClientFactory : IGitHubApplicationClientFactory
+    private readonly IGitHubClientFactory _clientFactory;
+    private readonly IGitHubTokenProvider _tokenProvider;
+
+    public GitHubApplicationClientFactory(IGitHubClientFactory clientFactory, IGitHubTokenProvider tokenProvider)
     {
-        private readonly IGitHubClientFactory _clientFactory;
-        private readonly IGitHubTokenProvider _tokenProvider;
+        _clientFactory = clientFactory;
+        _tokenProvider = tokenProvider;
+    }
 
-        public GitHubApplicationClientFactory(IGitHubClientFactory clientFactory, IGitHubTokenProvider tokenProvider)
-        {
-            _clientFactory = clientFactory;
-            _tokenProvider = tokenProvider;
-        }
+    public async Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo)
+    {
+        return _clientFactory.CreateGitHubClient(await _tokenProvider.GetTokenForRepository(owner, repo));
+    }
 
-        public async Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo)
-        {
-            return _clientFactory.CreateGitHubClient(await _tokenProvider.GetTokenForRepository(owner, repo));
-        }
+    public IGitHubClient CreateGitHubAppClient()
+    {
+        return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(), AuthenticationType.Bearer);
+    }
 
-        public IGitHubClient CreateGitHubAppClient()
-        {
-            return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(), AuthenticationType.Bearer);
-        }
-
-        public IGitHubClient CreateGitHubAppClient(string name)
-        {
-            return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(name), AuthenticationType.Bearer);
-        }
+    public IGitHubClient CreateGitHubAppClient(string name)
+    {
+        return _clientFactory.CreateGitHubClient(_tokenProvider.GetTokenForApp(name), AuthenticationType.Bearer);
     }
 }

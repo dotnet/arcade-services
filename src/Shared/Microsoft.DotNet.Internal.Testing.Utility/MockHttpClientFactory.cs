@@ -8,150 +8,149 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Internal.Testing.Utility
+namespace Microsoft.DotNet.Internal.Testing.Utility;
+
+public class MockHttpClientFactory : IHttpClientFactory
 {
-    public class MockHttpClientFactory : IHttpClientFactory
+    private class Handler : HttpMessageHandler
     {
-        private class Handler : HttpMessageHandler
+        private readonly IReadOnlyList<CannedResponse> _responses;
+        private readonly ICollection<RequestMessage> _unexpectedRequests;
+
+        public Handler(IReadOnlyList<CannedResponse> responses, ICollection<RequestMessage> unexpectedRequests)
         {
-            private readonly IReadOnlyList<CannedResponse> _responses;
-            private readonly ICollection<RequestMessage> _unexpectedRequests;
+            _responses = responses;
+            _unexpectedRequests = unexpectedRequests;
+        }
 
-            public Handler(IReadOnlyList<CannedResponse> responses, ICollection<RequestMessage> unexpectedRequests)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            foreach (CannedResponse response in _responses)
             {
-                _responses = responses;
-                _unexpectedRequests = unexpectedRequests;
-            }
-
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            {
-                foreach (CannedResponse response in _responses)
+                if (request.RequestUri.AbsoluteUri == response.Uri && request.Method == response.Method && response.Used == false)
                 {
-                    if (request.RequestUri.AbsoluteUri == response.Uri && request.Method == response.Method && response.Used == false)
-                    {
-                        response.Used = true;
-                        return Task.FromResult(CreateResponse(response));
-                    }
+                    response.Used = true;
+                    return Task.FromResult(CreateResponse(response));
                 }
-
-                _unexpectedRequests.Add(new RequestMessage(request.RequestUri.AbsoluteUri, request.Method, request.Content?.Headers.ContentType.ToString(), request.Content?.Headers.ContentLength ?? 0));
-                return Task.FromResult(CreateResponse(HttpStatusCode.NoContent));
             }
 
-            private static HttpResponseMessage CreateResponse(HttpStatusCode code)
-            {
-                return new HttpResponseMessage(code);
-            }
+            _unexpectedRequests.Add(new RequestMessage(request.RequestUri.AbsoluteUri, request.Method, request.Content?.Headers.ContentType.ToString(), request.Content?.Headers.ContentLength ?? 0));
+            return Task.FromResult(CreateResponse(HttpStatusCode.NoContent));
+        }
 
-            private static HttpResponseMessage CreateResponse(CannedResponse response)
+        private static HttpResponseMessage CreateResponse(HttpStatusCode code)
+        {
+            return new HttpResponseMessage(code);
+        }
+
+        private static HttpResponseMessage CreateResponse(CannedResponse response)
+        {
+            var message = new HttpResponseMessage(response.Code)
             {
-                var message = new HttpResponseMessage(response.Code)
+                Content = string.IsNullOrEmpty(response.Content) ? null : new StringContent(response.Content)
                 {
-                    Content = string.IsNullOrEmpty(response.Content) ? null : new StringContent(response.Content)
+                    Headers =
                     {
-                        Headers =
-                        {
-                            ContentType = new MediaTypeHeaderValue(response.ContentType),
-                        },
+                        ContentType = new MediaTypeHeaderValue(response.ContentType),
                     },
-                };
-                foreach (KeyValuePair<string, string> header in response.Headers)
-                {
-                    message.Headers.TryAddWithoutValidation(header.Key, header.Value);
-                }
-
-                return message;
-            }
-        }
-
-        private class RequestMessage
-        {
-            public readonly string Uri;
-            public readonly HttpMethod Method;
-            public readonly string ContentType;
-            public readonly long ContentLength;
-
-            public RequestMessage(string uri, HttpMethod method, string contentType, long contentLength)
+                },
+            };
+            foreach (KeyValuePair<string, string> header in response.Headers)
             {
-                Uri = uri;
-                Method = method;
-                ContentType = contentType;
-                ContentLength = contentLength;
+                message.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
 
-            public override string ToString()
-            {
-                return $"{Method} {Uri}{(ContentLength > 0 ? $" {ContentLength} byte {ContentType}" : "")}";
-            }
+            return message;
         }
+    }
 
-        private class CannedResponse
+    private class RequestMessage
+    {
+        public readonly string Uri;
+        public readonly HttpMethod Method;
+        public readonly string ContentType;
+        public readonly long ContentLength;
+
+        public RequestMessage(string uri, HttpMethod method, string contentType, long contentLength)
         {
-            public readonly string Uri;
-            public readonly string Content;
-            public readonly HttpMethod Method;
-            public readonly string ContentType;
-            public readonly HttpStatusCode Code;
-            public readonly IReadOnlyDictionary<string, string> Headers;
-            public bool Used;
-
-            public CannedResponse(string uri, string content, HttpMethod method, string contentType,
-                HttpStatusCode code, IReadOnlyDictionary<string, string> headers)
-            {
-                Uri = uri;
-                Content = content;
-                Method = method;
-                ContentType = contentType;
-                Code = code;
-                Headers = headers;
-                Used = false;
-            }
-
-            public override string ToString()
-            {
-                return $"{Method} {Uri} {Code}{(!string.IsNullOrEmpty(Content) ? $" {Content.Length} byte {ContentType}" : "")}";
-            }
+            Uri = uri;
+            Method = method;
+            ContentType = contentType;
+            ContentLength = contentLength;
         }
 
-        private static readonly IReadOnlyDictionary<string, string> EmptyHeaders = new Dictionary<string, string>();
-
-        private readonly List<CannedResponse> _cannedResponses = new List<CannedResponse>();
-        private readonly List<RequestMessage> _unexpectedRequests = new List<RequestMessage>();
-
-        public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType, HttpMethod method, IReadOnlyDictionary<string, string> headers)
+        public override string ToString()
         {
-            _cannedResponses.Add(new CannedResponse(uri, content, method, contentType, code, headers));
+            return $"{Method} {Uri}{(ContentLength > 0 ? $" {ContentLength} byte {ContentType}" : "")}";
+        }
+    }
+
+    private class CannedResponse
+    {
+        public readonly string Uri;
+        public readonly string Content;
+        public readonly HttpMethod Method;
+        public readonly string ContentType;
+        public readonly HttpStatusCode Code;
+        public readonly IReadOnlyDictionary<string, string> Headers;
+        public bool Used;
+
+        public CannedResponse(string uri, string content, HttpMethod method, string contentType,
+            HttpStatusCode code, IReadOnlyDictionary<string, string> headers)
+        {
+            Uri = uri;
+            Content = content;
+            Method = method;
+            ContentType = contentType;
+            Code = code;
+            Headers = headers;
+            Used = false;
         }
 
-        public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType, HttpMethod method)
+        public override string ToString()
         {
-            AddCannedResponse(uri, content, code, contentType, method, EmptyHeaders);
+            return $"{Method} {Uri} {Code}{(!string.IsNullOrEmpty(Content) ? $" {Content.Length} byte {ContentType}" : "")}";
         }
+    }
+
+    private static readonly IReadOnlyDictionary<string, string> EmptyHeaders = new Dictionary<string, string>();
+
+    private readonly List<CannedResponse> _cannedResponses = new List<CannedResponse>();
+    private readonly List<RequestMessage> _unexpectedRequests = new List<RequestMessage>();
+
+    public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType, HttpMethod method, IReadOnlyDictionary<string, string> headers)
+    {
+        _cannedResponses.Add(new CannedResponse(uri, content, method, contentType, code, headers));
+    }
+
+    public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType, HttpMethod method)
+    {
+        AddCannedResponse(uri, content, code, contentType, method, EmptyHeaders);
+    }
         
-        public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType)
-        {
-            AddCannedResponse(uri, content, code, contentType, HttpMethod.Get);
-        }
+    public void AddCannedResponse(string uri, string content, HttpStatusCode code, string contentType)
+    {
+        AddCannedResponse(uri, content, code, contentType, HttpMethod.Get);
+    }
 
-        public void AddCannedResponse(string uri, string content, HttpStatusCode code)
-        {
-            AddCannedResponse(uri, content, code, "application/json");
-        }
+    public void AddCannedResponse(string uri, string content, HttpStatusCode code)
+    {
+        AddCannedResponse(uri, content, code, "application/json");
+    }
 
-        public void AddCannedResponse(string uri, string content)
-        {
-            AddCannedResponse(uri, content, HttpStatusCode.OK);
-        }
+    public void AddCannedResponse(string uri, string content)
+    {
+        AddCannedResponse(uri, content, HttpStatusCode.OK);
+    }
 
-        public HttpClient CreateClient(string name)
-        {
-            return new HttpClient(new Handler(_cannedResponses, _unexpectedRequests)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used in unit testing
-        }
+    public HttpClient CreateClient(string name)
+    {
+        return new HttpClient(new Handler(_cannedResponses, _unexpectedRequests)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used in unit testing
+    }
 
-        public void VerifyAll()
-        {
-            _cannedResponses.Should().AllSatisfy(response => response.Used.Should().BeTrue());
-            _unexpectedRequests.Should().BeEmpty();
-        }
+    public void VerifyAll()
+    {
+        _cannedResponses.Should().AllSatisfy(response => response.Used.Should().BeTrue());
+        _unexpectedRequests.Should().BeEmpty();
     }
 }

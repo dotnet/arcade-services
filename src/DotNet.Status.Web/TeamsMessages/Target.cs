@@ -1,12 +1,11 @@
 using Newtonsoft.Json;
 
-namespace DotNet.Status.Web.TeamsMessages
-{
-    public class Target
-    {
-        [JsonProperty("os")]
-        public string OperatingSystem { get; set; } = "default";
+namespace DotNet.Status.Web.TeamsMessages;
 
-        public string Uri { get; set; }
-    }
+public class Target
+{
+    [JsonProperty("os")]
+    public string OperatingSystem { get; set; } = "default";
+
+    public string Uri { get; set; }
 }

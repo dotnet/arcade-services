@@ -12,65 +12,64 @@ using Microsoft.ServiceFabric.Services.Remoting.V2;
 using Microsoft.ServiceFabric.Services.Remoting.V2.Client;
 using Newtonsoft.Json;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+internal class ActivityServiceRemotingClient : IServiceRemotingClient
 {
-    internal class ActivityServiceRemotingClient : IServiceRemotingClient
+    internal readonly IServiceRemotingClient _inner;
+
+    public ActivityServiceRemotingClient(IServiceRemotingClient inner)
     {
-        internal readonly IServiceRemotingClient _inner;
+        _inner = inner;
+    }
 
-        public ActivityServiceRemotingClient(IServiceRemotingClient inner)
-        {
-            _inner = inner;
-        }
+    public ResolvedServicePartition ResolvedServicePartition
+    {
+        get => _inner.ResolvedServicePartition;
+        set => _inner.ResolvedServicePartition = value;
+    }
 
-        public ResolvedServicePartition ResolvedServicePartition
-        {
-            get => _inner.ResolvedServicePartition;
-            set => _inner.ResolvedServicePartition = value;
-        }
+    public string ListenerName
+    {
+        get => _inner.ListenerName;
+        set => _inner.ListenerName = value;
+    }
 
-        public string ListenerName
-        {
-            get => _inner.ListenerName;
-            set => _inner.ListenerName = value;
-        }
+    public ResolvedServiceEndpoint Endpoint
+    {
+        get => _inner.Endpoint;
+        set => _inner.Endpoint = value;
+    }
 
-        public ResolvedServiceEndpoint Endpoint
+    public Task<IServiceRemotingResponseMessage> RequestResponseAsync(IServiceRemotingRequestMessage requestMessage)
+    {
+        Activity current = Activity.Current;
+        if (current != null)
         {
-            get => _inner.Endpoint;
-            set => _inner.Endpoint = value;
-        }
-
-        public Task<IServiceRemotingResponseMessage> RequestResponseAsync(IServiceRemotingRequestMessage requestMessage)
-        {
-            Activity current = Activity.Current;
-            if (current != null)
+            try
             {
-                try
+                IServiceRemotingRequestMessageHeader header = requestMessage.GetHeader();
+                header.AddHeader(ActivityServiceRemoting.OperationIdHeaderName, Encoding.UTF8.GetBytes(current.Id));
+                if (current.Baggage.Any())
                 {
-                    IServiceRemotingRequestMessageHeader header = requestMessage.GetHeader();
-                    header.AddHeader(ActivityServiceRemoting.OperationIdHeaderName, Encoding.UTF8.GetBytes(current.Id));
-                    if (current.Baggage.Any())
-                    {
-                        List<KeyValuePair<string, string>> baggageObject = current.Baggage.ToList();
-                        string baggageStr = JsonConvert.SerializeObject(baggageObject);
-                        header.AddHeader(
-                            ActivityServiceRemoting.CorrelationContextHeaderName,
-                            Encoding.UTF8.GetBytes(baggageStr));
-                    }
-                }
-                catch (FabricElementAlreadyExistsException)
-                {
-                    // ignore
+                    List<KeyValuePair<string, string>> baggageObject = current.Baggage.ToList();
+                    string baggageStr = JsonConvert.SerializeObject(baggageObject);
+                    header.AddHeader(
+                        ActivityServiceRemoting.CorrelationContextHeaderName,
+                        Encoding.UTF8.GetBytes(baggageStr));
                 }
             }
-
-            return _inner.RequestResponseAsync(requestMessage);
+            catch (FabricElementAlreadyExistsException)
+            {
+                // ignore
+            }
         }
 
-        public void SendOneWay(IServiceRemotingRequestMessage requestMessage)
-        {
-            _inner.SendOneWay(requestMessage);
-        }
+        return _inner.RequestResponseAsync(requestMessage);
+    }
+
+    public void SendOneWay(IServiceRemotingRequestMessage requestMessage)
+    {
+        _inner.SendOneWay(requestMessage);
     }
 }

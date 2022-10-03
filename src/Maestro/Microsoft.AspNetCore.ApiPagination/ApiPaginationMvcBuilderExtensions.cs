@@ -6,24 +6,23 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.AspNetCore.ApiPagination
+namespace Microsoft.AspNetCore.ApiPagination;
+
+[PublicAPI]
+public static class ApiPaginationMvcBuilderExtensions
 {
-    [PublicAPI]
-    public static class ApiPaginationMvcBuilderExtensions
+    public static IMvcBuilder AddApiPagination(this IMvcBuilder builder)
     {
-        public static IMvcBuilder AddApiPagination(this IMvcBuilder builder)
-        {
-            return builder.AddMvcOptions(ConfigureMvcOptions);
-        }
+        return builder.AddMvcOptions(ConfigureMvcOptions);
+    }
 
-        private static void ConfigureMvcOptions(MvcOptions options)
-        {
-            options.Conventions.Add(new ApiPaginationApplicationModelConvention());
-        }
+    private static void ConfigureMvcOptions(MvcOptions options)
+    {
+        options.Conventions.Add(new ApiPaginationApplicationModelConvention());
+    }
 
-        public static IMvcCoreBuilder AddApiPagination(this IMvcCoreBuilder builder)
-        {
-            return builder.AddMvcOptions(ConfigureMvcOptions);
-        }
+    public static IMvcCoreBuilder AddApiPagination(this IMvcCoreBuilder builder)
+    {
+        return builder.AddMvcOptions(ConfigureMvcOptions);
     }
 }

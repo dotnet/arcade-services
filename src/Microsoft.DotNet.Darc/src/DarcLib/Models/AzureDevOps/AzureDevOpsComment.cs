@@ -4,27 +4,26 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsComment
 {
-    public class AzureDevOpsComment
+    public AzureDevOpsComment(List<AzureDevOpsCommentBody> comments)
     {
-        public AzureDevOpsComment(List<AzureDevOpsCommentBody> comments)
-        {
-            Comments = comments;
-        }
-
-        public List<AzureDevOpsCommentBody> Comments { get; set; }
+        Comments = comments;
     }
 
-    public class AzureDevOpsCommentBody
+    public List<AzureDevOpsCommentBody> Comments { get; set; }
+}
+
+public class AzureDevOpsCommentBody
+{
+    public AzureDevOpsCommentBody(string content)
     {
-        public AzureDevOpsCommentBody(string content)
-        {
-            Content = content;
-        }
-
-        public string Content { get; set; }
-
-        public int CommentType { get; set; } = 1;
+        Content = content;
     }
+
+    public string Content { get; set; }
+
+    public int CommentType { get; set; } = 1;
 }

@@ -2,20 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class GitHubRef
 {
-    public class GitHubRef
+    public GitHubRef(string githubRef, string sha)
     {
-        public GitHubRef(string githubRef, string sha)
-        {
-            Ref = githubRef;
-            Sha = sha;
-        }
-
-        public string Ref { get; set; }
-
-        public string Sha { get; set; }
-
-        public bool Force { get; set; }
+        Ref = githubRef;
+        Sha = sha;
     }
+
+    public string Ref { get; set; }
+
+    public string Sha { get; set; }
+
+    public bool Force { get; set; }
 }

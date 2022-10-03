@@ -4,11 +4,10 @@
 
 using Microsoft.DotNet.Internal.AzureDevOps;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.AzureDevOpsTimeline;
+
+public class AugmentedBuild
 {
-    public class AugmentedBuild
-    {
-        public Build Build { get; init; }
-        public string TargetBranch { get; init; }
-    }
+    public Build Build { get; init; }
+    public string TargetBranch { get; init; }
 }

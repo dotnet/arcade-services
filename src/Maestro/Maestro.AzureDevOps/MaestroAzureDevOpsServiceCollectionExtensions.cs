@@ -4,13 +4,12 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Maestro.AzureDevOps
+namespace Maestro.AzureDevOps;
+
+public static class MaestroAzureDevOpsServiceCollectionExtensions
 {
-    public static class MaestroAzureDevOpsServiceCollectionExtensions
+    public static IServiceCollection AddAzureDevOpsTokenProvider(this IServiceCollection services)
     {
-        public static IServiceCollection AddAzureDevOpsTokenProvider(this IServiceCollection services)
-        {
-            return services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        }
+        return services.AddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
     }
 }

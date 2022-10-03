@@ -6,16 +6,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public class LongestBuildPath
 {
-    public class LongestBuildPath
-    {
-        public int Id { get; set; }
-        public int ChannelId { get; set; }
-        public Channel Channel { get; set; }
-        public DateTimeOffset ReportDate { get; set; }
-        public double BestCaseTimeInMinutes { get; set; }
-        public double WorstCaseTimeInMinutes { get; set; }
-        public string ContributingRepositories { get; set; }
-    }
+    public int Id { get; set; }
+    public int ChannelId { get; set; }
+    public Channel Channel { get; set; }
+    public DateTimeOffset ReportDate { get; set; }
+    public double BestCaseTimeInMinutes { get; set; }
+    public double WorstCaseTimeInMinutes { get; set; }
+    public string ContributingRepositories { get; set; }
 }

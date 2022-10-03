@@ -5,10 +5,9 @@
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Remoting;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public interface IFeedCleanerService : IService
 {
-    public interface IFeedCleanerService : IService
-    {
-        Task CleanManagedFeedsAsync();
-    }
+    Task CleanManagedFeedsAsync();
 }

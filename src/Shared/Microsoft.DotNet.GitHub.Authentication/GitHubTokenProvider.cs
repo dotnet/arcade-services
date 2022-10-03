@@ -11,94 +11,93 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace Microsoft.DotNet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication;
+
+public class GitHubTokenProvider : IGitHubTokenProvider
 {
-    public class GitHubTokenProvider : IGitHubTokenProvider
+    private readonly IInstallationLookup _installationLookup;
+    private readonly IGitHubAppTokenProvider _tokens;
+    private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
+    private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
+    public readonly ILogger<GitHubTokenProvider> _logger;
+    private readonly ExponentialRetry _retry;
+
+    public GitHubTokenProvider(
+        IInstallationLookup installationLookup,
+        IGitHubAppTokenProvider tokens,
+        IOptions<GitHubClientOptions> gitHubClientOptions,
+        ILogger<GitHubTokenProvider> logger,
+        ExponentialRetry retry)
     {
-        private readonly IInstallationLookup _installationLookup;
-        private readonly IGitHubAppTokenProvider _tokens;
-        private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
-        private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
-        public readonly ILogger<GitHubTokenProvider> _logger;
-        private readonly ExponentialRetry _retry;
+        _installationLookup = installationLookup;
+        _tokens = tokens;
+        _gitHubClientOptions = gitHubClientOptions;
+        _logger = logger;
+        _retry = retry;
+        _tokenCache = new ConcurrentDictionary<long, AccessToken>();
+    }
 
-        public GitHubTokenProvider(
-            IInstallationLookup installationLookup,
-            IGitHubAppTokenProvider tokens,
-            IOptions<GitHubClientOptions> gitHubClientOptions,
-            ILogger<GitHubTokenProvider> logger,
-            ExponentialRetry retry)
+    public async Task<string> GetTokenForInstallationAsync(long installationId)
+    {
+        if (TryGetCachedToken(installationId, out AccessToken cachedToken))
         {
-            _installationLookup = installationLookup;
-            _tokens = tokens;
-            _gitHubClientOptions = gitHubClientOptions;
-            _logger = logger;
-            _retry = retry;
-            _tokenCache = new ConcurrentDictionary<long, AccessToken>();
+            _logger.LogInformation("Cached token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, cachedToken.ExpiresAt);
+            return cachedToken.Token;
         }
 
-        public async Task<string> GetTokenForInstallationAsync(long installationId)
-        {
-            if (TryGetCachedToken(installationId, out AccessToken cachedToken))
+        return await _retry.RetryAsync(
+            async () =>
             {
-                _logger.LogInformation("Cached token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, cachedToken.ExpiresAt);
-                return cachedToken.Token;
-            }
+                string jwt = _tokens.GetAppToken();
+                var appClient = new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
+                AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
+                _logger.LogInformation("New token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, token.ExpiresAt);
+                UpdateTokenCache(installationId, token);
+                return token.Token;
+            },
+            ex => _logger.LogError(ex, "Failed to get a github token for installation id {installationId}, retrying", installationId),
+            ex => ex is ApiException exception && exception.StatusCode == HttpStatusCode.InternalServerError);
+    }
 
-            return await _retry.RetryAsync(
-                async () =>
-                {
-                    string jwt = _tokens.GetAppToken();
-                    var appClient = new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
-                    AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
-                    _logger.LogInformation("New token obtained for GitHub installation {installationId}. Expires at {tokenExpiresAt}.", installationId, token.ExpiresAt);
-                    UpdateTokenCache(installationId, token);
-                    return token.Token;
-                },
-                ex => _logger.LogError(ex, "Failed to get a github token for installation id {installationId}, retrying", installationId),
-                ex => ex is ApiException exception && exception.StatusCode == HttpStatusCode.InternalServerError);
-        }
+    public string GetTokenForApp()
+    {
+        return _tokens.GetAppToken();
+    }
 
-        public string GetTokenForApp()
+    public string GetTokenForApp(string name)
+    {
+        return _tokens.GetAppToken(name);
+    }
+
+    public async Task<string> GetTokenForRepository(string repositoryUrl)
+    {
+        return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));
+    }
+
+    private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)
+    {
+        cachedToken = null;
+
+        if (!_tokenCache.ContainsKey(installationId))
         {
-            return _tokens.GetAppToken();
+            return false;
         }
 
-        public string GetTokenForApp(string name)
+        AccessToken token = _tokenCache[installationId];
+
+        // If the cached token will expire in less than 30 minutes we won't use it and let GetTokenForInstallationAsync generate a new one
+        // and update the cache
+        if (token.ExpiresAt.Subtract(DateTimeOffset.Now).TotalMinutes < 30)
         {
-            return _tokens.GetAppToken(name);
+            return false;
         }
 
-        public async Task<string> GetTokenForRepository(string repositoryUrl)
-        {
-            return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));
-        }
+        cachedToken = token;
+        return true;
+    }
 
-        private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)
-        {
-            cachedToken = null;
-
-            if (!_tokenCache.ContainsKey(installationId))
-            {
-                return false;
-            }
-
-            AccessToken token = _tokenCache[installationId];
-
-            // If the cached token will expire in less than 30 minutes we won't use it and let GetTokenForInstallationAsync generate a new one
-            // and update the cache
-            if (token.ExpiresAt.Subtract(DateTimeOffset.Now).TotalMinutes < 30)
-            {
-                return false;
-            }
-
-            cachedToken = token;
-            return true;
-        }
-
-        private void UpdateTokenCache(long installationId, AccessToken accessToken)
-        {
-            _tokenCache.AddOrUpdate(installationId, accessToken, (installation, token) => token = accessToken);
-        }
+    private void UpdateTokenCache(long installationId, AccessToken accessToken)
+    {
+        _tokenCache.AddOrUpdate(installationId, accessToken, (installation, token) => token = accessToken);
     }
 }
