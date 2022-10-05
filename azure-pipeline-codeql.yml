@@ -1,14 +1,23 @@
 parameters:
+  # Optionally do not publish to TSA. Useful for e.g. verifying fixes before PR.
 - name: Codeql.TSAEnabled
   displayName: Publish results to TSA
   type: boolean
   default: true
 
 variables:
+  # CG is handled in the primary CI pipeline
 - name: skipComponentGovernanceDetection
   value: true
+  # Force CodeQL enabled so it may be run on any branch
 - name: Codeql.Enabled
   value: true
+- name: _BuildConfig
+  value: Release
+- name: _InternalBuildArgs
+  value: ''
+- name: _ProductionArgs
+  value: ''
 
 trigger: none
 
