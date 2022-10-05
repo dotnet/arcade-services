@@ -172,7 +172,6 @@ public class GitHubClaimResolver
                 {
                     string orgLogin = org.Login?.ToLowerInvariant();
                     AddClaim(ClaimTypes.Role, GetOrganizationRole(orgLogin));
-                    AddClaim("urn:github:org", orgLogin);
                 }
             }
 
@@ -185,7 +184,6 @@ public class GitHubClaimResolver
                     string orgName = team.Organization.Login?.ToLowerInvariant();
                     string fullName = orgName + ":" + teamName;
                     AddClaim(ClaimTypes.Role, GetTeamRole(orgName, teamName));
-                    AddClaim("urn:github:team", fullName);
                 }
             }
 
