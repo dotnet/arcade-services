@@ -7,137 +7,136 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
+namespace Microsoft.AspNetCore.ApiVersioning.Analyzers;
+
+internal class TypeVersionChecker
 {
-    internal class TypeVersionChecker
+    private static readonly string[] IgnorableVersionedTypeNames =
     {
-        private static readonly string[] IgnorableVersionedTypeNames =
-        {
-            "System.DateTimeOffset",
-            "System.Guid",
-            "System.IO.Stream",
-            "System.Nullable`1",
-            "System.TimeSpan",
-            "System.Uri",
-            "System.Threading.CancellationToken",
-            "System.Threading.Tasks.Task",
-            "System.Threading.Tasks.Task`1",
-            "System.Collections.Generic.List`1",
-            "System.Collections.Generic.IList`1",
-            "System.Collections.Generic.IReadOnlyList`1",
-            "System.Collections.Generic.IEnumerable`1",
-            "System.Collections.Generic.IDictionary`2",
-            "Microsoft.AspNetCore.Mvc.IActionResult",
-            "Microsoft.AspNetCore.Mvc.ActionResult",
-        };
+        "System.DateTimeOffset",
+        "System.Guid",
+        "System.IO.Stream",
+        "System.Nullable`1",
+        "System.TimeSpan",
+        "System.Uri",
+        "System.Threading.CancellationToken",
+        "System.Threading.Tasks.Task",
+        "System.Threading.Tasks.Task`1",
+        "System.Collections.Generic.List`1",
+        "System.Collections.Generic.IList`1",
+        "System.Collections.Generic.IReadOnlyList`1",
+        "System.Collections.Generic.IEnumerable`1",
+        "System.Collections.Generic.IDictionary`2",
+        "Microsoft.AspNetCore.Mvc.IActionResult",
+        "Microsoft.AspNetCore.Mvc.ActionResult",
+    };
 
-        public TypeVersionChecker(Compilation compilation)
+    public TypeVersionChecker(Compilation compilation)
+    {
+        Compilation = compilation;
+        IgnorableVersionedTypes = IgnorableVersionedTypeNames.Select(n => Compilation.GetTypeByMetadataName(n))
+            .Where(t => t != null)
+            .ToList();
+    }
+
+    private Compilation Compilation { get; }
+
+    public IReadOnlyList<INamedTypeSymbol> IgnorableVersionedTypes { get; }
+
+    public bool IsVersionable(ITypeSymbol symbol)
+    {
+        if (IsVersionableSpecialType(symbol))
         {
-            Compilation = compilation;
-            IgnorableVersionedTypes = IgnorableVersionedTypeNames.Select(n => Compilation.GetTypeByMetadataName(n))
-                .Where(t => t != null)
-                .ToList();
+            return true;
         }
 
-        private Compilation Compilation { get; }
-
-        public IReadOnlyList<INamedTypeSymbol> IgnorableVersionedTypes { get; }
-
-        public bool IsVersionable(ITypeSymbol symbol)
+        if (IsSuppressed(symbol))
         {
-            if (IsVersionableSpecialType(symbol))
-            {
+            return true;
+        }
+
+        if (IgnorableVersionedTypes.Any(symbol.Equals))
+        {
+            return true;
+        }
+
+        if (symbol.OriginalDefinition != null && IgnorableVersionedTypes.Any(symbol.OriginalDefinition.Equals))
+        {
+            return true;
+        }
+
+        return IsVersioned(symbol);
+    }
+
+    private bool IsSuppressed(ITypeSymbol symbol)
+    {
+        var attribute = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == "SuppressVersionErrorsAttribute");
+        return attribute != null;
+    }
+
+    private bool IsVersionableSpecialType(ITypeSymbol symbol)
+    {
+        switch (symbol.SpecialType)
+        {
+            case SpecialType.System_Object:
+            case SpecialType.System_Void:
+            case SpecialType.System_Boolean:
+            case SpecialType.System_Char:
+            case SpecialType.System_SByte:
+            case SpecialType.System_Byte:
+            case SpecialType.System_Int16:
+            case SpecialType.System_UInt16:
+            case SpecialType.System_Int32:
+            case SpecialType.System_UInt32:
+            case SpecialType.System_Int64:
+            case SpecialType.System_UInt64:
+            case SpecialType.System_Decimal:
+            case SpecialType.System_Single:
+            case SpecialType.System_Double:
+            case SpecialType.System_String:
+            case SpecialType.System_IntPtr:
+            case SpecialType.System_UIntPtr:
+            case SpecialType.System_Array:
+            case SpecialType.System_Collections_IEnumerable:
+            case SpecialType.System_Collections_Generic_IEnumerable_T:
+            case SpecialType.System_Collections_Generic_IList_T:
+            case SpecialType.System_Collections_Generic_ICollection_T:
+            case SpecialType.System_Collections_IEnumerator:
+            case SpecialType.System_Collections_Generic_IEnumerator_T:
+            case SpecialType.System_Collections_Generic_IReadOnlyList_T:
+            case SpecialType.System_Collections_Generic_IReadOnlyCollection_T:
+            case SpecialType.System_Nullable_T:
+            case SpecialType.System_DateTime:
+                // allowable Special Types
                 return true;
-            }
 
-            if (IsSuppressed(symbol))
-            {
-                return true;
-            }
 
-            if (IgnorableVersionedTypes.Any(symbol.Equals))
-            {
-                return true;
-            }
-
-            if (symbol.OriginalDefinition != null && IgnorableVersionedTypes.Any(symbol.OriginalDefinition.Equals))
-            {
-                return true;
-            }
-
-            return IsVersioned(symbol);
+            case SpecialType.None:
+                // Not Special Type, fall through to checking for known types.
+                return false;
+            case SpecialType.System_ArgIterator:
+            case SpecialType.System_AsyncCallback:
+            case SpecialType.System_Delegate:
+            case SpecialType.System_Enum:
+            case SpecialType.System_IAsyncResult:
+            case SpecialType.System_IDisposable:
+            case SpecialType.System_MulticastDelegate:
+            case SpecialType.System_RuntimeArgumentHandle:
+            case SpecialType.System_RuntimeFieldHandle:
+            case SpecialType.System_RuntimeMethodHandle:
+            case SpecialType.System_RuntimeTypeHandle:
+            case SpecialType.System_Runtime_CompilerServices_IsVolatile:
+            case SpecialType.System_TypedReference:
+            case SpecialType.System_ValueType:
+                // Bad special types
+                return false;
+            default:
+                throw new InvalidOperationException($"Unknown SpecialType Value: {symbol.SpecialType}");
         }
+    }
 
-        private bool IsSuppressed(ITypeSymbol symbol)
-        {
-            var attribute = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == "SuppressVersionErrorsAttribute");
-            return attribute != null;
-        }
-
-        private bool IsVersionableSpecialType(ITypeSymbol symbol)
-        {
-            switch (symbol.SpecialType)
-            {
-                case SpecialType.System_Object:
-                case SpecialType.System_Void:
-                case SpecialType.System_Boolean:
-                case SpecialType.System_Char:
-                case SpecialType.System_SByte:
-                case SpecialType.System_Byte:
-                case SpecialType.System_Int16:
-                case SpecialType.System_UInt16:
-                case SpecialType.System_Int32:
-                case SpecialType.System_UInt32:
-                case SpecialType.System_Int64:
-                case SpecialType.System_UInt64:
-                case SpecialType.System_Decimal:
-                case SpecialType.System_Single:
-                case SpecialType.System_Double:
-                case SpecialType.System_String:
-                case SpecialType.System_IntPtr:
-                case SpecialType.System_UIntPtr:
-                case SpecialType.System_Array:
-                case SpecialType.System_Collections_IEnumerable:
-                case SpecialType.System_Collections_Generic_IEnumerable_T:
-                case SpecialType.System_Collections_Generic_IList_T:
-                case SpecialType.System_Collections_Generic_ICollection_T:
-                case SpecialType.System_Collections_IEnumerator:
-                case SpecialType.System_Collections_Generic_IEnumerator_T:
-                case SpecialType.System_Collections_Generic_IReadOnlyList_T:
-                case SpecialType.System_Collections_Generic_IReadOnlyCollection_T:
-                case SpecialType.System_Nullable_T:
-                case SpecialType.System_DateTime:
-                    // allowable Special Types
-                    return true;
-
-
-                case SpecialType.None:
-                    // Not Special Type, fall through to checking for known types.
-                    return false;
-                case SpecialType.System_ArgIterator:
-                case SpecialType.System_AsyncCallback:
-                case SpecialType.System_Delegate:
-                case SpecialType.System_Enum:
-                case SpecialType.System_IAsyncResult:
-                case SpecialType.System_IDisposable:
-                case SpecialType.System_MulticastDelegate:
-                case SpecialType.System_RuntimeArgumentHandle:
-                case SpecialType.System_RuntimeFieldHandle:
-                case SpecialType.System_RuntimeMethodHandle:
-                case SpecialType.System_RuntimeTypeHandle:
-                case SpecialType.System_Runtime_CompilerServices_IsVolatile:
-                case SpecialType.System_TypedReference:
-                case SpecialType.System_ValueType:
-                    // Bad special types
-                    return false;
-                default:
-                    throw new InvalidOperationException($"Unknown SpecialType Value: {symbol.SpecialType}");
-            }
-        }
-
-        private bool IsVersioned(ITypeSymbol type)
-        {
-            return type.ToDisplayString().Contains("Api.v");
-        }
+    private bool IsVersioned(ITypeSymbol type)
+    {
+        return type.ToDisplayString().Contains("Api.v");
     }
 }

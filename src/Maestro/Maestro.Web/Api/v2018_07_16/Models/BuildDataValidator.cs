@@ -4,13 +4,12 @@
 
 using FluentValidation;
 
-namespace Maestro.Web.Api.v2018_07_16.Models
+namespace Maestro.Web.Api.v2018_07_16.Models;
+
+public class BuildDataValidator : AbstractValidator<BuildData>
 {
-    public class BuildDataValidator : AbstractValidator<BuildData>
+    public BuildDataValidator()
     {
-        public BuildDataValidator()
-        {
-            RuleFor(b => b.Assets).NotEmpty();
-        }
+        RuleFor(b => b.Assets).NotEmpty();
     }
 }

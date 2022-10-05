@@ -4,10 +4,9 @@
 
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public interface IHealthReporter
 {
-    public interface IHealthReporter
-    {
-        Task UpdateStatusAsync(string subStatus, HealthStatus status, string message);
-    }
+    Task UpdateStatusAsync(string subStatus, HealthStatus status, string message);
 }

@@ -12,195 +12,194 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.DncEng.PatGeneratorTool
+namespace Microsoft.DncEng.PatGeneratorTool;
+
+class Program
 {
-    class Program
+    private const int DefaultExpirationInDays = 30;
+
+    static int Main(string[] args)
     {
-        private const int DefaultExpirationInDays = 30;
+        string possibleEnumScopes = GetScopesHelpString();
 
-        static int Main(string[] args)
+        var cmd = new RootCommand
         {
-            string possibleEnumScopes = GetScopesHelpString();
-
-            var cmd = new RootCommand
+            new Option<List<AzureDevOpsPATScopes>>("--scopes",
+                parseArgument: arg => ParsePATScopes(arg),
+                description: $"PAT scopes. Valid values are:{Environment.NewLine}{possibleEnumScopes}.")
             {
-                new Option<List<AzureDevOpsPATScopes>>("--scopes",
-                    parseArgument: arg => ParsePATScopes(arg),
-                    description: $"PAT scopes. Valid values are:{Environment.NewLine}{possibleEnumScopes}.")
-                {
-                    IsRequired = true,
-                    Arity = ArgumentArity.OneOrMore,
-                    AllowMultipleArgumentsPerToken = true,
-                },
-                new Option<string[]>("--organizations", "Organizations that the PAT should apply to.")
-                {
-                    IsRequired = true,
-                    Arity = ArgumentArity.OneOrMore,
-                    AllowMultipleArgumentsPerToken = true,
-                },
-                new Option<string>("--name", "Optional name of the PAT. If no name is specified, then uses a standard naming format of orgs-scopes"),
-                new Option<int?>("--expires-in", @"Number of days that the PAT should expire in. Cannot be used in conjunction with --expiration"),
-                new Option<DateTime?>("--expiration", @"Date that the PAT should expire on. Cannot be used in conjunction with --expires-in"),
-                new Option<string>("--user", @"DOMAIN\username of a specific domain user to whom the PAT should belong. Only works while **physically** connected to corp."),
-                new Option<string>("--password", @"password of a specific domain user to whom the PAT should belong. Only works while **physically** connected to corp."),
-            };
+                IsRequired = true,
+                Arity = ArgumentArity.OneOrMore,
+                AllowMultipleArgumentsPerToken = true,
+            },
+            new Option<string[]>("--organizations", "Organizations that the PAT should apply to.")
+            {
+                IsRequired = true,
+                Arity = ArgumentArity.OneOrMore,
+                AllowMultipleArgumentsPerToken = true,
+            },
+            new Option<string>("--name", "Optional name of the PAT. If no name is specified, then uses a standard naming format of orgs-scopes"),
+            new Option<int?>("--expires-in", @"Number of days that the PAT should expire in. Cannot be used in conjunction with --expiration"),
+            new Option<DateTime?>("--expiration", @"Date that the PAT should expire on. Cannot be used in conjunction with --expires-in"),
+            new Option<string>("--user", @"DOMAIN\username of a specific domain user to whom the PAT should belong. Only works while **physically** connected to corp."),
+            new Option<string>("--password", @"password of a specific domain user to whom the PAT should belong. Only works while **physically** connected to corp."),
+        };
 
-            cmd.Handler = CommandHandler.Create<List<AzureDevOpsPATScopes>, string[], string, int?, DateTime?, string, string, IConsole>(Go);
+        cmd.Handler = CommandHandler.Create<List<AzureDevOpsPATScopes>, string[], string, int?, DateTime?, string, string, IConsole>(Go);
 
-            return cmd.Invoke(args);
-        }
+        return cmd.Invoke(args);
+    }
 
-        /// <summary>
-        /// Generate a string for printing command line help.
-        /// </summary>
-        /// <exception cref="Exception">Throws if one of the scope attributes is missing an expected attribute</exception>
-        private static string GetScopesHelpString()
+    /// <summary>
+    /// Generate a string for printing command line help.
+    /// </summary>
+    /// <exception cref="Exception">Throws if one of the scope attributes is missing an expected attribute</exception>
+    private static string GetScopesHelpString()
+    {
+        var azdoScopeType = typeof(AzureDevOpsPATScopes);
+        var enumScopesBuilder = new StringBuilder();
+        var shortHandType = typeof(ScopeDescriptionAttribute);
+        var possibleEnumScopes = string.Join(Environment.NewLine, Enum.GetNames(azdoScopeType).Select(scope =>
         {
-            var azdoScopeType = typeof(AzureDevOpsPATScopes);
-            var enumScopesBuilder = new StringBuilder();
-            var shortHandType = typeof(ScopeDescriptionAttribute);
-            var possibleEnumScopes = string.Join(Environment.NewLine, Enum.GetNames(azdoScopeType).Select(scope =>
+            var memberInfo = azdoScopeType.GetMember(scope.ToString());
+            var attribute = Attribute.GetCustomAttribute(memberInfo[0], shortHandType);
+            if (attribute == null)
             {
-                var memberInfo = azdoScopeType.GetMember(scope.ToString());
-                var attribute = Attribute.GetCustomAttribute(memberInfo[0], shortHandType);
-                if (attribute == null)
-                {
-                    throw new Exception($"{scope.ToString()} should have a 'ScopeShortHand' attribute.");
-                }
-
-                var shortHandTypeAttribute = (ScopeDescriptionAttribute)attribute;
-                return $"'{scope}' - {shortHandTypeAttribute.Description}";
-            }));
-            return possibleEnumScopes;
-        }
-
-        /// <summary>
-        /// Parse out the scope strings into PAT enumeration values 
-        /// </summary>
-        /// <param name="argumentResult"></param>
-        /// <returns></returns>
-        private static List<AzureDevOpsPATScopes> ParsePATScopes(System.CommandLine.Parsing.ArgumentResult argumentResult)
-        {
-            List<AzureDevOpsPATScopes> scopes = new List<AzureDevOpsPATScopes>();
-            foreach (var token in argumentResult.Tokens)
-            {
-                if (Enum.TryParse(token.Value, ignoreCase: true, out AzureDevOpsPATScopes patScope))
-                {
-                    scopes.Add(patScope);
-                }
-                else
-                {
-                    argumentResult.ErrorMessage = $"'{token.Value}' is not a valid scope";
-                }
+                throw new Exception($"{scope.ToString()} should have a 'ScopeShortHand' attribute.");
             }
 
-            return scopes;
-        }
+            var shortHandTypeAttribute = (ScopeDescriptionAttribute)attribute;
+            return $"'{scope}' - {shortHandTypeAttribute.Description}";
+        }));
+        return possibleEnumScopes;
+    }
 
-        private static async Task<int> Go(List<AzureDevOpsPATScopes> scopes, string[] organizations, string name, int? expiresIn, DateTime? expiration, string user, string password, IConsole console)
+    /// <summary>
+    /// Parse out the scope strings into PAT enumeration values 
+    /// </summary>
+    /// <param name="argumentResult"></param>
+    /// <returns></returns>
+    private static List<AzureDevOpsPATScopes> ParsePATScopes(System.CommandLine.Parsing.ArgumentResult argumentResult)
+    {
+        List<AzureDevOpsPATScopes> scopes = new List<AzureDevOpsPATScopes>();
+        foreach (var token in argumentResult.Tokens)
         {
-            AzureDevOpsPATScopes scopeFlags = 0;
-            foreach (var scope in scopes)
+            if (Enum.TryParse(token.Value, ignoreCase: true, out AzureDevOpsPATScopes patScope))
             {
-                scopeFlags |= scope;
-            }
-
-            string patName = GetPatName(scopeFlags, organizations, name);
-
-            if (expiresIn.HasValue && expiration.HasValue)
-            {
-                Console.WriteLine("May not specify both --expires-in and --expiration.");
-                return 1;
-            }
-
-            if (string.IsNullOrEmpty(user) != string.IsNullOrEmpty(password))
-            {
-                Console.WriteLine("Must specify both user + password, or neither.");
-                return 1;
-            }
-
-            DateTime credentialExpiration = GetExpirationDate(expiration, expiresIn);
-
-            VssCredentials credentials;
-            if (!string.IsNullOrEmpty(user))
-            {
-                // rewrite REDMOND\account -> account@microsoft.com
-                if (user.Contains("\\"))
-                {
-                    user = $"{user.Split('\\').Last()}@microsoft.com";
-                }
-
-                credentials = new VssAadCredential(user, password);
+                scopes.Add(patScope);
             }
             else
             {
-                credentials = await GetInteractiveUserCredentials();
+                argumentResult.ErrorMessage = $"'{token.Value}' is not a valid scope";
             }
-
-            var patGenerator = new AzureDevOpsPATGenerator(credentials);
-            var pat = await patGenerator.GeneratePATAsync(patName, scopeFlags, organizations, credentialExpiration);
-            Console.WriteLine($"{patName} (Valid Until: {credentialExpiration}): {pat.Token}");
-            return 0;
         }
 
-        /// <summary>
-        /// Determine the desired name of the PAT. It appears that PATs may have really any combination of characters
-        /// and they do not have to be unique.
-        /// </summary>
-        /// <param name="scopes">Desired scopes</param>
-        /// <param name="organizations">Organizations</param>
-        /// <param name="name">Name provided by the user</param>
-        /// <returns>Name of the PAT.</returns>
-        private static string GetPatName(AzureDevOpsPATScopes scopes, string[] organizations, string name)
+        return scopes;
+    }
+
+    private static async Task<int> Go(List<AzureDevOpsPATScopes> scopes, string[] organizations, string name, int? expiresIn, DateTime? expiration, string user, string password, IConsole console)
+    {
+        AzureDevOpsPATScopes scopeFlags = 0;
+        foreach (var scope in scopes)
         {
-            string patName = name;
-            if (string.IsNullOrEmpty(patName))
-            {
-                string scopeString = scopes.GetScopeString();
-                patName = $"{string.Join("-", organizations)}-{scopeString}";
-            }
-
-            return patName;
+            scopeFlags |= scope;
         }
 
-        /// <summary>
-        /// Compute the desired expiration date. If no expiration day or expiresIn is specified, 
-        /// then defaults to 30 days.
-        /// </summary>
-        /// <param name="expiration">Explicit expiration date</param>
-        /// <param name="expiresIn">Explicit number of days to expire in.</param>
-        /// <returns>Date that the credential should expire on.</returns>
-        private static DateTime GetExpirationDate(DateTime? expiration, int? expiresIn)
+        string patName = GetPatName(scopeFlags, organizations, name);
+
+        if (expiresIn.HasValue && expiration.HasValue)
         {
-            DateTime finalExpiration = DateTime.Now.AddDays(DefaultExpirationInDays);
-            if (!expiresIn.HasValue && expiration.HasValue)
-            {
-                finalExpiration = expiration.Value;
-            }
-            else if (expiresIn.HasValue && !expiration.HasValue)
-            {
-                finalExpiration = DateTime.Now.AddDays(expiresIn.Value);
-            }
-
-            return finalExpiration;
+            Console.WriteLine("May not specify both --expires-in and --expiration.");
+            return 1;
         }
 
-        /// <summary>
-        /// The GUID here refers to the Azure DevOps resource:
-        /// https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/manage-personal-access-tokens-via-api?view=azure-devops#configure-a-quickstart-application
-        /// </summary>
-        readonly static string[] AzureDevOpsAuthScopes = new string[] { "499b84ac-1321-427f-aa17-267ca6975798/user_impersonation" };
-
-        /// <summary>
-        /// Get interactive user credentials for Azure Devops. 
-        /// </summary>
-        /// <returns>AzDO Credentials</returns>
-        private static async Task<VssCredentials> GetInteractiveUserCredentials()
+        if (string.IsNullOrEmpty(user) != string.IsNullOrEmpty(password))
         {
-            var browserCredential = new InteractiveBrowserCredential();
-            var context = new TokenRequestContext(AzureDevOpsAuthScopes);
-            var authToken = await browserCredential.GetTokenAsync(context, System.Threading.CancellationToken.None);
-            return new VssCredentials(new VssBasicCredential("", authToken.Token));
+            Console.WriteLine("Must specify both user + password, or neither.");
+            return 1;
         }
+
+        DateTime credentialExpiration = GetExpirationDate(expiration, expiresIn);
+
+        VssCredentials credentials;
+        if (!string.IsNullOrEmpty(user))
+        {
+            // rewrite REDMOND\account -> account@microsoft.com
+            if (user.Contains("\\"))
+            {
+                user = $"{user.Split('\\').Last()}@microsoft.com";
+            }
+
+            credentials = new VssAadCredential(user, password);
+        }
+        else
+        {
+            credentials = await GetInteractiveUserCredentials();
+        }
+
+        var patGenerator = new AzureDevOpsPATGenerator(credentials);
+        var pat = await patGenerator.GeneratePATAsync(patName, scopeFlags, organizations, credentialExpiration);
+        Console.WriteLine($"{patName} (Valid Until: {credentialExpiration}): {pat.Token}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Determine the desired name of the PAT. It appears that PATs may have really any combination of characters
+    /// and they do not have to be unique.
+    /// </summary>
+    /// <param name="scopes">Desired scopes</param>
+    /// <param name="organizations">Organizations</param>
+    /// <param name="name">Name provided by the user</param>
+    /// <returns>Name of the PAT.</returns>
+    private static string GetPatName(AzureDevOpsPATScopes scopes, string[] organizations, string name)
+    {
+        string patName = name;
+        if (string.IsNullOrEmpty(patName))
+        {
+            string scopeString = scopes.GetScopeString();
+            patName = $"{string.Join("-", organizations)}-{scopeString}";
+        }
+
+        return patName;
+    }
+
+    /// <summary>
+    /// Compute the desired expiration date. If no expiration day or expiresIn is specified, 
+    /// then defaults to 30 days.
+    /// </summary>
+    /// <param name="expiration">Explicit expiration date</param>
+    /// <param name="expiresIn">Explicit number of days to expire in.</param>
+    /// <returns>Date that the credential should expire on.</returns>
+    private static DateTime GetExpirationDate(DateTime? expiration, int? expiresIn)
+    {
+        DateTime finalExpiration = DateTime.Now.AddDays(DefaultExpirationInDays);
+        if (!expiresIn.HasValue && expiration.HasValue)
+        {
+            finalExpiration = expiration.Value;
+        }
+        else if (expiresIn.HasValue && !expiration.HasValue)
+        {
+            finalExpiration = DateTime.Now.AddDays(expiresIn.Value);
+        }
+
+        return finalExpiration;
+    }
+
+    /// <summary>
+    /// The GUID here refers to the Azure DevOps resource:
+    /// https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/manage-personal-access-tokens-via-api?view=azure-devops#configure-a-quickstart-application
+    /// </summary>
+    readonly static string[] AzureDevOpsAuthScopes = new string[] { "499b84ac-1321-427f-aa17-267ca6975798/user_impersonation" };
+
+    /// <summary>
+    /// Get interactive user credentials for Azure Devops. 
+    /// </summary>
+    /// <returns>AzDO Credentials</returns>
+    private static async Task<VssCredentials> GetInteractiveUserCredentials()
+    {
+        var browserCredential = new InteractiveBrowserCredential();
+        var context = new TokenRequestContext(AzureDevOpsAuthScopes);
+        var authToken = await browserCredential.GetTokenAsync(context, System.Threading.CancellationToken.None);
+        return new VssCredentials(new VssBasicCredential("", authToken.Token));
     }
 }

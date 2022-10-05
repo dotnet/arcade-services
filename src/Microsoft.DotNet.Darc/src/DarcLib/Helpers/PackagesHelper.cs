@@ -7,35 +7,34 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-namespace Microsoft.DotNet.DarcLib.Helpers
+namespace Microsoft.DotNet.DarcLib.Helpers;
+
+public static class PackagesHelper
 {
-    public static class PackagesHelper
+    public static ManifestMetadata GetManifestMetadata(string packagePath)
     {
-        public static ManifestMetadata GetManifestMetadata(string packagePath)
+        ManifestMetadata manifestMetadata = null;
+        string tmpFolder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+        try
         {
-            ManifestMetadata manifestMetadata = null;
-            string tmpFolder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            ZipFile.ExtractToDirectory(packagePath, tmpFolder);
+            string nuspecPath = Directory.GetFiles(tmpFolder, "*.nuspec").FirstOrDefault();
 
-            try
+            if (!string.IsNullOrEmpty(nuspecPath))
             {
-                ZipFile.ExtractToDirectory(packagePath, tmpFolder);
-                string nuspecPath = Directory.GetFiles(tmpFolder, "*.nuspec").FirstOrDefault();
-
-                if (!string.IsNullOrEmpty(nuspecPath))
+                using (Stream stream = new MemoryStream(File.ReadAllBytes(nuspecPath)))
                 {
-                    using (Stream stream = new MemoryStream(File.ReadAllBytes(nuspecPath)))
-                    {
-                        Manifest manifest = Manifest.ReadFrom(stream, false);
-                        manifestMetadata = manifest.Metadata;
-                    }
+                    Manifest manifest = Manifest.ReadFrom(stream, false);
+                    manifestMetadata = manifest.Metadata;
                 }
             }
-            finally
-            {
-                Directory.Delete(tmpFolder, true);
-            }
-
-            return manifestMetadata;
         }
+        finally
+        {
+            Directory.Delete(tmpFolder, true);
+        }
+
+        return manifestMetadata;
     }
 }

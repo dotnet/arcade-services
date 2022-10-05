@@ -8,32 +8,31 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.DarcLib.HealthMetrics
+namespace Microsoft.DotNet.DarcLib.HealthMetrics;
+
+public enum HealthResult
 {
-    public enum HealthResult
+    Passed,
+    Failed,
+    Warning
+}
+
+public abstract class HealthMetric
+{
+    public HealthMetric(ILogger logger, IRemoteFactory remoteFactory)
     {
-        Passed,
-        Failed,
-        Warning
+        Logger = logger;
+        RemoteFactory = remoteFactory;
     }
 
-    public abstract class HealthMetric
-    {
-        public HealthMetric(ILogger logger, IRemoteFactory remoteFactory)
-        {
-            Logger = logger;
-            RemoteFactory = remoteFactory;
-        }
+    protected readonly ILogger Logger;
+    protected readonly IRemoteFactory RemoteFactory;
 
-        protected readonly ILogger Logger;
-        protected readonly IRemoteFactory RemoteFactory;
+    public abstract string MetricName { get; }
 
-        public abstract string MetricName { get; }
+    public abstract string MetricDescription { get; }
 
-        public abstract string MetricDescription { get; }
+    public HealthResult Result { get; protected set; }
 
-        public HealthResult Result { get; protected set; }
-
-        public abstract Task EvaluateAsync();
-    }
+    public abstract Task EvaluateAsync();
 }

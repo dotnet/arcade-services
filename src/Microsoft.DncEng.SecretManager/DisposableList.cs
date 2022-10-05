@@ -1,23 +1,22 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DncEng.SecretManager
+namespace Microsoft.DncEng.SecretManager;
+
+public class DisposableList : IDisposable
 {
-    public class DisposableList : IDisposable
+    private readonly List<IDisposable> _disposables = new List<IDisposable>();
+
+    public void Add(IDisposable disposable)
     {
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
+        _disposables.Add(disposable);
+    }
 
-        public void Add(IDisposable disposable)
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables)
         {
-            _disposables.Add(disposable);
-        }
-
-        public void Dispose()
-        {
-            foreach (var disposable in _disposables)
-            {
-                disposable?.Dispose();
-            }
+            disposable?.Dispose();
         }
     }
 }

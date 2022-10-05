@@ -4,18 +4,17 @@
 
 using System.Collections.Immutable;
 
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class GrafanaNotification
 {
-    public class GrafanaNotification
-    {
-        public string Title { get; set; }
-        public int RuleId { get; set; }
-        public string RuleName { get; set; }
-        public string RuleUrl { get; set; }
-        public string State { get; set; }
-        public string ImageUrl { get; set; }
-        public string Message { get; set; }
-        public IImmutableList<GrafanaNotificationMatch> EvalMatches { get; set; }
-        public ImmutableDictionary<string, string> Tags { get; set; }
-    }
+    public string Title { get; set; }
+    public int RuleId { get; set; }
+    public string RuleName { get; set; }
+    public string RuleUrl { get; set; }
+    public string State { get; set; }
+    public string ImageUrl { get; set; }
+    public string Message { get; set; }
+    public IImmutableList<GrafanaNotificationMatch> EvalMatches { get; set; }
+    public ImmutableDictionary<string, string> Tags { get; set; }
 }

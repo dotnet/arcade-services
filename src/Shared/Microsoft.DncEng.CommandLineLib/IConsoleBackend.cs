@@ -6,15 +6,14 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Microsoft.DncEng.CommandLineLib
+namespace Microsoft.DncEng.CommandLineLib;
+
+public interface IConsoleBackend
 {
-    public interface IConsoleBackend
-    {
-        TextWriter Out { get; }
-        TextWriter Error { get; }
-        void SetColor(ConsoleColor color);
-        void ResetColor();
-        Task<string> PromptAsync(string message);
-        bool IsInteractive { get; }
-    }
+    TextWriter Out { get; }
+    TextWriter Error { get; }
+    void SetColor(ConsoleColor color);
+    void ResetColor();
+    Task<string> PromptAsync(string message);
+    bool IsInteractive { get; }
 }

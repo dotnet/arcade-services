@@ -13,105 +13,104 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
+namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+
+[PublicAPI]
+public class ConfigureSwaggerVersions : IConfigureOptions<SwaggerGenOptions>
 {
-    [PublicAPI]
-    public class ConfigureSwaggerVersions : IConfigureOptions<SwaggerGenOptions>
+    public ConfigureSwaggerVersions(
+        VersionedControllerProvider controllerProvider,
+        IOptions<ApiVersioningOptions> versioningOptionsAccessor,
+        Action<string, OpenApiInfo> configureVersionInfo)
     {
-        public ConfigureSwaggerVersions(
-            VersionedControllerProvider controllerProvider,
-            IOptions<ApiVersioningOptions> versioningOptionsAccessor,
-            Action<string, OpenApiInfo> configureVersionInfo)
+        ControllerProvider = controllerProvider;
+        ConfigureVersionInfo = configureVersionInfo;
+        VersioningOptions = versioningOptionsAccessor.Value;
+    }
+
+    private ApiVersioningOptions VersioningOptions { get; }
+
+    private VersionedControllerProvider ControllerProvider { get; }
+
+    private Action<string, OpenApiInfo> ConfigureVersionInfo { get; }
+
+    public void Configure(SwaggerGenOptions options)
+    {
+        ConfigureSwaggerVersioningParameters(options, VersioningOptions.VersioningScheme);
+        foreach (string version in ControllerProvider.Versions.Keys)
         {
-            ControllerProvider = controllerProvider;
-            ConfigureVersionInfo = configureVersionInfo;
-            VersioningOptions = versioningOptionsAccessor.Value;
+            var info = new OpenApiInfo
+            {
+                Version = version,
+                Title = $"Version {version}",
+            };
+            ConfigureVersionInfo?.Invoke(version, info);
+            options.SwaggerDoc(version, info);
         }
 
-        private ApiVersioningOptions VersioningOptions { get; }
-
-        private VersionedControllerProvider ControllerProvider { get; }
-
-        private Action<string, OpenApiInfo> ConfigureVersionInfo { get; }
-
-        public void Configure(SwaggerGenOptions options)
-        {
-            ConfigureSwaggerVersioningParameters(options, VersioningOptions.VersioningScheme);
-            foreach (string version in ControllerProvider.Versions.Keys)
+        options.DocInclusionPredicate(IsVersion);
+        options.TagActionsBy(
+            desc =>
             {
-                var info = new OpenApiInfo
+                string controller = desc.ActionDescriptor.RouteValues["controller"];
+                string version = desc.ActionDescriptor.RouteValues["version"];
+                if (controller.EndsWith(version))
                 {
-                    Version = version,
-                    Title = $"Version {version}",
-                };
-                ConfigureVersionInfo?.Invoke(version, info);
-                options.SwaggerDoc(version, info);
-            }
+                    controller = controller.Substring(0, controller.Length - version.Length - 1);
+                }
 
-            options.DocInclusionPredicate(IsVersion);
-            options.TagActionsBy(
-                desc =>
-                {
-                    string controller = desc.ActionDescriptor.RouteValues["controller"];
-                    string version = desc.ActionDescriptor.RouteValues["version"];
-                    if (controller.EndsWith(version))
-                    {
-                        controller = controller.Substring(0, controller.Length - version.Length - 1);
-                    }
+                return new[] {controller};
+            });
+        options.OperationFilter<SwaggerModelBindingOperationFilter>();
+        options.OperationFilter<SwaggerNamingOperationFilter>();
+    }
 
-                    return new[] {controller};
-                });
-            options.OperationFilter<SwaggerModelBindingOperationFilter>();
-            options.OperationFilter<SwaggerNamingOperationFilter>();
+    private void ConfigureSwaggerVersioningParameters(SwaggerGenOptions options, IVersioningScheme versioningScheme)
+    {
+        if (versioningScheme is QueryVersioningScheme qvs)
+        {
+            ConfigureQueryVersioning(options, qvs);
         }
 
-        private void ConfigureSwaggerVersioningParameters(SwaggerGenOptions options, IVersioningScheme versioningScheme)
+        if (versioningScheme is HeaderVersioningScheme hvs)
         {
-            if (versioningScheme is QueryVersioningScheme qvs)
-            {
-                ConfigureQueryVersioning(options, qvs);
-            }
-
-            if (versioningScheme is HeaderVersioningScheme hvs)
-            {
-                ConfigureHeaderVersioning(options, hvs);
-            }
-
-            if (versioningScheme is ISwaggerVersioningScheme svs)
-            {
-                ConfigureSwaggerVersioning(options, svs);
-            }
+            ConfigureHeaderVersioning(options, hvs);
         }
 
-        private void ConfigureQueryVersioning(SwaggerGenOptions options, QueryVersioningScheme versioningScheme)
+        if (versioningScheme is ISwaggerVersioningScheme svs)
         {
-            options.OperationFilter<QueryVersioningOperationFilter>(versioningScheme);
-        }
-
-        private void ConfigureHeaderVersioning(SwaggerGenOptions options, HeaderVersioningScheme versioningScheme)
-        {
-            options.OperationFilter<HeaderVersioningOperationFilter>(versioningScheme);
-        }
-
-        private void ConfigureSwaggerVersioning(SwaggerGenOptions options, ISwaggerVersioningScheme versioningScheme)
-        {
-            options.OperationFilter<VersioningOperationFilter>(versioningScheme);
-        }
-
-        private bool IsVersion(string version, ApiDescription desc)
-        {
-            return desc.ActionDescriptor.RouteValues["version"] == version;
+            ConfigureSwaggerVersioning(options, svs);
         }
     }
 
-    public class SwaggerNamingOperationFilter : IOperationFilter
+    private void ConfigureQueryVersioning(SwaggerGenOptions options, QueryVersioningScheme versioningScheme)
     {
-        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        options.OperationFilter<QueryVersioningOperationFilter>(versioningScheme);
+    }
+
+    private void ConfigureHeaderVersioning(SwaggerGenOptions options, HeaderVersioningScheme versioningScheme)
+    {
+        options.OperationFilter<HeaderVersioningOperationFilter>(versioningScheme);
+    }
+
+    private void ConfigureSwaggerVersioning(SwaggerGenOptions options, ISwaggerVersioningScheme versioningScheme)
+    {
+        options.OperationFilter<VersioningOperationFilter>(versioningScheme);
+    }
+
+    private bool IsVersion(string version, ApiDescription desc)
+    {
+        return desc.ActionDescriptor.RouteValues["version"] == version;
+    }
+}
+
+public class SwaggerNamingOperationFilter : IOperationFilter
+{
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    {
+        if (context.ApiDescription.ActionDescriptor is ControllerActionDescriptor desc)
         {
-            if (context.ApiDescription.ActionDescriptor is ControllerActionDescriptor desc)
-            {
-                operation.OperationId = desc.ActionName;
-            }
+            operation.OperationId = desc.ActionName;
         }
     }
 }

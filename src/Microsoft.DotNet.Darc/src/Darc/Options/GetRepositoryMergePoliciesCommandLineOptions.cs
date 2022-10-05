@@ -5,23 +5,22 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("get-repository-policies", HelpText = "Retrieves information about repository merge policies.")]
+internal class GetRepositoryMergePoliciesCommandLineOptions : CommandLineOptions
 {
-    [Verb("get-repository-policies", HelpText = "Retrieves information about repository merge policies.")]
-    internal class GetRepositoryMergePoliciesCommandLineOptions : CommandLineOptions
+    [Option("repo", HelpText = "Name of repository to get repository merge policies for. Match on substring")]
+    public string Repo { get; set; }
+
+    [Option("branch", HelpText = "Name of repository to get repository merge policies for. Match on substring")]
+    public string Branch { get; set; }
+
+    [Option("all", HelpText = "List all repositories. Otherwise, branches not targeted by a batchable subscription are not listed.")]
+    public bool All { get; set; }
+
+    public override Operation GetOperation()
     {
-        [Option("repo", HelpText = "Name of repository to get repository merge policies for. Match on substring")]
-        public string Repo { get; set; }
-
-        [Option("branch", HelpText = "Name of repository to get repository merge policies for. Match on substring")]
-        public string Branch { get; set; }
-
-        [Option("all", HelpText = "List all repositories. Otherwise, branches not targeted by a batchable subscription are not listed.")]
-        public bool All { get; set; }
-
-        public override Operation GetOperation()
-        {
-            return new GetRepositoryMergePoliciesOperation(this);
-        }
+        return new GetRepositoryMergePoliciesOperation(this);
     }
 }

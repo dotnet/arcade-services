@@ -4,38 +4,37 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Maestro.Web.Api.v2018_07_16.Models
+namespace Maestro.Web.Api.v2018_07_16.Models;
+
+public class SubscriptionData
 {
-    public class SubscriptionData
+    [Required]
+    public string ChannelName { get; set; }
+
+    [Required]
+    public string SourceRepository { get; set; }
+
+    [Required]
+    [RepositoryUrl]
+    public string TargetRepository { get; set; }
+
+    [Required]
+    public string TargetBranch { get; set; }
+
+    public bool? Enabled { get; set; }
+
+    [Required]
+    public SubscriptionPolicy Policy { get; set; }
+
+    public Data.Models.Subscription ToDb()
     {
-        [Required]
-        public string ChannelName { get; set; }
-
-        [Required]
-        public string SourceRepository { get; set; }
-
-        [Required]
-        [RepositoryUrl]
-        public string TargetRepository { get; set; }
-
-        [Required]
-        public string TargetBranch { get; set; }
-
-        public bool? Enabled { get; set; }
-
-        [Required]
-        public SubscriptionPolicy Policy { get; set; }
-
-        public Data.Models.Subscription ToDb()
+        return new Data.Models.Subscription
         {
-            return new Data.Models.Subscription
-            {
-                SourceRepository = SourceRepository,
-                TargetRepository = TargetRepository,
-                TargetBranch = TargetBranch,
-                PolicyObject = Policy.ToDb(),
-                Enabled = Enabled ?? true
-            };
-        }
+            SourceRepository = SourceRepository,
+            TargetRepository = TargetRepository,
+            TargetBranch = TargetBranch,
+            PolicyObject = Policy.ToDb(),
+            Enabled = Enabled ?? true
+        };
     }
 }

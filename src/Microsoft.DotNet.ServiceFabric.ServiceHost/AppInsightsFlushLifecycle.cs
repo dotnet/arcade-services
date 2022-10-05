@@ -4,20 +4,19 @@
 
 using Microsoft.ApplicationInsights.Channel;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class AppInsightsFlushLifecycle : Lifecycle
 {
-    public class AppInsightsFlushLifecycle : Lifecycle
+    private readonly ITelemetryChannel _channel;
+
+    public AppInsightsFlushLifecycle(ITelemetryChannel channel)
     {
-        private readonly ITelemetryChannel _channel;
+        _channel = channel;
+    }
 
-        public AppInsightsFlushLifecycle(ITelemetryChannel channel)
-        {
-            _channel = channel;
-        }
-
-        public override void OnStopping()
-        {
-            _channel.Flush();
-        }
+    public override void OnStopping()
+    {
+        _channel.Flush();
     }
 }

@@ -6,15 +6,14 @@ using System;
 using System.Threading.Tasks;
 using Quartz;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+[DisallowConcurrentExecution]
+internal sealed class FuncInvokingJob : IJob
 {
-    [DisallowConcurrentExecution]
-    internal sealed class FuncInvokingJob : IJob
+    public async Task Execute(IJobExecutionContext context)
     {
-        public async Task Execute(IJobExecutionContext context)
-        {
-            var func = (Func<Task>) context.MergedJobDataMap["func"];
-            await func();
-        }
+        var func = (Func<Task>) context.MergedJobDataMap["func"];
+        await func();
     }
 }

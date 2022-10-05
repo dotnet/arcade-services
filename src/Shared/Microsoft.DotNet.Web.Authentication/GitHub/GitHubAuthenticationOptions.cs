@@ -4,14 +4,13 @@
 
 using Microsoft.AspNetCore.Authentication.OAuth;
 
-namespace Microsoft.DotNet.Web.Authentication.GitHub
+namespace Microsoft.DotNet.Web.Authentication.GitHub;
+
+public class GitHubAuthenticationOptions : OAuthOptions
 {
-    public class GitHubAuthenticationOptions : OAuthOptions
+    public GitHubAuthenticationOptions()
     {
-        public GitHubAuthenticationOptions()
-        {
-            AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
-            TokenEndpoint = "https://github.com/login/oauth/access_token";
-        }
+        AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+        TokenEndpoint = "https://github.com/login/oauth/access_token";
     }
 }

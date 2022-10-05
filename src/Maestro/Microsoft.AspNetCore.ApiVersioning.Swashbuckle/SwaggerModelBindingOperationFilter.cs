@@ -7,21 +7,20 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
+namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+
+public class SwaggerModelBindingOperationFilter : IOperationFilter
 {
-    public class SwaggerModelBindingOperationFilter : IOperationFilter
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
     {
-        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        foreach (OpenApiParameter parameter in operation.Parameters)
         {
-            foreach (OpenApiParameter parameter in operation.Parameters)
+            // For some reason Swashbuckle doesn't honor ModelMetadata.IsRequired for parameters
+            ApiParameterDescription apiParamDesc =
+                context.ApiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter.Name);
+            if (apiParamDesc != null && apiParamDesc.ModelMetadata.IsRequired)
             {
-                // For some reason Swashbuckle doesn't honor ModelMetadata.IsRequired for parameters
-                ApiParameterDescription apiParamDesc =
-                    context.ApiDescription.ParameterDescriptions.FirstOrDefault(p => p.Name == parameter.Name);
-                if (apiParamDesc != null && apiParamDesc.ModelMetadata.IsRequired)
-                {
-                    parameter.Required = true;
-                }
+                parameter.Required = true;
             }
         }
     }

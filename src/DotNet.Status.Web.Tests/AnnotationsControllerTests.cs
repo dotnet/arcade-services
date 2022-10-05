@@ -13,138 +13,137 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DotNet.Status.Web.Tests
+namespace DotNet.Status.Web.Tests;
+
+[TestFixture]
+public class AnnotationsControllerTests
 {
-    [TestFixture]
-    public class AnnotationsControllerTests
+    [Test]
+    public async Task StatusOkayTest()
     {
-        [Test]
-        public async Task StatusOkayTest()
+        // This endpoint is required by Grafana
+        using TestData testData = new TestData();
+        using HttpResponseMessage responseMessage = await testData.Client.GetAsync("/api/annotations");
+
+        responseMessage.IsSuccessStatusCode.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task TooManyServicesRefusedTest()
+    {
+        using TestData testData = new TestData();
+
+        // Do not process more than 10 elements in query
+        string body = "" +
+                      "{" +
+                      "\"range\": {" +
+                      "\"from\": \"2021-09-22T00:16:51.657Z\"," +
+                      "\"to\": \"2021-09-29T00:16:51.657Z\"," +
+                      "\"raw\": {" +
+                      "\"from\": \"now-7d\"," +
+                      "\"to\": \"now\"" +
+                      "}" +
+                      "}," +
+                      "\"annotation\": {" +
+                      "\"name\": \"New annotation\"," +
+                      "\"datasource\": \"Rollout Annotations - Prod\"," +
+                      "\"enable\": true," +
+                      "\"iconColor\": \"red\"," +
+                      "\"query\": \"s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11\"" +
+                      "}," +
+                      "\"rangeRaw\": {" +
+                      "\"from\": \"now-7d\"," +
+                      "\"to\": \"now\"" +
+                      "}" +
+                      "}";
+
+        using StringContent stringContent = new StringContent(body)
         {
-            // This endpoint is required by Grafana
-            using TestData testData = new TestData();
-            using HttpResponseMessage responseMessage = await testData.Client.GetAsync("/api/annotations");
+            Headers = {
+                ContentType = new MediaTypeHeaderValue("application/json"),
+                ContentLength = body.Length
+            }
+        };
+        using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
 
-            responseMessage.IsSuccessStatusCode.Should().BeTrue();
-        }
+        // The query parses and returns anything
+        response.IsSuccessStatusCode.Should().BeFalse();
+    }
 
-        [Test]
-        public async Task TooManyServicesRefusedTest()
+    [Test]
+    [Ignore("Not configured for CI; requires storage account or emulator")]
+    public async Task QueryTest()
+    {
+        using TestData testData = new TestData();
+
+        // Real traffic
+        string body = "" +
+                      "{" +
+                      "\"range\": {" +
+                      "\"from\": \"2021-09-22T00:16:51.657Z\"," +
+                      "\"to\": \"2021-09-29T00:16:51.657Z\"," +
+                      "\"raw\": {" +
+                      "\"from\": \"now-7d\"," +
+                      "\"to\": \"now\"" +
+                      "}" +
+                      "}," +
+                      "\"annotation\": {" +
+                      "\"name\": \"New annotation\"," +
+                      "\"datasource\": \"Rollout Annotations - Prod\"," +
+                      "\"enable\": true," +
+                      "\"iconColor\": \"red\"," +
+                      "\"query\": \"\"" +
+                      "}," +
+                      "\"rangeRaw\": {" +
+                      "\"from\": \"now-7d\"," +
+                      "\"to\": \"now\"" +
+                      "}" +
+                      "}";
+
+        using StringContent stringContent = new StringContent(body) {
+            Headers = {
+                ContentType = new MediaTypeHeaderValue("application/json"),
+                ContentLength = body.Length
+            } 
+        };
+        using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
+
+        // The query parses and returns anything
+        response.IsSuccessStatusCode.Should().BeTrue();
+    }
+
+    public sealed class TestData : IDisposable
+    {
+        public HttpClient Client { get; }
+
+        public TestData()
         {
-            using TestData testData = new TestData();
+            var factory = new TestAppFactory();
 
-            // Do not process more than 10 elements in query
-            string body = "" +
-                "{" +
-                    "\"range\": {" +
-                        "\"from\": \"2021-09-22T00:16:51.657Z\"," +
-                        "\"to\": \"2021-09-29T00:16:51.657Z\"," +
-                        "\"raw\": {" +
-                            "\"from\": \"now-7d\"," +
-                            "\"to\": \"now\"" +
-                        "}" +
-                    "}," +
-                    "\"annotation\": {" +
-                        "\"name\": \"New annotation\"," +
-                        "\"datasource\": \"Rollout Annotations - Prod\"," +
-                        "\"enable\": true," +
-                        "\"iconColor\": \"red\"," +
-                        "\"query\": \"s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11\"" +
-                    "}," +
-                    "\"rangeRaw\": {" +
-                        "\"from\": \"now-7d\"," +
-                        "\"to\": \"now\"" +
-                    "}" +
-                "}";
-
-            using StringContent stringContent = new StringContent(body)
+            factory.ConfigureServices(services =>
             {
-                Headers = {
-                    ContentType = new MediaTypeHeaderValue("application/json"),
-                    ContentLength = body.Length
-                }
-            };
-            using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
+                services.AddControllers()
+                    .AddApplicationPart(typeof(AnnotationsController).Assembly);
 
-            // The query parses and returns anything
-            response.IsSuccessStatusCode.Should().BeFalse();
-        }
-
-        [Test]
-        [Ignore("Not configured for CI; requires storage account or emulator")]
-        public async Task QueryTest()
-        {
-            using TestData testData = new TestData();
-
-            // Real traffic
-            string body = "" +
-                "{" +
-                    "\"range\": {" +
-                        "\"from\": \"2021-09-22T00:16:51.657Z\"," +
-                        "\"to\": \"2021-09-29T00:16:51.657Z\"," +
-                        "\"raw\": {" +
-                            "\"from\": \"now-7d\"," +
-                            "\"to\": \"now\"" +
-                        "}" +
-                    "}," +
-                    "\"annotation\": {" +
-                        "\"name\": \"New annotation\"," +
-                        "\"datasource\": \"Rollout Annotations - Prod\"," +
-                        "\"enable\": true," +
-                        "\"iconColor\": \"red\"," +
-                        "\"query\": \"\"" +
-                    "}," +
-                    "\"rangeRaw\": {" +
-                        "\"from\": \"now-7d\"," +
-                        "\"to\": \"now\"" +
-                    "}" +
-                "}";
-
-            using StringContent stringContent = new StringContent(body) {
-                Headers = {
-                    ContentType = new MediaTypeHeaderValue("application/json"),
-                    ContentLength = body.Length
-                } 
-            };
-            using HttpResponseMessage response = await testData.Client.PostAsync("/api/annotations/annotations", stringContent);
-
-            // The query parses and returns anything
-            response.IsSuccessStatusCode.Should().BeTrue();
-        }
-
-        public sealed class TestData : IDisposable
-        {
-            public HttpClient Client { get; }
-
-            public TestData()
-            {
-                var factory = new TestAppFactory();
-
-                factory.ConfigureServices(services =>
+                services.Configure<GrafanaOptions>(options =>
                 {
-                    services.AddControllers()
-                        .AddApplicationPart(typeof(AnnotationsController).Assembly);
-
-                    services.Configure<GrafanaOptions>(options =>
-                    {
-                        options.TableUri = "https://127.0.0.1:10002/devstoreaccount1/deployments";
-                    });
-
-                    services.AddLogging();
-                });
-                factory.ConfigureBuilder(app =>
-                {
-                    app.UseRouting();
-                    app.UseEndpoints(e => e.MapControllers());
+                    options.TableUri = "https://127.0.0.1:10002/devstoreaccount1/deployments";
                 });
 
-                Client = factory.CreateClient();
-            }
-
-            public void Dispose()
+                services.AddLogging();
+            });
+            factory.ConfigureBuilder(app =>
             {
-                Client?.Dispose();
-            }
+                app.UseRouting();
+                app.UseEndpoints(e => e.MapControllers());
+            });
+
+            Client = factory.CreateClient();
+        }
+
+        public void Dispose()
+        {
+            Client?.Dispose();
         }
     }
 }

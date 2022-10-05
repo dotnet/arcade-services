@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace CoreHealthMonitor
+namespace CoreHealthMonitor;
+
+public class MemoryDumpOptions
 {
-    public class MemoryDumpOptions
-    {
-        public string ContainerUri { get; set; }
-        public string[] IgnoreDumpPatterns { get; set; }
-    }
+    public string ContainerUri { get; set; }
+    public string[] IgnoreDumpPatterns { get; set; }
 }

@@ -6,25 +6,24 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using Microsoft.Extensions.Configuration;
 
-namespace Microsoft.DotNet.Kusto
-{
-    public static class KustoServiceCollectionExtensions
-    {
-        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, string sectionName)
-        {
-            services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
-            services.Configure<KustoClientProviderOptions>(sectionName, (o, s) =>
-            {
-                s.Bind(o);
-            });
-            return services;
-        }
+namespace Microsoft.DotNet.Kusto;
 
-        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<KustoClientProviderOptions> configure)
+public static class KustoServiceCollectionExtensions
+{
+    public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, string sectionName)
+    {
+        services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+        services.Configure<KustoClientProviderOptions>(sectionName, (o, s) =>
         {
-            services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
-            services.Configure<KustoClientProviderOptions>(configure);
-            return services;
-        }
+            s.Bind(o);
+        });
+        return services;
+    }
+
+    public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<KustoClientProviderOptions> configure)
+    {
+        services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+        services.Configure<KustoClientProviderOptions>(configure);
+        return services;
     }
 }

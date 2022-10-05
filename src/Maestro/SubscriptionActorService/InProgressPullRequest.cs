@@ -8,37 +8,36 @@ using System.Runtime.Serialization;
 using Maestro.Contracts;
 using Microsoft.DotNet.DarcLib;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+[DataContract]
+public class InProgressPullRequest : IPullRequest
 {
-    [DataContract]
-    public class InProgressPullRequest : IPullRequest
-    {
-        [DataMember]
-        public string Url { get; set; }
+    [DataMember]
+    public string Url { get; set; }
 
-        [DataMember]
-        public MergePolicyCheckResult MergePolicyResult { get; set; }
+    [DataMember]
+    public MergePolicyCheckResult MergePolicyResult { get; set; }
 
-        [DataMember]
-        public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
+    [DataMember]
+    public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
-        [DataMember]
-        public List<SubscriptionPullRequestUpdate> Contained { get; set; }
+    [DataMember]
+    public List<SubscriptionPullRequestUpdate> Contained { get; set; }
 
-        [DataMember]
-        public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
+    [DataMember]
+    public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 
-        [DataMember]
-        public bool? SourceRepoNotified { get; set; }
-    }
+    [DataMember]
+    public bool? SourceRepoNotified { get; set; }
+}
 
-    [DataContract]
-    public class SubscriptionPullRequestUpdate
-    {
-        [DataMember]
-        public Guid SubscriptionId { get; set; }
+[DataContract]
+public class SubscriptionPullRequestUpdate
+{
+    [DataMember]
+    public Guid SubscriptionId { get; set; }
 
-        [DataMember]
-        public int BuildId { get; set; }
-    }
+    [DataMember]
+    public int BuildId { get; set; }
 }

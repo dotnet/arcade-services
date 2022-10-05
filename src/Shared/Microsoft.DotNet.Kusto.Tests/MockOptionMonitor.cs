@@ -6,30 +6,29 @@ using System;
 using Microsoft.Extensions.Options;
 using Moq;
 
-namespace Microsoft.DotNet.Kusto.Tests
+namespace Microsoft.DotNet.Kusto.Tests;
+
+public static class MockOptionMonitor
 {
-    public static class MockOptionMonitor
+    public static MockOptionMonitor<TOptions> Create<TOptions>(TOptions opts) where TOptions : class, new() => new MockOptionMonitor<TOptions>(opts);
+}
+
+public class MockOptionMonitor<TOptions> : IOptionsMonitor<TOptions>, IOptionsSnapshot<TOptions>, IOptions<TOptions>
+    where TOptions : class, new()
+{
+    public MockOptionMonitor(TOptions value)
     {
-        public static MockOptionMonitor<TOptions> Create<TOptions>(TOptions opts) where TOptions : class, new() => new MockOptionMonitor<TOptions>(opts);
+        Value = value;
     }
 
-    public class MockOptionMonitor<TOptions> : IOptionsMonitor<TOptions>, IOptionsSnapshot<TOptions>, IOptions<TOptions>
-        where TOptions : class, new()
+    TOptions IOptionsMonitor<TOptions>.Get(string name) => Value;
+
+    public IDisposable OnChange(Action<TOptions, string> listener)
     {
-        public MockOptionMonitor(TOptions value)
-        {
-            Value = value;
-        }
-
-        TOptions IOptionsMonitor<TOptions>.Get(string name) => Value;
-
-        public IDisposable OnChange(Action<TOptions, string> listener)
-        {
-            return Mock.Of<IDisposable>();
-        }
-
-        public TOptions CurrentValue => Value;
-        public TOptions Value { get; }
-        TOptions IOptionsSnapshot<TOptions>.Get(string name) => Value;
+        return Mock.Of<IDisposable>();
     }
+
+    public TOptions CurrentValue => Value;
+    public TOptions Value { get; }
+    TOptions IOptionsSnapshot<TOptions>.Get(string name) => Value;
 }

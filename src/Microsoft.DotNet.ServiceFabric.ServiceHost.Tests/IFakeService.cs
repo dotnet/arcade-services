@@ -1,7 +1,6 @@
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests;
+
+public interface IFakeService
 {
-    public interface IFakeService
-    {
-        string TestServiceMethod();
-    }
+    string TestServiceMethod();
 }

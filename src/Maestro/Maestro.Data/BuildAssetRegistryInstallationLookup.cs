@@ -2,29 +2,28 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Maestro.Data
+namespace Maestro.Data;
+
+public class BuildAssetRegistryInstallationLookup : IInstallationLookup
 {
-    public class BuildAssetRegistryInstallationLookup : IInstallationLookup
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    public BuildAssetRegistryInstallationLookup(IServiceScopeFactory scopeFactory)
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        _scopeFactory = scopeFactory;
+    }
 
-        public BuildAssetRegistryInstallationLookup(IServiceScopeFactory scopeFactory)
+    public async Task<long> GetInstallationId(string repositoryUrl)
+    {
+        using (var scope = _scopeFactory.CreateScope())
         {
-            _scopeFactory = scopeFactory;
+            var ctx = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+            return await ctx.GetInstallationId(repositoryUrl);
         }
+    }
 
-        public async Task<long> GetInstallationId(string repositoryUrl)
-        {
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                var ctx = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-                return await ctx.GetInstallationId(repositoryUrl);
-            }
-        }
-
-        public Task<bool> IsOrganizationSupported(string org)
-        {
-            return Task.FromResult(true);
-        }
+    public Task<bool> IsOrganizationSupported(string org)
+    {
+        return Task.FromResult(true);
     }
 }

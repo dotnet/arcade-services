@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public enum RevocationStatus
 {
-    public enum RevocationStatus
-    {
-        Unknown = 0,
-        Active,
-        Revoked,
-    }
+    Unknown = 0,
+    Active,
+    Revoked,
 }

@@ -4,12 +4,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrPatchHandler : IVmrPatchHandler
 {
+    // These git attributes can override cloaking of files when set it individual repositories
     private const string KeepAttribute = "vmr-preserve";
     private const string IgnoreAttribute = "vmr-ignore";
 
@@ -36,42 +38,80 @@ public class VmrPatchHandler : IVmrPatchHandler
     private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
 
     private readonly IVmrDependencyTracker _vmrInfo;
+    private readonly ILocalGitRepo _localGitRepo;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly IProcessManager _processManager;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
     public VmrPatchHandler(
         IVmrDependencyTracker dependencyInfo,
+        ILocalGitRepo localGitRepo,
+        IRemoteFactory remoteFactory,
         IProcessManager processManager,
+        IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = dependencyInfo;
+        _localGitRepo = localGitRepo;
+        _remoteFactory = remoteFactory;
         _processManager = processManager;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
     /// <summary>
     /// Creates a patch file (a diff) for given two commits in a repo adhering to the in/exclusion filters of the mapping.
+    /// Submodules are recursively inlined into the VMR (patch is created for each submodule separately).
     /// </summary>
-    public async Task CreatePatch(
+    /// <param name="mapping">Individual repository mapping</param>
+    /// <param name="repoPath">Path to the clone of the repo</param>
+    /// <param name="sha1">Diff from this commit</param>
+    /// <param name="sha2">Diff to this commit</param>
+    /// <param name="destDir">Directory where patches should be placed</param>
+    /// <param name="tmpPath">Directory where submodules can be cloned temporarily</param>
+    /// <param name="cancellationToken">Cancellation is safe with regards to git operations</param>
+    /// <returns>List of patch files that can be applied on the VMR</returns>
+    public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
         string sha1,
         string sha2,
-        string destPath,
+        string destDir,
+        string tmpPath,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Creating diff in {path}..", destPath);
+        _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
-        var args = new List<string>
+        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
+
+        _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
+
+        return patches;
+    }
+
+    private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
+        SourceMapping mapping,
+        string repoPath,
+        string sha1,
+        string sha2,
+        string destDir,
+        string tmpPath,
+        string relativePath,
+        CancellationToken cancellationToken)
+    {
+        if (repoPath.EndsWith(".git"))
         {
-            "diff",
-            "--patch",
-            "--binary", // Include binary contents as base64
-            "--output", // Store the diff in a .patch file
-            destPath,
-            $"{sha1}..{sha2}",
-            "--",
+            repoPath = _fileSystem.GetDirectoryName(repoPath)!;
+        }
+
+        var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
+        var patches = new List<VmrIngestionPatch>
+        {
+            new(patchName, relativePath)
         };
+
+        List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
 
         if (!mapping.Include.Any())
         {
@@ -81,63 +121,139 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
         }
 
-        if (repoPath.EndsWith(".git"))
+        var args = new List<string>
         {
-            repoPath = Path.GetDirectoryName(repoPath)!;
-        }
+            "diff",
+            "--patch",
+            "--binary", // Include binary contents as base64
+            "--output", // Store the diff in a .patch file
+            patchName,
+            $"{sha1}..{sha2}",
+            "--",
+        };
 
         args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{IgnoreAttribute}){p}"));
         args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{KeepAttribute}){p}"));
 
+        // Ignore submodules in the diff, they will be inlined via their own diffs
+        if (submoduleChanges.Any())
+        {
+            args.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
+        }
+
         // Other git commands are executed from whichever folder and use `-C [path to repo]` 
         // However, here we must execute in repo's dir because attribute filters work against the working tree
         // We also need to do call this from the repo root and not from repo/.git
-        var result = await _processManager.Execute(
-            _processManager.GitExecutable,
+        var result = await _processManager.ExecuteGit(
+            repoPath,
             args,
-            workingDir: repoPath,
             cancellationToken: cancellationToken);
 
         result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
 
         _logger.LogDebug("{output}", result.ToString());
 
-        args = new List<string>
+        var countArgs = new[]
         {
             "rev-list",
             "--count",
             $"{sha1}..{sha2}",
         };
 
-        var distance = (await _processManager.ExecuteGit(repoPath, args, cancellationToken)).StandardOutput.Trim();
+        var distance = (await _processManager.ExecuteGit(repoPath, countArgs, cancellationToken)).StandardOutput.Trim();
 
         _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
-            destPath, distance, distance == "1" ? string.Empty : "s", StringUtils.GetHumanReadableFileSize(destPath));
+            patchName,
+            distance == "0" ? "?" : distance,
+            distance == "1" ? string.Empty : "s",
+            StringUtils.GetHumanReadableFileSize(patchName));
+
+        if (!submoduleChanges.Any())
+        {
+            return patches;
+        }
+        
+        _logger.LogInformation("Creating diffs for submodules of {repo}..", mapping.Name);
+
+        foreach (var change in submoduleChanges)
+        {
+            if (change.Before == change.After)
+            {
+                _logger.LogInformation("No changes for submodule {submodule} of {repo}", change.Name, mapping.Name);
+                continue;
+            }
+
+            if (change.Before == Constants.EmptyGitObject)
+            {
+                _logger.LogInformation("New submodule {submodule} was added to {repo} at {path} @ {sha}",
+                    change.Name, mapping.Name, change.Path, Commit.GetShortSha(change.After));
+            }
+            else if (change.After == Constants.EmptyGitObject)
+            {
+                _logger.LogInformation("Submodule {submodule} of {repo} was removed",
+                    change.Name, mapping.Name);
+            }
+            else
+            {
+                _logger.LogInformation("Found changes for submodule {submodule} of {repo} ({sha1}..{sha2})",
+                    change.Name, mapping.Name, Commit.GetShortSha(change.Before), Commit.GetShortSha(change.After));
+            }
+
+            patches.AddRange(await GetPatchesForSubmoduleChange(
+                mapping,
+                destDir,
+                tmpPath,
+                relativePath,
+                change,
+                cancellationToken));
+
+            _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
+        }
+
+        return patches;
     }
 
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    /// <param name="mapping">Mapping</param>
-    /// <param name="patchPath">Path to the patch file with the diff</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    public async Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
+    public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
+        var info = _fileSystem.GetFileInfo(patch.Path);
+        if (!info.Exists)
+        {
+            _logger.LogError("Failed to find a patch which was expected at {path}", patch.Path);
+            return;
+        }
+
+        if (info.Length == 0)
+        {
+            _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
+            return;
+        }
+
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
             .Replace(_vmrInfo.VmrPath, null)
             .Replace("\\", "/")
             [1..];
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patchPath, destPath);
+        // When inlining submodules, we need to point the git apply there
+        if (destPath[^1] != '/')
+        {
+            destPath += '/';
+        }
+
+        destPath += patch.ApplicationPath;
+
+        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
-        Directory.CreateDirectory(destPath);
+        _fileSystem.CreateDirectory(destPath);
 
-        IEnumerable<string> args = new[]
+        var args = new[]
         {
             "apply",
 
@@ -155,21 +271,33 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--directory",
             destPath,
 
-            patchPath,
+            patch.Path,
         };
 
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
-
+        
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
-        // This will end up having the working tree all staged
+        // This will end up having the working tree match what is staged
         _logger.LogInformation("Resetting the working tree...");
         args = new[] { "checkout", destPath };
         result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed($"Failed to clean the working tree");
-        _logger.LogDebug("{output}", result.ToString());
+
+        if (result.Succeeded)
+        {
+            _logger.LogDebug("{output}", result.ToString());
+            return;
+        }
+
+        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+        // We can just remove the working tree folder then
+        if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
+        {
+            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
+            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, destPath), true);
+        }
     }
 
     /// <summary>
@@ -192,8 +320,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
 
-        var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
-        localRepo.Checkout(clonePath, originalRevision);
+        _localGitRepo.Checkout(clonePath, originalRevision);
 
         var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
 
@@ -204,23 +331,22 @@ public class VmrPatchHandler : IVmrPatchHandler
             foreach (var patchedFile in await GetFilesInPatch(clonePath, patch, cancellationToken))
             {
                 // git always works with forward slashes (even on Windows)
-                string relativePath = Path.DirectorySeparatorChar != '/'
-                    ? patchedFile.Replace('/', Path.DirectorySeparatorChar)
+                string relativePath = _fileSystem.DirectorySeparatorChar != '/'
+                    ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
                     : patchedFile;
 
-                var originalFile = Path.Combine(clonePath, relativePath);
-                var destination = Path.Combine(repoSourcesPath, relativePath);
+                var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
+                var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
 
                 _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
 
                 // Copy old revision to VMR
-                File.Copy(originalFile, destination, overwrite: true);
+                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
             }
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        using var repository = new Repository(_vmrInfo.VmrPath);
-        Commands.Stage(repository, repoSourcesPath);
+        _localGitRepo.Stage(_vmrInfo.VmrPath, repoSourcesPath);
 
         _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
     }
@@ -244,7 +370,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, patchFile, cancellationToken);
+            await ApplyPatch(mapping, new(patchFile, string.Empty), cancellationToken);
         }
     }
 
@@ -270,5 +396,162 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         return files;
+    }
+
+    /// <summary>
+    /// Finds all changes that happened for submodules between given commits.
+    /// </summary>
+    /// <param name="repoPath">Path to the local git repository</param>
+    /// <returns>A pair of submodules (state in SHA1, state in SHA2) where additions/removals are marked by EmptyGitObject</returns>
+    private List<SubmoduleChange> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
+    {
+        List<GitSubmoduleInfo> submodulesBefore = _localGitRepo.GetGitSubmodules(repoPath, sha1);
+        List<GitSubmoduleInfo> submodulesAfter = _localGitRepo.GetGitSubmodules(repoPath, sha2);
+
+        var submodulePaths = submodulesBefore
+            .Concat(submodulesAfter)
+            .Select(s => s.Path)
+            .Distinct();
+
+        var submoduleChanges = new List<SubmoduleChange>();
+
+        // Pair submodule state from sha1 and sha2
+        // When submodule is added/removed, signal this with well known zero commit
+        foreach (string path in submodulePaths)
+        {
+            GitSubmoduleInfo? before = submodulesBefore.FirstOrDefault(s => s.Path == path);
+            GitSubmoduleInfo? after = submodulesAfter.FirstOrDefault(s => s.Path == path);
+
+            // Submodule was added
+            if (before is null && after is not null)
+            {
+                submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+                continue;
+            }
+
+            // Submodule was removed
+            if (before is not null && after is null)
+            {
+                submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+                continue;
+            }
+
+            // When submodule points to some new remote, we have to break it down to 2 changes: remove the old, add the new
+            // (this is what happened in the remote repo)
+            if (before!.Url != after!.Url)
+            {
+                submoduleChanges.Add(new(before.Name, path, before.Url, before.Commit, Constants.EmptyGitObject));
+                submoduleChanges.Add(new(after.Name, path, after.Url, Constants.EmptyGitObject, after.Commit));
+                continue;
+            }
+
+            // Submodule was not changed or points to a new commit
+            // We want to include it both ways though as we need to ignore it when diffing
+            submoduleChanges.Add(new(after.Name, path, after.Url, before.Commit, after.Commit));
+        }
+
+        return submoduleChanges;
+    }
+
+    /// <summary>
+    /// Creates and returns path to patch files that inline all submodules recursively.
+    /// </summary>
+    /// <param name="mapping">Mapping for the current repo/submodule</param>
+    /// <param name="destDir">Directory where patches should be placed</param>
+    /// <param name="tmpPath">Directory where submodules can be cloned temporarily</param>
+    /// <param name="relativePath">Relative path where the currently processed repo/submodule is</param>
+    /// <param name="change">Change in the submodule that the patches will be created for</param>
+    /// <param name="cancellationToken">Cancellation is safe with regards to git operations</param>
+    /// <returns>List of patch files with relatives path respective to the VMR</returns>
+    private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
+        SourceMapping mapping,
+        string destDir,
+        string tmpPath,
+        string relativePath,
+        SubmoduleChange change,
+        CancellationToken cancellationToken)
+    {
+        var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
+
+        // Clone path of submodules needs to be derived from the URL
+        // We can't use the path from the submodule as we could be changing the remote of the submodule
+        var urlHash = CreateMD5(change.Url);
+        var clonePath = _fileSystem.PathCombine(tmpPath, urlHash);
+        await CloneOrFetch(change.Url, checkoutCommit, clonePath);
+
+        // We are only interested in filters specific to submodule's path
+        ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
+        {
+            return filters
+                .Where(p => p.StartsWith(change.Path))
+                .Select(p => p[change.Path.Length..].TrimStart('/'))
+                .ToImmutableArray();
+        }
+
+        static string SanitizeName(string mappingName)
+        {
+            mappingName = mappingName.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)[^1];
+
+            if (mappingName.EndsWith(".git"))
+            {
+                mappingName = mappingName[..^4];
+            }
+            
+            return mappingName;
+        }
+
+        var submoduleMapping = new SourceMapping(
+            SanitizeName(change.Name),
+            change.Url,
+            change.Before,
+            GetSubmoduleFilters(mapping.Include),
+            GetSubmoduleFilters(mapping.Exclude),
+            Array.Empty<string>());
+
+        var submodulePath = change.Path;
+        if (!string.IsNullOrEmpty(relativePath))
+        {
+            submodulePath = relativePath + '/' + submodulePath;
+        }
+
+        return await CreatePatchesRecursive(
+            submoduleMapping,
+            clonePath,
+            change.Before,
+            change.After,
+            destDir,
+            tmpPath,
+            submodulePath,
+            cancellationToken);
+    }
+
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
+    private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
+    {
+        if (_fileSystem.DirectoryExists(destPath))
+        {
+            _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
+
+            _localGitRepo.Checkout(destPath, checkoutRef);
+
+            var result = await _processManager.ExecuteGit(destPath, "fetch", "--all");
+            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {destPath}");
+            _logger.LogDebug("{output}", result.ToString());
+
+            return;
+        }
+
+        var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
+        remoteRepo.Clone(repoUri, checkoutRef, destPath, checkoutSubmodules: false, null);
+    }
+
+    private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
+
+    public static string CreateMD5(string input)
+    {
+        using var md5 = MD5.Create();
+        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+        byte[] hashBytes = md5.ComputeHash(inputBytes);
+        return Convert.ToHexString(hashBytes);
     }
 }

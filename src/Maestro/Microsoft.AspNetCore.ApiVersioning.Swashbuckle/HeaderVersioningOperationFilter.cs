@@ -10,42 +10,41 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
+namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+
+[UsedImplicitly(ImplicitUseKindFlags.InstantiatedWithFixedConstructorSignature)]
+internal class HeaderVersioningOperationFilter : IOperationFilter
 {
-    [UsedImplicitly(ImplicitUseKindFlags.InstantiatedWithFixedConstructorSignature)]
-    internal class HeaderVersioningOperationFilter : IOperationFilter
+    private readonly HeaderVersioningScheme _scheme;
+
+    public HeaderVersioningOperationFilter(HeaderVersioningScheme scheme)
     {
-        private readonly HeaderVersioningScheme _scheme;
+        _scheme = scheme;
+    }
 
-        public HeaderVersioningOperationFilter(HeaderVersioningScheme scheme)
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    {
+        string version = context.ApiDescription.ActionDescriptor.RouteValues["version"];
+        if (operation.Parameters == null)
         {
-            _scheme = scheme;
+            operation.Parameters = new List<OpenApiParameter>();
         }
 
-        public void Apply(OpenApiOperation operation, OperationFilterContext context)
-        {
-            string version = context.ApiDescription.ActionDescriptor.RouteValues["version"];
-            if (operation.Parameters == null)
+        operation.Parameters.Add(
+            new OpenApiParameter
             {
-                operation.Parameters = new List<OpenApiParameter>();
-            }
-
-            operation.Parameters.Add(
-                new OpenApiParameter
+                In = ParameterLocation.Header,
+                Name = _scheme.HeaderName,
+                Description = "The api version",
+                Required = true,
+                Schema = new OpenApiSchema
                 {
-                    In = ParameterLocation.Header,
-                    Name = _scheme.HeaderName,
-                    Description = "The api version",
-                    Required = true,
-                    Schema = new OpenApiSchema
+                    Type = "string",
+                    Enum = new List<IOpenApiAny>
                     {
-                        Type = "string",
-                        Enum = new List<IOpenApiAny>
-                        {
-                            new OpenApiString(version)
-                        },
+                        new OpenApiString(version)
                     },
-                });
-        }
+                },
+            });
     }
 }

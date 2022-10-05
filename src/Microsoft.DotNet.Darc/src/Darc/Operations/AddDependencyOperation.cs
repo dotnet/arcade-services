@@ -10,50 +10,49 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class AddDependencyOperation : Operation
 {
-    internal class AddDependencyOperation : Operation
+    AddDependencyCommandLineOptions _options;
+    public AddDependencyOperation(AddDependencyCommandLineOptions options)
+        : base(options)
     {
-        AddDependencyCommandLineOptions _options;
-        public AddDependencyOperation(AddDependencyCommandLineOptions options)
-            : base(options)
+        _options = options;
+    }
+
+    public override async Task<int> ExecuteAsync()
+    {
+        DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
+
+        Local local = new Local(Logger);
+
+        DependencyDetail dependency = new DependencyDetail
         {
-            _options = options;
+            Name = _options.Name,
+            Version = _options.Version ?? string.Empty,
+            RepoUri = _options.RepoUri ?? string.Empty,
+            Commit = _options.Commit ?? string.Empty,
+            CoherentParentDependencyName = _options.CoherentParentDependencyName ?? string.Empty,
+            Pinned = _options.Pinned,
+            Type = type,
+        };
+
+        try
+        {
+            await local.AddDependencyAsync(dependency);
+            return Constants.SuccessCode;
         }
-
-        public override async Task<int> ExecuteAsync()
+        catch (FileNotFoundException exc)
         {
-            DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
-
-            Local local = new Local(Logger);
-
-            DependencyDetail dependency = new DependencyDetail
-            {
-                Name = _options.Name,
-                Version = _options.Version ?? string.Empty,
-                RepoUri = _options.RepoUri ?? string.Empty,
-                Commit = _options.Commit ?? string.Empty,
-                CoherentParentDependencyName = _options.CoherentParentDependencyName ?? string.Empty,
-                Pinned = _options.Pinned,
-                Type = type,
-            };
-
-            try
-            {
-                await local.AddDependencyAsync(dependency);
-                return Constants.SuccessCode;
-            }
-            catch (FileNotFoundException exc)
-            {
-                Logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
-                    "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
-                return Constants.ErrorCode;
-            }
-            catch (Exception exc)
-            {
-                Logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
-                return Constants.ErrorCode;
-            }
+            Logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
+                                 "included in https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
+            return Constants.ErrorCode;
+        }
+        catch (Exception exc)
+        {
+            Logger.LogError(exc, $"Failed to add dependency '{dependency.Name}' to repository.");
+            return Constants.ErrorCode;
         }
     }
 }

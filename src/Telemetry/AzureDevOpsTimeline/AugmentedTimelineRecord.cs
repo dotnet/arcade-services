@@ -4,14 +4,13 @@
 
 using Microsoft.DotNet.Internal.AzureDevOps;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.AzureDevOpsTimeline;
+
+public class AugmentedTimelineRecord
 {
-    public class AugmentedTimelineRecord
-    {
-        public int BuildId { get; init; }
-        public string TimelineId { get; init; }
-        public TimelineRecord Raw { get; init; }
-        public string AugmentedOrder { get; set; }
-        public string ImageName { get; set; }
-    }
+    public int BuildId { get; init; }
+    public string TimelineId { get; init; }
+    public TimelineRecord Raw { get; init; }
+    public string AugmentedOrder { get; set; }
+    public string ImageName { get; set; }
 }

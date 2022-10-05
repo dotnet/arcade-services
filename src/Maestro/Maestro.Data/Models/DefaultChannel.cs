@@ -7,52 +7,51 @@ using Microsoft.DotNet.Services.Utility;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public class DefaultChannel
 {
-    public class DefaultChannel
+    private string _repository;
+
+    public int Id { get; set; }
+
+    [StringLength(300)]
+    [Column(TypeName = "varchar(300)")]
+    [Required]
+    public string Repository
     {
-        private string _repository;
-
-        public int Id { get; set; }
-
-        [StringLength(300)]
-        [Column(TypeName = "varchar(300)")]
-        [Required]
-        public string Repository
+        get
         {
-            get
-            {
-                return AzureDevOpsClient.NormalizeUrl(_repository);
-            }
-
-            set
-            {
-                _repository = AzureDevOpsClient.NormalizeUrl(value);
-            }
+            return AzureDevOpsClient.NormalizeUrl(_repository);
         }
 
-        private string _branch;
-
-        [StringLength(100)]
-        [Column(TypeName = "varchar(100)")]
-        [Required]
-        public string Branch
+        set
         {
-            get
-            {
-                return GitHelpers.NormalizeBranchName(_branch);
-            }
-            set
-            {
-                _branch = GitHelpers.NormalizeBranchName(value);
-            }
+            _repository = AzureDevOpsClient.NormalizeUrl(value);
         }
-
-        [Required]
-        public int ChannelId { get; set; }
-
-        public bool Enabled { get; set; } = true;
-
-        public Channel Channel { get; set; }
     }
+
+    private string _branch;
+
+    [StringLength(100)]
+    [Column(TypeName = "varchar(100)")]
+    [Required]
+    public string Branch
+    {
+        get
+        {
+            return GitHelpers.NormalizeBranchName(_branch);
+        }
+        set
+        {
+            _branch = GitHelpers.NormalizeBranchName(value);
+        }
+    }
+
+    [Required]
+    public int ChannelId { get; set; }
+
+    public bool Enabled { get; set; } = true;
+
+    public Channel Channel { get; set; }
 }

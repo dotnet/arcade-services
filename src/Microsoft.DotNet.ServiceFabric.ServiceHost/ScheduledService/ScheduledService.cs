@@ -14,145 +14,144 @@ using Quartz;
 using Quartz.Impl;
 using Quartz.Simpl;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+internal class ScheduledService<TService>
 {
-    internal class ScheduledService<TService>
+    private readonly OperationManager _operations;
+    private readonly ILogger<ScheduledService<TService>> _logger;
+
+    public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
     {
-        private readonly OperationManager _operations;
-        private readonly ILogger<ScheduledService<TService>> _logger;
+        var provider = container.GetRequiredService<IServiceProvider>();
+        var scheduler = ActivatorUtilities.CreateInstance<ScheduledService<TService>>(provider);
+        await scheduler.RunAsync(cancellationToken);
+    }
 
-        public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
+    public ScheduledService(
+        OperationManager operations,
+        ILogger<ScheduledService<TService>> logger)
+    {
+        _operations = operations;
+        _logger = logger;
+    }
+
+    private IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(CancellationToken cancellationToken)
+    {
+        Type type = typeof(TService);
+
+        foreach (MethodInfo method in type.GetRuntimeMethods())
         {
-            var provider = container.GetRequiredService<IServiceProvider>();
-            var scheduler = ActivatorUtilities.CreateInstance<ScheduledService<TService>>(provider);
-            await scheduler.RunAsync(cancellationToken);
-        }
-
-        public ScheduledService(
-            OperationManager operations,
-            ILogger<ScheduledService<TService>> logger)
-        {
-            _operations = operations;
-            _logger = logger;
-        }
-
-        private IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(CancellationToken cancellationToken)
-        {
-            Type type = typeof(TService);
-
-            foreach (MethodInfo method in type.GetRuntimeMethods())
+            if (method.IsStatic)
             {
-                if (method.IsStatic)
-                {
-                    continue;
-                }
-
-                if (method.GetParameters().Length > 1)
-                {
-                    continue;
-                }
-
-                if (method.ReturnType != typeof(Task))
-                {
-                    continue;
-                }
-
-                var attr = method.GetCustomAttribute<CronScheduleAttribute>();
-                if (attr == null)
-                {
-                    continue;
-                }
-
-                IJobDetail job = JobBuilder.Create<FuncInvokingJob>()
-                    .WithIdentity(method.Name, type.Name)
-                    .UsingJobData(new JobDataMap
-                    {
-                        ["func"] = (Func<Task>) (() => InvokeMethodAsync(method, cancellationToken)),
-                    })
-                    .Build();
-
-                TimeZoneInfo scheduleTimeZone = TimeZoneInfo.Utc;
-
-                try
-                {
-                    scheduleTimeZone = TimeZoneInfo.FindSystemTimeZoneById(attr.TimeZone);
-                }
-                catch (TimeZoneNotFoundException)
-                {
-                    _logger.LogWarning(
-                        "TimeZoneNotFoundException occurred for timezone string: {requestedTimeZoneName}",
-                        attr.TimeZone);
-                }
-                catch (InvalidTimeZoneException)
-                {
-                    _logger.LogWarning(
-                        "InvalidTimeZoneException occurred for timezone string: {requestedTimeZoneName}",
-                        attr.TimeZone);
-                }
-
-                ITrigger trigger = TriggerBuilder.Create()
-                    .WithIdentity(method.Name + "-Trigger", type.Name)
-                    .WithCronSchedule(attr.Schedule, schedule => schedule.InTimeZone(scheduleTimeZone))
-                    .StartNow()
-                    .Build();
-
-                yield return (job, trigger);
+                continue;
             }
-        }
 
-        private async Task InvokeMethodAsync(MethodInfo method, CancellationToken cancellationToken)
-        {
-            using (Operation op = _operations.BeginOperation("Invoking scheduled method {scheduledMethod}", method.ToString()))
+            if (method.GetParameters().Length > 1)
             {
-                try
-                {
-                    var impl = op.ServiceProvider.GetService<TService>();
-                    var parameters = method.GetParameters();
-                    Task result;
-                    if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
-                    {
-                        result = (Task) method.Invoke(impl, new object[] {cancellationToken})!;
-                    }
-                    else
-                    {
-                        result = (Task) method.Invoke(impl, Array.Empty<object>())!;
-                    }
-
-                    await result;
-                }
-                catch (OperationCanceledException ocex) when (ocex.CancellationToken == cancellationToken)
-                {
-                    //ignore
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogCritical(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
-                }
+                continue;
             }
-        }
 
-        private async Task RunAsync(CancellationToken cancellationToken)
-        {
-            IScheduler scheduler = null;
-            var name = Guid.NewGuid().ToString();
+            if (method.ReturnType != typeof(Task))
+            {
+                continue;
+            }
+
+            var attr = method.GetCustomAttribute<CronScheduleAttribute>();
+            if (attr == null)
+            {
+                continue;
+            }
+
+            IJobDetail job = JobBuilder.Create<FuncInvokingJob>()
+                .WithIdentity(method.Name, type.Name)
+                .UsingJobData(new JobDataMap
+                {
+                    ["func"] = (Func<Task>) (() => InvokeMethodAsync(method, cancellationToken)),
+                })
+                .Build();
+
+            TimeZoneInfo scheduleTimeZone = TimeZoneInfo.Utc;
+
             try
             {
-                DirectSchedulerFactory.Instance.CreateScheduler(name, name, new DefaultThreadPool(), new RAMJobStore());
-                scheduler = await DirectSchedulerFactory.Instance.GetScheduler(name, cancellationToken);
-                foreach ((IJobDetail job, ITrigger trigger) in GetCronJobs(cancellationToken))
+                scheduleTimeZone = TimeZoneInfo.FindSystemTimeZoneById(attr.TimeZone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                _logger.LogWarning(
+                    "TimeZoneNotFoundException occurred for timezone string: {requestedTimeZoneName}",
+                    attr.TimeZone);
+            }
+            catch (InvalidTimeZoneException)
+            {
+                _logger.LogWarning(
+                    "InvalidTimeZoneException occurred for timezone string: {requestedTimeZoneName}",
+                    attr.TimeZone);
+            }
+
+            ITrigger trigger = TriggerBuilder.Create()
+                .WithIdentity(method.Name + "-Trigger", type.Name)
+                .WithCronSchedule(attr.Schedule, schedule => schedule.InTimeZone(scheduleTimeZone))
+                .StartNow()
+                .Build();
+
+            yield return (job, trigger);
+        }
+    }
+
+    private async Task InvokeMethodAsync(MethodInfo method, CancellationToken cancellationToken)
+    {
+        using (Operation op = _operations.BeginOperation("Invoking scheduled method {scheduledMethod}", method.ToString()))
+        {
+            try
+            {
+                var impl = op.ServiceProvider.GetService<TService>();
+                var parameters = method.GetParameters();
+                Task result;
+                if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
                 {
-                    await scheduler.ScheduleJob(job, trigger, cancellationToken);
+                    result = (Task) method.Invoke(impl, new object[] {cancellationToken})!;
+                }
+                else
+                {
+                    result = (Task) method.Invoke(impl, Array.Empty<object>())!;
                 }
 
-                await scheduler.Start(cancellationToken);
-                await cancellationToken.AsTask();
+                await result;
             }
-            finally
+            catch (OperationCanceledException ocex) when (ocex.CancellationToken == cancellationToken)
             {
-                if (scheduler != null)
-                {
-                    await scheduler.Shutdown(true, CancellationToken.None);
-                }
+                //ignore
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
+            }
+        }
+    }
+
+    private async Task RunAsync(CancellationToken cancellationToken)
+    {
+        IScheduler scheduler = null;
+        var name = Guid.NewGuid().ToString();
+        try
+        {
+            DirectSchedulerFactory.Instance.CreateScheduler(name, name, new DefaultThreadPool(), new RAMJobStore());
+            scheduler = await DirectSchedulerFactory.Instance.GetScheduler(name, cancellationToken);
+            foreach ((IJobDetail job, ITrigger trigger) in GetCronJobs(cancellationToken))
+            {
+                await scheduler.ScheduleJob(job, trigger, cancellationToken);
+            }
+
+            await scheduler.Start(cancellationToken);
+            await cancellationToken.AsTask();
+        }
+        finally
+        {
+            if (scheduler != null)
+            {
+                await scheduler.Shutdown(true, CancellationToken.None);
             }
         }
     }

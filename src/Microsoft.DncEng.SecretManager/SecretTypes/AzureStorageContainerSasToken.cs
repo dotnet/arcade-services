@@ -3,27 +3,26 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
 
-namespace Microsoft.DncEng.SecretManager.SecretTypes
-{
-    [Name("azure-storage-container-sas-token")]
-    public class AzureStorageContainerSasToken : SecretType<AzureStorageContainerSasUri.Parameters>
-    {        
-        private readonly ISystemClock _clock;
+namespace Microsoft.DncEng.SecretManager.SecretTypes;
 
-        public AzureStorageContainerSasToken(ISystemClock clock)
-        {
-            _clock = clock;
-        }
+[Name("azure-storage-container-sas-token")]
+public class AzureStorageContainerSasToken : SecretType<AzureStorageContainerSasUri.Parameters>
+{        
+    private readonly ISystemClock _clock;
 
-        protected override async Task<SecretData> RotateValue(AzureStorageContainerSasUri.Parameters parameters, RotationContext context, CancellationToken cancellationToken)
-        {            
-            DateTimeOffset expiresOn = _clock.UtcNow.AddMonths(1);
-            DateTimeOffset nextRotationOn = _clock.UtcNow.AddDays(15);
+    public AzureStorageContainerSasToken(ISystemClock clock)
+    {
+        _clock = clock;
+    }
 
-            string connectionString = await context.GetSecretValue(parameters.ConnectionString);
-            (string containerUri, string sas) containerUriAndSas = StorageUtils.GenerateBlobContainerSas(connectionString, parameters.Container, parameters.Permissions, expiresOn);
+    protected override async Task<SecretData> RotateValue(AzureStorageContainerSasUri.Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+    {            
+        DateTimeOffset expiresOn = _clock.UtcNow.AddMonths(1);
+        DateTimeOffset nextRotationOn = _clock.UtcNow.AddDays(15);
 
-            return new SecretData(containerUriAndSas.sas, expiresOn, nextRotationOn);
-        }
+        string connectionString = await context.GetSecretValue(parameters.ConnectionString);
+        (string containerUri, string sas) containerUriAndSas = StorageUtils.GenerateBlobContainerSas(connectionString, parameters.Container, parameters.Permissions, expiresOn);
+
+        return new SecretData(containerUriAndSas.sas, expiresOn, nextRotationOn);
     }
 }

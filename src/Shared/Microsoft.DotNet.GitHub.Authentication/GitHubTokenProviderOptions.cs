@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication;
+
+public class GitHubTokenProviderOptions
 {
-    public class GitHubTokenProviderOptions
-    {
-        public string PrivateKey { get; set; }
-        public int GitHubAppId { get; set; }
-    }
+    public string PrivateKey { get; set; }
+    public int GitHubAppId { get; set; }
 }

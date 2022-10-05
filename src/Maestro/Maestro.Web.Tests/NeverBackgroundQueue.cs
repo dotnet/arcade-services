@@ -6,13 +6,12 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
-namespace Maestro.Web.Tests
+namespace Maestro.Web.Tests;
+
+public class NeverBackgroundQueue : IBackgroundQueue
 {
-    public class NeverBackgroundQueue : IBackgroundQueue
+    public void Post<T>(JToken args) where T : IBackgroundWorkItem
     {
-        public void Post<T>(JToken args) where T : IBackgroundWorkItem
-        {
-            TestContext.WriteLine($"Denying background call: {typeof(T).Name}({args.ToString(Formatting.None)})");
-        }
+        TestContext.WriteLine($"Denying background call: {typeof(T).Name}({args.ToString(Formatting.None)})");
     }
 }

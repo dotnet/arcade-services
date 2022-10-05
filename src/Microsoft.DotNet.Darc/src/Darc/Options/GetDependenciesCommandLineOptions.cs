@@ -5,17 +5,16 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
-{
-    [Verb("get-dependencies", HelpText = "Get local dependencies.")]
-    internal class GetDependenciesCommandLineOptions : CommandLineOptions
-    {
-        [Option('n', "name", HelpText = "Name of dependency to query for.")]
-        public string Name { get; set; }
+namespace Microsoft.DotNet.Darc.Options;
 
-        public override Operation GetOperation()
-        {
-            return new GetDependenciesOperation(this);
-        }
+[Verb("get-dependencies", HelpText = "Get local dependencies.")]
+internal class GetDependenciesCommandLineOptions : CommandLineOptions
+{
+    [Option('n', "name", HelpText = "Name of dependency to query for.")]
+    public string Name { get; set; }
+
+    public override Operation GetOperation()
+    {
+        return new GetDependenciesOperation(this);
     }
 }

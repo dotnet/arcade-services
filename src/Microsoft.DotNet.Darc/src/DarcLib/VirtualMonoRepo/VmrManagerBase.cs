@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -23,9 +22,9 @@ public abstract class VmrManagerBase : IVmrManager
     protected const string HEAD = "HEAD";
 
     private readonly IVmrDependencyTracker _dependencyInfo;
-    private readonly IVmrPatchHandler _patchHandler;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly ILocalGitRepo _localGitRepo;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
     
@@ -35,22 +34,23 @@ public abstract class VmrManagerBase : IVmrManager
 
     protected VmrManagerBase(
         IVmrDependencyTracker dependencyInfo,
-        IVmrPatchHandler patchHandler,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         string tmpPath)
     {
         _logger = logger;
         _dependencyInfo = dependencyInfo;
-        _patchHandler = patchHandler;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
+        _localGitRepo = localGitRepo;
         _versionDetailsParser = versionDetailsParser;
         _tmpPath = tmpPath;
     }
 
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote.Clone
     /// <summary>
     /// Prepares a clone of given git repository either by cloning it to temp or if exists, pulling the newest changes.
     /// </summary>
@@ -63,8 +63,7 @@ public abstract class VmrManagerBase : IVmrManager
         {
             _logger.LogInformation("Clone of {repo} found, pulling new changes...", mapping.DefaultRemote);
 
-            var localRepo = new LocalGitClient(_processManager.GitExecutable, _logger);
-            localRepo.Checkout(clonePath, mapping.DefaultRef);
+            _localGitRepo.Checkout(clonePath, mapping.DefaultRef);
 
             var result = await _processManager.ExecuteGit(clonePath, "pull");
             result.ThrowIfFailed($"Failed to pull new changes from {mapping.DefaultRemote} into {clonePath}");
@@ -79,61 +78,6 @@ public abstract class VmrManagerBase : IVmrManager
         return clonePath;
     }
 
-    /// <summary>
-    /// Gets information about submodules from individual repos and compiles a .gitmodules file for the VMR.
-    /// We also need to replace the submodule paths with the src/[repo] prefixes.
-    /// The .gitmodules file is only relevant in the root of the repo. We can leave the old files behind.
-    /// The information about the commit the submodule is referencing is stored in the git tree.
-    /// </summary>
-    protected async Task UpdateGitmodules(CancellationToken cancellationToken)
-    {
-        const string gitmodulesFileName = ".gitmodules";
-
-        _logger.LogInformation("Updating .gitmodules file..");
-
-        // Matches the 'path = ' setting from the .gitmodules file so that we can prefix it
-        var pathSettingRegex = new Regex(@"(\bpath[ \t]*\=[ \t]*\b)");
-
-        using (var vmrGitmodule = File.Open(Path.Combine(_dependencyInfo.VmrPath, gitmodulesFileName), FileMode.Create))
-        using (var writer = new StreamWriter(vmrGitmodule) { NewLine = "\n" })
-        {
-            foreach (var mapping in Mappings)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var repoGitmodulePath = Path.Combine(_dependencyInfo.GetRepoSourcesPath(mapping), gitmodulesFileName);
-                if (!File.Exists(repoGitmodulePath))
-                {
-                    continue;
-                }
-
-                _logger.LogDebug("Copying .gitmodules from {repo}..", mapping.Name);
-
-                // Header for the repo
-                await writer.WriteAsync("# ");
-                await writer.WriteLineAsync(mapping.Name);
-                await writer.WriteLineAsync();
-
-                // Copy contents
-                var content = await File.ReadAllTextAsync(repoGitmodulePath, cancellationToken);
-
-                // Add src/[repo]/ prefixes to paths
-                content = pathSettingRegex
-                    .Replace(content, $"$1{VmrDependencyTracker.VmrSourcesDir}/{mapping.Name}/")
-                    .Replace("\r\n", "\n");
-
-                await writer.WriteAsync(content);
-
-                // Add some spacing
-                await writer.WriteLineAsync();
-                await writer.WriteLineAsync();
-            }
-        }
-
-        (await _processManager.ExecuteGit(_dependencyInfo.VmrPath, new[] { "add", gitmodulesFileName }, cancellationToken))
-            .ThrowIfFailed("Failed to stage the .gitmodules file!");
-    }
-
     protected void Commit(string commitMessage, Signature author)
     {
         _logger.LogInformation("Committing..");
@@ -142,7 +86,7 @@ public abstract class VmrManagerBase : IVmrManager
         using var repository = new Repository(_dependencyInfo.VmrPath);
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
-        _logger.LogInformation("Created {sha} in {duration} seconds", ShortenId(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
+        _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -180,8 +124,6 @@ public abstract class VmrManagerBase : IVmrManager
         return result;
     }
 
-    protected string GetPatchFilePath(SourceMapping mapping) => Path.Combine(_tmpPath, $"{mapping.Name}.patch");
-
     protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
 
     /// <summary>
@@ -205,8 +147,8 @@ public abstract class VmrManagerBase : IVmrManager
             { "remote", mapping.DefaultRemote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? string.Empty : ShortenId(oldSha) },
-            { "newShaShort", newSha is null ? string.Empty : ShortenId(newSha) },
+            { "oldShaShort", oldSha is null ? string.Empty : DarcLib.Commit.GetShortSha(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : DarcLib.Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
         };
 
@@ -228,6 +170,4 @@ public abstract class VmrManagerBase : IVmrManager
     }
 
     protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
-
-    protected static string ShortenId(string commitSha) => commitSha[..7];
 }

@@ -4,14 +4,13 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.Monitoring.Sdk
+namespace Microsoft.DotNet.Monitoring.Sdk;
+
+internal static class PolyFill
 {
-    internal static class PolyFill
+    public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> pair, out TKey key, out TValue value)
     {
-        public static void Deconstruct<TKey, TValue>(this KeyValuePair<TKey, TValue> pair, out TKey key, out TValue value)
-        {
-            key = pair.Key;
-            value = pair.Value;
-        }
+        key = pair.Key;
+        value = pair.Value;
     }
 }

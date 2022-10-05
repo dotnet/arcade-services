@@ -5,22 +5,21 @@
 using Microsoft.DotNet.Internal.AzureDevOps;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests
+namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests;
+
+public class BuildAndTimeline
 {
-    public class BuildAndTimeline
+    public Build Build { get; }
+    public IList<Timeline> Timelines { get; } = new List<Timeline>();
+
+    public BuildAndTimeline(Build build)
     {
-        public Build Build { get; }
-        public IList<Timeline> Timelines { get; } = new List<Timeline>();
+        Build = build;
+    }
 
-        public BuildAndTimeline(Build build)
-        {
-            Build = build;
-        }
-
-        public BuildAndTimeline(Build build, IList<Timeline> timelines)
-        {
-            Build = build;
-            Timelines = timelines;
-        }
+    public BuildAndTimeline(Build build, IList<Timeline> timelines)
+    {
+        Build = build;
+        Timelines = timelines;
     }
 }

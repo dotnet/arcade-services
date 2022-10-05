@@ -5,10 +5,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public interface IExternalHealthReporter : IHealthReporter
 {
-    public interface IExternalHealthReporter : IHealthReporter
-    {
-        Task<IList<HealthReport>> GetServiceStatusAsync();
-    }
+    Task<IList<HealthReport>> GetServiceStatusAsync();
 }

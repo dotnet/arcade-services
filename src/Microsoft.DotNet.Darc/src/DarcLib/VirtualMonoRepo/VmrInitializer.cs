@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,19 +33,23 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrPatchHandler _patchHandler;
     private readonly ILogger<VmrUpdater> _logger;
 
+    private readonly string _tmpPath;
+
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
         IVmrPatchHandler patchHandler,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
+        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
     {
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _logger = logger;
+        _tmpPath = configuration.TmpPath;
     }
 
     public async Task InitializeRepository(
@@ -67,21 +72,27 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
-        string patchPath = GetPatchFilePath(mapping);
-        await _patchHandler.CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
+        var patches = await _patchHandler.CreatePatches(
+            mapping,
+            clonePath,
+            Constants.EmptyGitObject,
+            commit.Id.Sha,
+            _tmpPath,
+            _tmpPath,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var patch in patches)
+        {
+            await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
         Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await UpdateGitmodules(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)

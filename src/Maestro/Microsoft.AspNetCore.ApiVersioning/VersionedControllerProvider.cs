@@ -12,92 +12,91 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.AspNetCore.ApiVersioning
+namespace Microsoft.AspNetCore.ApiVersioning;
+
+[PublicAPI]
+public class VersionedControllerProvider
 {
-    [PublicAPI]
-    public class VersionedControllerProvider
+    public VersionedControllerProvider(
+        ApplicationPartManager manager,
+        ILogger<VersionedControllerProvider> logger,
+        IOptions<ApiVersioningOptions> optionsAccessor)
     {
-        public VersionedControllerProvider(
-            ApplicationPartManager manager,
-            ILogger<VersionedControllerProvider> logger,
-            IOptions<ApiVersioningOptions> optionsAccessor)
+        Options = optionsAccessor.Value;
+        if (Options.GetVersion == null)
         {
-            Options = optionsAccessor.Value;
-            if (Options.GetVersion == null)
-            {
-                throw new InvalidOperationException("ApiVersioningOptions.GetVersion must be set.");
-            }
-
-            Logger = logger;
-            var controllerFeature = new ControllerFeature();
-            manager.PopulateFeature(controllerFeature);
-            Versions = GetVersions(controllerFeature.Controllers);
+            throw new InvalidOperationException("ApiVersioningOptions.GetVersion must be set.");
         }
 
-        private ILogger<VersionedControllerProvider> Logger { get; }
+        Logger = logger;
+        var controllerFeature = new ControllerFeature();
+        manager.PopulateFeature(controllerFeature);
+        Versions = GetVersions(controllerFeature.Controllers);
+    }
 
-        public ApiVersioningOptions Options { get; }
+    private ILogger<VersionedControllerProvider> Logger { get; }
 
-        public IReadOnlyDictionary<string, IReadOnlyDictionary<string, TypeInfo>> Versions { get; }
+    public ApiVersioningOptions Options { get; }
 
-        private IReadOnlyDictionary<string, IReadOnlyDictionary<string, TypeInfo>> GetVersions(
-            IList<TypeInfo> controllerTypes)
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, TypeInfo>> Versions { get; }
+
+    private IReadOnlyDictionary<string, IReadOnlyDictionary<string, TypeInfo>> GetVersions(
+        IList<TypeInfo> controllerTypes)
+    {
+        List<string> versionList = controllerTypes.Select(Options.GetVersion)
+            .Where(v => v != null)
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+        var versions =
+            new Dictionary<string, IReadOnlyDictionary<string, TypeInfo>>(StringComparer.OrdinalIgnoreCase);
+        foreach (string version in versionList)
         {
-            List<string> versionList = controllerTypes.Select(Options.GetVersion)
-                .Where(v => v != null)
-                .Distinct()
-                .OrderBy(v => v)
-                .ToList();
-            var versions =
-                new Dictionary<string, IReadOnlyDictionary<string, TypeInfo>>(StringComparer.OrdinalIgnoreCase);
-            foreach (string version in versionList)
-            {
-                Dictionary<string, TypeInfo> controllers = GetControllersForVersion(version, controllerTypes);
-                versions[version] = controllers;
-            }
+            Dictionary<string, TypeInfo> controllers = GetControllersForVersion(version, controllerTypes);
+            versions[version] = controllers;
+        }
 
-            // Move controllers forward to latest versions if they aren't overridden
-            var currentControllers = new Dictionary<string, TypeInfo>(StringComparer.OrdinalIgnoreCase);
-            foreach (string version in versions.Keys.OrderBy(n => n))
+        // Move controllers forward to latest versions if they aren't overridden
+        var currentControllers = new Dictionary<string, TypeInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (string version in versions.Keys.OrderBy(n => n))
+        {
+            var currentVersion = (Dictionary<string, TypeInfo>) versions[version];
+            List<string> names = currentControllers.Keys.Concat(versions[version].Keys).Distinct().ToList();
+            foreach (string name in names)
             {
-                var currentVersion = (Dictionary<string, TypeInfo>) versions[version];
-                List<string> names = currentControllers.Keys.Concat(versions[version].Keys).Distinct().ToList();
-                foreach (string name in names)
+                if (currentVersion.ContainsKey(name))
                 {
-                    if (currentVersion.ContainsKey(name))
-                    {
-                        currentControllers[name] = currentVersion[name];
-                    }
-                    else if (currentControllers.ContainsKey(name) && !currentVersion.ContainsKey(name))
-                    {
-                        currentVersion[name] = currentControllers[name];
-                    }
+                    currentControllers[name] = currentVersion[name];
+                }
+                else if (currentControllers.ContainsKey(name) && !currentVersion.ContainsKey(name))
+                {
+                    currentVersion[name] = currentControllers[name];
                 }
             }
-
-            return versions;
         }
 
-        private Dictionary<string, TypeInfo> GetControllersForVersion(
-            string version,
-            IEnumerable<TypeInfo> apiControllerTypes)
-        {
-            var controllers = new Dictionary<string, TypeInfo>(StringComparer.OrdinalIgnoreCase);
-            // Find controllers in this version
-            foreach (TypeInfo controllerType in apiControllerTypes.Where(t => Options.GetVersion(t) == version))
-            {
-                string name = Options.GetName(controllerType);
-                if (controllers.ContainsKey(name))
-                {
-                    Logger.LogWarning(
-                        $"Skipped duplicate controller: '{controllerType.FullName}' because it has the same name as '{controllers[name].FullName}'");
-                    continue;
-                }
+        return versions;
+    }
 
-                controllers[name] = controllerType;
+    private Dictionary<string, TypeInfo> GetControllersForVersion(
+        string version,
+        IEnumerable<TypeInfo> apiControllerTypes)
+    {
+        var controllers = new Dictionary<string, TypeInfo>(StringComparer.OrdinalIgnoreCase);
+        // Find controllers in this version
+        foreach (TypeInfo controllerType in apiControllerTypes.Where(t => Options.GetVersion(t) == version))
+        {
+            string name = Options.GetName(controllerType);
+            if (controllers.ContainsKey(name))
+            {
+                Logger.LogWarning(
+                    $"Skipped duplicate controller: '{controllerType.FullName}' because it has the same name as '{controllers[name].FullName}'");
+                continue;
             }
 
-            return controllers;
+            controllers[name] = controllerType;
         }
+
+        return controllers;
     }
 }

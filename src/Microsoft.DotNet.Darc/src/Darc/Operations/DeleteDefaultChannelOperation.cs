@@ -11,43 +11,42 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
 {
-    internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
+    DeleteDefaultChannelCommandLineOptions _options;
+    public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
+        : base(options)
     {
-        DeleteDefaultChannelCommandLineOptions _options;
-        public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
-            : base(options)
+        _options = options;
+    }
+
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            _options = options;
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            DefaultChannel resolvedChannel = await ResolveSingleChannel();
+            if (resolvedChannel == null)
+            {
+                return Constants.ErrorCode;
+            }
+
+            await remote.DeleteDefaultChannelAsync(resolvedChannel.Id);
+
+            return Constants.SuccessCode;
         }
-
-        public override async Task<int> ExecuteAsync()
+        catch (AuthenticationException e)
         {
-            try
-            {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-                DefaultChannel resolvedChannel = await ResolveSingleChannel();
-                if (resolvedChannel == null)
-                {
-                    return Constants.ErrorCode;
-                }
-
-                await remote.DeleteDefaultChannelAsync(resolvedChannel.Id);
-
-                return Constants.SuccessCode;
-            }
-            catch (AuthenticationException e)
-            {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Error: Failed remove the default channel association.");
-                return Constants.ErrorCode;
-            }
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed remove the default channel association.");
+            return Constants.ErrorCode;
         }
     }
 }

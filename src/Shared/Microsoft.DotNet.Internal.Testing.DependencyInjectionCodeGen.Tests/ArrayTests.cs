@@ -8,37 +8,36 @@ using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
-{
-    public partial class ArrayTests
-    {
-        [TestDependencyInjectionSetup]
-        public static class TestDataConfiguration
-        {
-            public static Func<IServiceProvider, string[]> Values(
-                IServiceCollection collection,
-                string[] values)
-            {
-                return _ => values;
-            }
-        }
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests;
 
-        [Test]
-        public void Defaults()
+public partial class ArrayTests
+{
+    [TestDependencyInjectionSetup]
+    public static class TestDataConfiguration
+    {
+        public static Func<IServiceProvider, string[]> Values(
+            IServiceCollection collection,
+            string[] values)
         {
-            using TestData testData = TestData.Default.Build();
-            testData.Values.Should().BeNull();
+            return _ => values;
         }
+    }
+
+    [Test]
+    public void Defaults()
+    {
+        using TestData testData = TestData.Default.Build();
+        testData.Values.Should().BeNull();
+    }
         
-        [Test]
-        public void WithValue()
-        {
-            using TestData testData = TestData
-                .Default
-                .WithValues(new[] { "pizza", "banana" })
-                .Build();
-            testData.Values.Should().NotBeNull()
-                .And.BeEquivalentTo("pizza", "banana");
-        }
+    [Test]
+    public void WithValue()
+    {
+        using TestData testData = TestData
+            .Default
+            .WithValues(new[] { "pizza", "banana" })
+            .Build();
+        testData.Values.Should().NotBeNull()
+            .And.BeEquivalentTo("pizza", "banana");
     }
 }

@@ -9,26 +9,25 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public static class Extensions
 {
-    public static class Extensions
+    public static Task AsTask(this CancellationToken cancellationToken)
     {
-        public static Task AsTask(this CancellationToken cancellationToken)
+        if (!cancellationToken.CanBeCanceled)
         {
-            if (!cancellationToken.CanBeCanceled)
-            {
-                return Task.FromException(
-                    new ArgumentException("The passed in CancellationToken cannot be canceled", nameof(cancellationToken)));
-            }
-
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return Task.CompletedTask;
-            }
-
-            var tcs = new TaskCompletionSource<bool>();
-            cancellationToken.Register(s => ((TaskCompletionSource<bool>) s!).TrySetCanceled(cancellationToken), tcs);
-            return tcs.Task;
+            return Task.FromException(
+                new ArgumentException("The passed in CancellationToken cannot be canceled", nameof(cancellationToken)));
         }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource<bool>();
+        cancellationToken.Register(s => ((TaskCompletionSource<bool>) s!).TrySetCanceled(cancellationToken), tcs);
+        return tcs.Task;
     }
 }

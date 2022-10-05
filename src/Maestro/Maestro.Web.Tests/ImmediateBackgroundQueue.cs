@@ -8,21 +8,20 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
-namespace Maestro.Web.Tests
+namespace Maestro.Web.Tests;
+
+public class ImmediateBackgroundQueue : IBackgroundQueue
 {
-    public class ImmediateBackgroundQueue : IBackgroundQueue
+    private readonly IServiceProvider _services;
+
+    public ImmediateBackgroundQueue(IServiceProvider services)
     {
-        private readonly IServiceProvider _services;
+        _services = services;
+    }
 
-        public ImmediateBackgroundQueue(IServiceProvider services)
-        {
-            _services = services;
-        }
-
-        public void Post<T>(JToken args) where T : IBackgroundWorkItem
-        {
-            TestContext.WriteLine($"Immediate background call: {typeof(T).Name}({args.ToString(Formatting.None)})");
-            ActivatorUtilities.CreateInstance<T>(_services).ProcessAsync(args).GetAwaiter().GetResult();
-        }
+    public void Post<T>(JToken args) where T : IBackgroundWorkItem
+    {
+        TestContext.WriteLine($"Immediate background call: {typeof(T).Name}({args.ToString(Formatting.None)})");
+        ActivatorUtilities.CreateInstance<T>(_services).ProcessAsync(args).GetAwaiter().GetResult();
     }
 }

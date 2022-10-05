@@ -13,58 +13,57 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.Web.Pages
+namespace Maestro.Web.Pages;
+
+public class IndexModel : PageModel
 {
-    public class IndexModel : PageModel
+    public IWebHostEnvironment Environment { get; }
+
+    public IndexModel(IWebHostEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
     {
-        public IWebHostEnvironment Environment { get; }
+        Environment = environment;
+        InstrumentationKey = applicationInsightsOptions.Value.InstrumentationKey;
+    }
 
-        public IndexModel(IWebHostEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
+    public IReadOnlyList<(string name, string file)> Themes { get; private set; }
+    public string CurrentThemeFile { get; private set; }
+    public string InstrumentationKey { get; }
+
+    public PageResult OnGet()
+    {
+        Themes = GetThemes();
+        CurrentThemeFile = GetCurrentThemeFile();
+        return Page();
+    }
+
+    public IReadOnlyList<(string name, string file)> GetThemes()
+    {
+        var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
+        var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
+
+        return assets["styles"].ToObject<JArray>().Select(s => (s["name"].ToString(), s["file"].ToString())).ToList();
+    }
+
+    public string GetCurrentThemeFile()
+    {
+        var selectedThemeName = HttpContext.Request.Cookies["Maestro.Theme"];
+        var selectedTheme = Themes.FirstOrDefault(t => t.name == selectedThemeName);
+        if (selectedTheme.file == default)
         {
-            Environment = environment;
-            InstrumentationKey = applicationInsightsOptions.Value.InstrumentationKey;
+            selectedTheme = Themes.FirstOrDefault(t => t.name == "light");
         }
 
-        public IReadOnlyList<(string name, string file)> Themes { get; private set; }
-        public string CurrentThemeFile { get; private set; }
-        public string InstrumentationKey { get; }
+        return selectedTheme.file;
+    }
 
-        public PageResult OnGet()
-        {
-            Themes = GetThemes();
-            CurrentThemeFile = GetCurrentThemeFile();
-            return Page();
-        }
+    public HtmlString GetScriptBundles()
+    {
+        var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
+        var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
 
-        public IReadOnlyList<(string name, string file)> GetThemes()
-        {
-            var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
-            var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
+        var scripts = assets["scripts"].ToObject<JArray>()
+            .Select(s => $"<script type=\"text/javascript\" src=\"{s["file"]}\"></script>");
 
-            return assets["styles"].ToObject<JArray>().Select(s => (s["name"].ToString(), s["file"].ToString())).ToList();
-        }
-
-        public string GetCurrentThemeFile()
-        {
-            var selectedThemeName = HttpContext.Request.Cookies["Maestro.Theme"];
-            var selectedTheme = Themes.FirstOrDefault(t => t.name == selectedThemeName);
-            if (selectedTheme.file == default)
-            {
-                selectedTheme = Themes.FirstOrDefault(t => t.name == "light");
-            }
-
-            return selectedTheme.file;
-        }
-
-        public HtmlString GetScriptBundles()
-        {
-            var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
-            var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
-
-            var scripts = assets["scripts"].ToObject<JArray>()
-                .Select(s => $"<script type=\"text/javascript\" src=\"{s["file"]}\"></script>");
-
-            return new HtmlString(string.Join("", scripts));
-        }
+        return new HtmlString(string.Join("", scripts));
     }
 }
