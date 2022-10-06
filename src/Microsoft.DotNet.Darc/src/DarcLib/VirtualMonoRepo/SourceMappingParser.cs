@@ -37,6 +37,7 @@ public class SourceMappingParser : ISourceMappingParser
         {
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            ReadCommentHandling = JsonCommentHandling.Skip,
         };
 
         using var stream = File.Open(mappingFile.FullName, FileMode.Open);
