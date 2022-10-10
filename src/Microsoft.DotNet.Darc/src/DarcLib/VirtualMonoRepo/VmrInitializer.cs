@@ -2,8 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -59,12 +60,56 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
+        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
+
+        while (reposToUpdate.TryDequeue(out var repoToUpdate))
+        {
+            await InitializeRepository(repoToUpdate.mapping, repoToUpdate.targetRevision, repoToUpdate.targetVersion, cancellationToken);
+
+            // When initializing dependencies, we initialize always to the first version of the dependency we've seen
+            if (initializeDependencies)
+            {
+                var dependencies = await GetDependencies(repoToUpdate.mapping, cancellationToken);
+                foreach (var (dependency, dependencyMapping) in dependencies)
+                {
+                    if (reposToUpdate.Any(r => r.mapping.Name == dependency.Name))
+                    {
+                        // Repository is already queued for update, we prefer that version first
+                        continue;
+                    }
+
+                    if (Directory.Exists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
+                    {
+                        // Repository has already been initialized
+                        continue;
+                    }
+
+                    _logger.LogDebug("Detected dependency of {parent} - {repo} / {commit} ({version})",
+                        mapping.Name,
+                        dependencyMapping.Name,
+                        dependency.Commit,
+                        dependency.Version);
+
+                    reposToUpdate.Enqueue((dependencyMapping, dependency.Commit, dependency.Version));
+                }
+            }
+        }
+    }
+
+    private async Task InitializeRepository(
+        SourceMapping mapping,
+        string? targetRevision,
+        string? targetVersion,
+        CancellationToken cancellationToken,
+        string? fromRepo = null)
+    {
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
+        _logger.LogInformation("Initializing {name} at {revision} included by {parent}..", mapping.Name, targetRevision ?? mapping.DefaultRef, fromRepo ?? "__root");
 
         string clonePath = await CloneOrPull(mapping);
         cancellationToken.ThrowIfCancellationRequested();
@@ -100,29 +145,5 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", mapping.Name);
-
-        if (initializeDependencies)
-        {
-            await InitializeDependencies(mapping, cancellationToken);
-        }
-    }
-
-    private async Task InitializeDependencies(SourceMapping mapping, CancellationToken cancellationToken)
-    {
-        foreach (var (dependency, dependencyMapping) in await GetDependencies(mapping, cancellationToken))
-        {
-            if (Directory.Exists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
-            {
-                _logger.LogDebug("Dependency {repo} has already been initialized", dependencyMapping.Name);
-                continue;
-            }
-
-            _logger.LogInformation("Recursively initializing dependency {repo} / {commit} ({version})",
-                dependencyMapping.Name,
-                dependency.Commit,
-                dependency.Version);
-
-            await InitializeRepository(dependencyMapping, dependency.Commit, dependency.Version, true, cancellationToken);
-        }
     }
 }
