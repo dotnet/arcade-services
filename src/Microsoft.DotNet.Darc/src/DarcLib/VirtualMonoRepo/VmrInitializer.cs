@@ -104,15 +104,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         SourceMapping mapping,
         string? targetRevision,
         string? targetVersion,
-        CancellationToken cancellationToken,
-        string? fromRepo = null)
+        CancellationToken cancellationToken)
     {
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        _logger.LogInformation("Initializing {name} at {revision} included by {parent}..", mapping.Name, targetRevision ?? mapping.DefaultRef, fromRepo ?? "__root");
+        _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
         cancellationToken.ThrowIfCancellationRequested();
