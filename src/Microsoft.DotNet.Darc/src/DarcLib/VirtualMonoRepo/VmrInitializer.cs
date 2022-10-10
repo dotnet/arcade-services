@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,11 +62,22 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         CancellationToken cancellationToken)
     {
+        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
+        {
+            throw new EmptySyncException($"Repository {mapping.Name} already exists");
+        }
+
         var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
         reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
+            if (_fileSystem.DirectoryExists(_dependencyTracker.GetRepoSourcesPath(repoToUpdate.mapping)))
+            {
+                // Repository has already been initialized
+                continue;
+            }
+            
             await InitializeRepository(repoToUpdate.mapping, repoToUpdate.targetRevision, repoToUpdate.targetVersion, cancellationToken);
 
             // When initializing dependencies, we initialize always to the first version of the dependency we've seen
@@ -106,11 +116,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? targetVersion,
         CancellationToken cancellationToken)
     {
-        if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
-        {
-            throw new EmptySyncException($"Repository {mapping.Name} already exists");
-        }
-
         _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
         string clonePath = await CloneOrPull(mapping);
