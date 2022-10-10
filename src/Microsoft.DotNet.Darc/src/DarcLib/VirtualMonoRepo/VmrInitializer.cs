@@ -32,6 +32,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
     private readonly string _tmpPath;
@@ -43,12 +44,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IRemoteFactory remoteFactory,
         ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
+        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrManagerConfiguration configuration)
         : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
     {
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
+        _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = configuration.TmpPath;
     }
@@ -79,7 +82,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                         continue;
                     }
 
-                    if (Directory.Exists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
+                    if (_fileSystem.DirectoryExists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
                     {
                         // Repository has already been initialized
                         continue;
