@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -577,7 +576,7 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName1, SubmoduleSha1, Constants.EmptyGitObject, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**")
+            .Append(":(glob,attr:!vmr-ignore)**/*")
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
@@ -590,7 +589,7 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**")
+            .Append(":(glob,attr:!vmr-ignore)**/*")
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
@@ -619,7 +618,7 @@ public class VmrPatchHandlerTests
     [Test]
     public async Task PatchIsAppliedOnRepoWithTrailingSlashTest()
     {
-        //Setup
+        // Setup
         _vmrInfo.Reset();
         _vmrInfo
             .SetupGet(x => x.VmrPath)
@@ -652,8 +651,7 @@ public class VmrPatchHandlerTests
             $"src/{IndividualRepoName}/",
             patch.Path,
         },
-        VmrPath + "/"
-        );
+        VmrPath + "/");
 
         VerifyGitCall(new[]
         {
@@ -695,7 +693,7 @@ public class VmrPatchHandlerTests
             ":(glob,attr:!vmr-ignore)src/*",
             ":(exclude,glob,attr:!vmr-preserve)*.dll",
             ":(exclude,glob,attr:!vmr-preserve)*.exe",
-            ":(exclude,glob,attr:!vmr-preserve)src/*tests/**.*",
+            ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
             ":(exclude,glob,attr:!vmr-preserve)submodules/external-1/LICENSE.md",
         };
 
