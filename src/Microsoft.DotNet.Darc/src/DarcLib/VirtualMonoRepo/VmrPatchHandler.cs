@@ -538,7 +538,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private string[] GetVmrPatches(SourceMapping mapping) => _vmrInfo.PatchesPath is not null && Directory.Exists(_vmrInfo.PatchesPath)
+    private string[] GetVmrPatches(SourceMapping mapping) => _vmrInfo.PatchesPath is not null && _fileSystem.DirectoryExists(_vmrInfo.PatchesPath)
         ? _fileSystem.GetFiles(_fileSystem.PathCombine(_vmrInfo.PatchesPath, mapping.Name))
         : Array.Empty<string>();
 

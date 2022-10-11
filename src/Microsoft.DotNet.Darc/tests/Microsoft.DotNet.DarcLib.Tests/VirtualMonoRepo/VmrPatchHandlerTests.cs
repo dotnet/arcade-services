@@ -37,9 +37,9 @@ public class VmrPatchHandlerTests
 
     private readonly IReadOnlyCollection<string> _vmrPatches = new[]
     {
-        "patches/test-repo-patch1.patch",
-        "patches/test-repo-patch2.patch",
-        "submodules/external-1/eng/build.sh", // patch for a submodule
+        "test-repo-patch1.patch",
+        "test-repo-patch2.patch",
+        "submodule.patch",
     };
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
@@ -71,6 +71,9 @@ public class VmrPatchHandlerTests
             .SetupGet(x => x.VmrPath)
             .Returns(VmrPath);
         _vmrInfo
+            .Setup(x => x.PatchesPath)
+            .Returns(VmrPath + "/patches");
+        _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
 
@@ -97,6 +100,12 @@ public class VmrPatchHandlerTests
         _fileSystem
             .Setup(x => x.PathCombine(It.IsAny<string>(), It.IsAny<string>()))
             .Returns((string first, string second) => (first + "/" + second).Replace("//", null));
+        _fileSystem
+            .Setup(x => x.GetFiles($"{VmrPath}/patches/{IndividualRepoName}"))
+            .Returns(_vmrPatches.ToArray());
+        _fileSystem
+            .Setup(x => x.DirectoryExists($"{VmrPath}/patches"))
+            .Returns(true);
 
         _patchHandler = new VmrPatchHandler(
             _vmrInfo.Object,
@@ -112,7 +121,7 @@ public class VmrPatchHandlerTests
     public async Task PatchIsAppliedTest()
     {
         // Setup
-        var patch = new VmrIngestionPatch("{PatchDir}/test-repo.patch", string.Empty);
+        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", string.Empty);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
@@ -182,6 +191,18 @@ public class VmrPatchHandlerTests
             "src/xyz.cs",
         };
 
+        _fileSystem
+            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[0]}"))
+            .Returns(true);
+
+        _fileSystem
+            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[1]}"))
+            .Returns(true);
+
+        _fileSystem
+            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[2]}"))
+            .Returns(false);
+
         SetupGitCall(
             new[] { "apply", "--numstat", _vmrPatches.First() },
             new ProcessExecutionResult()
@@ -216,13 +237,22 @@ public class VmrPatchHandlerTests
         _localGitRepo.Verify(x => x.Checkout(ClonePath, originalRevision, false), Times.Once);
         _localGitRepo.Verify(x => x.Stage(VmrPath, VmrPath + "/src/" + IndividualRepoName), Times.Once);
 
-        foreach (var file in patchedFiles)
-        {
-            _fileSystem.Verify(x => x.CopyFile(
-                ClonePath + '/' + file,
-                VmrPath + "/src/test-repo/" + file,
-                true));
-        }
+        _fileSystem
+            .Verify(x => x.CopyFile(
+                ClonePath + '/' + patchedFiles[0],
+                VmrPath + "/src/test-repo/" + patchedFiles[0],
+                true),
+              Times.Once);
+
+        _fileSystem
+            .Verify(x => x.CopyFile(
+                ClonePath + '/' + patchedFiles[1],
+                VmrPath + "/src/test-repo/" + patchedFiles[1],
+                true),
+              Times.Once);
+
+        _fileSystem
+            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[2]), Times.Once);
     }
     
     [Test]
