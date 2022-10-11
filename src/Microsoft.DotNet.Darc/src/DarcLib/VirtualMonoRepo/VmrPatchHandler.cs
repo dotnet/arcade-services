@@ -235,7 +235,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
             .Replace(_vmrInfo.VmrPath, null)
             .Replace("\\", "/")
-            [1..];
+            .TrimStart('/');
 
         // When inlining submodules, we need to point the git apply there
         if (destPath[^1] != '/')

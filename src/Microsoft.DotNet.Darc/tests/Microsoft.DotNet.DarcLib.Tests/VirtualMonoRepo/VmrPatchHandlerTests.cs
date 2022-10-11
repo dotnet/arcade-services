@@ -585,7 +585,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
-        
+
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
             .Take(7)
@@ -613,6 +613,52 @@ public class VmrPatchHandlerTests
             new VmrIngestionPatch(expectedSubmodulePatchName1, _submoduleInfo.Path),
             new VmrIngestionPatch(expectedSubmodulePatchName2, _submoduleInfo.Path),
         });
+    }
+
+    [Test]
+    public async Task PatchIsAppliedOnRepoWithTrailingSlashTest()
+    {
+        // Setup
+        _vmrInfo.Reset();
+        _vmrInfo
+            .SetupGet(x => x.VmrPath)
+            .Returns(VmrPath + "/");
+        _vmrInfo
+            .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
+            .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
+
+        _patchHandler = new VmrPatchHandler(
+            _vmrInfo.Object,
+            _localGitRepo.Object,
+            _remoteFactory.Object,
+            _processManager.Object,
+            _fileSystem.Object,
+            new NullLogger<VmrPatchHandler>());
+
+        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", string.Empty);
+        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
+
+        // Act
+        await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
+
+        // Verify
+        VerifyGitCall(new[]
+        {
+            "apply",
+            "--cached",
+            "--ignore-space-change",
+            "--directory",
+            $"src/{IndividualRepoName}/",
+            patch.Path,
+        },
+        VmrPath + "/");
+
+        VerifyGitCall(new[]
+        {
+            "checkout",
+            $"src/{IndividualRepoName}/",
+        },
+        VmrPath + "/");
     }
 
     private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
