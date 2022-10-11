@@ -35,7 +35,15 @@ public class VmrPatchHandlerTests
         "https://github.com/dotnet/external-1",
         SubmoduleSha1);
 
-    private readonly Mock<IVmrDependencyTracker> _vmrInfo = new();
+    private readonly IReadOnlyCollection<string> _vmrPatches = new[]
+    {
+        "patches/test-repo-patch1.patch",
+        "patches/test-repo-patch2.patch",
+        "submodules/external-1/eng/build.sh", // patch for a submodule
+    };
+
+    private readonly Mock<IVmrInfo> _vmrInfo = new();
+    private readonly Mock<IVmrDependencyTracker> _dependencyTracker = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
     private readonly Mock<IRemoteFactory> _remoteFactory = new();
     private readonly Mock<IProcessManager> _processManager = new();
@@ -53,14 +61,8 @@ public class VmrPatchHandlerTests
             "*.exe", 
             "src/**/tests/**/*.*", 
             "submodules/external-1/LICENSE.md",
-        },
-        VmrPatches: new[]
-        {
-            "patches/test-repo-patch1.patch",
-            "patches/test-repo-patch2.patch",
-            "submodules/external-1/eng/build.sh", // patch for a submodule
         });
-
+    
     [SetUp]
     public void SetUp()
     {
@@ -71,6 +73,8 @@ public class VmrPatchHandlerTests
         _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
+
+        _dependencyTracker.Reset();
 
         _localGitRepo.Reset();
         _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
@@ -96,6 +100,7 @@ public class VmrPatchHandlerTests
 
         _patchHandler = new VmrPatchHandler(
             _vmrInfo.Object,
+            _dependencyTracker.Object,
             _localGitRepo.Object,
             _remoteFactory.Object,
             _processManager.Object,
@@ -140,7 +145,7 @@ public class VmrPatchHandlerTests
         // Act
         await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
 
-        foreach (var patch in _testRepoMapping.VmrPatches)
+        foreach (var patch in _vmrPatches)
         {
             // Verify
             VerifyGitCall(new[]
@@ -159,7 +164,7 @@ public class VmrPatchHandlerTests
             "checkout",
             $"src/{IndividualRepoName}/",
         },
-        times: Times.Exactly(_testRepoMapping.VmrPatches.Count));
+        times: Times.Exactly(_vmrPatches.Count));
     }
 
     [Test]
@@ -178,7 +183,7 @@ public class VmrPatchHandlerTests
         };
 
         SetupGitCall(
-            new[] { "apply", "--numstat", _testRepoMapping.VmrPatches.First() },
+            new[] { "apply", "--numstat", _vmrPatches.First() },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
@@ -189,7 +194,7 @@ public class VmrPatchHandlerTests
             ClonePath);
 
         SetupGitCall(
-            new[] { "apply", "--numstat", _testRepoMapping.VmrPatches.Last() },
+            new[] { "apply", "--numstat", _vmrPatches.Last() },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
