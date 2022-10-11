@@ -338,10 +338,18 @@ public class VmrPatchHandler : IVmrPatchHandler
                 var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
                 var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
 
-                _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
-
-                // Copy old revision to VMR
-                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+                if (_fileSystem.FileExists(originalFile))
+                {
+                    // Copy old revision to VMR
+                    _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
+                    _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+                }
+                else
+                {
+                    // File is being added by the patch - we need to remove it
+                    _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
+                    _fileSystem.DeleteFile(destination);
+                }
             }
         }
 
