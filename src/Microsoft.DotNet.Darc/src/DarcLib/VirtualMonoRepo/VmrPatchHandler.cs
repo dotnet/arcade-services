@@ -234,8 +234,12 @@ public class VmrPatchHandler : IVmrPatchHandler
         // We have to give git a relative path with forward slashes where to apply the patch
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
             .Replace(_vmrInfo.VmrPath, null)
-            .Replace("\\", "/")
-            [1..];
+            .Replace("\\", "/");
+
+        if (destPath[0] == '/')
+        {
+            destPath = destPath.Substring(1);
+        }
 
         // When inlining submodules, we need to point the git apply there
         if (destPath[^1] != '/')
