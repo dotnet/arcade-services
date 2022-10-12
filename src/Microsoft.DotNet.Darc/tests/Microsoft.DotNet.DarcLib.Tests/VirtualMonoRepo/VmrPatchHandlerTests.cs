@@ -664,6 +664,7 @@ public class VmrPatchHandlerTests
 
         _patchHandler = new VmrPatchHandler(
             _vmrInfo.Object,
+            _dependencyTracker.Object,
             _localGitRepo.Object,
             _remoteFactory.Object,
             _processManager.Object,
