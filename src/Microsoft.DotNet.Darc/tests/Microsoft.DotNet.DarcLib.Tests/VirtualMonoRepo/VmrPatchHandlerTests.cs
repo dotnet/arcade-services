@@ -104,7 +104,7 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetFiles($"{VmrPath}/patches/{IndividualRepoName}"))
             .Returns(_vmrPatches.ToArray());
         _fileSystem
-            .Setup(x => x.DirectoryExists($"{VmrPath}/patches"))
+            .Setup(x => x.DirectoryExists(It.Is<string>(s => s.StartsWith($"{VmrPath}/patches"))))
             .Returns(true);
 
         _patchHandler = new VmrPatchHandler(
