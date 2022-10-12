@@ -538,9 +538,21 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private string[] GetVmrPatches(SourceMapping mapping) => _vmrInfo.PatchesPath is not null && _fileSystem.DirectoryExists(_vmrInfo.PatchesPath)
-        ? _fileSystem.GetFiles(_fileSystem.PathCombine(_vmrInfo.PatchesPath, mapping.Name))
-        : Array.Empty<string>();
+    private string[] GetVmrPatches(SourceMapping mapping)
+    {
+        if (_vmrInfo.PatchesPath is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var mappingPatchesPath = _fileSystem.PathCombine(_vmrInfo.PatchesPath, mapping.Name);
+        if (!_fileSystem.DirectoryExists(mappingPatchesPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        return _fileSystem.GetFiles(mappingPatchesPath);
+    }
 
     // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
     private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
