@@ -15,13 +15,7 @@ public record VmrDependencyVersion(string Sha, string? PackageVersion);
 
 public interface IVmrDependencyTracker
 {
-    string VmrPath { get; }
-
-    string SourcesPath { get; }
-    
     IReadOnlyCollection<SourceMapping> Mappings { get; }
-
-    string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(SourcesPath, mapping.Name);
 
     void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
 
@@ -34,32 +28,22 @@ public interface IVmrDependencyTracker
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    public const string SourceMappingsFileName = "source-mappings.jsonc";
-    public const string VmrSourcesDir = "src";
-    public const string GitInfoSourcesDir = "git-info";
-
     // TODO: https://github.com/dotnet/source-build/issues/2250
     private const string DefaultVersion = "8.0.100";
 
     private readonly Lazy<AllVersionsPropsFile> _repoVersions;
     private readonly string _allVersionsFilePath;
-
-    public string VmrPath { get; }
-
-    public string SourcesPath { get; }
+    private readonly IVmrInfo _vmrInfo;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public VmrDependencyTracker(
-        IVmrManagerConfiguration configuration,
-        IReadOnlyCollection<SourceMapping> mappings)
+    public VmrDependencyTracker(IVmrInfo vmrInfo, IReadOnlyCollection<SourceMapping> mappings)
     {
-        VmrPath = configuration.VmrPath;
-        SourcesPath = Path.Combine(configuration.VmrPath, VmrSourcesDir);
-        Mappings = mappings;
-
-        _allVersionsFilePath = Path.Combine(VmrPath, GitInfoSourcesDir, AllVersionsPropsFile.FileName);
+        _vmrInfo = vmrInfo;
+        _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
+
+        Mappings = mappings;
     }
 
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
@@ -100,5 +84,5 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         return AllVersionsPropsFile.DeserializeFromXml(_allVersionsFilePath);
     }
 
-    private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(VmrPath, GitInfoSourcesDir, $"{mapping.Name}.props");
+    private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(_vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, $"{mapping.Name}.props");
 }

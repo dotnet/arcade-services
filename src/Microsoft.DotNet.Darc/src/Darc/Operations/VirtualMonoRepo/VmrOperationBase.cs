@@ -145,7 +145,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             var vmrPath = options.VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
             var tmpPath = options.TmpPath ?? LocalSettings.GetDarcSettings(options, logger).TemporaryRepositoryRoot;
 
-            return new VmrManagerConfiguration(vmrPath, tmpPath);
+            return new VmrInfo(vmrPath, tmpPath);
         });
 
         return services;
