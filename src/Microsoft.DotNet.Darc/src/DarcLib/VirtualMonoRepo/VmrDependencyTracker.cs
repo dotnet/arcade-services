@@ -34,7 +34,7 @@ public interface IVmrDependencyTracker
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    public const string SourceMappingsFileName = "source-mappings.json";
+    public const string SourceMappingsFileName = "source-mappings.jsonc";
     public const string VmrSourcesDir = "src";
     public const string GitInfoSourcesDir = "git-info";
 
