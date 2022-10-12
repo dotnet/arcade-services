@@ -19,18 +19,22 @@ public interface ISourceMappingParser
     Task<IReadOnlyCollection<SourceMapping>> ParseMappings();
 }
 
+/// <summary>
+/// Class responsible for parsing the source-mappings.json file.
+/// TODO (https://github.com/dotnet/arcade/issues/11226): Link to source-mappings.json documentation
+/// </summary>
 public class SourceMappingParser : ISourceMappingParser
 {
-    private readonly IVmrInfo _vmrConfiguration;
+    private readonly IVmrInfo _vmrInfo;
 
-    public SourceMappingParser(IVmrInfo vmrConfiguration)
+    public SourceMappingParser(IVmrInfo vmrInfo)
     {
-        _vmrConfiguration = vmrConfiguration;
+        _vmrInfo = vmrInfo;
     }
 
     public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings()
     {
-        var mappingFilePath = Path.Combine(_vmrConfiguration.VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceMappingsFileName);
+        var mappingFilePath = Path.Combine(_vmrInfo.VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceMappingsFileName);
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
@@ -54,7 +58,7 @@ public class SourceMappingParser : ISourceMappingParser
         var patchesPath = settings.PatchesPath;
         if (patchesPath is not null)
         {
-            _vmrConfiguration.PatchesPath = Path.Combine(_vmrConfiguration.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
+            _vmrInfo.PatchesPath = Path.Combine(_vmrInfo.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
         }
 
         var mappings = settings.Mappings
