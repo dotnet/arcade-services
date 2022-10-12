@@ -41,7 +41,6 @@ public static class VmrRegistrations
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<IVmrManager>>());
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
-        services.TryAddTransient<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
