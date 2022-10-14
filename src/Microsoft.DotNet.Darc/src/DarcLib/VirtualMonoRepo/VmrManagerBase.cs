@@ -19,7 +19,10 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase : IVmrManager
 {
+    // String used to mark the commit as automated
+    protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
     protected const string HEAD = "HEAD";
+
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IProcessManager _processManager;
