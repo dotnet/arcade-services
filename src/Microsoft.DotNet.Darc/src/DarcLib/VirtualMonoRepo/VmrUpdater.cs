@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -26,15 +25,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
     // Message shown when synchronizing a single commit
     private const string SingleCommitMessage =
-        """
+        $$"""
         [{name}] Sync {newShaShort}: {commitMessage}
 
         Original commit: {remote}/commit/{newSha}
+        
+        {{AUTOMATION_COMMIT_TAG}}
         """;
 
     // Message shown when synchronizing multiple commits as one
     private const string SquashCommitMessage =
-        """
+        $$"""
         [{name}] Sync {oldShaShort} → {newShaShort}
         Diff: {remote}/compare/{oldSha}..{newSha}
         
@@ -43,6 +44,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         Commits:
         {commitMessage}
+        
+        {{AUTOMATION_COMMIT_TAG}}
         """;
 
     private readonly IVmrInfo _vmrInfo;
