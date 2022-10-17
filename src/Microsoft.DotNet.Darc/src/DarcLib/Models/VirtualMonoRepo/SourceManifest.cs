@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -60,7 +61,8 @@ public class SourceManifest
             WriteIndented = true,
         };
 
-        return JsonSerializer.Deserialize<SourceManifest>(stream, options);
+        return JsonSerializer.Deserialize<SourceManifest>(stream, options) 
+            ?? throw new Exception($"Failed to deserialize source manifest");
     }
 
     public static SourceManifest FromJson(string path)
@@ -79,21 +81,22 @@ public class SourceManifest
         };
         
         using var stream = File.Open(path, FileMode.Open, FileAccess.Read);
-        return JsonSerializer.Deserialize<SourceManifest>(stream, options);
+        return JsonSerializer.Deserialize<SourceManifest>(stream, options)
+            ?? throw new Exception($"Failed to deserialize {path}");
     }
 }
 
 public class RepositoryRecord
 {
-    public string Path { get; set; }
-    public string RemoteUri { get; set; }
-    public string CommitSha { get; set; }
-    public string PackageVersion { get; set; }
+    public string Path { get; set; } = null!;
+    public string RemoteUri { get; set; } = null!;
+    public string CommitSha { get; set; } = null!;
+    public string PackageVersion { get; set; } = null!;
 }
 
 public class SubmoduleRecord
 {
-    public string Path { get; set; }
-    public string RemoteUri { get; set; }
-    public string CommitSha { get; set; }
+    public string Path { get; set; } = null!;
+    public string RemoteUri { get; set; } = null!;
+    public string CommitSha { get; set; } = null!;
 };
