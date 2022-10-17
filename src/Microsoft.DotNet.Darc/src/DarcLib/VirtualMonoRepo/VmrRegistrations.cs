@@ -49,8 +49,9 @@ public static class VmrRegistrations
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();
             var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
+            var fileSystem = sp.GetRequiredService<IFileSystem>();
             var mappings = mappingParser.ParseMappings().GetAwaiter().GetResult();
-            return new VmrDependencyTracker(configuration, mappings);
+            return new VmrDependencyTracker(configuration, mappings, fileSystem);
         });
     }
 }

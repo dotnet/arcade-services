@@ -307,6 +307,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
         Commands.Stage(new Repository(_vmrInfo.VmrPath), VmrInfo.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), _vmrInfo.GetSourceManifestPath());
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
