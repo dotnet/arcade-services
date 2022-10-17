@@ -40,14 +40,13 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public VmrDependencyTracker(IVmrInfo vmrInfo, IReadOnlyCollection<SourceMapping> mappings, IFileSystem fileSystem)
+    public VmrDependencyTracker(IVmrInfo vmrInfo, IFileSystem fileSystem, IReadOnlyCollection<SourceMapping> mappings, SourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _fileSystem = fileSystem;
         _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
-        _sourceManifest = LoadSourceManifest();
-        
+        _sourceManifest = sourceManifest;
+        _fileSystem = fileSystem;
         Mappings = mappings;
     }
 
@@ -90,17 +89,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         }
 
         return AllVersionsPropsFile.DeserializeFromXml(_allVersionsFilePath);
-    }
-
-    private SourceManifest LoadSourceManifest()
-    {
-        if (!_fileSystem.FileExists(_vmrInfo.GetSourceManifestPath()))
-        {
-            return new SourceManifest();
-        }
-
-        using var stream = _fileSystem.GetFileStream(_vmrInfo.GetSourceManifestPath(), FileMode.Open, FileAccess.Read);
-        return SourceManifest.FromJson(stream);
     }
 
     private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(_vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, $"{mapping.Name}.props");
