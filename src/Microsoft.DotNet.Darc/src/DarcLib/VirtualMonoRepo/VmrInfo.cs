@@ -18,7 +18,7 @@ public interface IVmrInfo
 
 public class VmrInfo : IVmrInfo
 {
-    public const string SourceMappingsFileName = "source-mappings.jsonc";
+    public const string SourceMappingsFileName = "source-mappings.json";
     public const string SourcesDir = "src";
     public const string GitInfoSourcesDir = "git-info";
 
