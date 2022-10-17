@@ -14,8 +14,8 @@ public class SourceManifest
 
     public SourceManifest()
     {
-        Repositories = new List<RepositoryRecord>();
-        Submodules = new List<SubmoduleRecord>();
+        Repositories = new SortedSet<RepositoryRecord>();
+        Submodules = new SortedSet<SubmoduleRecord>();
     }
 
     public void UpdateVersion(string repository, string uri, string sha, string packageVersion)
@@ -86,17 +86,29 @@ public class SourceManifest
     }
 }
 
-public class RepositoryRecord
+public class RepositoryRecord : IComparable<RepositoryRecord>
 {
     public string Path { get; set; } = null!;
     public string RemoteUri { get; set; } = null!;
     public string CommitSha { get; set; } = null!;
     public string PackageVersion { get; set; } = null!;
+
+    public int CompareTo(RepositoryRecord? other)
+    {
+        if (other == null) return 1;
+        return Path.CompareTo(other.Path);
+    }
 }
 
-public class SubmoduleRecord
+public class SubmoduleRecord : IComparable<SubmoduleRecord>
 {
     public string Path { get; set; } = null!;
     public string RemoteUri { get; set; } = null!;
     public string CommitSha { get; set; } = null!;
-};
+
+    public int CompareTo(SubmoduleRecord? other)
+    {
+        if(other == null) return 1;
+        return Path.CompareTo(other.Path);
+    }
+}

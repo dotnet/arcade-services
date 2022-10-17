@@ -40,7 +40,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public VmrDependencyTracker(IVmrInfo vmrInfo, IFileSystem fileSystem, IReadOnlyCollection<SourceMapping> mappings, SourceManifest sourceManifest)
+    public VmrDependencyTracker(
+        IVmrInfo vmrInfo,
+        IFileSystem fileSystem,
+        IReadOnlyCollection<SourceMapping> mappings,
+        SourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
         _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
