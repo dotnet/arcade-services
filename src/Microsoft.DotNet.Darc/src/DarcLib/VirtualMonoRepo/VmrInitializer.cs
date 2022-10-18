@@ -23,10 +23,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 {
     // Message shown when initializing an individual repo for the first time
     private const string InitializationCommitMessage =
-        """
+        $$"""
         [{name}] Initial pull of the individual repository ({newShaShort})
 
         Original commit: {remote}/commit/{newSha}
+
+        {{AUTOMATION_COMMIT_TAG}}
         """;
     
     private readonly IVmrInfo _vmrInfo;
