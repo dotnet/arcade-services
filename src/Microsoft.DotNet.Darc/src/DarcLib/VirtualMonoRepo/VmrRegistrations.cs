@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -49,8 +50,10 @@ public static class VmrRegistrations
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();
             var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
+            var fileSystem = sp.GetRequiredService<IFileSystem>();
             var mappings = mappingParser.ParseMappings().GetAwaiter().GetResult();
-            return new VmrDependencyTracker(configuration, mappings);
+            var sourceManifest = SourceManifest.FromJson(configuration.GetSourceManifestPath());
+            return new VmrDependencyTracker(configuration, fileSystem, mappings, sourceManifest);
         });
     }
 }

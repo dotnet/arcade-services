@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -32,17 +33,24 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private const string DefaultVersion = "8.0.100";
 
     private readonly Lazy<AllVersionsPropsFile> _repoVersions;
+    private readonly SourceManifest _sourceManifest;
     private readonly string _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
+    private readonly IFileSystem _fileSystem;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public VmrDependencyTracker(IVmrInfo vmrInfo, IReadOnlyCollection<SourceMapping> mappings)
+    public VmrDependencyTracker(
+        IVmrInfo vmrInfo,
+        IFileSystem fileSystem,
+        IReadOnlyCollection<SourceMapping> mappings,
+        SourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
         _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
-
+        _sourceManifest = sourceManifest;
+        _fileSystem = fileSystem;
         Mappings = mappings;
     }
 
@@ -59,6 +67,9 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
         _repoVersions.Value.UpdateVersion(mapping.Name, version.Sha, version.PackageVersion);
         _repoVersions.Value.SerializeToXml(_allVersionsFilePath);
+
+        _sourceManifest.UpdateVersion(mapping.Name, mapping.DefaultRemote, version.Sha, version.PackageVersion);
+        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
 
         var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version.PackageVersion);
         
