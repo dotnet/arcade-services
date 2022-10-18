@@ -43,6 +43,29 @@ public class SourceManifest
         }
     }
 
+    public void DeleteSubmodule(SubmoduleRecord record)
+    {
+        var repo = Submodules.FirstOrDefault(r => r.Path == record.Path);
+        if(repo != null)
+        {
+            Submodules.Remove(repo);
+        }
+    }
+
+    public void UpdateSubmodule(SubmoduleRecord record)
+    {
+        var repo = Submodules.FirstOrDefault(r => r.Path == record.Path);
+        if (repo != null)
+        {
+            repo.CommitSha = record.CommitSha;
+            repo.RemoteUri = record.RemoteUri;
+        }
+        else
+        {
+            Submodules.Add(record);
+        }
+    }
+
     public string ToJson()
     {
         var options = new JsonSerializerOptions

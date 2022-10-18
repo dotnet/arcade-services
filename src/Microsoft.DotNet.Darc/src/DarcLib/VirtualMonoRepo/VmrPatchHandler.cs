@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -116,6 +115,12 @@ public class VmrPatchHandler : IVmrPatchHandler
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
+
+        var changedRecords = submoduleChanges
+            .Select(c => new SubmoduleRecord { Path = c.Name, CommitSha = c.After, RemoteUri = c.Url })
+            .ToList();
+
+        _dependencyTracker.UpdateSubmodules(changedRecords);
 
         if (!mapping.Include.Any())
         {
