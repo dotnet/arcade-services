@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -56,14 +55,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
-        IProcessManager processManager,
         IRemoteFactory remoteFactory,
-        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -102,13 +99,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo}@{revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
-        var clonePath = await CloneOrPull(mapping);
+        string clonePath = GetClonePath(mapping);
+        await _patchHandler.CloneOrFetch(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, clonePath);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var clone = new Repository(clonePath);
-        var currentCommit = GetCommit(clone, currentSha);
-        var targetCommit = GetCommit(clone, targetRevision);
+        LibGit2Sharp.Commit currentCommit;
+        LibGit2Sharp.Commit targetCommit;
+        using (var clone = new Repository(clonePath))
+        {
+            currentCommit = GetCommit(clone, currentSha);
+            targetCommit = GetCommit(clone, targetRevision);
+        }
 
         targetRevision = targetCommit.Id.Sha;
 
@@ -197,7 +199,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 commitMessages
                     .AppendLine($"  - {commit.MessageShort}")
-                    .AppendLine($"    {mapping.DefaultRemote}/commit/{targetRevision}");
+                    .AppendLine($"    {mapping.DefaultRemote}/commit/{commit.Id.Sha}");
             }
 
             var message = PrepareCommitMessage(

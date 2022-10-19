@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -554,8 +553,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
-    private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
+    public async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
     {
         if (_fileSystem.DirectoryExists(destPath))
         {
