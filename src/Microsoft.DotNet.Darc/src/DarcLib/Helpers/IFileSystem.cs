@@ -20,6 +20,8 @@ public interface IFileSystem
 
     void DeleteDirectory(string path, bool recursive);
 
+    string[] GetFiles(string path);
+
     string? GetFileName(string? path);
 
     string? GetDirectoryName(string? path);

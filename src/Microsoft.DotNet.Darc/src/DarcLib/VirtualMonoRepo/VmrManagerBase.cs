@@ -19,35 +19,36 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase : IVmrManager
 {
+    // String used to mark the commit as automated
+    protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
     protected const string HEAD = "HEAD";
 
+    private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IProcessManager _processManager;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ILocalGitRepo _localGitRepo;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
-    
-    private readonly string _tmpPath;
 
     public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
 
     protected VmrManagerBase(
+        IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyInfo,
         IProcessManager processManager,
         IRemoteFactory remoteFactory,
         ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
-        ILogger<VmrUpdater> logger,
-        string tmpPath)
+        ILogger<VmrUpdater> logger)
     {
         _logger = logger;
+        _vmrInfo = vmrInfo;
         _dependencyInfo = dependencyInfo;
         _processManager = processManager;
         _remoteFactory = remoteFactory;
         _localGitRepo = localGitRepo;
         _versionDetailsParser = versionDetailsParser;
-        _tmpPath = tmpPath;
     }
 
     // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote.Clone
@@ -83,7 +84,7 @@ public abstract class VmrManagerBase : IVmrManager
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new Repository(_dependencyInfo.VmrPath);
+        using var repository = new Repository(_vmrInfo.VmrPath);
         var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
@@ -97,7 +98,7 @@ public abstract class VmrManagerBase : IVmrManager
         CancellationToken cancellationToken)
     {
         var versionDetailsPath = Path.Combine(
-            _dependencyInfo.GetRepoSourcesPath(mapping),
+            _vmrInfo.GetRepoSourcesPath(mapping),
             VersionFiles.VersionDetailsXml.Replace('/', Path.DirectorySeparatorChar));
 
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
@@ -124,7 +125,7 @@ public abstract class VmrManagerBase : IVmrManager
         return result;
     }
 
-    protected string GetClonePath(SourceMapping mapping) => Path.Combine(_tmpPath, mapping.Name);
+    protected string GetClonePath(SourceMapping mapping) => Path.Combine(_vmrInfo.TmpPath, mapping.Name);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

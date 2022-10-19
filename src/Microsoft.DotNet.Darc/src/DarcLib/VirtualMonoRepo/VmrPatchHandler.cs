@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -37,7 +38,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// </summary>
     private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
 
-    private readonly IVmrDependencyTracker _vmrInfo;
+    private readonly IVmrInfo _vmrInfo;
+    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepo _localGitRepo;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IProcessManager _processManager;
@@ -45,14 +47,16 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly ILogger<VmrPatchHandler> _logger;
 
     public VmrPatchHandler(
-        IVmrDependencyTracker dependencyInfo,
+        IVmrInfo vmrInfo,
+        IVmrDependencyTracker dependencyTracker,
         ILocalGitRepo localGitRepo,
         IRemoteFactory remoteFactory,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
-        _vmrInfo = dependencyInfo;
+        _vmrInfo = vmrInfo;
+        _dependencyTracker = dependencyTracker;
         _localGitRepo = localGitRepo;
         _remoteFactory = remoteFactory;
         _processManager = processManager;
@@ -235,7 +239,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
             .Replace(_vmrInfo.VmrPath, null)
             .Replace("\\", "/")
-            [1..];
+            .TrimStart('/');
 
         // When inlining submodules, we need to point the git apply there
         if (destPath[^1] != '/')
@@ -313,7 +317,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         string originalRevision,
         CancellationToken cancellationToken)
     {
-        if (!mapping.VmrPatches.Any())
+        var vmrPatches = GetVmrPatches(mapping);
+        if (vmrPatches.Length == 0)
         {
             return;
         }
@@ -324,7 +329,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
 
-        foreach (var patch in mapping.VmrPatches)
+        foreach (var patch in vmrPatches)
         {
             _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
 
@@ -338,10 +343,18 @@ public class VmrPatchHandler : IVmrPatchHandler
                 var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
                 var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
 
-                _logger.LogDebug("Restoring file `{originalFile}` to `{destination}`..", originalFile, destination);
-
-                // Copy old revision to VMR
-                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+                if (_fileSystem.FileExists(originalFile))
+                {
+                    // Copy old revision to VMR
+                    _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
+                    _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+                }
+                else
+                {
+                    // File is being added by the patch - we need to remove it
+                    _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
+                    _fileSystem.DeleteFile(destination);
+                }
             }
         }
 
@@ -358,14 +371,15 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="mapping">Mapping</param>
     public async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
     {
-        if (!mapping.VmrPatches.Any())
+        var vmrPatches = GetVmrPatches(mapping);
+        if (vmrPatches.Length == 0)
         {
             return;
         }
 
         _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
 
-        foreach (var patchFile in mapping.VmrPatches)
+        foreach (var patchFile in vmrPatches)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -505,8 +519,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             change.Url,
             change.Before,
             GetSubmoduleFilters(mapping.Include),
-            GetSubmoduleFilters(mapping.Exclude),
-            Array.Empty<string>());
+            GetSubmoduleFilters(mapping.Exclude));
 
         var submodulePath = change.Path;
         if (!string.IsNullOrEmpty(relativePath))
@@ -523,6 +536,22 @@ public class VmrPatchHandler : IVmrPatchHandler
             tmpPath,
             submodulePath,
             cancellationToken);
+    }
+
+    private string[] GetVmrPatches(SourceMapping mapping)
+    {
+        if (_vmrInfo.PatchesPath is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var mappingPatchesPath = _fileSystem.PathCombine(_vmrInfo.PatchesPath, mapping.Name);
+        if (!_fileSystem.DirectoryExists(mappingPatchesPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
     // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote

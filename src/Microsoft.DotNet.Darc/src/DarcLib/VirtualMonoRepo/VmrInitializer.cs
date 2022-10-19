@@ -23,12 +23,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 {
     // Message shown when initializing an individual repo for the first time
     private const string InitializationCommitMessage =
-        """
+        $$"""
         [{name}] Initial pull of the individual repository ({newShaShort})
 
         Original commit: {remote}/commit/{newSha}
+
+        {{AUTOMATION_COMMIT_TAG}}
         """;
     
+    private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
@@ -45,14 +48,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
-        IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger)
     {
+        _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
         _logger = logger;
-        _tmpPath = configuration.TmpPath;
+        _tmpPath = vmrInfo.TmpPath;
     }
 
     public async Task InitializeRepository(
@@ -72,7 +76,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
-            if (_fileSystem.DirectoryExists(_dependencyTracker.GetRepoSourcesPath(repoToUpdate.mapping)))
+            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(repoToUpdate.mapping)))
             {
                 // Repository has already been initialized
                 continue;
@@ -92,7 +96,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                         continue;
                     }
 
-                    if (_fileSystem.DirectoryExists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
+                    if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(dependencyMapping)))
                     {
                         // Repository has already been initialized
                         continue;
@@ -141,7 +145,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
-        Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), VmrInfo.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), _vmrInfo.GetSourceManifestPath());
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);

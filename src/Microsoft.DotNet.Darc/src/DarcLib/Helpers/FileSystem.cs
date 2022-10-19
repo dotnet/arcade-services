@@ -22,6 +22,8 @@ public class FileSystem : IFileSystem
 
     public string? GetDirectoryName(string? path) => Path.GetDirectoryName(path);
 
+    public string[] GetFiles(string path) => Directory.GetFiles(path);
+
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
     public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);

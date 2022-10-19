@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -26,15 +25,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
     // Message shown when synchronizing a single commit
     private const string SingleCommitMessage =
-        """
+        $$"""
         [{name}] Sync {newShaShort}: {commitMessage}
 
         Original commit: {remote}/commit/{newSha}
+        
+        {{AUTOMATION_COMMIT_TAG}}
         """;
 
     // Message shown when synchronizing multiple commits as one
     private const string SquashCommitMessage =
-        """
+        $$"""
         [{name}] Sync {oldShaShort} → {newShaShort}
         Diff: {remote}/compare/{oldSha}..{newSha}
         
@@ -43,14 +44,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         Commits:
         {commitMessage}
+        
+        {{AUTOMATION_COMMIT_TAG}}
         """;
 
-    private readonly ILogger<VmrUpdater> _logger;
+    private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IVmrPatchHandler _patchHandler;
-
-    private readonly string _tmpPath;
+    private readonly ILogger<VmrUpdater> _logger;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -60,14 +62,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
-        IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger, configuration.TmpPath)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, dependencyTracker, processManager, remoteFactory, localGitRepo, versionDetailsParser, logger)
     {
         _logger = logger;
+        _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _remoteFactory = remoteFactory;
         _patchHandler = patchHandler;
-        _tmpPath = configuration.TmpPath;
     }
 
     public Task UpdateRepository(
@@ -291,8 +293,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             clonePath,
             fromRevision,
             toRevision,
-            _tmpPath,
-            _tmpPath,
+            _vmrInfo.TmpPath,
+            _vmrInfo.TmpPath,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -307,7 +309,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(toRevision, targetVersion));
-        Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), VmrInfo.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), _vmrInfo.GetSourceManifestPath());
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
