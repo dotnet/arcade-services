@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -25,9 +24,6 @@ public abstract class VmrManagerBase : IVmrManager
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyInfo;
-    private readonly IProcessManager _processManager;
-    private readonly IRemoteFactory _remoteFactory;
-    private readonly ILocalGitRepo _localGitRepo;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
 
@@ -36,47 +32,13 @@ public abstract class VmrManagerBase : IVmrManager
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyInfo,
-        IProcessManager processManager,
-        IRemoteFactory remoteFactory,
-        ILocalGitRepo localGitRepo,
         IVersionDetailsParser versionDetailsParser,
         ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
         _dependencyInfo = dependencyInfo;
-        _processManager = processManager;
-        _remoteFactory = remoteFactory;
-        _localGitRepo = localGitRepo;
         _versionDetailsParser = versionDetailsParser;
-    }
-
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote.Clone
-    /// <summary>
-    /// Prepares a clone of given git repository either by cloning it to temp or if exists, pulling the newest changes.
-    /// </summary>
-    /// <param name="mapping">Repository mapping</param>
-    /// <returns>Path to the cloned repo</returns>
-    protected async Task<string> CloneOrPull(SourceMapping mapping)
-    {
-        var clonePath = GetClonePath(mapping);
-        if (Directory.Exists(clonePath))
-        {
-            _logger.LogInformation("Clone of {repo} found, pulling new changes...", mapping.DefaultRemote);
-
-            _localGitRepo.Checkout(clonePath, mapping.DefaultRef);
-
-            var result = await _processManager.ExecuteGit(clonePath, "pull");
-            result.ThrowIfFailed($"Failed to pull new changes from {mapping.DefaultRemote} into {clonePath}");
-            _logger.LogDebug("{output}", result.ToString());
-
-            return Path.Combine(clonePath, ".git");
-        }
-
-        var remoteRepo = await _remoteFactory.GetRemoteAsync(mapping.DefaultRemote, _logger);
-        remoteRepo.Clone(mapping.DefaultRemote, mapping.DefaultRef, clonePath, checkoutSubmodules: false, null);
-
-        return clonePath;
     }
 
     protected void Commit(string commitMessage, Signature author)
