@@ -27,6 +27,8 @@ public class VmrPatchHandlerTests
     private const string Sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
     private const string SubmoduleSha1 = "839e1e3b415fc2747dde68f47d940faa414020ec";
     private const string SubmoduleSha2 = "bd5b76f98468017131aabe68f47d758f08b1c5ab";
+    private const string NestedSubmoduleSha1 = "839e1e3b415fc2747dde68f47d940faa414020eb";
+    private const string NestedSubmoduleSha2 = "bd5b76f98468017131aabe68f47d758f08b1c5ac";
     private const string PatchDir = "/tmp/patch";
 
     private readonly GitSubmoduleInfo _submoduleInfo = new(
@@ -34,6 +36,12 @@ public class VmrPatchHandlerTests
         "submodules/external-1",
         "https://github.com/dotnet/external-1",
         SubmoduleSha1);
+
+    private readonly GitSubmoduleInfo _nestedSubmoduleInfo = new(
+        "external-2",
+        "external-2",
+        "https://github.com/dotnet/external-2",
+        NestedSubmoduleSha1);
 
     private readonly IReadOnlyCollection<string> _vmrPatches = new[]
     {
@@ -399,6 +407,105 @@ public class VmrPatchHandlerTests
         {
             new VmrIngestionPatch(expectedPatchName, string.Empty),
             new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path),
+        });
+    }
+
+    [Test]
+    public async Task CreatePatchesWithSubmoduleAndNestedSubmoduleAddedTest()
+    {
+        // Setup
+        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        string expectedNestedSubmodulePatchName = $"{PatchDir}/{_nestedSubmoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(NestedSubmoduleSha1)}.patch";
+        
+        // Return no submodule for first SHA, one for second
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Returns(new List<GitSubmoduleInfo>());
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+
+        var submoduleClonePath = "/tmp/D8FC6934CE892A82EE79D572E24A7512";
+
+        _localGitRepo
+            .Setup(x => x.GetGitSubmodules(submoduleClonePath, SubmoduleSha1))
+            .Returns(new List<GitSubmoduleInfo> { _nestedSubmoduleInfo });
+
+        var remote = new Mock<IRemote>();
+        var nestedSubmoduleRemote = new Mock<IRemote>();
+
+        _remoteFactory
+            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
+            .ReturnsAsync(remote.Object);
+
+        _remoteFactory
+            .Setup(x => x.GetRemoteAsync(_nestedSubmoduleInfo.Url, It.IsAny<ILogger>()))
+            .ReturnsAsync(nestedSubmoduleRemote.Object);
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            ClonePath,
+            Sha1,
+            Sha2,
+            PatchDir,
+            "/tmp",
+            CancellationToken.None);
+
+        // Verify diff for the individual repo
+        var expectedArgs = GetExpectedGitDiffArguments(
+            expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                ClonePath,
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        // Verify diff for the submodule
+        expectedArgs = GetExpectedGitDiffArguments(
+            expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, new[] { _nestedSubmoduleInfo.Path })
+            .Take(7)
+            .Append(":(glob,attr:!vmr-ignore)**/*")
+            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md")
+            .Append(":(exclude)external-2");
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        remote.Verify(
+            x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Once);
+
+        // Verify diff for the nested submodule
+        expectedArgs = GetExpectedGitDiffArguments(
+            expectedNestedSubmodulePatchName, Constants.EmptyGitObject, NestedSubmoduleSha1, null)
+            .Take(7)
+            .Append(":(glob,attr:!vmr-ignore)**/*");
+
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                "/tmp/44B69A1449124AD460A08091672021B6",
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        nestedSubmoduleRemote.Verify(
+            x => x.Clone(_nestedSubmoduleInfo.Url, NestedSubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
+            Times.Once);
+
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName, string.Empty),
+            new VmrIngestionPatch(expectedSubmodulePatchName, _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedNestedSubmodulePatchName, _submoduleInfo.Path + "/" + _nestedSubmoduleInfo.Path),
         });
     }
 
