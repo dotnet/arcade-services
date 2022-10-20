@@ -7,6 +7,10 @@ using System;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
+/// <summary>
+/// Represents a record in the source-manifest.json file which VMR uses to keep track of
+/// synchronized sources
+/// </summary>
 public abstract class ManifestRecord : IComparable<ManifestRecord>
 {
     public string Path { get; set; }
@@ -22,7 +26,11 @@ public abstract class ManifestRecord : IComparable<ManifestRecord>
 
     public int CompareTo(ManifestRecord? other)
     {
-        if(other == null) return 1;
+        if (other == null)
+        {
+            return 1;
+        }
+
         return Path.CompareTo(other.Path);
     }
 }

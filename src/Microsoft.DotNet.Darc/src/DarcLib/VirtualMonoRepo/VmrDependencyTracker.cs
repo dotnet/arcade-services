@@ -89,11 +89,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)
     {
-        foreach(var submodule in submodules)
+        foreach (var submodule in submodules)
         {
-            if(submodule.CommitSha == Constants.EmptyGitObject)
+            if (submodule.CommitSha == Constants.EmptyGitObject)
             {
-                _sourceManifest.DeleteSubmodule(submodule);
+                _sourceManifest.RemoveSubmodule(submodule);
             }
             else
             {
