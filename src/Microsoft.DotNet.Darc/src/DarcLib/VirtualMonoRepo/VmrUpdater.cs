@@ -259,6 +259,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
+                    updatedDependencies.Add(repoToUpdate);
                     continue;
                 }
 
