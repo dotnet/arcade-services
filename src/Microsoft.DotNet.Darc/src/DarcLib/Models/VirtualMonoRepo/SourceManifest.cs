@@ -33,36 +33,30 @@ public class SourceManifest
         }
         else
         {
-            Repositories.Add(new RepositoryRecord 
-            { 
-                Path = repository,
-                CommitSha = sha,
-                RemoteUri = uri,
-                PackageVersion = packageVersion
-            });
+            Repositories.Add(new RepositoryRecord(repository, sha, uri, packageVersion));
         }
     }
 
-    public void DeleteSubmodule(SubmoduleRecord record)
+    public void DeleteSubmodule(SubmoduleRecord submodule)
     {
-        var repo = Submodules.FirstOrDefault(r => r.Path == record.Path);
+        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if(repo != null)
         {
             Submodules.Remove(repo);
         }
     }
 
-    public void UpdateSubmodule(SubmoduleRecord record)
+    public void UpdateSubmodule(SubmoduleRecord submodule)
     {
-        var repo = Submodules.FirstOrDefault(r => r.Path == record.Path);
+        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
         {
-            repo.CommitSha = record.CommitSha;
-            repo.RemoteUri = record.RemoteUri;
+            repo.CommitSha = submodule.CommitSha;
+            repo.RemoteUri = submodule.RemoteUri;
         }
         else
         {
-            Submodules.Add(record);
+            Submodules.Add(submodule);
         }
     }
 

@@ -86,7 +86,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
-        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
+        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, mapping.Name, cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
@@ -109,15 +109,16 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
+        var patchPath = !relativePath.Contains('/') ? string.Empty : relativePath[(relativePath.IndexOf('/') + 1)..];
         var patches = new List<VmrIngestionPatch>
         {
-            new(patchName, relativePath)
+            new(patchName, patchPath)
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
 
         var changedRecords = submoduleChanges
-            .Select(c => new SubmoduleRecord { Path = c.Name, CommitSha = c.After, RemoteUri = c.Url })
+            .Select(c => new SubmoduleRecord(relativePath + '/' + c.Path, c.Url, c.After))
             .ToList();
 
         _dependencyTracker.UpdateSubmodules(changedRecords);
