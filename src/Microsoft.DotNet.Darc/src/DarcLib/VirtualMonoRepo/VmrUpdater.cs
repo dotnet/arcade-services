@@ -232,38 +232,59 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
-        reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
+        var reposToUpdate = new Queue<DependencyUpdate>();
+        var updatedDependencies = new HashSet<DependencyUpdate>();
+        var skippedDependencies = new HashSet<DependencyUpdate>();
 
-        var updatedDependencies = new HashSet<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        reposToUpdate.Enqueue(new DependencyUpdate(mapping, targetRevision, targetVersion, null));
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
-            var mappingToUpdate = repoToUpdate.mapping;
+            var mappingToUpdate = repoToUpdate.Mapping;
+            var currentSha = GetCurrentVersion(mappingToUpdate);
 
-            _logger.LogInformation("Recursively updating dependency {repo} / {commit}",
-                mappingToUpdate.Name,
-                repoToUpdate.targetRevision ?? HEAD);
+            if (repoToUpdate.Parent is null)
+            {
+                _logger.LogInformation("Starting recursive update for {repo} / {from} → {to}",
+                    mappingToUpdate.Name,
+                    currentSha,
+                    repoToUpdate.TargetRevision ?? HEAD);
+            }
+            else
+            {
+                _logger.LogInformation("Recursively updating dependency (of {parent}) {repo} / {from} → {to}",
+                    mappingToUpdate.Name,
+                    repoToUpdate.Parent,
+                    currentSha,
+                    repoToUpdate.TargetRevision ?? HEAD);
+            }
 
-            await UpdateRepository(mappingToUpdate, repoToUpdate.targetRevision, repoToUpdate.targetVersion, noSquash, cancellationToken);
+            await UpdateRepository(mappingToUpdate, repoToUpdate.TargetRevision, repoToUpdate.TargetVersion, noSquash, cancellationToken);
             updatedDependencies.Add(repoToUpdate);
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
             {
-                if (updatedDependencies.Any(d => d.mapping == dependencyMapping))
+                if (updatedDependencies.Any(d => d.Mapping == dependencyMapping) ||
+                    skippedDependencies.Any(d => d.Mapping == dependencyMapping))
                 {
                     continue;
                 }
+
+                var dependencyUpdate = new DependencyUpdate(
+                    Mapping: dependencyMapping,
+                    TargetRevision: dependency.Commit,
+                    TargetVersion: dependency.Version,
+                    Parent: mappingToUpdate.Name);
 
                 var dependencySha = GetCurrentVersion(dependencyMapping);
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
-                    updatedDependencies.Add(repoToUpdate);
+                    skippedDependencies.Add(dependencyUpdate);
                     continue;
                 }
 
-                reposToUpdate.Enqueue((dependencyMapping, dependency.Commit, dependency.Version));
+                reposToUpdate.Enqueue(dependencyUpdate);
             }
         }
 
@@ -272,7 +293,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var update in updatedDependencies)
         {
-            summaryMessage.AppendLine($"  - {update.mapping.Name} / {update.targetRevision ?? HEAD}");
+            summaryMessage.AppendLine($"  - {update.Mapping.Name} / {update.TargetRevision ?? HEAD}");
         }
 
         _logger.LogInformation("{summary}", summaryMessage);
@@ -343,4 +364,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         return version.Sha;
     }
+
+    private record DependencyUpdate(
+        SourceMapping Mapping,
+        string? TargetRevision,
+        string? TargetVersion,
+        string? Parent);
 }
