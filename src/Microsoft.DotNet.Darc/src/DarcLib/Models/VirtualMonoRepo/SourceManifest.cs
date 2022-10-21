@@ -11,6 +11,10 @@ using System.Text.Json;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
+/// <summary>
+/// A model for source-manifest.json file which VMR uses to keep track of
+/// synchronized sources
+/// </summary>
 public class SourceManifest
 {
     public ICollection<RepositoryRecord> Repositories { get; set; }
@@ -33,13 +37,30 @@ public class SourceManifest
         }
         else
         {
-            Repositories.Add(new RepositoryRecord 
-            { 
-                Path = repository,
-                CommitSha = sha,
-                RemoteUri = uri,
-                PackageVersion = packageVersion
-            });
+            Repositories.Add(new RepositoryRecord(repository, sha, uri, packageVersion));
+        }
+    }
+
+    public void RemoveSubmodule(SubmoduleRecord submodule)
+    {
+        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
+        if(repo != null)
+        {
+            Submodules.Remove(repo);
+        }
+    }
+
+    public void UpdateSubmodule(SubmoduleRecord submodule)
+    {
+        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
+        if (repo != null)
+        {
+            repo.CommitSha = submodule.CommitSha;
+            repo.RemoteUri = submodule.RemoteUri;
+        }
+        else
+        {
+            Submodules.Add(submodule);
         }
     }
 

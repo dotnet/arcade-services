@@ -20,6 +20,8 @@ public interface IVmrDependencyTracker
 
     void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
 
+    void UpdateSubmodules(List<SubmoduleRecord> submodules);
+
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
 
@@ -83,6 +85,23 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));
+    }
+
+    public void UpdateSubmodules(List<SubmoduleRecord> submodules)
+    {
+        foreach (var submodule in submodules)
+        {
+            if (submodule.CommitSha == Constants.EmptyGitObject)
+            {
+                _sourceManifest.RemoveSubmodule(submodule);
+            }
+            else
+            {
+                _sourceManifest.UpdateSubmodule(submodule);
+            } 
+        }
+
+        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
     }
 
     private AllVersionsPropsFile LoadAllVersionsFile()
