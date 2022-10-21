@@ -109,10 +109,9 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
-        var patchPath = !relativePath.Contains('/') ? string.Empty : relativePath[(relativePath.IndexOf('/') + 1)..];
         var patches = new List<VmrIngestionPatch>
         {
-            new(patchName, patchPath)
+            new(patchName, relativePath)
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
@@ -242,18 +241,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         // We have to give git a relative path with forward slashes where to apply the patch
-        var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
-            .Replace(_vmrInfo.VmrPath, null)
-            .Replace("\\", "/")
-            .TrimStart('/');
-
-        // When inlining submodules, we need to point the git apply there
-        if (destPath[^1] != '/')
-        {
-            destPath += '/';
-        }
-
-        destPath += patch.ApplicationPath;
+        var destPath = VmrInfo.SourcesDir + '/' + patch.ApplicationPath;
 
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
 
@@ -390,7 +378,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, new(patchFile, string.Empty), cancellationToken);
+            await ApplyPatch(mapping, new(patchFile, mapping.Name), cancellationToken);
         }
     }
 
