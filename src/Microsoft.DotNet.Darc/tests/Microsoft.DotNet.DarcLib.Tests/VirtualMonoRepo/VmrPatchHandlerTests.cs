@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Castle.Core.Internal;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -280,9 +281,12 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
-        
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName));
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName)); 
     }
 
     [Test]
@@ -332,6 +336,15 @@ public class VmrPatchHandlerTests
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName));
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(1));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l[0].CommitSha == _submoduleInfo.Commit 
+                        && l[0].RemoteUri == _submoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)), Times.Once);
     }
 
     [Test]
@@ -394,6 +407,20 @@ public class VmrPatchHandlerTests
         remote.Verify(
             x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 1
+                        && l[0].CommitSha == _submoduleInfo.Commit
+                        && l[0].RemoteUri == _submoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -501,6 +528,29 @@ public class VmrPatchHandlerTests
             x => x.Clone(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
 
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 1
+                        && l[0].CommitSha == nestedSubmoduleInfo.Commit
+                        && l[0].RemoteUri == nestedSubmoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + "/" + _submoduleInfo.Path + "/" + nestedSubmoduleInfo.Path)),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 1
+                        && l[0].CommitSha == _submoduleInfo.Commit
+                        && l[0].RemoteUri == _submoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
             new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
@@ -581,6 +631,20 @@ public class VmrPatchHandlerTests
                 new[] { "fetch", "--all" }),
                 Times.AtLeastOnce);
 
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 1
+                        && l[0].CommitSha == Constants.EmptyGitObject
+                        && l[0].RemoteUri == _submoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
             new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
@@ -658,6 +722,20 @@ public class VmrPatchHandlerTests
                 "/tmp/D8FC6934CE892A82EE79D572E24A7512",
                 new[] { "fetch", "--all" }),
                 Times.AtLeastOnce);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 1
+                        && l[0].CommitSha == SubmoduleSha2
+                        && l[0].RemoteUri == _submoduleInfo.Url
+                        && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -748,6 +826,25 @@ public class VmrPatchHandlerTests
         remote2.Verify(
             x => x.Clone("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
             Times.Once);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(
+                It.Is<List<SubmoduleRecord>>(
+                    l => l.Count == 2 
+                    && l.Any(
+                        r => r.CommitSha == Constants.EmptyGitObject 
+                        && r.RemoteUri == _submoduleInfo.Url 
+                        && r.Path == IndividualRepoName + '/' + _submoduleInfo.Path)
+                    && l.Any(
+                        r => r.CommitSha == SubmoduleSha2 
+                        && r.RemoteUri == "https://github.com/dotnet/external-2" 
+                        && r.Path == IndividualRepoName + '/' + _submoduleInfo.Path))),
+            Times.Once);
+
+        _dependencyTracker.Verify(
+            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Exactly(2));
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
