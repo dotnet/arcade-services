@@ -236,15 +236,28 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var updatedDependencies = new HashSet<DependencyUpdate>();
         var skippedDependencies = new HashSet<DependencyUpdate>();
 
-        reposToUpdate.Enqueue(new(mapping, targetRevision, targetVersion));
+        reposToUpdate.Enqueue(new DependencyUpdate(mapping, targetRevision, targetVersion, null));
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
             var mappingToUpdate = repoToUpdate.Mapping;
+            var currentSha = GetCurrentVersion(mappingToUpdate);
 
-            _logger.LogInformation("Recursively updating dependency {repo} / {commit}",
-                mappingToUpdate.Name,
-                repoToUpdate.TargetRevision ?? HEAD);
+            if (repoToUpdate.Parent is null)
+            {
+                _logger.LogInformation("Starting recursive update for {repo} / {from} → {to}",
+                    mappingToUpdate.Name,
+                    currentSha,
+                    repoToUpdate.TargetRevision ?? HEAD);
+            }
+            else
+            {
+                _logger.LogInformation("Recursively updating dependency (of {parent}) {repo} / {from} → {to}",
+                    mappingToUpdate.Name,
+                    repoToUpdate.Parent,
+                    currentSha,
+                    repoToUpdate.TargetRevision ?? HEAD);
+            }
 
             await UpdateRepository(mappingToUpdate, repoToUpdate.TargetRevision, repoToUpdate.TargetVersion, noSquash, cancellationToken);
             updatedDependencies.Add(repoToUpdate);
@@ -257,15 +270,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     continue;
                 }
 
+                var dependencyUpdate = new DependencyUpdate(
+                    Mapping: dependencyMapping,
+                    TargetRevision: dependency.Commit,
+                    TargetVersion: dependency.Version,
+                    Parent: mappingToUpdate.Name);
+
                 var dependencySha = GetCurrentVersion(dependencyMapping);
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.Name, dependencySha);
-                    skippedDependencies.Add(new(dependencyMapping, dependency.Commit, dependency.Version));
+                    skippedDependencies.Add(dependencyUpdate);
                     continue;
                 }
 
-                reposToUpdate.Enqueue(new(dependencyMapping, dependency.Commit, dependency.Version));
+                reposToUpdate.Enqueue(dependencyUpdate);
             }
         }
 
@@ -346,5 +365,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return version.Sha;
     }
 
-    private record DependencyUpdate(SourceMapping Mapping, string? TargetRevision, string? TargetVersion);
+    private record DependencyUpdate(
+        SourceMapping Mapping,
+        string? TargetRevision,
+        string? TargetVersion,
+        string? Parent);
 }
