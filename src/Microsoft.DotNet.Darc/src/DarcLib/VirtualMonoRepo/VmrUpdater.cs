@@ -252,9 +252,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             else
             {
-                _logger.LogInformation("Recursively updating dependency (of {parent}) {repo} / {from} → {to}",
-                    mappingToUpdate.Name,
+                _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from} → {to}",
                     repoToUpdate.Parent,
+                    mappingToUpdate.Name,
                     currentSha,
                     repoToUpdate.TargetRevision ?? HEAD);
             }
