@@ -7,40 +7,39 @@ using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests;
+
+public partial class NoConfigTest
 {
-    public partial class NoConfigTest
+    [TestDependencyInjectionSetup]
+    public static class TestDataConfiguration
     {
-        [TestDependencyInjectionSetup]
-        public static class TestDataConfiguration
+        public static void Empty(IServiceCollection collection)
         {
-            public static void Empty(IServiceCollection collection)
-            {
-            }
         }
+    }
 
-        [Test]
-        public void ValidateSync()
-        {
-            using TestData testData = TestData.Default.Build();
-        }
+    [Test]
+    public void ValidateSync()
+    {
+        using TestData testData = TestData.Default.Build();
+    }
 
-        [Test]
-        public async Task ValidateAsyncBuild()
-        {
-            using TestData testData = await TestData.Default.BuildAsync();
-        }
+    [Test]
+    public async Task ValidateAsyncBuild()
+    {
+        using TestData testData = await TestData.Default.BuildAsync();
+    }
 
-        [Test]
-        public async Task ValidateAsyncDispose()
-        {
-            await using TestData testData = TestData.Default.Build();
-        }
+    [Test]
+    public async Task ValidateAsyncDispose()
+    {
+        await using TestData testData = TestData.Default.Build();
+    }
 
-        [Test]
-        public async Task ValidateAsyncAll()
-        {
-            await using TestData testData = await TestData.Default.BuildAsync();
-        }
+    [Test]
+    public async Task ValidateAsyncAll()
+    {
+        await using TestData testData = await TestData.Default.BuildAsync();
     }
 }

@@ -4,20 +4,19 @@
 
 using Moq;
 
-namespace SubscriptionActorService.Tests
-{
-    public class VerifyableMockRepository : MockRepository
-    {
-        public VerifyableMockRepository(MockBehavior defaultBehavior) : base(defaultBehavior)
-        {
-        }
+namespace SubscriptionActorService.Tests;
 
-        public void VerifyNoUnverifiedCalls()
+public class VerifyableMockRepository : MockRepository
+{
+    public VerifyableMockRepository(MockBehavior defaultBehavior) : base(defaultBehavior)
+    {
+    }
+
+    public void VerifyNoUnverifiedCalls()
+    {
+        foreach (dynamic mock in Mocks)
         {
-            foreach (dynamic mock in Mocks)
-            {
-                mock.VerifyNoOtherCalls();
-            }
+            mock.VerifyNoOtherCalls();
         }
     }
 }

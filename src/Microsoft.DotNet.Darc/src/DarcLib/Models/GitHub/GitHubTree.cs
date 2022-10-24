@@ -5,13 +5,12 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class GitHubTree
-    {
-        [JsonProperty("base_tree")]
-        public string BaseTree { get; set; }
+namespace Microsoft.DotNet.DarcLib;
 
-        public List<GitHubTreeItem> Tree { get; set; }
-    }
+public class GitHubTree
+{
+    [JsonProperty("base_tree")]
+    public string BaseTree { get; set; }
+
+    public List<GitHubTreeItem> Tree { get; set; }
 }

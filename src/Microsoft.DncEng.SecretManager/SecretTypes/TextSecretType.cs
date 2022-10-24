@@ -3,36 +3,35 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
 
-namespace Microsoft.DncEng.SecretManager.SecretTypes
+namespace Microsoft.DncEng.SecretManager.SecretTypes;
+
+[Name("text")]
+public class TextSecretType : SecretType<TextSecretType.Parameters>
 {
-    [Name("text")]
-    public class TextSecretType : SecretType<TextSecretType.Parameters>
+    private readonly IConsole _console;
+
+    public class Parameters
     {
-        private readonly IConsole _console;
+        public string Description { get; set; }
+    }
 
-        public class Parameters
-        {
-            public string Description { get; set; }
-        }
+    public TextSecretType(IConsole console)
+    {
+        _console = console;
+    }
 
-        public TextSecretType(IConsole console)
+    protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+    {
+        var existing = await context.GetSecretValue(new SecretReference(context.SecretName));
+        if (!_console.IsInteractive)
         {
-            _console = console;
+            throw new HumanInterventionRequiredException($"Text secret rotation required. Human intervention required.");
         }
-
-        protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
+        var newValue = await _console.PromptAsync($"Input value for {context.SecretName} (empty to keep existing), {parameters.Description}: ");
+        if (string.IsNullOrEmpty(newValue))
         {
-            var existing = await context.GetSecretValue(new SecretReference(context.SecretName));
-            if (!_console.IsInteractive)
-            {
-                throw new HumanInterventionRequiredException($"Text secret rotation required. Human intervention required.");
-            }
-            var newValue = await _console.PromptAsync($"Input value for {context.SecretName} (empty to keep existing), {parameters.Description}: ");
-            if (string.IsNullOrEmpty(newValue))
-            {
-                newValue = existing;
-            }
-            return new SecretData(newValue, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue);
+            newValue = existing;
         }
+        return new SecretData(newValue, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue);
     }
 }

@@ -8,49 +8,48 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 
-namespace Microsoft.DncEng.CommandLineLib
+namespace Microsoft.DncEng.CommandLineLib;
+
+public class DefaultCommandRegistry : ICommandRegistry
 {
-    public class DefaultCommandRegistry : ICommandRegistry
+    private readonly ImmutableList<(Type parent, string name, Type commandType)> _commandSet;
+
+    public DefaultCommandRegistry()
     {
-        private readonly ImmutableList<(Type parent, string name, Type commandType)> _commandSet;
+        _commandSet = ScanForCommands();
+    }
 
-        public DefaultCommandRegistry()
+    private static ImmutableList<(Type parent, string name, Type commandType)> ScanForCommands()
+    {
+        Type commandType = typeof(Command);
+        IEnumerable<Type> allCommands =
+            Assembly.GetEntryAssembly().GetTypes().Where(t => commandType.IsAssignableFrom(t));
+        ImmutableList<(Type parent, string name, Type commandType)>.Builder list =
+            ImmutableList.CreateBuilder<(Type parent, string name, Type commandType)>();
+        foreach (Type command in allCommands)
         {
-            _commandSet = ScanForCommands();
-        }
-
-        private static ImmutableList<(Type parent, string name, Type commandType)> ScanForCommands()
-        {
-            Type commandType = typeof(Command);
-            IEnumerable<Type> allCommands =
-                Assembly.GetEntryAssembly().GetTypes().Where(t => commandType.IsAssignableFrom(t));
-            ImmutableList<(Type parent, string name, Type commandType)>.Builder list =
-                ImmutableList.CreateBuilder<(Type parent, string name, Type commandType)>();
-            foreach (Type command in allCommands)
+            if (command.IsAbstract)
             {
-                if (command.IsAbstract)
-                {
-                    continue;
-                }
-
-                var attr = command.GetCustomAttribute<CommandAttribute>();
-                if (attr == null)
-                {
-                    continue;
-                }
-
-                Type parentType = attr.Parent ?? typeof(GlobalCommand);
-
-                list.Add((parentType, attr.Name, command));
+                continue;
             }
 
-            return list.ToImmutable();
+            var attr = command.GetCustomAttribute<CommandAttribute>();
+            if (attr == null)
+            {
+                continue;
+            }
+
+            Type parentType = attr.Parent ?? typeof(GlobalCommand);
+
+            list.Add((parentType, attr.Name, command));
         }
 
-        public IReadOnlyDictionary<string, Type> GetValidCommandAtScope(Type scope = null)
-        {
-            scope ??= typeof(GlobalCommand);
-            return _commandSet.Where(c => c.parent == scope).ToImmutableDictionary(c => c.name, c => c.commandType);
-        }
+        return list.ToImmutable();
+    }
+
+    public IReadOnlyDictionary<string, Type> GetValidCommandAtScope(Type scope = null)
+    {
+        scope ??= typeof(GlobalCommand);
+        return _commandSet.Where(c => c.parent == scope).ToImmutableDictionary(c => c.name, c => c.commandType);
     }
 }

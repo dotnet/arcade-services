@@ -1,7 +1,6 @@
-namespace DotNet.Status.Web.Options
+namespace DotNet.Status.Web.Options;
+
+public class AnnotationsOptions
 {
-    public class AnnotationsOptions
-    {
-        public string DeploymentsTableConnectionString { get; set; }
-    }
+    public string DeploymentsTableConnectionString { get; set; }
 }

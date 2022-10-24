@@ -12,42 +12,41 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace Microsoft.DotNet.Web.Authentication.GitHub
+namespace Microsoft.DotNet.Web.Authentication.GitHub;
+
+public class GitHubAuthenticationHandler : OAuthHandler<GitHubAuthenticationOptions>
 {
-    public class GitHubAuthenticationHandler : OAuthHandler<GitHubAuthenticationOptions>
+    private readonly GitHubClaimResolver _claimResolver;
+
+    public GitHubAuthenticationHandler(
+        GitHubClaimResolver claimResolver,
+        IOptionsMonitor<GitHubAuthenticationOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock) : base(options, logger, encoder, clock)
     {
-        private readonly GitHubClaimResolver _claimResolver;
+        _claimResolver = claimResolver;
+    }
 
-        public GitHubAuthenticationHandler(
-            GitHubClaimResolver claimResolver,
-            IOptionsMonitor<GitHubAuthenticationOptions> options,
-            ILoggerFactory logger,
-            UrlEncoder encoder,
-            ISystemClock clock) : base(options, logger, encoder, clock)
-        {
-            _claimResolver = claimResolver;
-        }
+    protected override async Task<AuthenticationTicket> CreateTicketAsync(
+        ClaimsIdentity identity,
+        AuthenticationProperties properties,
+        OAuthTokenResponse tokens)
+    {
+        string accessToken = tokens.AccessToken;
+        (IEnumerable<Claim> claims, User user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
+        identity.AddClaims(claims);
 
-        protected override async Task<AuthenticationTicket> CreateTicketAsync(
-            ClaimsIdentity identity,
-            AuthenticationProperties properties,
-            OAuthTokenResponse tokens)
-        {
-            string accessToken = tokens.AccessToken;
-            (IEnumerable<Claim> claims, User user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
-            identity.AddClaims(claims);
-
-            var context = new OAuthCreatingTicketContext(
-                new ClaimsPrincipal(identity),
-                properties,
-                Context,
-                Scheme,
-                Options,
-                Backchannel,
-                tokens,
-                default);
-            await Options.Events.CreatingTicket(context);
-            return new AuthenticationTicket(context.Principal, context.Properties, context.Scheme.Name);
-        }
+        var context = new OAuthCreatingTicketContext(
+            new ClaimsPrincipal(identity),
+            properties,
+            Context,
+            Scheme,
+            Options,
+            Backchannel,
+            tokens,
+            default);
+        await Options.Events.CreatingTicket(context);
+        return new AuthenticationTicket(context.Principal, context.Properties, context.Scheme.Name);
     }
 }

@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsChangeType
 {
-    public class AzureDevOpsChangeType
-    {
-        public static int Add = 1;
+    public static int Add = 1;
 
-        public static int Edit = 2;
+    public static int Edit = 2;
 
-        public static int Delete = 16;
-    }
+    public static int Delete = 16;
 }

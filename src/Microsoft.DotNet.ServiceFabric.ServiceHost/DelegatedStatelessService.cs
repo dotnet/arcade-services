@@ -14,93 +14,92 @@ using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class DelegatedStatelessService<TServiceImplementation> : StatelessService
+    where TServiceImplementation : IServiceImplementation
 {
-    public class DelegatedStatelessService<TServiceImplementation> : StatelessService
-        where TServiceImplementation : IServiceImplementation
+    private readonly ServiceProvider _container;
+
+    public DelegatedStatelessService(
+        StatelessServiceContext context,
+        Action<IServiceCollection> configureServices) : base(context)
     {
-        private readonly ServiceProvider _container;
+        var services = new ServiceCollection();
+        services.AddSingleton<ServiceContext>(Context);
+        services.AddSingleton(Context);
+        services.AddSingleton<IServiceLoadReporter>(new StatelessServiceLoadReporter(Partition));
+        configureServices(services);
 
-        public DelegatedStatelessService(
-            StatelessServiceContext context,
-            Action<IServiceCollection> configureServices) : base(context)
+        _container = services.BuildServiceProvider();
+
+        // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
+        _container.GetService<TemporaryFiles>()?.Initialize();
+    }
+
+    protected override Task OnCloseAsync(CancellationToken cancellationToken)
+    {
+        _container?.Dispose();
+        return Task.CompletedTask;
+    }
+
+    protected override void OnAbort()
+    {
+        _container?.Dispose();
+    }
+
+    protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+    {
+        Type[] ifaces = typeof(TServiceImplementation).GetAllInterfaces()
+            .Where(iface => typeof(IService).IsAssignableFrom(iface))
+            .ToArray();
+        if (ifaces.Length == 0)
         {
-            var services = new ServiceCollection();
-            services.AddSingleton<ServiceContext>(Context);
-            services.AddSingleton(Context);
-            services.AddSingleton<IServiceLoadReporter>(new StatelessServiceLoadReporter(Partition));
-            configureServices(services);
-
-            _container = services.BuildServiceProvider();
-
-            // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            _container.GetService<TemporaryFiles>()?.Initialize();
+            return Enumerable.Empty<ServiceInstanceListener>();
         }
 
-        protected override Task OnCloseAsync(CancellationToken cancellationToken)
+        return new[]
         {
-            _container?.Dispose();
-            return Task.CompletedTask;
-        }
+            new ServiceInstanceListener(
+                context => ServiceHostRemoting.CreateServiceRemotingListener<TServiceImplementation>(
+                    context,
+                    ifaces,
+                    _container))
+        };
+    }
 
-        protected override void OnAbort()
-        {
-            _container?.Dispose();
-        }
+    protected override async Task RunAsync(CancellationToken cancellationToken)
+    {
+        await DelegatedService.RunServiceLoops<DelegatedStatelessService<TServiceImplementation>>(
+            _container,
+            cancellationToken,
+            RunAsyncLoop,
+            RunSchedule
+        );
+    }
 
-        protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+    private async Task RunAsyncLoop(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
         {
-            Type[] ifaces = typeof(TServiceImplementation).GetAllInterfaces()
-                .Where(iface => typeof(IService).IsAssignableFrom(iface))
-                .ToArray();
-            if (ifaces.Length == 0)
+            using (IServiceScope scope = _container.CreateScope())
             {
-                return Enumerable.Empty<ServiceInstanceListener>();
-            }
+                var impl = scope.ServiceProvider.GetService<TServiceImplementation>();
 
-            return new[]
-            {
-                new ServiceInstanceListener(
-                    context => ServiceHostRemoting.CreateServiceRemotingListener<TServiceImplementation>(
-                        context,
-                        ifaces,
-                        _container))
-            };
-        }
+                var shouldWaitFor = await impl.RunAsync(cancellationToken);
 
-        protected override async Task RunAsync(CancellationToken cancellationToken)
-        {
-            await DelegatedService.RunServiceLoops<DelegatedStatelessService<TServiceImplementation>>(
-                _container,
-                cancellationToken,
-                RunAsyncLoop,
-                RunSchedule
-            );
-        }
-
-        private async Task RunAsyncLoop(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                using (IServiceScope scope = _container.CreateScope())
+                if (shouldWaitFor.Equals(TimeSpan.MaxValue))
                 {
-                    var impl = scope.ServiceProvider.GetService<TServiceImplementation>();
-
-                    var shouldWaitFor = await impl.RunAsync(cancellationToken);
-
-                    if (shouldWaitFor.Equals(TimeSpan.MaxValue))
-                    {
-                        return;
-                    }
-
-                    await Task.Delay(shouldWaitFor, cancellationToken);
+                    return;
                 }
+
+                await Task.Delay(shouldWaitFor, cancellationToken);
             }
         }
+    }
 
-        private async Task RunSchedule(CancellationToken cancellationToken)
-        {
-            await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
-        }
+    private async Task RunSchedule(CancellationToken cancellationToken)
+    {
+        await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
     }
 }

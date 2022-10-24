@@ -4,29 +4,28 @@
 
 using Microsoft.AspNetCore.Http;
 
-namespace Microsoft.DotNet.Web.Authentication.AccessToken
+namespace Microsoft.DotNet.Web.Authentication.AccessToken;
+
+public class GetTokenHashContext<TUser>
 {
-    public class GetTokenHashContext<TUser>
+    public GetTokenHashContext(HttpContext httpContext, int tokenId)
     {
-        public GetTokenHashContext(HttpContext httpContext, int tokenId)
-        {
-            HttpContext = httpContext;
-            TokenId = tokenId;
-            Succeeded = false;
-        }
+        HttpContext = httpContext;
+        TokenId = tokenId;
+        Succeeded = false;
+    }
 
-        public HttpContext HttpContext { get; }
-        public int TokenId { get; }
+    public HttpContext HttpContext { get; }
+    public int TokenId { get; }
 
-        public string Hash { get; private set; }
-        public TUser User { get; private set; }
-        public bool Succeeded { get; private set; }
+    public string Hash { get; private set; }
+    public TUser User { get; private set; }
+    public bool Succeeded { get; private set; }
 
-        public void Success(string hash, TUser user)
-        {
-            Hash = hash;
-            User = user;
-            Succeeded = true;
-        }
+    public void Success(string hash, TUser user)
+    {
+        Hash = hash;
+        User = user;
+        Succeeded = true;
     }
 }

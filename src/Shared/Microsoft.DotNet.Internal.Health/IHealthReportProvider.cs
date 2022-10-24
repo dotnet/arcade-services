@@ -5,11 +5,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public interface IHealthReportProvider
 {
-    public interface IHealthReportProvider
-    {
-        Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message);
-        Task<IList<HealthReport>> GetAllStatusAsync(string serviceName);
-    }
+    Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message);
+    Task<IList<HealthReport>> GetAllStatusAsync(string serviceName);
 }

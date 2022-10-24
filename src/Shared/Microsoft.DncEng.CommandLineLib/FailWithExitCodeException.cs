@@ -4,17 +4,16 @@
 
 using System;
 
-namespace Microsoft.DncEng.CommandLineLib
-{
-    public class FailWithExitCodeException : Exception
-    {
-        public int ExitCode { get; }
-        public bool ShowMessage { get; }
+namespace Microsoft.DncEng.CommandLineLib;
 
-        public FailWithExitCodeException(int exitCode, string message = null) : base(message)
-        {
-            ShowMessage = !string.IsNullOrEmpty(message);
-            ExitCode = exitCode;
-        }
+public class FailWithExitCodeException : Exception
+{
+    public int ExitCode { get; }
+    public bool ShowMessage { get; }
+
+    public FailWithExitCodeException(int exitCode, string message = null) : base(message)
+    {
+        ShowMessage = !string.IsNullOrEmpty(message);
+        ExitCode = exitCode;
     }
 }

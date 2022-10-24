@@ -1,39 +1,38 @@
 using System;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Internal.Logging
+namespace Microsoft.DotNet.Internal.Logging;
+
+internal static class FormattableStringFormatter
 {
-    internal static class FormattableStringFormatter
+    private class FormattingLogger : ILogger, IDisposable
     {
-        private class FormattingLogger : ILogger, IDisposable
+        public string LastLog;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            public string LastLog;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-            {
-                LastLog = formatter(state, exception);
-            }
-
-            public bool IsEnabled(LogLevel logLevel)
-            {
-                return true;
-            }
-
-            public IDisposable BeginScope<TState>(TState state)
-            {
-                return this;
-            }
-
-            public void Dispose()
-            {
-            }
+            LastLog = formatter(state, exception);
         }
 
-        public static string Format(string logFormatString, object[] args)
+        public bool IsEnabled(LogLevel logLevel)
         {
-            var logger = new FormattingLogger();
-            logger.Log(LogLevel.Error, logFormatString, args);
-            return logger.LastLog;
+            return true;
         }
+
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return this;
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    public static string Format(string logFormatString, object[] args)
+    {
+        var logger = new FormattingLogger();
+        logger.Log(LogLevel.Error, logFormatString, args);
+        return logger.LastLog;
     }
 }

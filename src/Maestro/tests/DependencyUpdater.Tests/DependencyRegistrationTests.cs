@@ -7,26 +7,25 @@ using Microsoft.ServiceFabric.Data;
 using Moq;
 using NUnit.Framework;
 
-namespace DependencyUpdater.Tests
+namespace DependencyUpdater.Tests;
+
+[TestFixture]
+public class DependencyRegistrationTests
 {
-    [TestFixture]
-    public class DependencyRegistrationTests
+    [Test]
+    public void AreDependenciesRegistered()
     {
-        [Test]
-        public void AreDependenciesRegistered()
-        {
-            DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
-                    {
-                        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
-                        ServiceHost.ConfigureDefaultServices(s);
-                        Program.Configure(s);
+        DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+            {
+                Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "XUNIT");
+                ServiceHost.ConfigureDefaultServices(s);
+                Program.Configure(s);
 
-                        // The "IReliableStateManager" is provided by stateful services
-                        s.AddSingleton(Mock.Of<IReliableStateManager>());
+                // The "IReliableStateManager" is provided by stateful services
+                s.AddSingleton(Mock.Of<IReliableStateManager>());
 
-                        s.AddScoped<DependencyUpdater>();
-                    },
-                    out string message).Should().BeTrue(message);
-        }
+                s.AddScoped<DependencyUpdater>();
+            },
+            out string message).Should().BeTrue(message);
     }
 }

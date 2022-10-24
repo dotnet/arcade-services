@@ -11,157 +11,156 @@ using NUnit.Framework;
 
 #pragma warning disable 1998
 
-namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests
+namespace Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.Tests;
+
+public partial class AsyncNoReturn
 {
-    public partial class AsyncNoReturn
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
     {
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
+        public static async Task Configure(IServiceCollection collection, Ref<bool> called)
         {
-            public static async Task Configure(IServiceCollection collection, Ref<bool> called)
-            {
-                called.Value = true;
-            }
-        }
-
-        [Test]
-        public async Task Validate()
-        {
-            var called = new Ref<bool>();
-            await using TestData testData = await TestData.Default.WithCalled(called).BuildAsync();
-            called.Value.Should().BeTrue();
+            called.Value = true;
         }
     }
 
-    public partial class AsyncWithCallback
+    [Test]
+    public async Task Validate()
     {
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
-        {
-            public static async Task<Action<IServiceProvider>> Configure(
-                IServiceCollection collection,
-                Ref<bool> configCalled,
-                Ref<bool> callbackCalled)
-            {
-                configCalled.Value = true;
-                return s => callbackCalled.Value = true;
-            }
-        }
+        var called = new Ref<bool>();
+        await using TestData testData = await TestData.Default.WithCalled(called).BuildAsync();
+        called.Value.Should().BeTrue();
+    }
+}
 
-        [Test]
-        public async Task Validate()
+public partial class AsyncWithCallback
+{
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
+    {
+        public static async Task<Action<IServiceProvider>> Configure(
+            IServiceCollection collection,
+            Ref<bool> configCalled,
+            Ref<bool> callbackCalled)
         {
-            var configCalled = new Ref<bool>();
-            var callbackCalled = new Ref<bool>();
-            await using TestData testData = await TestData.Default
-                .WithConfigCalled(configCalled)
-                .WithCallbackCalled(callbackCalled)
-                .BuildAsync();
-            configCalled.Value.Should().BeTrue();
+            configCalled.Value = true;
+            return s => callbackCalled.Value = true;
         }
     }
 
-    public partial class AsyncWithReturn
+    [Test]
+    public async Task Validate()
     {
-        private const string ValueText = "Test-AsyncWithReturn";
+        var configCalled = new Ref<bool>();
+        var callbackCalled = new Ref<bool>();
+        await using TestData testData = await TestData.Default
+            .WithConfigCalled(configCalled)
+            .WithCallbackCalled(callbackCalled)
+            .BuildAsync();
+        configCalled.Value.Should().BeTrue();
+    }
+}
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
-        {
-            public static async Task<Func<IServiceProvider, Injectable>> Injectable(IServiceCollection collection)
-            {
-                return _ => new Injectable(ValueText);
-            }
-        }
+public partial class AsyncWithReturn
+{
+    private const string ValueText = "Test-AsyncWithReturn";
 
-        [Test]
-        public async Task Validate()
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
+    {
+        public static async Task<Func<IServiceProvider, Injectable>> Injectable(IServiceCollection collection)
         {
-            await using TestData testData = await TestData.Default
-                .BuildAsync();
-            testData.Injectable.Value.Should().Be(ValueText);
+            return _ => new Injectable(ValueText);
         }
     }
 
-    public partial class DoubleAsync
+    [Test]
+    public async Task Validate()
     {
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
-        {
-            public static async Task<Func<IServiceProvider, Task>> Configure(
-                IServiceCollection collection,
-                Ref<bool> configCalled,
-                Ref<bool> callbackCalled)
-            {
-                configCalled.Value = true;
-                return async s => callbackCalled.Value = true;
-            }
-        }
+        await using TestData testData = await TestData.Default
+            .BuildAsync();
+        testData.Injectable.Value.Should().Be(ValueText);
+    }
+}
 
-        [Test]
-        public async Task Validate()
+public partial class DoubleAsync
+{
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
+    {
+        public static async Task<Func<IServiceProvider, Task>> Configure(
+            IServiceCollection collection,
+            Ref<bool> configCalled,
+            Ref<bool> callbackCalled)
         {
-            var configCalled = new Ref<bool>();
-            var callbackCalled = new Ref<bool>();
-            await using TestData testData = await TestData.Default
-                .WithConfigCalled(configCalled)
-                .WithCallbackCalled(callbackCalled)
-                .BuildAsync();
-            configCalled.Value.Should().BeTrue();
+            configCalled.Value = true;
+            return async s => callbackCalled.Value = true;
         }
     }
 
-    public partial class DoubleAsyncWithReturn
+    [Test]
+    public async Task Validate()
     {
-        private const string ValueText = "Test-DoubleAsyncWithReturn";
+        var configCalled = new Ref<bool>();
+        var callbackCalled = new Ref<bool>();
+        await using TestData testData = await TestData.Default
+            .WithConfigCalled(configCalled)
+            .WithCallbackCalled(callbackCalled)
+            .BuildAsync();
+        configCalled.Value.Should().BeTrue();
+    }
+}
 
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
-        {
-            public static async Task<Func<IServiceProvider, Task<Injectable>>> Injectable(IServiceCollection collection)
-            {
-                return async _ => new Injectable(ValueText);
-            }
-        }
+public partial class DoubleAsyncWithReturn
+{
+    private const string ValueText = "Test-DoubleAsyncWithReturn";
 
-        [Test]
-        public async Task Validate()
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
+    {
+        public static async Task<Func<IServiceProvider, Task<Injectable>>> Injectable(IServiceCollection collection)
         {
-            await using TestData testData = await TestData.Default
-                .BuildAsync();
-            testData.Injectable.Value.Should().Be(ValueText);
+            return async _ => new Injectable(ValueText);
         }
     }
 
-    public partial class DoubleAsyncWithReturnParameter
+    [Test]
+    public async Task Validate()
     {
-        [TestDependencyInjectionSetup]
-        private static class TestDataConfig
-        {
-            public static async Task<Func<IServiceProvider, Task<Injectable>>> Injectable(
-                IServiceCollection collection,
-                string value)
-            {
-                return async _ => new Injectable(value);
-            }
-        }
+        await using TestData testData = await TestData.Default
+            .BuildAsync();
+        testData.Injectable.Value.Should().Be(ValueText);
+    }
+}
 
-        [Test]
-        public async Task ValidateDefault()
+public partial class DoubleAsyncWithReturnParameter
+{
+    [TestDependencyInjectionSetup]
+    private static class TestDataConfig
+    {
+        public static async Task<Func<IServiceProvider, Task<Injectable>>> Injectable(
+            IServiceCollection collection,
+            string value)
         {
-            await using TestData testData = await TestData.Default
-                .BuildAsync();
-            testData.Injectable.Value.Should().BeNull();
+            return async _ => new Injectable(value);
         }
+    }
 
-        [Test]
-        public async Task ValidateValue()
-        {
-            const string valueTest = "Test-DoubleAsyncWithReturnParameter";
-            await using TestData testData = await TestData.Default
-                .WithValue(valueTest)
-                .BuildAsync();
-            testData.Injectable.Value.Should().Be(valueTest);
-        }
+    [Test]
+    public async Task ValidateDefault()
+    {
+        await using TestData testData = await TestData.Default
+            .BuildAsync();
+        testData.Injectable.Value.Should().BeNull();
+    }
+
+    [Test]
+    public async Task ValidateValue()
+    {
+        const string valueTest = "Test-DoubleAsyncWithReturnParameter";
+        await using TestData testData = await TestData.Default
+            .WithValue(valueTest)
+            .BuildAsync();
+        testData.Injectable.Value.Should().Be(valueTest);
     }
 }

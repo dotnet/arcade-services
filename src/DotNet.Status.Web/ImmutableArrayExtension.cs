@@ -6,18 +6,17 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace DotNet.Status.Web
-{
-    internal static class ImmutableArrayExtension
-    {
-        internal static IEnumerable<T> OrEmpty<T>(this IEnumerable<T> array)
-        {
-            return array ?? Enumerable.Empty<T>();
-        }
+namespace DotNet.Status.Web;
 
-        internal static IEnumerable<T> OrEmpty<T>(this ImmutableArray<T> array)
-        {
-            return array.IsDefault ? Enumerable.Empty<T>() : array;
-        }
+internal static class ImmutableArrayExtension
+{
+    internal static IEnumerable<T> OrEmpty<T>(this IEnumerable<T> array)
+    {
+        return array ?? Enumerable.Empty<T>();
+    }
+
+    internal static IEnumerable<T> OrEmpty<T>(this ImmutableArray<T> array)
+    {
+        return array.IsDefault ? Enumerable.Empty<T>() : array;
     }
 }

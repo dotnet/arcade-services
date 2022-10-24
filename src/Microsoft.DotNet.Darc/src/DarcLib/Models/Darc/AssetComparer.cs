@@ -6,28 +6,27 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+/// <summary>
+///     Compares assets based on name and version.
+/// </summary>
+public class AssetComparer : IEqualityComparer<Asset>
 {
-    /// <summary>
-    ///     Compares assets based on name and version.
-    /// </summary>
-    public class AssetComparer : IEqualityComparer<Asset>
+    public bool Equals(Asset x, Asset y)
     {
-        public bool Equals(Asset x, Asset y)
-        {
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
-                x.Version == y.Version;
-        }
+        return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
+               x.Version == y.Version;
+    }
 
-        public bool Equals(Asset x, DependencyDetail y)
-        {
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
-                x.Version == y.Version;
-        }
+    public bool Equals(Asset x, DependencyDetail y)
+    {
+        return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
+               x.Version == y.Version;
+    }
 
-        public int GetHashCode(Asset obj)
-        {
-            return (obj.Name, obj.Version).GetHashCode();
-        }
+    public int GetHashCode(Asset obj)
+    {
+        return (obj.Name, obj.Version).GetHashCode();
     }
 }

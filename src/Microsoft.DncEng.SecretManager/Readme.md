@@ -394,11 +394,10 @@ type: ad-application
 ```yaml
 type: azure-devops-access-token
 parameters:
-  organization: azure devops org
-  requiredScopes: string describing the required scopes
-  # only one of the following is required
+  organizations: space separate list of organizations
+  scopes: space separated list of scopes in the format accepted by pat-generator
+  domainAccountName: name of domain account
   domainAccountSecret: secret reference to a domain-account
-  gitHubBotAccountSecret: secret reference to a github-account
 ```
 
 ### Base64 Encode

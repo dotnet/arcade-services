@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public enum KnownDependencyType
 {
-    public enum KnownDependencyType
-    {
-        GlobalJson,
-        Docker
-    }
+    GlobalJson,
+    Docker
 }

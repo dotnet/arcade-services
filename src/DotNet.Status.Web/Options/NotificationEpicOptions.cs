@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public class NotificationEpicOptions
 {
-    public class NotificationEpicOptions
-    {
-        public string Repository { get; set; }
-        public int IssueNumber { get; set; }
-    }
+    public string Repository { get; set; }
+    public int IssueNumber { get; set; }
 }

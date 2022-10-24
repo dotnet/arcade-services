@@ -5,10 +5,9 @@
 
 using System.Threading.Tasks;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+public interface IPullRequestPolicyFailureNotifier
 {
-    public interface IPullRequestPolicyFailureNotifier
-    {
-        Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr);
-    }
+    Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr);
 }

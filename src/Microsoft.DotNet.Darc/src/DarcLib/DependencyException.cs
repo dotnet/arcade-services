@@ -5,25 +5,24 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+[Serializable]
+public class DependencyException : DarcException
 {
-    [Serializable]
-    public class DependencyException : DarcException
+    public DependencyException() : base()
     {
-        public DependencyException() : base()
-        {
-        }
+    }
 
-        protected DependencyException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
+    protected DependencyException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
 
-        public DependencyException(string message) : base(message)
-        {
-        }
+    public DependencyException(string message) : base(message)
+    {
+    }
 
-        public DependencyException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+    public DependencyException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }

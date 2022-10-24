@@ -4,11 +4,10 @@
 
 using System.Threading.Tasks;
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public interface ITokenRevocationProvider
 {
-    public interface ITokenRevocationProvider
-    {
-        Task<bool> IsTokenRevokedAsync(long userId, long tokenId);
-        Task RevokeTokenAsync(long userId, long tokenId);
-    }
+    Task<bool> IsTokenRevokedAsync(long userId, long tokenId);
+    Task RevokeTokenAsync(long userId, long tokenId);
 }

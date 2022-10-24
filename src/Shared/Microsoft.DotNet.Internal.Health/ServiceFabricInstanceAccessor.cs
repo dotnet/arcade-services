@@ -4,20 +4,19 @@
 
 using System.Fabric;
 
-namespace Microsoft.DotNet.Internal.Health
-{
-    public class ServiceFabricInstanceAccessor : IInstanceAccessor
-    {
-        private readonly ServiceContext _context;
-        
-        public ServiceFabricInstanceAccessor(ServiceContext context)
-        {
-            _context = context;
-        }
+namespace Microsoft.DotNet.Internal.Health;
 
-        public string GetCurrentInstanceName()
-        {
-            return _context.ReplicaOrInstanceId.ToString();
-        }
+public class ServiceFabricInstanceAccessor : IInstanceAccessor
+{
+    private readonly ServiceContext _context;
+        
+    public ServiceFabricInstanceAccessor(ServiceContext context)
+    {
+        _context = context;
+    }
+
+    public string GetCurrentInstanceName()
+    {
+        return _context.ReplicaOrInstanceId.ToString();
     }
 }

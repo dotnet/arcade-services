@@ -2,15 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.GitHub.Authentication
-{
-    public interface IGitHubAppTokenProvider 
-    {
-        string GetAppToken();
+namespace Microsoft.DotNet.GitHub.Authentication;
 
-        /// <summary>
-        /// Get an app token using the configuration that corresponds to the logical name specified by <paramref name="name"/>.
-        /// </summary>
-        string GetAppToken(string name);
-    }
+public interface IGitHubAppTokenProvider 
+{
+    string GetAppToken();
+
+    /// <summary>
+    /// Get an app token using the configuration that corresponds to the logical name specified by <paramref name="name"/>.
+    /// </summary>
+    string GetAppToken(string name);
 }

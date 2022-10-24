@@ -6,10 +6,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public interface IServiceImplementation
 {
-    public interface IServiceImplementation
-    {
-        Task<TimeSpan> RunAsync(CancellationToken cancellationToken);
-    }
+    Task<TimeSpan> RunAsync(CancellationToken cancellationToken);
 }

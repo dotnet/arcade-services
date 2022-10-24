@@ -6,10 +6,9 @@ using DotNet.Status.Web.Controllers;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Models;
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public interface ITimelineIssueTriage
 {
-    public interface ITimelineIssueTriage
-    {
-        Task ProcessIssueEvent(IssuesHookData issuePayload);
-    }
+    Task ProcessIssueEvent(IssuesHookData issuePayload);
 }

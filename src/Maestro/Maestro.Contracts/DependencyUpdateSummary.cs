@@ -4,18 +4,17 @@
 
 using System.Runtime.Serialization;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+[DataContract]
+public class DependencyUpdateSummary
 {
-    [DataContract]
-    public class DependencyUpdateSummary
-    {
-        [DataMember]
-        public string DependencyName { get; set; }
+    [DataMember]
+    public string DependencyName { get; set; }
 
-        [DataMember]
-        public string FromVersion { get; set; }
+    [DataMember]
+    public string FromVersion { get; set; }
 
-        [DataMember]
-        public string ToVersion { get; set; }
-    }
+    [DataMember]
+    public string ToVersion { get; set; }
 }

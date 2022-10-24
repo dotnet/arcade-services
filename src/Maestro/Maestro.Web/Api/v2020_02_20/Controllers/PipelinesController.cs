@@ -5,14 +5,13 @@
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Maestro.Web.Api.v2020_02_20.Controllers
+namespace Maestro.Web.Api.v2020_02_20.Controllers;
+
+/// <summary>
+///   We don't use Release Pipelines anymore.
+/// </summary>
+[Route("pipelines")]
+[ApiVersion("2020-02-20")]
+public class PipelinesController
 {
-    /// <summary>
-    ///   We don't use Release Pipelines anymore.
-    /// </summary>
-    [Route("pipelines")]
-    [ApiVersion("2020-02-20")]
-    public class PipelinesController
-    {
-    }
 }

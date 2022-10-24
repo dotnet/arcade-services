@@ -7,32 +7,31 @@ using FluentAssertions;
 using NUnit.Framework;
 using ServiceFabricMocks;
 
-namespace SubscriptionActorService.Tests
+namespace SubscriptionActorService.Tests;
+
+[TestFixture]
+public abstract class ActorTests : TestsWithServices
 {
-    [TestFixture]
-    public abstract class ActorTests : TestsWithServices
+    protected Dictionary<string, object> ExpectedActorState;
+
+    protected Dictionary<string, MockReminderManager.Reminder> ExpectedReminders;
+
+    protected MockReminderManager Reminders;
+    protected MockActorStateManager StateManager;
+
+    [SetUp]
+    public void ActorTests_SetUp()
     {
-        protected Dictionary<string, object> ExpectedActorState;
+        ExpectedActorState = new Dictionary<string, object>();
+        ExpectedReminders = new Dictionary<string, MockReminderManager.Reminder>();
+        StateManager = new MockActorStateManager();
+        Reminders = new MockReminderManager();
+    }
 
-        protected Dictionary<string, MockReminderManager.Reminder> ExpectedReminders;
-
-        protected MockReminderManager Reminders;
-        protected MockActorStateManager StateManager;
-
-        [SetUp]
-        public void ActorTests_SetUp()
-        {
-            ExpectedActorState = new Dictionary<string, object>();
-            ExpectedReminders = new Dictionary<string, MockReminderManager.Reminder>();
-            StateManager = new MockActorStateManager();
-            Reminders = new MockReminderManager();
-        }
-
-        [TearDown]
-        public void ActorTests_TearDown()
-        {
-            Reminders.Data.Should().BeEquivalentTo(ExpectedReminders);
-            StateManager.Data.Should().BeEquivalentTo(ExpectedActorState);
-        }
+    [TearDown]
+    public void ActorTests_TearDown()
+    {
+        Reminders.Data.Should().BeEquivalentTo(ExpectedReminders);
+        StateManager.Data.Should().BeEquivalentTo(ExpectedActorState);
     }
 }

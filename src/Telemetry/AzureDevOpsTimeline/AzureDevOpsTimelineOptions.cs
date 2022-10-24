@@ -2,19 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
-{
-    public class AzureDevOpsTimelineOptions
-    {
-        public string AzureDevOpsAccessToken { get; set; }
-        public string AzureDevOpsProjects { get; set; }
-        public string AzureDevOpsOrganization { get; set; }
-        public string AzureDevOpsUrl { get; set; }
+using System.Collections.Generic;
 
-        public string InitialDelay { get; set; }
-        public string Interval { get; set; }
-        public string ParallelRequests { get; set; }
-        public string BuildBatchSize { get; set; }
-        public string LogScrapingTimeout { get; set; }
-    }
+namespace Microsoft.DotNet.AzureDevOpsTimeline;
+
+public class AzureDevOpsProject
+{
+    public string Organization { get; set; }
+    public string Project { get; set; }
+}
+public class AzureDevOpsTimelineOptions
+{
+    public List<AzureDevOpsProject> Projects { get; set; }
+    public string InitialDelay { get; set; }
+    public string Interval { get; set; }
+    public string BuildBatchSize { get; set; }
+    public string LogScrapingTimeout { get; set; }
 }
