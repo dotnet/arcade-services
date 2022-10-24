@@ -3,15 +3,5 @@
 // See the LICENSE file in the project root for more information.
 namespace Microsoft.DotNet.Kusto
 {
-    public class KustoQueryOption
-    {
-        public string Name;
-        public object Value;
-
-        public KustoQueryOption(string name, object value)
-        {
-            Name = name;
-            Value = value;
-        }
-    }
+    public record KustoQueryOption(string Name, object Value);
 }
