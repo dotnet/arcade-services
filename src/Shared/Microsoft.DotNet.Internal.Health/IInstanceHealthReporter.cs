@@ -4,9 +4,8 @@
 
 using JetBrains.Annotations;
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public interface IInstanceHealthReporter<[UsedImplicitly] TService> : IHealthReporter
 {
-    public interface IInstanceHealthReporter<[UsedImplicitly] TService> : IHealthReporter
-    {
-    }
 }

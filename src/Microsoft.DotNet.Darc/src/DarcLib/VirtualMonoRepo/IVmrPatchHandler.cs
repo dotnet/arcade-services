@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -13,15 +14,16 @@ public interface IVmrPatchHandler
 {
     Task ApplyPatch(
         SourceMapping mapping,
-        string patchPath,
+        VmrIngestionPatch patch,
         CancellationToken cancellationToken);
     
-    Task CreatePatch(
+    Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
         string sha1,
         string sha2,
-        string destPath,
+        string destDir,
+        string tmpPath,
         CancellationToken cancellationToken);
 
     Task RestorePatchedFilesFromRepo(
@@ -33,4 +35,14 @@ public interface IVmrPatchHandler
     Task ApplyVmrPatches(
         SourceMapping mapping,
         CancellationToken cancellationToken);
+
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
+    Task CloneOrFetch(string repoUri, string checkoutRef, string destPath);
 }
+
+/// <summary>
+/// Patch that is created/applied during sync of the VMR.
+/// </summary>
+/// <param name="Path">Path where the patch is located</param>
+/// <param name="ApplicationPath">Relative path within the VMR to which the patch is applied onto</param>
+public record VmrIngestionPatch(string Path, string ApplicationPath);

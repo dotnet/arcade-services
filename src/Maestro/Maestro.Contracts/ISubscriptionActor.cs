@@ -5,13 +5,12 @@
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Actors;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public interface ISubscriptionActor : IActor
 {
-    public interface ISubscriptionActor : IActor
-    {
-        Task<string> RunActionAsync(string method, string arguments);
-        Task UpdateAsync(int buildId);
-        Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
-        Task<bool> AddDependencyFlowEventAsync(int updateBuildId, DependencyFlowEventType flowEvent, DependencyFlowEventReason reason, MergePolicyCheckResult policy, string flowType, string url);
-    }
+    Task<string> RunActionAsync(string method, string arguments);
+    Task UpdateAsync(int buildId);
+    Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
+    Task<bool> AddDependencyFlowEventAsync(int updateBuildId, DependencyFlowEventType flowEvent, DependencyFlowEventReason reason, MergePolicyCheckResult policy, string flowType, string url);
 }

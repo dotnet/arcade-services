@@ -19,439 +19,438 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.AzureDevOpsTimeline;
+
+/// <summary>
+///     An instance of this class is created for each service instance by the Service Fabric runtime.
+/// </summary>
+public sealed class AzureDevOpsTimeline : IServiceImplementation
 {
-    /// <summary>
-    ///     An instance of this class is created for each service instance by the Service Fabric runtime.
-    /// </summary>
-    public sealed class AzureDevOpsTimeline : IServiceImplementation
+    private readonly ILogger<AzureDevOpsTimeline> _logger;
+    private readonly AzureDevOpsTimelineOptions _options;
+    private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
+    private readonly IClientFactory<IAzureDevOpsClient> _azureDevopsClientFactory;
+    private readonly ISystemClock _systemClock;
+    private readonly IBuildLogScraper _buildLogScraper;
+
+    public AzureDevOpsTimeline(
+        ILogger<AzureDevOpsTimeline> logger,
+        IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
+        ITimelineTelemetryRepository timelineTelemetryRepository,
+        IClientFactory<IAzureDevOpsClient> azureDevopsClientFactory,
+        ISystemClock systemClock,
+        IBuildLogScraper buildLogScraper)
     {
-        private readonly ILogger<AzureDevOpsTimeline> _logger;
-        private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
-        private readonly ITimelineTelemetryRepository _timelineTelemetryRepository;
-        private readonly IAzureDevOpsClient _azureServer;
-        private readonly ISystemClock _systemClock;
-        private readonly IBuildLogScraper _buildLogScraper;
+        _logger = logger;
+        _options = options.Value;
+        _timelineTelemetryRepository = timelineTelemetryRepository;
+        _azureDevopsClientFactory = azureDevopsClientFactory;
+        _systemClock = systemClock;
+        _buildLogScraper = buildLogScraper;
+    }
 
-        public AzureDevOpsTimeline(
-            ILogger<AzureDevOpsTimeline> logger,
-            IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
-            ITimelineTelemetryRepository timelineTelemetryRepository,
-            IAzureDevOpsClient azureDevopsClient,
-            ISystemClock systemClock,
-            IBuildLogScraper buildLogScraper)
+    public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
+    {
+        try
         {
-            _logger = logger;
-            _options = options;
-            _timelineTelemetryRepository = timelineTelemetryRepository;
-            _azureServer = azureDevopsClient;
-            _systemClock = systemClock;
-            _buildLogScraper = buildLogScraper;
+            await Task.Delay(TimeSpan.Parse(_options.InitialDelay), cancellationToken);
+            await RunLoop(cancellationToken);
+        }
+        catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "AzureDevOpsTimeline failed with unhandled exception");
         }
 
-        public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
+        return TimeSpan.Parse(_options.Interval);
+    }
+
+    private async Task RunLoop(CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(_options.BuildBatchSize, out int buildBatchSize) || buildBatchSize < 1)
         {
-            await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await RunLoop(cancellationToken);
-                }
-                catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "AzureDevOpsTimelineLoop failed with unhandled exception");
-                }
-
-                await Wait(_options.Value.Interval, cancellationToken, TimeSpan.FromHours(6));
-            }
-
-            return TimeSpan.Zero;
+            buildBatchSize = 1000;
         }
 
-        private Task Wait(string duration, CancellationToken cancellationToken, TimeSpan defaultTime)
+        foreach (var instance in _options.Projects)
         {
-            if (!TimeSpan.TryParse(duration, out TimeSpan interval))
-            {
-                interval = defaultTime;
-            }
+            await RunProject(instance, buildBatchSize, cancellationToken);
+        }
+    }
 
-            _logger.LogTrace($"Delaying for {interval:g}...");
-            return Task.Delay(interval, cancellationToken);
+    public async Task RunProject(
+        AzureDevOpsProject project,
+        int buildBatchSize,
+        CancellationToken cancellationToken)
+    {
+        using var _ = _logger.BeginScope("Reading project {Organization}/{Project}", project.Organization, project.Project);
+                
+        DateTimeOffset latest;
+        DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(project);
+
+        if (latestCandidate.HasValue)
+        {
+            latest = latestCandidate.Value;
+        }
+        else
+        {
+            latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
+            _logger.LogWarning("No previous time found, using {StartTime}", latest.LocalDateTime);
         }
 
-        private async Task RunLoop(CancellationToken cancellationToken)
+        using var azDoClientRef = _azureDevopsClientFactory.GetClient(project.Organization);
+        var azDoClient = azDoClientRef.Value;
+
+        Build[] builds = await GetBuildsAsync(azDoClient, project.Project, latest, buildBatchSize, cancellationToken);
+        _logger.LogTrace("... found {BuildCount} builds...", builds.Length);
+
+        if (builds.Length == 0)
         {
-            // Fetch them again, we just waited an hour
-            AzureDevOpsTimelineOptions options = _options.Value;
-
-            if (!int.TryParse(options.BuildBatchSize, out int buildBatchSize) || buildBatchSize < 1)
-            {
-                buildBatchSize = 1000;
-            }
-
-            foreach (string project in options.AzureDevOpsProjects.Split(';'))
-            {
-                await RunProject(project, buildBatchSize, cancellationToken);
-            }
+            _logger.LogTrace("No work to do");
+            return;
         }
 
-        public async Task RunProject(
-            string project,
-            int buildBatchSize,
-            CancellationToken cancellationToken)
+        List<(int buildId, BuildRequestValidationResult validationResult)> validationResults = builds
+            .SelectMany(
+                build => build.ValidationResults,
+                (build, validationResult) => (build.Id, validationResult))
+            .ToList();
+
+        _logger.LogTrace("Fetching timeline...");
+        Dictionary<Build, Task<Timeline>> tasks = builds
+            .ToDictionary(
+                build => build,
+                build => azDoClient.GetTimelineAsync(project.Project, build.Id, cancellationToken)
+            );
+
+        await Task.WhenAll(tasks.Select(s => s.Value));
+
+        // Identify additional timelines by inspecting each record for a "PreviousAttempt"
+        // object, then fetching the "timelineId" field.
+        List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
+        foreach ((Build build, Task<Timeline> timelineTask) in tasks)
         {
-            DateTimeOffset latest;
-            DateTimeOffset? latestCandidate = await _timelineTelemetryRepository.GetLatestTimelineBuild(project);
+            Timeline timeline = await timelineTask;
 
-            if (latestCandidate.HasValue)
+            if (timeline is null)
             {
-                latest = latestCandidate.Value;
-            }
-            else
-            {
-                latest = _systemClock.UtcNow.Subtract(TimeSpan.FromDays(30));
-                _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
+                _logger.LogDebug("No timeline found for  {BuildId}", build.Id);
+                continue;
             }
 
-            _logger.LogInformation("Reading project {project}", project);
-            Build[] builds = await GetBuildsAsync(_azureServer, project, latest, buildBatchSize, cancellationToken);
-            _logger.LogTrace("... found {builds} builds...", builds.Length);
+            IEnumerable<string> additionalTimelineIds = timeline.Records
+                .Where(record => record.PreviousAttempts != null)
+                .SelectMany(record => record.PreviousAttempts)
+                .Select(attempt => attempt.TimelineId)
+                .Distinct();
 
-            if (builds.Length == 0)
+            retriedTimelineTasks.AddRange(
+                additionalTimelineIds.Select(
+                    timelineId => (build, azDoClient.GetTimelineAsync(project.Project, build.Id, timelineId, cancellationToken))));
+        }
+
+        await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
+
+        // Only record timelines where their "lastChangedOn" field is after the last 
+        // recorded date. Anything before has already been recorded.
+        List<(Build build, Task<Timeline> timeline)> allNewTimelines = new List<(Build build, Task<Timeline> timeline)>();
+        allNewTimelines.AddRange(tasks.Select(t => (t.Key, t.Value)));
+        allNewTimelines.AddRange(retriedTimelineTasks
+            .Where(t => t.timelineTask.Result.LastChangedOn > latest));
+
+        _logger.LogTrace("... finished timeline");
+
+        var records = new List<AugmentedTimelineRecord>();
+        var issues = new List<AugmentedTimelineIssue>();
+        var augmentedBuilds = new List<AugmentedBuild>();
+
+        _logger.LogTrace("Aggregating results...");
+        foreach ((Build build, Task<Timeline> timelineTask) in allNewTimelines)
+        {
+            using IDisposable buildScope = _logger.BeginScope(KeyValuePair.Create("buildId", build.Id));
+
+            augmentedBuilds.Add(CreateAugmentedBuild(build));
+
+            Timeline timeline = await timelineTask;
+            if (timeline?.Records == null)
             {
-                _logger.LogTrace("No work to do");
-                return;
+                continue;
             }
 
-            List<(int buildId, BuildRequestValidationResult validationResult)> validationResults = builds
-                .SelectMany(
-                    build => build.ValidationResults,
-                    (build, validationResult) => (build.Id, validationResult))
-                .ToList();
-
-            _logger.LogTrace("Fetching timeline...");
-            Dictionary<Build, Task<Timeline>> tasks = builds
-                .ToDictionary(
-                    build => build,
-                    build => _azureServer.GetTimelineAsync(project, build.Id, cancellationToken)
-                );
-
-            await Task.WhenAll(tasks.Select(s => s.Value));
-
-            // Identify additional timelines by inspecting each record for a "PreviousAttempt"
-            // object, then fetching the "timelineId" field.
-            List<(Build build, Task<Timeline> timelineTask)> retriedTimelineTasks = new List<(Build, Task<Timeline>)>();
-            foreach ((Build build, Task<Timeline> timelineTask) in tasks)
+            var recordCache =
+                new Dictionary<string, AugmentedTimelineRecord>();
+            var issueCache = new List<AugmentedTimelineIssue>();
+            foreach (TimelineRecord record in timeline.Records)
             {
-                Timeline timeline = await timelineTask;
-
-                if (timeline is null)
+                var augRecord = new AugmentedTimelineRecord
                 {
-                    _logger.LogDebug("No timeline found for buildid {buildid}", build.Id);
-                    continue;
-                }
-
-                IEnumerable<string> additionalTimelineIds = timeline.Records
-                    .Where(record => record.PreviousAttempts != null)
-                    .SelectMany(record => record.PreviousAttempts)
-                    .Select(attempt => attempt.TimelineId)
-                    .Distinct();
-
-                retriedTimelineTasks.AddRange(
-                    additionalTimelineIds.Select(
-                        timelineId => (build, _azureServer.GetTimelineAsync(project, build.Id, timelineId, cancellationToken))));
-            }
-
-            await Task.WhenAll(retriedTimelineTasks.Select(o => o.timelineTask));
-
-            // Only record timelines where their "lastChangedOn" field is after the last 
-            // recorded date. Anything before has already been recorded.
-            List<(Build build, Task<Timeline> timeline)> allNewTimelines = new List<(Build build, Task<Timeline> timeline)>();
-            allNewTimelines.AddRange(tasks.Select(t => (t.Key, t.Value)));
-            allNewTimelines.AddRange(retriedTimelineTasks
-                .Where(t => t.timelineTask.Result.LastChangedOn > latest));
-
-            _logger.LogTrace("... finished timeline");
-
-            var records = new List<AugmentedTimelineRecord>();
-            var issues = new List<AugmentedTimelineIssue>();
-            var augmentedBuilds = new List<AugmentedBuild>();
-
-            _logger.LogTrace("Aggregating results...");
-            foreach ((Build build, Task<Timeline> timelineTask) in allNewTimelines)
-            {
-                using IDisposable buildScope = _logger.BeginScope(KeyValuePair.Create("buildId", build.Id));
-
-                augmentedBuilds.Add(CreateAugmentedBuild(build));
-
-                Timeline timeline = await timelineTask;
-                if (timeline?.Records == null)
+                    BuildId = build.Id,
+                    TimelineId = timeline.Id,
+                    Raw = record,
+                };
+                recordCache.Add(record.Id, augRecord);
+                records.Add(augRecord);
+                if (record.Issues == null)
                 {
                     continue;
                 }
 
-                var recordCache =
-                    new Dictionary<string, AugmentedTimelineRecord>();
-                var issueCache = new List<AugmentedTimelineIssue>();
-                foreach (TimelineRecord record in timeline.Records)
+                for (int iIssue = 0; iIssue < record.Issues.Length; iIssue++)
                 {
-                    var augRecord = new AugmentedTimelineRecord(build.Id, timeline.Id, record);
-                    recordCache.Add(record.Id, augRecord);
-                    records.Add(augRecord);
-                    if (record.Issues == null)
+                    var augIssue = new AugmentedTimelineIssue
                     {
-                        continue;
-                    }
-
-                    for (int iIssue = 0; iIssue < record.Issues.Length; iIssue++)
-                    {
-                        var augIssue =
-                            new AugmentedTimelineIssue(build.Id, timeline.Id, record.Id, iIssue, record.Issues[iIssue]);
-                        augIssue.Bucket = GetBucket(augIssue);
-                        issueCache.Add(augIssue);
-                        issues.Add(augIssue);
-                    }
-                }
-
-                foreach (AugmentedTimelineRecord record in recordCache.Values)
-                {
-                    FillAugmentedOrder(record, recordCache);
-                }
-
-                foreach (AugmentedTimelineIssue issue in issueCache)
-                {
-                    if (recordCache.TryGetValue(issue.RecordId, out AugmentedTimelineRecord record))
-                    {
-                        issue.AugmentedIndex = record.AugmentedOrder + "." + issue.Index.ToString("D3");
-                    }
-                    else
-                    {
-                        issue.AugmentedIndex = "999." + issue.Index.ToString("D3");
-                    }
+                        BuildId = build.Id,
+                        TimelineId = timeline.Id,
+                        RecordId = record.Id,
+                        Index = iIssue,
+                        Raw = record.Issues[iIssue],
+                    };
+                    augIssue.Bucket = GetBucket(augIssue);
+                    issueCache.Add(augIssue);
+                    issues.Add(augIssue);
                 }
             }
 
-            await AddImageNamesToRecordsAsync(records, cancellationToken);
-
-            _logger.LogInformation("Saving TimelineBuilds...");
-            await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds);
-
-            _logger.LogInformation("Saving TimelineValidationMessages...");
-            await _timelineTelemetryRepository.WriteTimelineValidationMessages(validationResults);
-
-            _logger.LogInformation("Saving TimelineRecords...");
-            await _timelineTelemetryRepository.WriteTimelineRecords(records);
-
-            _logger.LogInformation("Saving TimelineIssues...");
-            await _timelineTelemetryRepository.WriteTimelineIssues(issues);
-        }
-
-        private AugmentedBuild CreateAugmentedBuild(Build build)
-        {
-            string targetBranch = "";
-
-            try
+            foreach (AugmentedTimelineRecord record in recordCache.Values)
             {
-                if (build.Reason == "pullRequest")
+                FillAugmentedOrder(record, recordCache);
+            }
+
+            foreach (AugmentedTimelineIssue issue in issueCache)
+            {
+                if (recordCache.TryGetValue(issue.RecordId, out AugmentedTimelineRecord record))
                 {
-                    if (build.Parameters != null)
-                    {
-                        targetBranch = (string)JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Build parameters null, unable to extract target branch");
-                    }
-                }
-            }
-            catch (JsonException e)
-            {
-                _logger.LogInformation(e, "Unable to extract targetBranch from Build");
-            }
-
-            return new AugmentedBuild(build, targetBranch);
-        }
-
-        private static string GetBucket(AugmentedTimelineIssue augIssue)
-        {
-            string message = augIssue?.Raw?.Message;
-            if (string.IsNullOrEmpty(message))
-                return null;
-
-            Match match = Regex.Match(message, @"\(NETCORE_ENGINEERING_TELEMETRY=([^)]*)\)");
-            if (!match.Success)
-                return null;
-
-            return match.Groups[1].Value;
-        }
-
-        private static void FillAugmentedOrder(
-            AugmentedTimelineRecord record,
-            IReadOnlyDictionary<string, AugmentedTimelineRecord> recordCache)
-        {
-            if (!string.IsNullOrEmpty(record.AugmentedOrder))
-            {
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(record.Raw.ParentId))
-            {
-                if (recordCache.TryGetValue(record.Raw.ParentId, out AugmentedTimelineRecord parent))
-                {
-                    FillAugmentedOrder(parent, recordCache);
-                    record.AugmentedOrder = parent.AugmentedOrder + "." + record.Raw.Order.ToString("D3");
-                    return;
-                }
-
-                record.AugmentedOrder = "999." + record.Raw.Order.ToString("D3");
-                return;
-            }
-
-            record.AugmentedOrder = record.Raw.Order.ToString("D3");
-        }
-
-        private static async Task<Build[]> GetBuildsAsync(
-            IAzureDevOpsClient azureServer,
-            string project,
-            DateTimeOffset minDateTime,
-            int limit,
-            CancellationToken cancellationToken)
-        {
-            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
-        }
-
-        private async Task AddImageNamesToRecordsAsync(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
-        {
-            TimeSpan cancellationTime = TimeSpan.Parse(_options.Value.LogScrapingTimeout ?? "00:10:00");
-
-            try
-            {
-                _logger.LogInformation("Starting log scraping");
-
-                var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
-                var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
-
-                using var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
-                var combinedCancellationToken = combinedCancellationTokenSource.Token;
-
-                Stopwatch stopWatch = Stopwatch.StartNew();
-
-                await GetImageNames(records, combinedCancellationToken);
-
-                stopWatch.Stop();
-                _logger.LogInformation("Log scraping took {elapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                //Don't swallup up the app cancellation token, let it do its thing
-                throw;
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("Exception thrown while getting image names: `{exception}`", e);
-            }
-        }
-
-        private async Task GetImageNames(List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
-        {
-            SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
-
-            var taskList = new List<Task>();
-
-            foreach (var record in records)
-            {
-                if (string.IsNullOrEmpty(record.Raw.Log?.Url))
-                {
-                    continue;
-                }
-
-                if (record.Raw.Name == "Initialize job")
-                {
-                    var childTask = GetImageName(record, throttleSemaphore, cancellationToken);
-                    taskList.Add(childTask);
-                    continue;
-                }
-
-                if (record.Raw.Name == "Initialize containers")
-                {
-                    var childTask = GetDockerImageName(record, throttleSemaphore, cancellationToken);
-                    taskList.Add(childTask);
-                    continue;
-                }
-            }
-
-            try
-            {
-                await Task.WhenAll(taskList);
-            }
-            catch(Exception e)
-            {                
-                _logger.LogInformation("Log scraping had some failures `{exception}`, summary below", e);
-            }
-            int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
-            int cancelledTasks = taskList.Count(task => task.IsCanceled);
-            int failedTasks = taskList.Count - successfulTasks - cancelledTasks;
-            _logger.LogInformation("Log scraping summary: {SuccessfulTasks} successful, {CancelledTasks} cancelled, {FailedTasks} failed", successfulTasks, cancelledTasks, failedTasks);
-        }
-        
-        private async Task GetImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
-        {
-            await throttleSemaphore.WaitAsync(cancellationToken);
-
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
-                {
-                    record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
-                }
-                else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
-                {
-                    record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(record.Raw.Log.Url, cancellationToken);
+                    issue.AugmentedIndex = record.AugmentedOrder + "." + issue.Index.ToString("D3");
                 }
                 else
                 {
-                    record.ImageName = null;
+                    issue.AugmentedIndex = "999." + issue.Index.ToString("D3");
                 }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
-                throw;
-            }
-            finally
-            {
-                throttleSemaphore.Release();
             }
         }
 
-        private async Task GetDockerImageName(AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+        await AddImageNamesToRecordsAsync(project, records, cancellationToken);
+
+        _logger.LogInformation("Saving TimelineBuilds...");
+        await _timelineTelemetryRepository.WriteTimelineBuilds(augmentedBuilds, project.Organization);
+
+        _logger.LogInformation("Saving TimelineValidationMessages...");
+        await _timelineTelemetryRepository.WriteTimelineValidationMessages(validationResults);
+
+        _logger.LogInformation("Saving TimelineRecords...");
+        await _timelineTelemetryRepository.WriteTimelineRecords(records);
+
+        _logger.LogInformation("Saving TimelineIssues...");
+        await _timelineTelemetryRepository.WriteTimelineIssues(issues);
+    }
+
+    private AugmentedBuild CreateAugmentedBuild(Build build)
+    {
+        string targetBranch = "";
+
+        try
         {
-            await throttleSemaphore.WaitAsync(cancellationToken);
+            if (build.Reason == "pullRequest")
+            {
+                if (build.Parameters != null)
+                {
+                    targetBranch = (string)JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
+                }
+                else
+                {
+                    _logger.LogInformation("Build parameters null, unable to extract target branch");
+                }
+            }
+        }
+        catch (JsonException e)
+        {
+            _logger.LogInformation(e, "Unable to extract targetBranch from Build");
+        }
 
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+        return new AugmentedBuild
+        {
+            Build = build,
+            TargetBranch = targetBranch,
+        };
+    }
 
-                record.ImageName = await _buildLogScraper.ExtractDockerImageNameAsync(record.Raw.Log.Url, cancellationToken);
-            }
-            catch (Exception exception)
+    private static string GetBucket(AugmentedTimelineIssue augIssue)
+    {
+        string message = augIssue?.Raw?.Message;
+        if (string.IsNullOrEmpty(message))
+            return null;
+
+        Match match = Regex.Match(message, @"\(NETCORE_ENGINEERING_TELEMETRY=([^)]*)\)");
+        if (!match.Success)
+            return null;
+
+        return match.Groups[1].Value;
+    }
+
+    private static void FillAugmentedOrder(
+        AugmentedTimelineRecord record,
+        IReadOnlyDictionary<string, AugmentedTimelineRecord> recordCache)
+    {
+        if (!string.IsNullOrEmpty(record.AugmentedOrder))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(record.Raw.ParentId))
+        {
+            if (recordCache.TryGetValue(record.Raw.ParentId, out AugmentedTimelineRecord parent))
             {
-                _logger.LogInformation("Non critical exception thrown when trying to get log '{logUrl}': `{exception}`", record.Raw.Log.Url, exception);
-                throw;
+                FillAugmentedOrder(parent, recordCache);
+                record.AugmentedOrder = parent.AugmentedOrder + "." + record.Raw.Order.ToString("D3");
+                return;
             }
-            finally
+
+            record.AugmentedOrder = "999." + record.Raw.Order.ToString("D3");
+            return;
+        }
+
+        record.AugmentedOrder = record.Raw.Order.ToString("D3");
+    }
+
+    private static async Task<Build[]> GetBuildsAsync(
+        IAzureDevOpsClient azureServer,
+        string project,
+        DateTimeOffset minDateTime,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+    }
+
+    private async Task AddImageNamesToRecordsAsync(AzureDevOpsProject project, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+    {
+        TimeSpan cancellationTime = TimeSpan.Parse(_options.LogScrapingTimeout ?? "00:10:00");
+
+        try
+        {
+            _logger.LogInformation("Starting log scraping");
+
+            var logScrapingTimeoutCancellationTokenSource = new CancellationTokenSource(cancellationTime);
+            var logScrapingTimeoutCancellationToken = logScrapingTimeoutCancellationTokenSource.Token;
+
+            using var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, logScrapingTimeoutCancellationToken);
+            var combinedCancellationToken = combinedCancellationTokenSource.Token;
+
+            Stopwatch stopWatch = Stopwatch.StartNew();
+
+            await GetImageNames(project, records, combinedCancellationToken);
+
+            stopWatch.Stop();
+            _logger.LogInformation("Log scraping took {ElapsedMilliseconds} milliseconds", stopWatch.ElapsedMilliseconds);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            //Don't swallow up the app cancellation token, let it do its thing
+            throw;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Exception thrown while getting image names");
+        }
+    }
+
+    private async Task GetImageNames(AzureDevOpsProject project, List<AugmentedTimelineRecord> records, CancellationToken cancellationToken)
+    {
+        SemaphoreSlim throttleSemaphore = new SemaphoreSlim(50);
+
+        var taskList = new List<Task>();
+
+        foreach (var record in records)
+        {
+            if (string.IsNullOrEmpty(record.Raw.Log?.Url))
             {
-                throttleSemaphore.Release();
+                continue;
             }
+
+            if (record.Raw.Name == "Initialize job")
+            {
+                var childTask = GetImageName(project, record, throttleSemaphore, cancellationToken);
+                taskList.Add(childTask);
+                continue;
+            }
+
+            if (record.Raw.Name == "Initialize containers")
+            {
+                var childTask = GetDockerImageName(project, record, throttleSemaphore, cancellationToken);
+                taskList.Add(childTask);
+                continue;
+            }
+        }
+
+        try
+        {
+            await Task.WhenAll(taskList);
+        }
+        catch(Exception e)
+        {                
+            _logger.LogInformation("Log scraping had some failures `{Exception}`, summary below", e);
+        }
+        int successfulTasks = taskList.Count(task => task.IsCompletedSuccessfully);
+        int cancelledTasks = taskList.Count(task => task.IsCanceled);
+        int failedTasks = taskList.Count - successfulTasks - cancelledTasks;
+        _logger.LogInformation("Log scraping summary: {SuccessfulTasks} successful, {CancelledTasks} cancelled, {FailedTasks} failed", successfulTasks, cancelledTasks, failedTasks);
+    }
+        
+    private async Task GetImageName(AzureDevOpsProject project, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+    {
+        await throttleSemaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (record.Raw.WorkerName.StartsWith("Azure Pipelines") || record.Raw.WorkerName.StartsWith("Hosted Agent"))
+            {
+                record.ImageName = await _buildLogScraper.ExtractMicrosoftHostedPoolImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
+            }
+            else if (record.Raw.WorkerName.StartsWith("NetCore1ESPool-"))
+            {
+                record.ImageName = await _buildLogScraper.ExtractOneESHostedPoolImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
+            }
+            else
+            {
+                record.ImageName = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogInformation(exception, "Non critical exception thrown when trying to get log '{LogUrl}'", record.Raw.Log.Url);
+            throw;
+        }
+        finally
+        {
+            throttleSemaphore.Release();
+        }
+    }
+
+    private async Task GetDockerImageName(AzureDevOpsProject project, AugmentedTimelineRecord record, SemaphoreSlim throttleSemaphore, CancellationToken cancellationToken)
+    {
+        await throttleSemaphore.WaitAsync(cancellationToken);
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            record.ImageName = await _buildLogScraper.ExtractDockerImageNameAsync(project, record.Raw.Log.Url, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogInformation(exception, "Non critical exception thrown when trying to get log '{LogUrl}'", record.Raw.Log.Url);
+            throw;
+        }
+        finally
+        {
+            throttleSemaphore.Release();
         }
     }
 }

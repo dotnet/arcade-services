@@ -14,96 +14,95 @@ using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class DelegatedStatelessWebService<TStartup> : StatelessService where TStartup : class
 {
-    public class DelegatedStatelessWebService<TStartup> : StatelessService where TStartup : class
+    private readonly Action<IWebHostBuilder> _configureHost;
+    private readonly Action<IServiceCollection> _configureServices;
+
+    public DelegatedStatelessWebService(
+        StatelessServiceContext context,
+        Action<IWebHostBuilder> configureHost,
+        Action<IServiceCollection> configureServices) : base(context)
     {
-        private readonly Action<IWebHostBuilder> _configureHost;
-        private readonly Action<IServiceCollection> _configureServices;
+        _configureHost = configureHost;
+        _configureServices = configureServices;
+    }
 
-        public DelegatedStatelessWebService(
-            StatelessServiceContext context,
-            Action<IWebHostBuilder> configureHost,
-            Action<IServiceCollection> configureServices) : base(context)
+    protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+    {
+        return new[]
         {
-            _configureHost = configureHost;
-            _configureServices = configureServices;
+            new ServiceInstanceListener(
+                context =>
+                {
+                    return new HttpSysCommunicationListener(
+                        context,
+                        "ServiceEndpoint",
+                        (url, listener) =>
+                        {
+                            var builder = new WebHostBuilder()
+                                .UseHttpSys()
+                                .UseContentRoot(Directory.GetCurrentDirectory())
+                                .UseSetting(WebHostDefaults.ApplicationKey,
+                                    typeof(TStartup).Assembly.GetName().Name);
+                            _configureHost(builder);
+
+                            return builder.ConfigureServices(
+                                    services =>
+                                    {
+                                        services.AddSingleton<ServiceContext>(context);
+                                        services.AddSingleton(context);
+                                        services.AddSingleton<IServiceLoadReporter>(new StatelessServiceLoadReporter(Partition));
+                                        services.AddSingleton<IStartup>(
+                                            provider =>
+                                            {
+                                                var env = provider.GetRequiredService<IHostEnvironment>();
+                                                return new DelegatedStatelessWebServiceStartup<TStartup>(
+                                                    provider,
+                                                    env,
+                                                    _configureServices);
+                                            });
+                                    })
+                                .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
+                                .UseUrls(url)
+                                .Build();
+                        });
+                })
+        };
+    }
+}
+
+public class DelegatedStatelessWebServiceStartup<TStartup> : IStartup
+{
+    private readonly Action<IServiceCollection> _configureServices;
+    private readonly IStartup _startupImplementation;
+
+    public DelegatedStatelessWebServiceStartup(
+        IServiceProvider provider,
+        IHostEnvironment env,
+        Action<IServiceCollection> configureServices)
+    {
+        _configureServices = configureServices;
+        if (typeof(IStartup).IsAssignableFrom(typeof(TStartup)))
+        {
+            _startupImplementation = (IStartup) ActivatorUtilities.CreateInstance<TStartup>(provider)!;
         }
-
-        protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+        else
         {
-            return new[]
-            {
-                new ServiceInstanceListener(
-                    context =>
-                    {
-                        return new HttpSysCommunicationListener(
-                            context,
-                            "ServiceEndpoint",
-                            (url, listener) =>
-                            {
-                                var builder = new WebHostBuilder()
-                                    .UseHttpSys()
-                                    .UseContentRoot(Directory.GetCurrentDirectory())
-                                    .UseSetting(WebHostDefaults.ApplicationKey,
-                                        typeof(TStartup).Assembly.GetName().Name);
-                                _configureHost(builder);
-
-                                return builder.ConfigureServices(
-                                        services =>
-                                        {
-                                            services.AddSingleton<ServiceContext>(context);
-                                            services.AddSingleton(context);
-                                            services.AddSingleton<IServiceLoadReporter>(new StatelessServiceLoadReporter(Partition));
-                                            services.AddSingleton<IStartup>(
-                                                provider =>
-                                                {
-                                                    var env = provider.GetRequiredService<IHostEnvironment>();
-                                                    return new DelegatedStatelessWebServiceStartup<TStartup>(
-                                                        provider,
-                                                        env,
-                                                        _configureServices);
-                                                });
-                                        })
-                                    .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
-                                    .UseUrls(url)
-                                    .Build();
-                            });
-                    })
-            };
+            throw new InvalidOperationException($"Type '{typeof(TStartup).FullName}' must implement {typeof(IStartup).FullName}");
         }
     }
 
-    public class DelegatedStatelessWebServiceStartup<TStartup> : IStartup
+    public IServiceProvider ConfigureServices(IServiceCollection services)
     {
-        private readonly Action<IServiceCollection> _configureServices;
-        private readonly IStartup _startupImplementation;
+        _configureServices(services);
+        return _startupImplementation.ConfigureServices(services);
+    }
 
-        public DelegatedStatelessWebServiceStartup(
-            IServiceProvider provider,
-            IHostEnvironment env,
-            Action<IServiceCollection> configureServices)
-        {
-            _configureServices = configureServices;
-            if (typeof(IStartup).IsAssignableFrom(typeof(TStartup)))
-            {
-                _startupImplementation = (IStartup) ActivatorUtilities.CreateInstance<TStartup>(provider)!;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Type '{typeof(TStartup).FullName}' must implement {typeof(IStartup).FullName}");
-            }
-        }
-
-        public IServiceProvider ConfigureServices(IServiceCollection services)
-        {
-            _configureServices(services);
-            return _startupImplementation.ConfigureServices(services);
-        }
-
-        public void Configure(IApplicationBuilder app)
-        {
-            _startupImplementation.Configure(app);
-        }
+    public void Configure(IApplicationBuilder app)
+    {
+        _startupImplementation.Configure(app);
     }
 }

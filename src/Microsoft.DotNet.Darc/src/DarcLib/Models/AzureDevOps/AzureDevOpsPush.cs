@@ -4,18 +4,17 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsPush
 {
-    public class AzureDevOpsPush
+    public AzureDevOpsPush(AzureDevOpsRefUpdate refUpdate, AzureDevOpsCommit vstsCommit)
     {
-        public AzureDevOpsPush(AzureDevOpsRefUpdate refUpdate, AzureDevOpsCommit vstsCommit)
-        {
-            RefUpdates = new List<AzureDevOpsRefUpdate> {refUpdate};
-            Commits = new List<AzureDevOpsCommit> {vstsCommit};
-        }
-
-        public List<AzureDevOpsRefUpdate> RefUpdates { get; set; }
-
-        public List<AzureDevOpsCommit> Commits { get; set; }
+        RefUpdates = new List<AzureDevOpsRefUpdate> {refUpdate};
+        Commits = new List<AzureDevOpsCommit> {vstsCommit};
     }
+
+    public List<AzureDevOpsRefUpdate> RefUpdates { get; set; }
+
+    public List<AzureDevOpsCommit> Commits { get; set; }
 }

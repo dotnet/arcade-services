@@ -7,32 +7,31 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Internal.Health.Tests
+namespace Microsoft.DotNet.Internal.Health.Tests;
+
+public class MockHandler : HttpMessageHandler, IHttpClientFactory, IHttpMessageHandlerFactory
 {
-    public class MockHandler : HttpMessageHandler, IHttpClientFactory, IHttpMessageHandlerFactory
+    private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _callback;
+
+    public MockHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> callback)
     {
-        private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _callback;
+        _callback = callback;
+    }
 
-        public MockHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> callback)
-        {
-            _callback = callback;
-        }
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        return _callback(request);
+    }
 
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            return _callback(request);
-        }
+    public HttpClient CreateClient(string name)
+    {
+        return new HttpClient(CreateHandler(name)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
+    }
 
-        public HttpClient CreateClient(string name)
-        {
-            return new HttpClient(CreateHandler(name)); // lgtm [cs/httpclient-checkcertrevlist-disabled] Used only for unit testing
-        }
-
-        public HttpMessageHandler CreateHandler(string name)
-        {
-            return this;
-        }
+    public HttpMessageHandler CreateHandler(string name)
+    {
+        return this;
     }
 }

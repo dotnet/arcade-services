@@ -4,16 +4,15 @@
 
 using System;
 
-namespace SubscriptionActorService
-{
-    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
-    public class ActionMethodAttribute : Attribute
-    {
-        public ActionMethodAttribute(string format)
-        {
-            Format = format;
-        }
+namespace SubscriptionActorService;
 
-        public string Format { get; }
+[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+public class ActionMethodAttribute : Attribute
+{
+    public ActionMethodAttribute(string format)
+    {
+        Format = format;
     }
+
+    public string Format { get; }
 }

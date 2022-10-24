@@ -2,39 +2,38 @@ using Microsoft.Extensions.Options;
 using Octokit;
 using System;
 
-namespace Microsoft.DotNet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication;
+
+public class GitHubClientFactory : IGitHubClientFactory
 {
-    public class GitHubClientFactory : IGitHubClientFactory
+    private readonly IOptionsMonitor<GitHubClientOptions> _githubClientOptions;
+
+    public GitHubClientFactory(IOptionsMonitor<GitHubClientOptions> githubClientOptions)
     {
-        private readonly IOptionsMonitor<GitHubClientOptions> _githubClientOptions;
+        _githubClientOptions = githubClientOptions;
+    }
 
-        public GitHubClientFactory(IOptionsMonitor<GitHubClientOptions> githubClientOptions)
+    public GitHubClientOptions Options => _githubClientOptions.CurrentValue; 
+
+    public IGitHubClient CreateGitHubClient(string token)
+    {
+        return CreateGitHubClient(token, AuthenticationType.Oauth);
+    }
+
+    public IGitHubClient CreateGitHubClient(string token, AuthenticationType type)
+    {
+        if (Options?.ProductHeader == null)
         {
-            _githubClientOptions = githubClientOptions;
+            throw new InvalidOperationException($"A {nameof(GitHubClientOptions.ProductHeader)} is required for a GitHub client, but the value in {nameof(GitHubClientOptions)} is null.");
         }
 
-        public GitHubClientOptions Options => _githubClientOptions.CurrentValue; 
+        var client = new GitHubClient(Options.ProductHeader);
 
-        public IGitHubClient CreateGitHubClient(string token)
+        if (!string.IsNullOrEmpty(token))
         {
-            return CreateGitHubClient(token, AuthenticationType.Oauth);
+            client.Credentials = new Credentials(token, type);
         }
 
-        public IGitHubClient CreateGitHubClient(string token, AuthenticationType type)
-        {
-            if (Options?.ProductHeader == null)
-            {
-                throw new InvalidOperationException($"A {nameof(GitHubClientOptions.ProductHeader)} is required for a GitHub client, but the value in {nameof(GitHubClientOptions)} is null.");
-            }
-
-            var client = new GitHubClient(Options.ProductHeader);
-
-            if (!string.IsNullOrEmpty(token))
-            {
-                client.Credentials = new Credentials(token, type);
-            }
-
-            return client;
-        }
+        return client;
     }
 }

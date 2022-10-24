@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.Web.Authentication.AccessToken
+namespace Microsoft.DotNet.Web.Authentication.AccessToken;
+
+public static class PersonalAccessTokenDefaults
 {
-    public static class PersonalAccessTokenDefaults
-    {
-        public static string AuthenticationScheme { get; } = "PersonalAccessToken";
-    }
+    public static string AuthenticationScheme { get; } = "PersonalAccessToken";
 }

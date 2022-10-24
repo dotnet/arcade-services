@@ -5,10 +5,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DncEng.CommandLineLib
+namespace Microsoft.DncEng.CommandLineLib;
+
+public interface ICommandRegistry
 {
-    public interface ICommandRegistry
-    {
-        IReadOnlyDictionary<string, Type> GetValidCommandAtScope(Type scope = null);
-    }
+    IReadOnlyDictionary<string, Type> GetValidCommandAtScope(Type scope = null);
 }

@@ -10,109 +10,108 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class TeamMentionForwardingOptions
 {
-    public class TeamMentionForwardingOptions
+    public string WatchedTeam { get; set; }
+    public string[] IgnoreRepos { get; set; }
+    public string TeamsWebHookUri { get; set; }
+}
+
+public interface ITeamMentionForwarder
+{
+    Task HandleMentions(string repo, [CanBeNull] string oldBody, string newBody, string title, string commentUri, string username, DateTimeOffset date);
+}
+
+public class TeamMentionForwarder : ITeamMentionForwarder
+{
+    private readonly IOptionsSnapshot<TeamMentionForwardingOptions> _options;
+    private readonly ILogger<TeamMentionForwarder> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public TeamMentionForwarder(IHttpClientFactory httpClientFactory, IOptionsSnapshot<TeamMentionForwardingOptions> options, ILogger<TeamMentionForwarder> logger)
     {
-        public string WatchedTeam { get; set; }
-        public string[] IgnoreRepos { get; set; }
-        public string TeamsWebHookUri { get; set; }
+        _httpClientFactory = httpClientFactory;
+        _options = options;
+        _logger = logger;
     }
 
-    public interface ITeamMentionForwarder
+    public async Task HandleMentions(string repo, [CanBeNull] string oldBody, string newBody, string title, string commentUri, string username, DateTimeOffset date)
     {
-        Task HandleMentions(string repo, [CanBeNull] string oldBody, string newBody, string title, string commentUri, string username, DateTimeOffset date);
-    }
+        bool shouldSend = true;
+        string team = _options.Value.WatchedTeam;
+        string[] ignoredRepos = _options.Value.IgnoreRepos;
 
-    public class TeamMentionForwarder : ITeamMentionForwarder
-    {
-        private readonly IOptionsSnapshot<TeamMentionForwardingOptions> _options;
-        private readonly ILogger<TeamMentionForwarder> _logger;
-        private readonly IHttpClientFactory _httpClientFactory;
-
-        public TeamMentionForwarder(IHttpClientFactory httpClientFactory, IOptionsSnapshot<TeamMentionForwardingOptions> options, ILogger<TeamMentionForwarder> logger)
+        if (ignoredRepos != null && ignoredRepos.Contains(repo))
         {
-            _httpClientFactory = httpClientFactory;
-            _options = options;
-            _logger = logger;
+            shouldSend = false;
         }
 
-        public async Task HandleMentions(string repo, [CanBeNull] string oldBody, string newBody, string title, string commentUri, string username, DateTimeOffset date)
+        if (string.IsNullOrEmpty(newBody) || !newBody.Contains(team))
         {
-            bool shouldSend = true;
-            string team = _options.Value.WatchedTeam;
-            string[] ignoredRepos = _options.Value.IgnoreRepos;
-
-            if (ignoredRepos != null && ignoredRepos.Contains(repo))
+            shouldSend = false;
+        }
+        else if (!string.IsNullOrEmpty(oldBody))
+        {
+            if (oldBody.Contains(team))
             {
                 shouldSend = false;
             }
-
-            if (string.IsNullOrEmpty(newBody) || !newBody.Contains(team))
-            {
-                shouldSend = false;
-            }
-            else if (!string.IsNullOrEmpty(oldBody))
-            {
-                if (oldBody.Contains(team))
-                {
-                    shouldSend = false;
-                }
-            }
-
-            if (shouldSend)
-            {
-                await SendCommentNotification(title, newBody, team, commentUri, username, date);
-            }
         }
 
-        private async Task SendCommentNotification(string title, string body, string teamName, string commentUri, string username, DateTimeOffset date)
+        if (shouldSend)
         {
-            try
+            await SendCommentNotification(title, newBody, team, commentUri, username, date);
+        }
+    }
+
+    private async Task SendCommentNotification(string title, string body, string teamName, string commentUri, string username, DateTimeOffset date)
+    {
+        try
+        {
+            _logger.LogInformation("Sending notification about mention of {teamName} at {uri}.", teamName, commentUri);
+            var message = new MessageCard
             {
-                _logger.LogInformation("Sending notification about mention of {teamName} at {uri}.", teamName, commentUri);
-                var message = new MessageCard
+                ThemeColor = "0072C6",
+                Text = $"Team {teamName} was mentioned in an issue.",
+                Actions = new List<IAction>
                 {
-                    ThemeColor = "0072C6",
-                    Text = $"Team {teamName} was mentioned in an issue.",
-                    Actions = new List<IAction>
+                    new OpenUri
                     {
-                        new OpenUri
+                        Name = "Open comment",
+                        Targets = new List<Target>
                         {
-                            Name = "Open comment",
-                            Targets = new List<Target>
+                            new Target
                             {
-                                new Target
-                                {
-                                    OperatingSystem = "default",
-                                    Uri = commentUri
-                                }
+                                OperatingSystem = "default",
+                                Uri = commentUri
                             }
                         }
-                    },
-                    Sections = new List<Section>
-                    {
-                        new Section
-                        {
-                            ActivityTitle = $"{username}",
-                            ActivitySubtitle = $"on {date:g}",
-                            ActivityText = body
-                        }
                     }
-                };
-                using HttpClient client = _httpClientFactory.CreateClient();
-                using var req = new HttpRequestMessage(HttpMethod.Post, _options.Value.TeamsWebHookUri)
+                },
+                Sections = new List<Section>
                 {
-                    Content = new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8),
-                };
-                using HttpResponseMessage res = await client.SendAsync(req);
-                res.EnsureSuccessStatusCode();
-                _logger.LogInformation("Sent notification about mention of {teamName} at {uri}.", teamName, commentUri);
-            }
-            catch (Exception ex)
+                    new Section
+                    {
+                        ActivityTitle = $"{username}",
+                        ActivitySubtitle = $"on {date:g}",
+                        ActivityText = body
+                    }
+                }
+            };
+            using HttpClient client = _httpClientFactory.CreateClient();
+            using var req = new HttpRequestMessage(HttpMethod.Post, _options.Value.TeamsWebHookUri)
             {
-                _logger.LogError(ex, "Unable to send notification about mention of {teamName} at {uri}.", teamName, commentUri);
-            }
+                Content = new StringContent(JsonConvert.SerializeObject(message), Encoding.UTF8),
+            };
+            using HttpResponseMessage res = await client.SendAsync(req);
+            res.EnsureSuccessStatusCode();
+            _logger.LogInformation("Sent notification about mention of {teamName} at {uri}.", teamName, commentUri);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unable to send notification about mention of {teamName} at {uri}.", teamName, commentUri);
         }
     }
 }

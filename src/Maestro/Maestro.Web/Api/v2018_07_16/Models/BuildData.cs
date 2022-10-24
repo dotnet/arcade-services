@@ -8,41 +8,40 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Maestro.Data.Models;
 
-namespace Maestro.Web.Api.v2018_07_16.Models
+namespace Maestro.Web.Api.v2018_07_16.Models;
+
+public class BuildData
 {
-    public class BuildData
+    [Required]
+    public string Repository { get; set; }
+
+    public string Branch { get; set; }
+
+    [Required]
+    public string Commit { get; set; }
+
+    [Required]
+    public string BuildNumber { get; set; }
+
+    public List<AssetData> Assets { get; set; }
+
+    public List<int> Dependencies { get; set; }
+
+    public Data.Models.Build ToDb()
     {
-        [Required]
-        public string Repository { get; set; }
+        var isGitHubInfo = Repository.IndexOf("github", StringComparison.OrdinalIgnoreCase) >= 0;
 
-        public string Branch { get; set; }
-
-        [Required]
-        public string Commit { get; set; }
-
-        [Required]
-        public string BuildNumber { get; set; }
-
-        public List<AssetData> Assets { get; set; }
-
-        public List<int> Dependencies { get; set; }
-
-        public Data.Models.Build ToDb()
+        return new Data.Models.Build
         {
-            var isGitHubInfo = Repository.IndexOf("github", StringComparison.OrdinalIgnoreCase) >= 0;
+            Commit = Commit,
+            AzureDevOpsBuildNumber = BuildNumber,
+            Assets = Assets.Select(a => a.ToDb()).ToList(),
 
-            return new Data.Models.Build
-            {
-                Commit = Commit,
-                AzureDevOpsBuildNumber = BuildNumber,
-                Assets = Assets.Select(a => a.ToDb()).ToList(),
+            GitHubRepository = isGitHubInfo ? Repository : null,
+            GitHubBranch = isGitHubInfo ? Branch : null,
 
-                GitHubRepository = isGitHubInfo ? Repository : null,
-                GitHubBranch = isGitHubInfo ? Branch : null,
-
-                AzureDevOpsRepository = isGitHubInfo ? null : Repository,
-                AzureDevOpsBranch = isGitHubInfo ? null : Branch,
-            };
-        }
+            AzureDevOpsRepository = isGitHubInfo ? null : Repository,
+            AzureDevOpsBranch = isGitHubInfo ? null : Branch,
+        };
     }
 }

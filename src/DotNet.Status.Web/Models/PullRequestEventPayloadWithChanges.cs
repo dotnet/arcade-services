@@ -1,9 +1,8 @@
 using Octokit;
 
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class PullRequestEventPayloadWithChanges : PullRequestEventPayload
 {
-    public class PullRequestEventPayloadWithChanges : PullRequestEventPayload
-    {
-        public IssueOrPullRequestCommentChanges Changes { get; set; }
-    }
+    public IssueOrPullRequestCommentChanges Changes { get; set; }
 }

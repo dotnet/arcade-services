@@ -5,22 +5,21 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.DarcLib
-{
-    internal interface ILocal
-    {
-        Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory);
-        /// <summary>
-        ///     Verify the local repository has correct and consistent dependency information
-        /// </summary>
-        /// <returns>Async task</returns>
-        Task<bool> Verify();
+namespace Microsoft.DotNet.DarcLib;
 
-        /// <summary>
-        ///     Checkout the specified tag, branch, or commit.
-        /// </summary>
-        /// <param name="commit">Tag, branch, or commit to checkout</param>
-        /// <param name="force">True to force checkout (can lose work)</param>
-        void Checkout(string commit, bool force);
-    }
+internal interface ILocal
+{
+    Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory);
+    /// <summary>
+    ///     Verify the local repository has correct and consistent dependency information
+    /// </summary>
+    /// <returns>Async task</returns>
+    Task<bool> Verify();
+
+    /// <summary>
+    ///     Checkout the specified tag, branch, or commit.
+    /// </summary>
+    /// <param name="commit">Tag, branch, or commit to checkout</param>
+    /// <param name="force">True to force checkout (can lose work)</param>
+    void Checkout(string commit, bool force);
 }

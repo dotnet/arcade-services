@@ -4,21 +4,20 @@
 
 using System;
 
-namespace DotNet.Status.Web
-{
-    internal struct GitHubTokenData
-    {
-        public GitHubTokenData(long userId, long tokenId, DateTimeOffset expiration, string accessToken)
-        {
-            UserId = userId;
-            TokenId = tokenId;
-            Expiration = expiration;
-            AccessToken = accessToken;
-        }
+namespace DotNet.Status.Web;
 
-        public long UserId { get; }
-        public long TokenId { get; }
-        public DateTimeOffset Expiration { get; }
-        public string AccessToken { get; }
+internal struct GitHubTokenData
+{
+    public GitHubTokenData(long userId, long tokenId, DateTimeOffset expiration, string accessToken)
+    {
+        UserId = userId;
+        TokenId = tokenId;
+        Expiration = expiration;
+        AccessToken = accessToken;
     }
+
+    public long UserId { get; }
+    public long TokenId { get; }
+    public DateTimeOffset Expiration { get; }
+    public string AccessToken { get; }
 }

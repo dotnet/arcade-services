@@ -4,20 +4,19 @@
 
 using CommandLine;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+abstract class UpdateDefaultChannelBaseCommandLineOptions : CommandLineOptions
 {
-    abstract class UpdateDefaultChannelBaseCommandLineOptions : CommandLineOptions
-    {
-        [Option("id", Default = -1, HelpText = "Existing default channel id")]
-        public int Id { get; set; }
+    [Option("id", Default = -1, HelpText = "Existing default channel id")]
+    public int Id { get; set; }
 
-        [Option("channel", HelpText = "Existing default channel association target channel name.")]
-        public string Channel { get; set; }
+    [Option("channel", HelpText = "Existing default channel association target channel name.")]
+    public string Channel { get; set; }
 
-        [Option("branch", HelpText = "Existing default channel association source branch name.")]
-        public string Branch { get; set; }
+    [Option("branch", HelpText = "Existing default channel association source branch name.")]
+    public string Branch { get; set; }
 
-        [Option("repo", HelpText = "Existing default channel association source repository name.")]
-        public string Repository { get; set; }
-    }
+    [Option("repo", HelpText = "Existing default channel association source repository name.")]
+    public string Repository { get; set; }
 }

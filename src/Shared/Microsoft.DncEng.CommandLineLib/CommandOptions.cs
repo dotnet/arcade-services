@@ -5,20 +5,19 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DncEng.CommandLineLib
+namespace Microsoft.DncEng.CommandLineLib;
+
+public class CommandOptions : ICommandOptions
 {
-    public class CommandOptions : ICommandOptions
+    private readonly Dictionary<Type, object> _options = new Dictionary<Type, object>();
+
+    public T GetOptions<T>()
     {
-        private readonly Dictionary<Type, object> _options = new Dictionary<Type, object>();
+        return (T) _options[typeof(T)];
+    }
 
-        public T GetOptions<T>()
-        {
-            return (T) _options[typeof(T)];
-        }
-
-        public void RegisterOptions(Command options)
-        {
-            _options.Add(options.GetType(), options);
-        }
+    public void RegisterOptions(Command options)
+    {
+        _options.Add(options.GetType(), options);
     }
 }

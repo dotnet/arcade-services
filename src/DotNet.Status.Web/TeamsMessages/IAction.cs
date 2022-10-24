@@ -1,4 +1,3 @@
-namespace DotNet.Status.Web.TeamsMessages
-{
-    public interface IAction { };
-}
+namespace DotNet.Status.Web.TeamsMessages;
+
+public interface IAction { };

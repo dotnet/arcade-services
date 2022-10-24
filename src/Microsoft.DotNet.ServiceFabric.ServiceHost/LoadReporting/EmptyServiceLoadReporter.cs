@@ -1,9 +1,8 @@
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class EmptyServiceLoadReporter : IServiceLoadReporter
 {
-    public class EmptyServiceLoadReporter : IServiceLoadReporter
+    public void ReportLoad(string name, int value)
     {
-        public void ReportLoad(string name, int value)
-        {
-        }
     }
 }

@@ -5,23 +5,22 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("get-default-channels", HelpText = "Gets a list of repo+branch combinations and their associated default channels for builds.")]
+internal class GetDefaultChannelsCommandLineOptions : CommandLineOptions
 {
-    [Verb("get-default-channels", HelpText = "Gets a list of repo+branch combinations and their associated default channels for builds.")]
-    internal class GetDefaultChannelsCommandLineOptions : CommandLineOptions
+    [Option("source-repo", HelpText = "Filter by a specific source repository. Matches on substring.")]
+    public string SourceRepository { get; set; }
+
+    [Option("branch", HelpText = "Filter by a branch. Matches on substring.")]
+    public string Branch { get; set; }
+
+    [Option("channel", HelpText = "Filter by a channel name. Matches on substring.")]
+    public string Channel { get; set; }
+
+    public override Operation GetOperation()
     {
-        [Option("source-repo", HelpText = "Filter by a specific source repository. Matches on substring.")]
-        public string SourceRepository { get; set; }
-
-        [Option("branch", HelpText = "Filter by a branch. Matches on substring.")]
-        public string Branch { get; set; }
-
-        [Option("channel", HelpText = "Filter by a channel name. Matches on substring.")]
-        public string Channel { get; set; }
-
-        public override Operation GetOperation()
-        {
-            return new GetDefaultChannelsOperation(this);
-        }
+        return new GetDefaultChannelsOperation(this);
     }
 }

@@ -13,68 +13,67 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class GetRepositoryMergePoliciesOperation : Operation
 {
-    internal class GetRepositoryMergePoliciesOperation : Operation
+    private GetRepositoryMergePoliciesCommandLineOptions _options;
+
+    public GetRepositoryMergePoliciesOperation(GetRepositoryMergePoliciesCommandLineOptions options)
+        : base(options)
     {
-        private GetRepositoryMergePoliciesCommandLineOptions _options;
+        _options = options;
+    }
 
-        public GetRepositoryMergePoliciesOperation(GetRepositoryMergePoliciesCommandLineOptions options)
-            : base(options)
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            _options = options;
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            IEnumerable<RepositoryBranch> allRepositories = await remote.GetRepositoriesAsync();
+            IEnumerable<RepositoryBranch> filteredRepositories = allRepositories.Where(repositories =>
+                (string.IsNullOrEmpty(_options.Repo) || repositories.Repository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrEmpty(_options.Branch) || repositories.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)));
+
+            // List only those repos and branches that are targeted by a batchable subscription (active) unless the user
+            // passes --all.
+            if (!_options.All)
+            {
+                HashSet<string> batchableTargets = (await remote.GetSubscriptionsAsync())
+                    .Where(s => s.Policy.Batchable)
+                    .Select<Subscription, string>(s => $"{s.TargetRepository}{s.TargetBranch}")
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var targetedRepositories = filteredRepositories.Where(r => batchableTargets.Contains($"{r.Repository}{r.Branch}"));
+
+                // If the number of repositories we're about to print is less than what we could have printed, then print a
+                // message.
+                int difference = filteredRepositories.Count() - targetedRepositories.Count();
+                if (difference != 0)
+                {
+                    Console.WriteLine($"Filtered {difference} policies for branches not targeted by an active batchable subscription. To include, pass --all.{Environment.NewLine}");
+                }
+
+                filteredRepositories = targetedRepositories;
+            }
+
+            foreach (var repository in filteredRepositories)
+            {
+                Console.WriteLine($"{repository.Repository} @ {repository.Branch}");
+                Console.Write(UxHelpers.GetMergePoliciesDescription(repository.MergePolicies));
+            }
+
+            return Constants.SuccessCode;
         }
-
-        public override async Task<int> ExecuteAsync()
+        catch (AuthenticationException e)
         {
-            try
-            {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-                IEnumerable<RepositoryBranch> allRepositories = await remote.GetRepositoriesAsync();
-                IEnumerable<RepositoryBranch> filteredRepositories = allRepositories.Where(repositories =>
-                    (string.IsNullOrEmpty(_options.Repo) || repositories.Repository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.Branch) || repositories.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)));
-
-                // List only those repos and branches that are targeted by a batchable subscription (active) unless the user
-                // passes --all.
-                if (!_options.All)
-                {
-                    HashSet<string> batchableTargets = (await remote.GetSubscriptionsAsync())
-                        .Where(s => s.Policy.Batchable)
-                        .Select<Subscription, string>(s => $"{s.TargetRepository}{s.TargetBranch}")
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    var targetedRepositories = filteredRepositories.Where(r => batchableTargets.Contains($"{r.Repository}{r.Branch}"));
-
-                    // If the number of repositories we're about to print is less than what we could have printed, then print a
-                    // message.
-                    int difference = filteredRepositories.Count() - targetedRepositories.Count();
-                    if (difference != 0)
-                    {
-                        Console.WriteLine($"Filtered {difference} policies for branches not targeted by an active batchable subscription. To include, pass --all.{Environment.NewLine}");
-                    }
-
-                    filteredRepositories = targetedRepositories;
-                }
-
-                foreach (var repository in filteredRepositories)
-                {
-                    Console.WriteLine($"{repository.Repository} @ {repository.Branch}");
-                    Console.Write(UxHelpers.GetMergePoliciesDescription(repository.MergePolicies));
-                }
-
-                return Constants.SuccessCode;
-            }
-            catch (AuthenticationException e)
-            {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Error: Failed to retrieve repositories");
-                return Constants.ErrorCode;
-            }
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed to retrieve repositories");
+            return Constants.ErrorCode;
         }
     }
 }

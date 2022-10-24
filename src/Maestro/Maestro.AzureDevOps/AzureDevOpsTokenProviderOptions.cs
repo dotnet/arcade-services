@@ -4,10 +4,9 @@
 
 using System.Collections.Generic;
 
-namespace Maestro.AzureDevOps
+namespace Maestro.AzureDevOps;
+
+public class AzureDevOpsTokenProviderOptions
 {
-    public class AzureDevOpsTokenProviderOptions
-    {
-        public Dictionary<string, string> Tokens { get; } = new Dictionary<string, string>();
-    }
+    public Dictionary<string, string> Tokens { get; } = new Dictionary<string, string>();
 }

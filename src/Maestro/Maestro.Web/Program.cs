@@ -4,13 +4,12 @@
 
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
-namespace Maestro.Web
+namespace Maestro.Web;
+
+internal static class Program
 {
-    internal static class Program
+    private static void Main()
     {
-        private static void Main()
-        {
-            ServiceHostWebSite<Startup>.Run("Maestro.WebType");
-        }
+        ServiceHostWebSite<Startup>.Run("Maestro.WebType");
     }
 }

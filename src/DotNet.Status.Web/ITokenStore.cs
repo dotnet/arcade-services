@@ -7,14 +7,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DotNet.Status.Web
+namespace DotNet.Status.Web;
+
+public interface ITokenStore
 {
-    public interface ITokenStore
-    {
-        Task<StoredTokenData> IssueTokenAsync(long userId, DateTimeOffset expiration, string description);
-        Task<StoredTokenData> GetTokenAsync(long userId, long tokenId);
-        Task<IEnumerable<StoredTokenData>> GetTokensForUserAsync(
-            long userId,
-            CancellationToken cancellationToken);
-    }
+    Task<StoredTokenData> IssueTokenAsync(long userId, DateTimeOffset expiration, string description);
+    Task<StoredTokenData> GetTokenAsync(long userId, long tokenId);
+    Task<IEnumerable<StoredTokenData>> GetTokensForUserAsync(
+        long userId,
+        CancellationToken cancellationToken);
 }

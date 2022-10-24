@@ -10,36 +10,35 @@ using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class LoggingServiceInterceptor : AsyncInterceptor
 {
-    public class LoggingServiceInterceptor : AsyncInterceptor
+    public LoggingServiceInterceptor(ServiceContext context, TelemetryClient telemetryClient)
     {
-        public LoggingServiceInterceptor(ServiceContext context, TelemetryClient telemetryClient)
-        {
-            Context = context;
-            TelemetryClient = telemetryClient;
-        }
+        Context = context;
+        TelemetryClient = telemetryClient;
+    }
 
-        private ServiceContext Context { get; }
-        private TelemetryClient TelemetryClient { get; }
+    private ServiceContext Context { get; }
+    private TelemetryClient TelemetryClient { get; }
 
-        protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
+    protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
+    {
+        string url = $"{Context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
+        using (IOperationHolder<RequestTelemetry> op =
+               TelemetryClient.StartOperation<RequestTelemetry>($"RPC {url}"))
         {
-            string url = $"{Context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-            using (IOperationHolder<RequestTelemetry> op =
-                TelemetryClient.StartOperation<RequestTelemetry>($"RPC {url}"))
+            try
             {
-                try
-                {
-                    op.Telemetry.Url = new Uri(url);
-                    return await call();
-                }
-                catch (Exception ex)
-                {
-                    op.Telemetry.Success = false;
-                    TelemetryClient.TrackException(ex);
-                    throw;
-                }
+                op.Telemetry.Url = new Uri(url);
+                return await call();
+            }
+            catch (Exception ex)
+            {
+                op.Telemetry.Success = false;
+                TelemetryClient.TrackException(ex);
+                throw;
             }
         }
     }

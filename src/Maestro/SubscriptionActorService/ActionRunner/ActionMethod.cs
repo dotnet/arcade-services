@@ -7,45 +7,44 @@ using System.Linq;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+public class ActionMethod
 {
-    public class ActionMethod
+    public ActionMethod(MethodInfo methodInfo)
     {
-        public ActionMethod(MethodInfo methodInfo)
-        {
-            MethodInfo = methodInfo;
-            ParameterTypes = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
-            Type taskReturnType = methodInfo.ReturnType;
-            Type returnType = taskReturnType.GetGenericArguments()[0];
-            ResultType = returnType.GetGenericArguments()[0];
+        MethodInfo = methodInfo;
+        ParameterTypes = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+        Type taskReturnType = methodInfo.ReturnType;
+        Type returnType = taskReturnType.GetGenericArguments()[0];
+        ResultType = returnType.GetGenericArguments()[0];
 
-            var attr = methodInfo.GetCustomAttribute<ActionMethodAttribute>();
-            MessageFormat = attr.Format;
+        var attr = methodInfo.GetCustomAttribute<ActionMethodAttribute>();
+        MessageFormat = attr.Format;
+    }
+
+    public string MessageFormat { get; }
+
+    public Type[] ParameterTypes { get; }
+    public MethodInfo MethodInfo { get; }
+    public Type ResultType { get; }
+    public string Name => MethodInfo.Name;
+
+    public object[] DeserializeArguments(string arguments)
+    {
+        JArray jArray = JArray.Parse(arguments);
+        if (jArray.Count != ParameterTypes.Length)
+        {
+            throw new TargetParameterCountException(
+                $"Method '{MethodInfo.Name}' requires '{ParameterTypes.Length}' arguments.");
         }
 
-        public string MessageFormat { get; }
-
-        public Type[] ParameterTypes { get; }
-        public MethodInfo MethodInfo { get; }
-        public Type ResultType { get; }
-        public string Name => MethodInfo.Name;
-
-        public object[] DeserializeArguments(string arguments)
+        var args = new object[ParameterTypes.Length];
+        for (var i = 0; i < ParameterTypes.Length; i++)
         {
-            JArray jArray = JArray.Parse(arguments);
-            if (jArray.Count != ParameterTypes.Length)
-            {
-                throw new TargetParameterCountException(
-                    $"Method '{MethodInfo.Name}' requires '{ParameterTypes.Length}' arguments.");
-            }
-
-            var args = new object[ParameterTypes.Length];
-            for (var i = 0; i < ParameterTypes.Length; i++)
-            {
-                args[i] = jArray[i].ToObject(ParameterTypes[i]);
-            }
-
-            return args;
+            args[i] = jArray[i].ToObject(ParameterTypes[i]);
         }
+
+        return args;
     }
 }

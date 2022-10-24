@@ -6,11 +6,10 @@ using JetBrains.Annotations;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
+namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+
+[PublicAPI]
+public interface ISwaggerVersioningScheme
 {
-    [PublicAPI]
-    public interface ISwaggerVersioningScheme
-    {
-        void Apply(OpenApiOperation operation, OperationFilterContext context, string version);
-    }
+    void Apply(OpenApiOperation operation, OperationFilterContext context, string version);
 }

@@ -13,91 +13,90 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.Web
+namespace Maestro.Web;
+
+public interface IBackgroundWorkItem
 {
-    public interface IBackgroundWorkItem
+    Task ProcessAsync(JToken argumentToken);
+}
+
+public interface IBackgroundQueue
+{
+    void Post<T>(JToken args) where T : IBackgroundWorkItem;
+}
+
+public static class BackgroundQueueExtensions
+{
+    public static void Post<T>(this IBackgroundQueue queue) where T : IBackgroundWorkItem
     {
-        Task ProcessAsync(JToken argumentToken);
+        queue.Post<T>("");
+    }
+}
+
+public class BackgroundQueue : BackgroundService, IBackgroundQueue
+{
+    private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
+    private readonly OperationManager _operations;
+
+    public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)
+    {
+        Logger = logger;
+        _operations = operations;
     }
 
-    public interface IBackgroundQueue
+    public ILogger<BackgroundQueue> Logger { get; }
+
+    public void Post<T>(JToken args) where T : IBackgroundWorkItem
     {
-        void Post<T>(JToken args) where T : IBackgroundWorkItem;
+        Logger.LogInformation(
+            $"Posted work to BackgroundQueue: {typeof(T).Name}.ProcessAsync({args.ToString(Formatting.None)})");
+        _workItems.Add((typeof(T), args));
     }
 
-    public static class BackgroundQueueExtensions
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        public static void Post<T>(this IBackgroundQueue queue) where T : IBackgroundWorkItem
+        // Get off the synchronous chain from WebHost.Start
+        await Task.Yield();
+        using (_operations.BeginOperation("Processing Background Queue"))
         {
-            queue.Post<T>("");
-        }
-    }
-
-    public class BackgroundQueue : BackgroundService, IBackgroundQueue
-    {
-        private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
-        private readonly OperationManager _operations;
-
-        public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)
-        {
-            Logger = logger;
-            _operations = operations;
-        }
-
-        public ILogger<BackgroundQueue> Logger { get; }
-
-        public void Post<T>(JToken args) where T : IBackgroundWorkItem
-        {
-            Logger.LogInformation(
-                $"Posted work to BackgroundQueue: {typeof(T).Name}.ProcessAsync({args.ToString(Formatting.None)})");
-            _workItems.Add((typeof(T), args));
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            // Get off the synchronous chain from WebHost.Start
-            await Task.Yield();
-            using (_operations.BeginOperation("Processing Background Queue"))
+            while (true)
             {
-                while (true)
+                try
                 {
-                    try
+                    while (!_workItems.IsCompleted)
                     {
-                        while (!_workItems.IsCompleted)
+                        if (stoppingToken.IsCancellationRequested)
                         {
-                            if (stoppingToken.IsCancellationRequested)
-                            {
-                                _workItems.CompleteAdding();
-                            }
+                            _workItems.CompleteAdding();
+                        }
 
-                            if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
+                        if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
+                        {
+                            using (Operation op = _operations.BeginOperation("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
                             {
-                                using (Operation op = _operations.BeginOperation("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
+                                try
                                 {
-                                    try
-                                    {
-                                        var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(op.ServiceProvider, item.type);
-                                        await instance.ProcessAsync(item.args);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Logger.LogError(
-                                            ex,
-                                            "Background work {item} threw an unhandled exception.",
-                                            item.ToString());
-                                    }
+                                    var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(op.ServiceProvider, item.type);
+                                    await instance.ProcessAsync(item.args);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.LogError(
+                                        ex,
+                                        "Background work {item} threw an unhandled exception.",
+                                        item.ToString());
                                 }
                             }
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError(ex, "Background queue got unhandled exception.");
-                        continue;
-                    }
-
-                    return;
                 }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Background queue got unhandled exception.");
+                    continue;
+                }
+
+                return;
             }
         }
     }

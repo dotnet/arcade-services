@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.Internal.Health
+namespace Microsoft.DotNet.Internal.Health;
+
+public interface IInstanceAccessor
 {
-    public interface IInstanceAccessor
-    {
-        string GetCurrentInstanceName();
-    }
+    string GetCurrentInstanceName();
 }

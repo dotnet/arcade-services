@@ -4,15 +4,14 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps
-{
-    public class AzureDevOpsRunResourcesParameters
-    {
-        public Dictionary<string, AzureDevOpsRepositoryResourceParameter> Repositories { get; set; }
+namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 
-        public AzureDevOpsRunResourcesParameters()
-        {
-            Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>();
-        }
+public class AzureDevOpsRunResourcesParameters
+{
+    public Dictionary<string, AzureDevOpsRepositoryResourceParameter> Repositories { get; set; }
+
+    public AzureDevOpsRunResourcesParameters()
+    {
+        Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>();
     }
 }

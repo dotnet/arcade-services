@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class GitHubContentType
 {
-    public class GitHubContentType
-    {
-        public const string File = "file";
-        public const string Dir = "dir";
-    }
+    public const string File = "file";
+    public const string Dir = "dir";
 }

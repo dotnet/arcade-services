@@ -5,17 +5,16 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
-{
-    [Verb("delete-channel", HelpText = "Deletes an existing channel.")]
-    internal class DeleteChannelCommandLineOptions : CommandLineOptions
-    {
-        [Option('n', "name", Required = true, HelpText = "Name of channel to delete.")]
-        public string Name { get; set; }
+namespace Microsoft.DotNet.Darc.Options;
 
-        public override Operation GetOperation()
-        {
-            return new DeleteChannelOperation(this);
-        }
+[Verb("delete-channel", HelpText = "Deletes an existing channel.")]
+internal class DeleteChannelCommandLineOptions : CommandLineOptions
+{
+    [Option('n', "name", Required = true, HelpText = "Name of channel to delete.")]
+    public string Name { get; set; }
+
+    public override Operation GetOperation()
+    {
+        return new DeleteChannelOperation(this);
     }
 }

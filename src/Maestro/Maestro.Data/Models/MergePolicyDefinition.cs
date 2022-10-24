@@ -6,13 +6,12 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.Data.Models
-{
-    public class MergePolicyDefinition
-    {
-        public string Name { get; set; }
+namespace Maestro.Data.Models;
 
-        [CanBeNull]
-        public Dictionary<string, JToken> Properties { get; set; }
-    }
+public class MergePolicyDefinition
+{
+    public string Name { get; set; }
+
+    [CanBeNull]
+    public Dictionary<string, JToken> Properties { get; set; }
 }

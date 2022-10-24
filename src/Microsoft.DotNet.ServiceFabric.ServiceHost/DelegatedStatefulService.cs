@@ -14,115 +14,114 @@ using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Runtime;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost;
+
+public class DelegatedStatefulService<TServiceImplementation> : StatefulService
+    where TServiceImplementation : IServiceImplementation
 {
-    public class DelegatedStatefulService<TServiceImplementation> : StatefulService
-        where TServiceImplementation : IServiceImplementation
+    private readonly Action<IServiceCollection> _configureServices;
+    private ServiceProvider _container;
+
+    public DelegatedStatefulService(
+        StatefulServiceContext context,
+        Action<IServiceCollection> configureServices) : base(context)
     {
-        private readonly Action<IServiceCollection> _configureServices;
-        private ServiceProvider _container;
+        _configureServices = configureServices;
+    }
 
-        public DelegatedStatefulService(
-            StatefulServiceContext context,
-            Action<IServiceCollection> configureServices) : base(context)
-        {
-            _configureServices = configureServices;
-        }
+    protected override Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ServiceContext>(Context);
+        services.AddSingleton(Context);
+        services.AddSingleton<IServiceLoadReporter>(new StatefulServiceLoadReporter(Partition));
+        _configureServices(services);
 
-        protected override Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
-        {
-            var services = new ServiceCollection();
-            services.AddSingleton<ServiceContext>(Context);
-            services.AddSingleton(Context);
-            services.AddSingleton<IServiceLoadReporter>(new StatefulServiceLoadReporter(Partition));
-            _configureServices(services);
+        services.AddSingleton(StateManager);
 
-            services.AddSingleton(StateManager);
-
-            _container = services.BuildServiceProvider();
+        _container = services.BuildServiceProvider();
             
-            // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            _container.GetService<TemporaryFiles>()?.Initialize();
+        // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
+        _container.GetService<TemporaryFiles>()?.Initialize();
 
-            return Task.CompletedTask;
+        return Task.CompletedTask;
+    }
+
+    protected override Task OnCloseAsync(CancellationToken cancellationToken)
+    {
+        _container?.Dispose();
+        return Task.CompletedTask;
+    }
+
+    protected override void OnAbort()
+    {
+        _container?.Dispose();
+    }
+
+    protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
+    {
+        if (_container == null)
+        {
+            throw new InvalidOperationException("CreateServiceReplicaListeners called before OnOpenAsync");
         }
 
-        protected override Task OnCloseAsync(CancellationToken cancellationToken)
+        Type[] interfaces = typeof(TServiceImplementation).GetAllInterfaces()
+            .Where(iface => typeof(IService).IsAssignableFrom(iface))
+            .ToArray();
+        if (interfaces.Length == 0)
         {
-            _container?.Dispose();
-            return Task.CompletedTask;
+            return Enumerable.Empty<ServiceReplicaListener>();
         }
 
-        protected override void OnAbort()
+        return new[]
         {
-            _container?.Dispose();
-        }
+            new ServiceReplicaListener(
+                context => ServiceHostRemoting.CreateServiceRemotingListener<TServiceImplementation>(
+                    context,
+                    interfaces,
+                    _container))
+        };
+    }
 
-        protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
+    protected override async Task RunAsync(CancellationToken cancellationToken)
+    {
+        await DelegatedService.RunServiceLoops<DelegatedStatefulService<TServiceImplementation>>(
+            _container,
+            cancellationToken,
+            RunAsyncLoop,
+            RunSchedule
+        );
+    }
+
+    private async Task RunAsyncLoop(CancellationToken cancellationToken)
+    {
+        if (_container == null)
         {
-            if (_container == null)
+            throw new InvalidOperationException("RunAsync called before OnOpenAsync");
+        }
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            using IServiceScope scope = _container.CreateScope();
+
+            TServiceImplementation impl = scope.ServiceProvider.GetRequiredService<TServiceImplementation>();
+
+            TimeSpan shouldWaitFor = await impl.RunAsync(cancellationToken);
+
+            if (shouldWaitFor.Equals(TimeSpan.MaxValue))
             {
-                throw new InvalidOperationException("CreateServiceReplicaListeners called before OnOpenAsync");
+                return;
             }
 
-            Type[] interfaces = typeof(TServiceImplementation).GetAllInterfaces()
-                .Where(iface => typeof(IService).IsAssignableFrom(iface))
-                .ToArray();
-            if (interfaces.Length == 0)
-            {
-                return Enumerable.Empty<ServiceReplicaListener>();
-            }
-
-            return new[]
-            {
-                new ServiceReplicaListener(
-                    context => ServiceHostRemoting.CreateServiceRemotingListener<TServiceImplementation>(
-                        context,
-                        interfaces,
-                        _container))
-            };
+            await Task.Delay(shouldWaitFor, cancellationToken);
         }
+    }
 
-        protected override async Task RunAsync(CancellationToken cancellationToken)
+    private async Task RunSchedule(CancellationToken cancellationToken)
+    {
+        if (_container == null)
         {
-            await DelegatedService.RunServiceLoops<DelegatedStatefulService<TServiceImplementation>>(
-                _container,
-                cancellationToken,
-                RunAsyncLoop,
-                RunSchedule
-            );
+            throw new InvalidOperationException("RunAsync called before OnOpenAsync");
         }
-
-        private async Task RunAsyncLoop(CancellationToken cancellationToken)
-        {
-            if (_container == null)
-            {
-                throw new InvalidOperationException("RunAsync called before OnOpenAsync");
-            }
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                using IServiceScope scope = _container.CreateScope();
-
-                TServiceImplementation impl = scope.ServiceProvider.GetRequiredService<TServiceImplementation>();
-
-                TimeSpan shouldWaitFor = await impl.RunAsync(cancellationToken);
-
-                if (shouldWaitFor.Equals(TimeSpan.MaxValue))
-                {
-                    return;
-                }
-
-                await Task.Delay(shouldWaitFor, cancellationToken);
-            }
-        }
-
-        private async Task RunSchedule(CancellationToken cancellationToken)
-        {
-            if (_container == null)
-            {
-                throw new InvalidOperationException("RunAsync called before OnOpenAsync");
-            }
-            await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
-        }
-     }
+        await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
+    }
 }

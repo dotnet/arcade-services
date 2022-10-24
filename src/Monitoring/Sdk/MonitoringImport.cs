@@ -9,75 +9,74 @@ using System.Threading.Tasks;
 using Microsoft.Build.Framework;
 using BuildTask = Microsoft.Build.Utilities.Task;
 
-namespace Microsoft.DotNet.Monitoring.Sdk
+namespace Microsoft.DotNet.Monitoring.Sdk;
+
+public class MonitoringImport : BuildTask
 {
-    public class MonitoringImport : BuildTask
-    {
-        [Required]
-        public string Host { get; set; }
+    [Required]
+    public string Host { get; set; }
 
-        [Required]
-        public string AccessToken { get; set; }
+    [Required]
+    public string AccessToken { get; set; }
         
-        [Required]
-        public string DashboardDirectory { get; set; }
+    [Required]
+    public string DashboardDirectory { get; set; }
 
-        [Required]
-        public string DataSourceDirectory{ get; set; }
+    [Required]
+    public string DataSourceDirectory{ get; set; }
 
-        [Required]
-        public string NotificationDirectory { get; set; }
+    [Required]
+    public string NotificationDirectory { get; set; }
 
-        [Required]
-        public string DashboardId { get; set; }
+    [Required]
+    public string DashboardId { get; set; }
 
-        [Required]
-        public string Tag { get; set; }
+    [Required]
+    public string Tag { get; set; }
 
-        [Required]
-        public ITaskItem[] Environments { get; set; }
+    [Required]
+    public ITaskItem[] Environments { get; set; }
 
-        [Required]
-        public string ParametersFile { get; set; }
+    [Required]
+    public string ParametersFile { get; set; }
 
-        [Required]
-        public string Environment { get; set; }
+    [Required]
+    public string Environment { get; set; }
 
-        public sealed override bool Execute()
+    public sealed override bool Execute()
+    {
+        return ExecuteAsync().GetAwaiter().GetResult();
+    }
+
+    private async Task<bool> ExecuteAsync()
+    {
+        using (var client = new GrafanaClient(Host, AccessToken))
         {
-            return ExecuteAsync().GetAwaiter().GetResult();
-        }
+            var deploy = new DeployImporter(
+                grafanaClient: client,
+                sourceTagValue: Tag,
+                dashboardDirectory: DashboardDirectory,
+                datasourceDirectory: DataSourceDirectory,
+                notificationDirectory: NotificationDirectory,
+                environments: Environments.Select(e => e.ItemSpec).ToArray(),
+                parametersFilePath: ParametersFile,
+                environment: Environment,
+                log: Log);
 
-        private async Task<bool> ExecuteAsync()
-        {
-            using (var client = new GrafanaClient(Host, AccessToken))
+            try
             {
-                var deploy = new DeployImporter(
-                    grafanaClient: client,
-                    sourceTagValue: Tag,
-                    dashboardDirectory: DashboardDirectory,
-                    datasourceDirectory: DataSourceDirectory,
-                    notificationDirectory: NotificationDirectory,
-                    environments: Environments.Select(e => e.ItemSpec).ToArray(),
-                    parametersFilePath: ParametersFile,
-                    environment: Environment,
-                    log: Log);
-
-                try
-                {
-                    await deploy.ImportFromGrafana(DashboardId);
-                }
-                catch (HttpRequestException e)
-                {
-                    Log.LogErrorFromException(e,
-                        showStackTrace: false,
-                        showDetail: false,
-                        file: "MonitoringImport");
-                    return false;
-                }
+                await deploy.ImportFromGrafana(DashboardId);
             }
-
-            return true;
+            catch (HttpRequestException e)
+            {
+                Log.LogErrorFromException(e,
+                    showStackTrace: false,
+                    showDetail: false,
+                    file: "MonitoringImport");
+                return false;
+            }
         }
+
+        return true;
     }
 }

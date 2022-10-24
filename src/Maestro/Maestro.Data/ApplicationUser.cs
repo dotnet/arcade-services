@@ -6,15 +6,14 @@ using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity;
 
-namespace Maestro.Data
+namespace Maestro.Data;
+
+public class ApplicationUser : IdentityUser<int>
 {
-    public class ApplicationUser : IdentityUser<int>
-    {
-        public List<ApplicationUserPersonalAccessToken> PersonalAccessTokens { get; set; }
+    public List<ApplicationUserPersonalAccessToken> PersonalAccessTokens { get; set; }
 
-        [PersonalData]
-        public string FullName { get; set; }
+    [PersonalData]
+    public string FullName { get; set; }
 
-        public DateTimeOffset LastUpdated { get; set; } = DateTimeOffset.UtcNow;
-    }
+    public DateTimeOffset LastUpdated { get; set; } = DateTimeOffset.UtcNow;
 }

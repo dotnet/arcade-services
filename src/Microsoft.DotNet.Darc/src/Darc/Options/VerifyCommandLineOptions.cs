@@ -5,14 +5,13 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("verify", HelpText = "Verify that the dependency information in the repository is correct.")]
+internal class VerifyCommandLineOptions : CommandLineOptions
 {
-    [Verb("verify", HelpText = "Verify that the dependency information in the repository is correct.")]
-    internal class VerifyCommandLineOptions : CommandLineOptions
+    public override Operation GetOperation()
     {
-        public override Operation GetOperation()
-        {
-            return new VerifyOperation(this);
-        }
+        return new VerifyOperation(this);
     }
-} 
+}

@@ -15,22 +15,20 @@ namespace Microsoft.DotNet.Kusto
             Options = options?.ToList() ?? new List<KustoQueryOption>();
         }
 
+        public KustoQuery(string text) : this(text, new List<KustoParameter>())
+        {
+        }
+
         public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters)
         {
         }
 
-        public List<KustoQueryOption> Options { get; }
         public List<KustoParameter> Parameters { get; }
-        public string Text { get; set; }
+        public string Text { get; set; } 
 
         public void AddParameter(string name, object value, KustoDataType type)
         {
             Parameters.Add(new KustoParameter(name, value, type));
-        }
-
-        public void AddOption(string key, object value)
-        {
-            Options.Add(new KustoQueryOption(key, value));
         }
     }
 }

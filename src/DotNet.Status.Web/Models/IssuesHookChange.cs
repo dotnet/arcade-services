@@ -1,7 +1,6 @@
-namespace DotNet.Status.Web.Models
+namespace DotNet.Status.Web.Models;
+
+public class IssuesHookChange
 {
-    public class IssuesHookChange
-    {
-        public string From { get; set; }
-    }
+    public string From { get; set; }
 }

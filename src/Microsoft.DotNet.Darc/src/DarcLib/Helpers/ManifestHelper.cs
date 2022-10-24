@@ -10,48 +10,48 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Microsoft.DotNet.DarcLib.Helpers
+namespace Microsoft.DotNet.DarcLib.Helpers;
+
+public class ManifestHelper
 {
-    public class ManifestHelper
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
     {
-        public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
+        return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths);
+    }
+
+
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,  string outputPath, bool makeAssetsRelativePaths)
+    {
+
+        // Construct an ad-hoc object with the necessary fields and use the json
+        // serializer to write it to disk
+        // If this type ever changes, we should consider giving it a specific versioned model object 
+
+        // Null out the alwaysDownloadedAssets collection in the case where it's empty, so as to avoid serializing it.
+        if (alwaysDownloadedAssets?.Count == 0)
         {
-            return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths);
+            alwaysDownloadedAssets = null;
         }
 
-
-        public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,  string outputPath, bool makeAssetsRelativePaths)
+        var manifestObject = new
         {
-
-            // Construct an ad-hoc object with the necessary fields and use the json
-            // serializer to write it to disk
-            // If this type ever changes, we should consider giving it a specific versioned model object 
-
-            // Null out the alwaysDownloadedAssets collection in the case where it's empty, so as to avoid serializing it.
-            if (alwaysDownloadedAssets?.Count == 0)
-            {
-                alwaysDownloadedAssets = null;
-            }
-
-            var manifestObject = new
-            {
-                outputPath = outputPath,
-                builds = downloadedBuilds.Select(build =>
-                    new
-                    {
-                        repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
-                        commit = build.Build.Commit,
-                        branch = build.Build.AzureDevOpsBranch,
-                        produced = build.Build.DateProduced,
-                        buildNumber = build.Build.AzureDevOpsBuildNumber,
-                        barBuildId = build.Build.Id,
-                        channels = build.Build.Channels.Select(channel =>
+            outputPath = outputPath,
+            builds = downloadedBuilds.Select(build =>
+                new
+                {
+                    repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
+                    commit = build.Build.Commit,
+                    branch = build.Build.AzureDevOpsBranch,
+                    produced = build.Build.DateProduced,
+                    buildNumber = build.Build.AzureDevOpsBuildNumber,
+                    barBuildId = build.Build.Id,
+                    channels = build.Build.Channels.Select(channel =>
                         new
                         {
                             id = channel.Id,
                             name = channel.Name
                         }),
-                        assets = build.DownloadedAssets.Select(asset =>
+                    assets = build.DownloadedAssets.Select(asset =>
                         new
                         {
                             name = asset.Asset.Name,
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                             targets = GetTargetPaths(asset),
                             barAssetId = asset.Asset.Id
                         }),
-                        dependencies = build.Dependencies?.Select(dependency =>
+                    dependencies = build.Dependencies?.Select(dependency =>
                         new
                         {
                             name = dependency.Name,
@@ -69,8 +69,8 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                             version = dependency.Version,
                             repoUri = dependency.RepoUri
                         })
-                    }),
-                extraAssets = alwaysDownloadedAssets?.Select(extraAsset =>
+                }),
+            extraAssets = alwaysDownloadedAssets?.Select(extraAsset =>
                 new
                 {
                     name = extraAsset.Asset.Name,
@@ -80,29 +80,28 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     targets = GetTargetPaths(extraAsset),
                     barAssetId = extraAsset.Asset.Id
                 })
-            };
+        };
 
-            // If assetsRelativePath is provided, calculate the target path list as relative to the overall output directory
-            List<string> GetTargetPaths(DownloadedAsset asset)
+        // If assetsRelativePath is provided, calculate the target path list as relative to the overall output directory
+        List<string> GetTargetPaths(DownloadedAsset asset)
+        {
+            if (makeAssetsRelativePaths)
             {
-                if (makeAssetsRelativePaths)
+                return new List<string>
                 {
-                    return new List<string>
-                    {
-                        Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
-                        Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
-                    };
-                }
-                else
-                {
-                    return new List<string>
-                    {
-                        asset.ReleaseLayoutTargetLocation,
-                        asset.UnifiedLayoutTargetLocation
-                    };
-                }
+                    Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
+                    Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
+                };
             }
-            return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+            else
+            {
+                return new List<string>
+                {
+                    asset.ReleaseLayoutTargetLocation,
+                    asset.UnifiedLayoutTargetLocation
+                };
+            }
         }
+        return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
     }
 }

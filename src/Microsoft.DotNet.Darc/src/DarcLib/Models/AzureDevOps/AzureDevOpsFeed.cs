@@ -4,23 +4,22 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class AzureDevOpsFeed: AzureDevOpsIdNamePair
 {
-    public class AzureDevOpsFeed: AzureDevOpsIdNamePair
+    public List<AzureDevOpsPackage> Packages { get; set; }
+
+    public AzureDevOpsProject Project { get; set; }
+
+    public string Account { get; set; }
+
+    public AzureDevOpsFeed(string account, string id, string name,  AzureDevOpsProject project = null)
     {
-        public List<AzureDevOpsPackage> Packages { get; set; }
-
-        public AzureDevOpsProject Project { get; set; }
-
-        public string Account { get; set; }
-
-        public AzureDevOpsFeed(string account, string id, string name,  AzureDevOpsProject project = null)
-        {
-            Account = account;
-            Name = name;
-            Id = id;
-            Project = project;
-            Packages = new List<AzureDevOpsPackage>();
-        }
+        Account = account;
+        Name = name;
+        Id = id;
+        Project = project;
+        Packages = new List<AzureDevOpsPackage>();
     }
 }

@@ -2,7 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -22,29 +23,37 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 {
     // Message shown when initializing an individual repo for the first time
     private const string InitializationCommitMessage =
-        """
+        $$"""
         [{name}] Initial pull of the individual repository ({newShaShort})
 
         Original commit: {remote}/commit/{newSha}
+
+        {{AUTOMATION_COMMIT_TAG}}
         """;
     
+    private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
+
+    private readonly string _tmpPath;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
         IVmrPatchHandler patchHandler,
-        IProcessManager processManager,
-        IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
+        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
-        IVmrManagerConfiguration configuration)
-        : base(dependencyTracker, patchHandler, processManager, remoteFactory, versionDetailsParser, logger, configuration.TmpPath)
+        IVmrInfo vmrInfo)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
     {
+        _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
+        _fileSystem = fileSystem;
         _logger = logger;
+        _tmpPath = vmrInfo.TmpPath;
     }
 
     public async Task InitializeRepository(
@@ -59,29 +68,90 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
+        var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
+        reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
+
+        while (reposToUpdate.TryDequeue(out var repoToUpdate))
+        {
+            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(repoToUpdate.mapping)))
+            {
+                // Repository has already been initialized
+                continue;
+            }
+            
+            await InitializeRepository(repoToUpdate.mapping, repoToUpdate.targetRevision, repoToUpdate.targetVersion, cancellationToken);
+
+            // When initializing dependencies, we initialize always to the first version of the dependency we've seen
+            if (initializeDependencies)
+            {
+                var dependencies = await GetDependencies(repoToUpdate.mapping, cancellationToken);
+                foreach (var (dependency, dependencyMapping) in dependencies)
+                {
+                    if (reposToUpdate.Any(r => r.mapping.Name == dependency.Name))
+                    {
+                        // Repository is already queued for update, we prefer that version first
+                        continue;
+                    }
+
+                    if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(dependencyMapping)))
+                    {
+                        // Repository has already been initialized
+                        continue;
+                    }
+
+                    _logger.LogDebug("Detected dependency of {parent} - {repo} / {commit} ({version})",
+                        mapping.Name,
+                        dependencyMapping.Name,
+                        dependency.Commit,
+                        dependency.Version);
+
+                    reposToUpdate.Enqueue((dependencyMapping, dependency.Commit, dependency.Version));
+                }
+            }
+        }
+    }
+
+    private async Task InitializeRepository(
+        SourceMapping mapping,
+        string? targetRevision,
+        string? targetVersion,
+        CancellationToken cancellationToken)
+    {
         _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
-        string clonePath = await CloneOrPull(mapping);
+        string clonePath = GetClonePath(mapping);
+        await _patchHandler.CloneOrFetch(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, clonePath);
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);
         var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
-        string patchPath = GetPatchFilePath(mapping);
-        await _patchHandler.CreatePatch(mapping, clonePath, Constants.EmptyGitObject, commit.Id.Sha, patchPath, cancellationToken);
+        var patches = await _patchHandler.CreatePatches(
+            mapping,
+            clonePath,
+            Constants.EmptyGitObject,
+            commit.Id.Sha,
+            _tmpPath,
+            _tmpPath,
+            cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.ApplyPatch(mapping, patchPath, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        foreach (var patch in patches)
+        {
+            await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
-        Commands.Stage(new Repository(_dependencyTracker.VmrPath), VmrDependencyTracker.GitInfoSourcesDir);
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
+        { 
+            VmrInfo.GitInfoSourcesDir,
+            _vmrInfo.GetSourceManifestPath() 
+        });
+
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await UpdateGitmodules(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
@@ -89,29 +159,5 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", mapping.Name);
-
-        if (initializeDependencies)
-        {
-            await InitializeDependencies(mapping, cancellationToken);
-        }
-    }
-
-    private async Task InitializeDependencies(SourceMapping mapping, CancellationToken cancellationToken)
-    {
-        foreach (var (dependency, dependencyMapping) in await GetDependencies(mapping, cancellationToken))
-        {
-            if (Directory.Exists(_dependencyTracker.GetRepoSourcesPath(dependencyMapping)))
-            {
-                _logger.LogDebug("Dependency {repo} has already been initialized", dependencyMapping.Name);
-                continue;
-            }
-
-            _logger.LogInformation("Recursively initializing dependency {repo} / {commit} ({version})",
-                dependencyMapping.Name,
-                dependency.Commit,
-                dependency.Version);
-
-            await InitializeRepository(dependencyMapping, dependency.Commit, dependency.Version, true, cancellationToken);
-        }
     }
 }

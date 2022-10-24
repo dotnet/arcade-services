@@ -5,26 +5,25 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
-namespace Microsoft.DotNet.Darc.Options
+namespace Microsoft.DotNet.Darc.Options;
+
+[Verb("subscription-status", HelpText = "Enables or disables subscriptions matching a specified criteria.")]
+internal class SubscriptionsStatusCommandLineOptions : SubscriptionsCommandLineOptions
 {
-    [Verb("subscription-status", HelpText = "Enables or disables subscriptions matching a specified criteria.")]
-    internal class SubscriptionsStatusCommandLineOptions : SubscriptionsCommandLineOptions
+    [Option("id", HelpText = "Specific subscription's id.")]
+    public string Id { get; set; }
+
+    [Option('e', "enable", HelpText = "Enable subscription(s).")]
+    public bool Enable { get; set; }
+
+    [Option('d', "disable", HelpText = "Disable subscription(s).")]
+    public bool Disable { get; set; }
+
+    [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be enabled/disabled.")]
+    public bool NoConfirmation { get; set; }
+
+    public override Operation GetOperation()
     {
-        [Option("id", HelpText = "Specific subscription's id.")]
-        public string Id { get; set; }
-
-        [Option('e', "enable", HelpText = "Enable subscription(s).")]
-        public bool Enable { get; set; }
-
-        [Option('d', "disable", HelpText = "Disable subscription(s).")]
-        public bool Disable { get; set; }
-
-        [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be enabled/disabled.")]
-        public bool NoConfirmation { get; set; }
-
-        public override Operation GetOperation()
-        {
-            return new SubscriptionsStatusOperation(this);
-        }
+        return new SubscriptionsStatusOperation(this);
     }
 }

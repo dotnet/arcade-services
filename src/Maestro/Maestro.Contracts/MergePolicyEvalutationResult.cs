@@ -7,57 +7,56 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public class MergePolicyEvaluationResults
 {
-    public class MergePolicyEvaluationResults
+    public MergePolicyEvaluationResults(IEnumerable<MergePolicyEvaluationResult> results)
     {
-        public MergePolicyEvaluationResults(IEnumerable<MergePolicyEvaluationResult> results)
+        Results = results.ToImmutableList();
+    }
+
+    public IImmutableList<MergePolicyEvaluationResult> Results { get; }
+
+    public bool Succeeded => Results.Count > 0 && Results.All(r => r.Status == MergePolicyEvaluationStatus.Success);
+
+    public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
+
+    public bool Failed => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Failure);
+}
+
+public class MergePolicyEvaluationResult
+{
+    public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, IMergePolicyInfo mergePolicy)
+    {
+        if (mergePolicy == null)
         {
-            Results = results.ToImmutableList();
+            throw new ArgumentNullException(nameof(mergePolicy));
+        }
+        if (mergePolicy.Name == null)
+        {
+            throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.Name)}");
+        }
+        if (mergePolicy.DisplayName == null)
+        {
+            throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.DisplayName)}");
         }
 
-        public IImmutableList<MergePolicyEvaluationResult> Results { get; }
-
-        public bool Succeeded => Results.Count > 0 && Results.All(r => r.Status == MergePolicyEvaluationStatus.Success);
-
-        public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
-
-        public bool Failed => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Failure);
+        Status = status;
+        Title = title;
+        Message = message;
+        MergePolicyInfo = mergePolicy;
     }
 
-    public class MergePolicyEvaluationResult
-    {
-        public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string title, string message, IMergePolicyInfo mergePolicy)
-        {
-            if (mergePolicy == null)
-            {
-                throw new ArgumentNullException(nameof(mergePolicy));
-            }
-            if (mergePolicy.Name == null)
-            {
-                throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.Name)}");
-            }
-            if (mergePolicy.DisplayName == null)
-            {
-                throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.DisplayName)}");
-            }
+    public MergePolicyEvaluationStatus Status { get; }
+    public string Title { get; }
+    public string Message { get;}
+    public IMergePolicyInfo MergePolicyInfo { get; }
+}
 
-            Status = status;
-            Title = title;
-            Message = message;
-            MergePolicyInfo = mergePolicy;
-        }
-
-        public MergePolicyEvaluationStatus Status { get; }
-        public string Title { get; }
-        public string Message { get;}
-        public IMergePolicyInfo MergePolicyInfo { get; }
-    }
-
-    public enum MergePolicyEvaluationStatus
-    {
-        Pending = 0,
-        Success,
-        Failure,
-    }
+public enum MergePolicyEvaluationStatus
+{
+    Pending = 0,
+    Success,
+    Failure,
 }

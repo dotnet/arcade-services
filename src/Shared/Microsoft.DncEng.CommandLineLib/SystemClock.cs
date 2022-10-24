@@ -4,10 +4,9 @@
 
 using System;
 
-namespace Microsoft.DncEng.CommandLineLib
+namespace Microsoft.DncEng.CommandLineLib;
+
+public class SystemClock : ISystemClock
 {
-    public class SystemClock : ISystemClock
-    {
-        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
-    }
+    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
 }
