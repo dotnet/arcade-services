@@ -35,9 +35,6 @@ public interface IVmrPatchHandler
     Task ApplyVmrPatches(
         SourceMapping mapping,
         CancellationToken cancellationToken);
-
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
-    Task CloneOrFetch(string repoUri, string checkoutRef, string destPath);
 }
 
 /// <summary>

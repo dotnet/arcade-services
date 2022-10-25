@@ -50,6 +50,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -57,6 +58,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IVmrDependencyTracker dependencyTracker,
         IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
+        IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
@@ -66,6 +68,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _remoteFactory = remoteFactory;
+        _cloneManager = cloneManager;
         _patchHandler = patchHandler;
     }
 
@@ -99,8 +102,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo}@{revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
-        string clonePath = GetClonePath(mapping);
-        await _patchHandler.CloneOrFetch(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, clonePath);
+        string clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 

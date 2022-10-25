@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +38,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
@@ -49,7 +47,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitRepo localGitRepo,
-        IRemoteFactory remoteFactory,
+        IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
@@ -57,7 +55,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitRepo = localGitRepo;
-        _remoteFactory = remoteFactory;
+        _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -480,12 +478,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
-
-        // Clone path of submodules needs to be derived from the URL
-        // We can't use the path from the submodule as we could be changing the remote of the submodule
-        var urlHash = CreateMD5(change.Url);
-        var clonePath = _fileSystem.PathCombine(tmpPath, urlHash);
-        await CloneOrFetch(change.Url, checkoutCommit, clonePath);
+        var clonePath = await _cloneManager.PrepareClone(change.Url, checkoutCommit, cancellationToken);   
 
         // We are only interested in filters specific to submodule's path
         ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
@@ -548,33 +541,5 @@ public class VmrPatchHandler : IVmrPatchHandler
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
-    public async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
-    {
-        if (_fileSystem.DirectoryExists(destPath))
-        {
-            _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
-
-            _localGitRepo.Checkout(destPath, checkoutRef);
-
-            var result = await _processManager.ExecuteGit(destPath, "fetch", "--all");
-            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {destPath}");
-            _logger.LogDebug("{output}", result.ToString());
-
-            return;
-        }
-
-        var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
-        remoteRepo.Clone(repoUri, checkoutRef, destPath, checkoutSubmodules: false, null);
-    }
-
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
-
-    public static string CreateMD5(string input)
-    {
-        using var md5 = MD5.Create();
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = md5.ComputeHash(inputBytes);
-        return Convert.ToHexString(hashBytes);
-    }
 }
