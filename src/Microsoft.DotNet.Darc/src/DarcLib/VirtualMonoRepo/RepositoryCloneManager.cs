@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IRepositoryCloneManager
 {
-    Task<string> GetClone(string repoUri, string checkoutRef);
+    Task<string> GetClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -51,14 +52,17 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         _logger = logger;
     }
 
-    public async Task<string> GetClone(string repoUri, string checkoutRef)
+    public async Task<string> GetClone(string repoUri, string checkoutRef, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var hash = CreateMD5(repoUri);
         var clonePath = _fileSystem.PathCombine(_vmrInfo.TmpPath, hash);
 
         if (_upToDateRepos.Contains(hash))
         {
             _localGitRepo.Checkout(clonePath, checkoutRef);
+            cancellationToken.ThrowIfCancellationRequested();
             return clonePath;
         }
 
@@ -67,6 +71,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             _logger.LogDebug("Cloning {repo} to {clonePath}", repoUri, clonePath);
             var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
             remoteRepo.Clone(repoUri, checkoutRef, clonePath, checkoutSubmodules: false, null);
+            cancellationToken.ThrowIfCancellationRequested();
         }
         else
         {
@@ -74,6 +79,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
             var result = await _processManager.ExecuteGit(clonePath, "fetch", "--all");
             result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {clonePath}");
+            cancellationToken.ThrowIfCancellationRequested();
 
             _localGitRepo.Checkout(clonePath, checkoutRef);
         }

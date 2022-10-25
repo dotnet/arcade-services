@@ -34,6 +34,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -43,6 +44,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVmrDependencyTracker dependencyTracker,
         IVmrPatchHandler patchHandler,
         IVersionDetailsParser versionDetailsParser,
+        IRepositoryCloneManager cloneManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
@@ -51,6 +53,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
+        _cloneManager = cloneManager;
         _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = vmrInfo.TmpPath;
@@ -119,8 +122,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
-        string clonePath = GetClonePath(mapping);
-        await _patchHandler.CloneOrFetch(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, clonePath);
+        string clonePath = await _cloneManager.GetClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);

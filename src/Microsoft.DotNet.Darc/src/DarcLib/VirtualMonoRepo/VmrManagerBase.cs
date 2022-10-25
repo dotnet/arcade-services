@@ -87,8 +87,6 @@ public abstract class VmrManagerBase : IVmrManager
         return result;
     }
 
-    protected string GetClonePath(SourceMapping mapping) => Path.Combine(_vmrInfo.TmpPath, mapping.Name);
-
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.
     /// </summary>
