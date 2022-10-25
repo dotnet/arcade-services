@@ -40,12 +40,9 @@ public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Paramete
         Console = console;
     }
 
-    private static class Constants
-    {
-        // Note that the below two GUIDs are for VSTS resource ID and Azure Powershell Client ID. Do not modify.
-        internal const string ClientId = "1950a258-227b-4e31-a9cf-717495945fc2";
-        internal const string VstsResourceId = "499b84ac-1321-427f-aa17-267ca6975798";
-    }
+    // Note that the below two GUIDs are for VSTS resource ID and Azure Powershell Client ID. Do not modify.
+    private const string ClientId = "1950a258-227b-4e31-a9cf-717495945fc2";
+    private const string VstsResourceId = "499b84ac-1321-427f-aa17-267ca6975798";
 
     private record OauthAccessTokenResponse
     {
@@ -60,10 +57,10 @@ public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Paramete
         var values = new Dictionary<string, string>
         {
             ["grant_type"] = "password",
-            ["resource"] = Constants.VstsResourceId,
+            ["resource"] = VstsResourceId,
             ["username"] = userName,
             ["password"] = password,
-            ["client_id"] = Constants.ClientId,
+            ["client_id"] = ClientId,
         };
 
         using var content = new FormUrlEncodedContent(values);
