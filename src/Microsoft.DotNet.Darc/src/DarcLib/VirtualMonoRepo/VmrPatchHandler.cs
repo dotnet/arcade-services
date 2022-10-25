@@ -38,7 +38,6 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -48,7 +47,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitRepo localGitRepo,
-        IRemoteFactory remoteFactory,
         IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
@@ -57,7 +55,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitRepo = localGitRepo;
-        _remoteFactory = remoteFactory;
         _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -481,7 +478,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
-        var clonePath = await _cloneManager.GetClone(change.Url, checkoutCommit, cancellationToken);        
+        var clonePath = await _cloneManager.GetClone(change.Url, checkoutCommit, cancellationToken);   
 
         // We are only interested in filters specific to submodule's path
         ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
