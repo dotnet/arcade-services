@@ -153,7 +153,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
+        await ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
@@ -161,5 +161,28 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", mapping.Name);
+    }
+
+    /// <summary>
+    /// Applies VMR patches onto files of given mapping's subrepository.
+    /// These files are stored in the VMR and applied on top of the individual repos.
+    /// </summary>
+    private async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
+    {
+        var vmrPatches = _patchHandler.GetVmrPatches(mapping);
+        if (!vmrPatches.Any())
+        {
+            return;
+        }
+
+        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
+
+        foreach (var patchFile in vmrPatches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _logger.LogDebug("Applying {patch}..", patchFile);
+            await _patchHandler.ApplyPatch(mapping, patchFile, cancellationToken);
+        }
     }
 }

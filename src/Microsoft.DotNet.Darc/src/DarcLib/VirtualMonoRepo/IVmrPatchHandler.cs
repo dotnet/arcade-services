@@ -12,11 +12,11 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPatchHandler
 {
-    Task ApplyPatch(
-        SourceMapping mapping,
-        VmrIngestionPatch patch,
-        CancellationToken cancellationToken);
-    
+    Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken);
+
+    Task ApplyPatch(SourceMapping mapping, string patchPath, CancellationToken cancellationToken)
+        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, mapping.Name), cancellationToken);
+
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
@@ -26,15 +26,13 @@ public interface IVmrPatchHandler
         string tmpPath,
         CancellationToken cancellationToken);
 
-    Task RestorePatchedFilesFromRepo(
-        SourceMapping mapping,
-        string clonePath,
-        string originalRevision,
-        CancellationToken cancellationToken);
+    Task RestorePatchedFilesFromRepo(SourceMapping mapping, string clonePath, CancellationToken cancellationToken);
+    
+    Task RestoreFilesFromPatch(SourceMapping mapping, string clonePath, string patch, CancellationToken cancellationToken);
 
-    Task ApplyVmrPatches(
-        SourceMapping mapping,
-        CancellationToken cancellationToken);
+    IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping);
+
+    Task<IReadOnlyCollection<string>> GetPatchedFiles(string repoPath, string patchPath, CancellationToken cancellationToken);
 }
 
 /// <summary>

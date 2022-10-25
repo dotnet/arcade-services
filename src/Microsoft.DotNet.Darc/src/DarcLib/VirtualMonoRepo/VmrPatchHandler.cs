@@ -305,49 +305,23 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="originalRevision">Revision from which we were updating</param>
     public async Task RestorePatchedFilesFromRepo(
         SourceMapping mapping,
-        string clonePath,
         string originalRevision,
         CancellationToken cancellationToken)
     {
         var vmrPatches = GetVmrPatches(mapping);
-        if (vmrPatches.Length == 0)
+        if (!vmrPatches.Any())
         {
             return;
         }
 
         _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
 
-        _localGitRepo.Checkout(clonePath, originalRevision);
-
+        var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, originalRevision, cancellationToken);
         var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
 
         foreach (var patch in vmrPatches)
         {
-            _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
-
-            foreach (var patchedFile in await GetFilesInPatch(clonePath, patch, cancellationToken))
-            {
-                // git always works with forward slashes (even on Windows)
-                string relativePath = _fileSystem.DirectorySeparatorChar != '/'
-                    ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
-                    : patchedFile;
-
-                var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
-                var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
-
-                if (_fileSystem.FileExists(originalFile))
-                {
-                    // Copy old revision to VMR
-                    _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
-                    _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-                }
-                else
-                {
-                    // File is being added by the patch - we need to remove it
-                    _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
-                    _fileSystem.DeleteFile(destination);
-                }
-            }
+            await RestoreFilesFromPatch(mapping, clonePath, patch, cancellationToken);
         }
 
         // Stage the restored files (all future patches are applied to index directly)
@@ -356,27 +330,38 @@ public class VmrPatchHandler : IVmrPatchHandler
         _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
     }
 
-    /// <summary>
-    /// Applies VMR patches onto files of given mapping's subrepository.
-    /// These files are stored in the VMR and applied on top of the individual repos.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    public async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
+    public async Task RestoreFilesFromPatch(
+        SourceMapping mapping,
+        string clonePath,
+        string patch,
+        CancellationToken cancellationToken)
     {
-        var vmrPatches = GetVmrPatches(mapping);
-        if (vmrPatches.Length == 0)
+        _logger.LogDebug("Restoring patched files from a VMR patch `{patch}`..", patch);
+        
+        var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
+
+        foreach (var patchedFile in await GetPatchedFiles(clonePath, patch, cancellationToken))
         {
-            return;
-        }
+            // git always works with forward slashes (even on Windows)
+            string relativePath = _fileSystem.DirectorySeparatorChar != '/'
+                ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
+                : patchedFile;
 
-        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
+            var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
+            var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
 
-        foreach (var patchFile in vmrPatches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, new(patchFile, mapping.Name), cancellationToken);
+            if (_fileSystem.FileExists(originalFile))
+            {
+                // Copy old revision to VMR
+                _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
+                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+            }
+            else
+            {
+                // File is being added by the patch - we need to remove it
+                _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
+                _fileSystem.DeleteFile(destination);
+            }
         }
     }
 
@@ -386,7 +371,10 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    private async Task<IReadOnlyCollection<string>> GetFilesInPatch(string repoPath, string patchPath, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(
+        string repoPath,
+        string patchPath,
+        CancellationToken cancellationToken)
     {
         var result = await _processManager.ExecuteGit(repoPath, new[] { "apply", "--numstat", patchPath }, cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
@@ -525,7 +513,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private string[] GetVmrPatches(SourceMapping mapping)
+    public IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping)
     {
         if (_vmrInfo.PatchesPath is null)
         {
