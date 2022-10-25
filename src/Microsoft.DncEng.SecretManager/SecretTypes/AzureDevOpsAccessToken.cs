@@ -117,7 +117,7 @@ public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Paramete
             .Select(s => s.StartsWith("vso.") ? s : $"vso.{s}")
             .ToArray();
 
-        Console.WriteLine($"Creating new pat in orgs '{string.Join(" ", orgIds)}' with scopes '{string.Join("", scopes)}'");
+        Console.WriteLine($"Creating new pat in orgs '{string.Join(" ", orgIds)}' with scopes '{string.Join(" ", scopes)}'");
         var expiresOn = now.AddDays(180);
         var newToken = await tokenClient.CreateSessionTokenAsync(new SessionToken
         {
