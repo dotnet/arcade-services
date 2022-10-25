@@ -45,6 +45,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IVmrDependencyTracker>(sp =>
         {
