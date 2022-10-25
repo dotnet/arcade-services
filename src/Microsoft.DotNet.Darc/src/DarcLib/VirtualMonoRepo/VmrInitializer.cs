@@ -122,7 +122,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
-        string clonePath = await _cloneManager.GetClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        string clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);

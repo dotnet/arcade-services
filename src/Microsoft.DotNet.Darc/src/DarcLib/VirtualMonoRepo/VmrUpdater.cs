@@ -102,7 +102,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo}@{revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
-        string clonePath = await _cloneManager.GetClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        string clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
