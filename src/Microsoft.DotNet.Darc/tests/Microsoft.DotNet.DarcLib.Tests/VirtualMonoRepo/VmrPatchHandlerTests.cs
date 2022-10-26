@@ -148,37 +148,6 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task VmrPatchesAreAppliedTest()
-    {
-        // Setup
-        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
-
-        // Act
-        await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
-
-        foreach (var patch in _vmrPatches)
-        {
-            // Verify
-            VerifyGitCall(new[]
-            {
-                "apply",
-                "--cached",
-                "--ignore-space-change",
-                "--directory",
-                $"src/{IndividualRepoName}",
-                patch,
-            });
-        }
-
-        VerifyGitCall(new[]
-        {
-            "checkout",
-            $"src/{IndividualRepoName}",
-        },
-        times: Times.Exactly(_vmrPatches.Count));
-    }
-
-    [Test]
     public async Task PatchedFilesAreRestoredTest()
     {
         // Setup
@@ -231,12 +200,11 @@ public class VmrPatchHandlerTests
         // Act
         await _patchHandler.RestorePatchedFilesFromRepo(
             _testRepoMapping,
-            ClonePath,
             originalRevision,
             CancellationToken.None);
 
         // Verify
-        _localGitRepo.Verify(x => x.Checkout(ClonePath, originalRevision, false), Times.Once);
+        _cloneManager.Verify(x => x.PrepareClone(_testRepoMapping.DefaultRemote, originalRevision, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         _localGitRepo.Verify(x => x.Stage(VmrPath, VmrPath + "/src/" + IndividualRepoName), Times.Once);
 
         _fileSystem
@@ -256,7 +224,7 @@ public class VmrPatchHandlerTests
         _fileSystem
             .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[2]), Times.Once);
     }
-    
+
     [Test]
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
