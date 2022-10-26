@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -87,7 +86,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
-        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, string.Empty, cancellationToken);
+        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, mapping.Name, cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
@@ -116,6 +115,12 @@ public class VmrPatchHandler : IVmrPatchHandler
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
+
+        var changedRecords = submoduleChanges
+            .Select(c => new SubmoduleRecord(relativePath + '/' + c.Path, c.Url, c.After))
+            .ToList();
+
+        _dependencyTracker.UpdateSubmodules(changedRecords);
 
         if (!mapping.Include.Any())
         {
@@ -236,18 +241,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         // We have to give git a relative path with forward slashes where to apply the patch
-        var destPath = _vmrInfo.GetRepoSourcesPath(mapping)
-            .Replace(_vmrInfo.VmrPath, null)
-            .Replace("\\", "/")
-            .TrimStart('/');
-
-        // When inlining submodules, we need to point the git apply there
-        if (destPath[^1] != '/')
-        {
-            destPath += '/';
-        }
-
-        destPath += patch.ApplicationPath;
+        var destPath = VmrInfo.SourcesDir + '/' + patch.ApplicationPath;
 
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
 
@@ -384,7 +378,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, new(patchFile, string.Empty), cancellationToken);
+            await ApplyPatch(mapping, new(patchFile, mapping.Name), cancellationToken);
         }
     }
 
@@ -554,8 +548,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Merge with IRemote
-    private async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
+    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
+    public async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
     {
         if (_fileSystem.DirectoryExists(destPath))
         {
