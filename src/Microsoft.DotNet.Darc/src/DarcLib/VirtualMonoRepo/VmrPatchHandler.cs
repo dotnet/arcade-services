@@ -273,27 +273,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
-        
-        // After we apply the diff to the index, working tree won't have the files so they will be missing
-        // We have to reset working tree to the index then
-        // This will end up having the working tree match what is staged
-        _logger.LogInformation("Resetting the working tree...");
-        args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
 
-        if (result.Succeeded)
-        {
-            _logger.LogDebug("{output}", result.ToString());
-            return;
-        }
-
-        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-        // We can just remove the working tree folder then
-        if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
-        {
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
-            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, destPath), true);
-        }
+        await ResetWorkingTreeDirectory(destPath);
     }
 
     /// <summary>
@@ -301,7 +282,6 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// This is because VMR contains already patched versions of these files and new updates from the repo wouldn't apply.
     /// </summary>
     /// <param name="mapping">Mapping</param>
-    /// <param name="clonePath">Path were the individual repo was cloned to</param>
     /// <param name="originalRevision">Revision from which we were updating</param>
     public async Task RestorePatchedFilesFromRepo(
         SourceMapping mapping,
@@ -363,6 +343,8 @@ public class VmrPatchHandler : IVmrPatchHandler
                 _fileSystem.DeleteFile(destination);
             }
         }
+
+        await ResetWorkingTreeDirectory(_vmrInfo.GetRelativeRepoSourcesPath(mapping));
     }
 
     /// <summary>
@@ -511,6 +493,35 @@ public class VmrPatchHandler : IVmrPatchHandler
             tmpPath,
             submodulePath,
             cancellationToken);
+    }
+
+    private async Task ResetWorkingTreeDirectory(string path)
+    {
+        // After we apply the diff to the index, working tree won't have the files so they will be missing
+        // We have to reset working tree to the index then
+        // This will end up having the working tree match what is staged
+        _logger.LogInformation("Cleaning the working tree...");
+        var args = new[] { "checkout", path };
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        
+        if (result.Succeeded)
+        {
+            _logger.LogDebug("{output}", result.ToString());
+            return;
+        }
+
+        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+        // We can just remove the working tree folder then
+        if (result.StandardError.Contains($"pathspec '{path}' did not match any file(s) known to git"))
+        {
+            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", path);
+            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, path), true);
+        }
+
+        // Also remove untracked files (in case files were removed in index)
+        args = new[] { "clean", "-df", path };
+        result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
     public IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping)

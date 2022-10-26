@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -357,6 +358,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             if (!_fileSystem.FileExists(patchPath))
             {
                 // Patch was removed, so it doesn't exist anymore
+                _logger.LogDebug("Not re-applying {patch} as it was removed", patchPath);
                 continue;
             }
             
@@ -373,43 +375,46 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var vmrPatchesToRestore = await GetVmrPatchesToRestore(mapping, clonePath, patches, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (vmrPatchesToRestore.Count > 0)
+        if (vmrPatchesToRestore.Count == 0)
         {
-            _logger.LogInformation("Found {count} VMR patches to restore. Restoring original files...", vmrPatchesToRestore.Count);
+            return vmrPatchesToRestore;
+        }
+        
+        _logger.LogInformation("Found {count} VMR patches to restore. Restoring original files...", vmrPatchesToRestore.Count);
 
-            foreach (var (affectedMapping, patchPath) in vmrPatchesToRestore)
+        foreach (var (affectedMapping, patchPath) in vmrPatchesToRestore)
+        {
+            if (!_fileSystem.FileExists(patchPath))
             {
-                if (!_fileSystem.FileExists(patchPath))
-                {
-                    // Patch is being added, so it doesn't exist yet
-                    continue;
-                }
-
-                var versionToRestoreFrom = _dependencyTracker.GetDependencyVersion(affectedMapping);
-                if (versionToRestoreFrom == null)
-                {
-                    _logger.LogInformation("Skipping VMR patches for {repo} as it hasn't been initialized yet", affectedMapping.Name);
-                    continue;
-                }
-
-                var repoToRestoreFrom = await _cloneManager.PrepareClone(
-                    affectedMapping.DefaultRemote,
-                    versionToRestoreFrom.Sha,
-                    cancellationToken);
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                await _patchHandler.RestoreFilesFromPatch(
-                    affectedMapping,
-                    repoToRestoreFrom,
-                    patchPath,
-                    cancellationToken);
-
-                cancellationToken.ThrowIfCancellationRequested();
+                // Patch is being added, so it doesn't exist yet
+                _logger.LogDebug("Not applying {patch} as will be added", patchPath);
+                continue;
             }
 
-            _logger.LogInformation("Files affected by VMR patches restored");
+            var versionToRestoreFrom = _dependencyTracker.GetDependencyVersion(affectedMapping);
+            if (versionToRestoreFrom == null)
+            {
+                _logger.LogInformation("Skipping VMR patches for {repo} as it hasn't been initialized yet", affectedMapping.Name);
+                continue;
+            }
+
+            var repoToRestoreFrom = await _cloneManager.PrepareClone(
+                affectedMapping.DefaultRemote,
+                versionToRestoreFrom.Sha,
+                cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            await _patchHandler.RestoreFilesFromPatch(
+                affectedMapping,
+                repoToRestoreFrom,
+                patchPath,
+                cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
+
+        _logger.LogInformation("Files affected by VMR patches restored");
 
         return vmrPatchesToRestore;
     }
@@ -440,7 +445,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         patchesToRestore.AddRange(_patchHandler.GetVmrPatches(updatedMapping).Select(patch => (updatedMapping, patch)));
 
         // If we are not updating the mapping that the VMR patches come from, we're done
-        if (_vmrInfo.PatchesPath == null || !_vmrInfo.PatchesPath.StartsWith(VmrInfo.SourcesDir + "/" + updatedMapping.Name))
+        if (_vmrInfo.PatchesPath == null || !_vmrInfo.PatchesPath.StartsWith(_vmrInfo.GetRepoSourcesPath(updatedMapping)))
         {
             return patchesToRestore;
         }
@@ -451,14 +456,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         foreach (var patch in patches)
         {
             var patchedFiles = await _patchHandler.GetPatchedFiles(clonePath, patch.Path, cancellationToken);
+            var affectedPatches = patchedFiles
+                .Select(path => path.Replace('/', _fileSystem.DirectorySeparatorChar))
+                .Select(path => _fileSystem.PathCombine(_vmrInfo.GetRepoSourcesPath(updatedMapping), path))
+                .Where(path => path.StartsWith(_vmrInfo.PatchesPath) && path.EndsWith(".patch"));
 
-            foreach (var patchedFile in patchedFiles.Where(p => p.StartsWith(_vmrInfo.PatchesPath!)))
+            foreach (var affectedPatch in affectedPatches)
             {
                 // patch is in the folder named as the mapping for which it is applied
-                var affectedMappping = patchedFile.Split('/')[^2];
+                var affectedMappping = affectedPatch.Split(_fileSystem.DirectorySeparatorChar)[^2];
                 
-                _logger.LogInformation("Detected a change of a VMR patch {patch} for {repo}", patchedFile, affectedMappping);
-                patchesToRestore.Add((_dependencyTracker.Mappings.First(m => m.Name == affectedMappping), patchedFile));
+                _logger.LogInformation("Detected a change of a VMR patch {patch} for {repo}", affectedPatch, affectedMappping);
+                patchesToRestore.Add((_dependencyTracker.Mappings.First(m => m.Name == affectedMappping), affectedPatch));
             }
         }
 
