@@ -277,39 +277,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         await ResetWorkingTreeDirectory(destPath);
     }
 
-    /// <summary>
-    /// For all files for which we have patches in VMR, restore their original version from the repo.
-    /// This is because VMR contains already patched versions of these files and new updates from the repo wouldn't apply.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    /// <param name="originalRevision">Revision from which we were updating</param>
-    public async Task RestorePatchedFilesFromRepo(
-        SourceMapping mapping,
-        string originalRevision,
-        CancellationToken cancellationToken)
-    {
-        var vmrPatches = GetVmrPatches(mapping);
-        if (!vmrPatches.Any())
-        {
-            return;
-        }
-
-        _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
-
-        var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, originalRevision, cancellationToken);
-        var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
-
-        foreach (var patch in vmrPatches)
-        {
-            await RestoreFilesFromPatch(mapping, clonePath, patch, cancellationToken);
-        }
-
-        // Stage the restored files (all future patches are applied to index directly)
-        _localGitRepo.Stage(_vmrInfo.VmrPath, repoSourcesPath);
-
-        _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
-    }
-
     public async Task RestoreFilesFromPatch(
         SourceMapping mapping,
         string clonePath,
@@ -344,7 +311,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             }
         }
 
-        await ResetWorkingTreeDirectory(_vmrInfo.GetRelativeRepoSourcesPath(mapping));
+        // Stage the restored files (all future patches are applied to index directly)
+        _localGitRepo.Stage(_vmrInfo.VmrPath, _vmrInfo.GetRelativeRepoSourcesPath(mapping));
     }
 
     /// <summary>
@@ -507,13 +475,11 @@ public class VmrPatchHandler : IVmrPatchHandler
         if (result.Succeeded)
         {
             _logger.LogDebug("{output}", result.ToString());
-            return;
         }
-
-        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-        // We can just remove the working tree folder then
-        if (result.StandardError.Contains($"pathspec '{path}' did not match any file(s) known to git"))
+        else if (result.StandardError.Contains($"pathspec '{path}' did not match any file(s) known to git"))
         {
+            // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+            // We can just remove the working tree folder then
             _logger.LogInformation("A removed submodule detected. Removing files at {path}...", path);
             _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, path), true);
         }

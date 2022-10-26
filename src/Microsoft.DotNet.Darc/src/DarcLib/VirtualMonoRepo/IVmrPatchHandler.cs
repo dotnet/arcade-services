@@ -32,11 +32,6 @@ public interface IVmrPatchHandler
         string tmpPath,
         CancellationToken cancellationToken);
 
-    Task RestorePatchedFilesFromRepo(
-        SourceMapping mapping,
-        string clonePath,
-        CancellationToken cancellationToken);
-
     Task RestoreFilesFromPatch(
         SourceMapping mapping,
         string clonePath,
