@@ -20,7 +20,7 @@ internal class GenerateTpnOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         var generator = Provider.GetRequiredService<IThirdPartyNoticesGenerator>();
-        await generator.UpdateThirtPartyNotices(true);
+        await generator.UpdateThirtPartyNotices();
         return 0;
     }
 }

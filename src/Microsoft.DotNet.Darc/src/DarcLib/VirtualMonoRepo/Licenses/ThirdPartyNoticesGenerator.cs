@@ -14,30 +14,26 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
 
 public interface IThirdPartyNoticesGenerator
 {
-    Task UpdateThirtPartyNotices(bool force = false);
+    Task UpdateThirtPartyNotices();
 }
 
 public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 {
-    private static readonly char[] NewlineChars = { '\n', '\r' };
     private static readonly Regex TpnFileName = new(@"third-?party-?notices(.txt)?$", RegexOptions.IgnoreCase);
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ILocalGitRepo _localGitClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ThirdPartyNoticesGenerator> _logger;
 
     public ThirdPartyNoticesGenerator(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
-        ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<ThirdPartyNoticesGenerator> logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _localGitClient = localGitClient;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -46,18 +42,13 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     /// Generates the THIRD-PARTY-NOTICES.txt file by assembling other similar files from the whole VMR.
     /// </summary>
     /// <param name="force">Force generation (skip check of notice changes)</param>
-    public async Task UpdateThirtPartyNotices(bool force = false)
+    public async Task UpdateThirtPartyNotices()
     {
-        if (!force && !NeedsUpdate())
-        {
-            return;
-        }
-        
-        _logger.LogInformation("Updating {tpnName} because there are new updates...", VmrInfo.ThirdPartyNoticesFileName);
+        _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
         var vmrTpnPath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
         var vmrTpn = _fileSystem.FileExists(vmrTpnPath)
-            ? TpnDocument.Parse((await _fileSystem.ReadAllTextAsync(vmrTpnPath)).Split(NewlineChars))
+            ? TpnDocument.Parse((await _fileSystem.ReadAllTextAsync(vmrTpnPath)).Replace("\r\n", "\n").Split('\n'))
             : new TpnDocument(string.Empty, Array.Empty<TpnSection>());
 
         // TODO: Remove?
@@ -74,7 +65,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
             _logger.LogDebug("Processing {name}...", notice);
 
             var content = await _fileSystem.ReadAllTextAsync(notice);
-            tpns.Add(TpnDocument.Parse(content.Split(NewlineChars)));
+            tpns.Add(TpnDocument.Parse(content.Replace("\r\n", "\n").Split('\n')));
         }
 
         TpnSection[] newSections = tpns
@@ -102,7 +93,6 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
         _fileSystem.WriteToFile(vmrTpnPath, newTpn.ToString());
 
         _logger.LogInformation("{tpnName} updated", VmrInfo.ThirdPartyNoticesFileName);
-        _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
     }
 
     private IEnumerable<string> GetAllNotices()
@@ -134,11 +124,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     }
 
     /// <summary>
-    /// Checkes whether at least one third party notice has been changed in the current change.
+    /// Checkes if a given path is a THIRD-PARTY-NOTICES.txt file.
     /// </summary>
-    private bool NeedsUpdate() =>
-        _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath)
-            .Where(path => TpnFileName.IsMatch(path))
-            .Any();
+    public static bool IsTpnPath(string path) => TpnFileName.IsMatch(path);
 }

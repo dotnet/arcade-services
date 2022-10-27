@@ -36,7 +36,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -48,16 +47,16 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
-        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = vmrInfo.TmpPath;
@@ -159,9 +158,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         await ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-
-        await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
-        cancellationToken.ThrowIfCancellationRequested();
+        
+        await UpdateThirdPartyNotices(cancellationToken);
 
         // Commit but do not add files (they were added to index directly)
         var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);

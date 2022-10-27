@@ -54,7 +54,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
-    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -65,10 +64,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -76,7 +76,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _remoteFactory = remoteFactory;
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
-        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _fileSystem = fileSystem;
     }
 
@@ -370,8 +369,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
-        cancellationToken.ThrowIfCancellationRequested();
+        await UpdateThirdPartyNotices(cancellationToken);
 
         Commit(commitMessage, author);
     }
