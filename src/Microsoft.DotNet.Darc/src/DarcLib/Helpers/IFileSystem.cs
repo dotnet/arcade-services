@@ -33,6 +33,8 @@ public interface IFileSystem
 
     string PathCombine(string path1, string path2);
 
+    string PathCombine(string path1, string path2, string path3);
+
     void DeleteFile(string path);
 
     void CopyFile(string sourceFileName, string destFileName, bool overwrite = false);

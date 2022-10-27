@@ -394,7 +394,10 @@ public class LocalGitClient : ILocalGitRepo
     public IEnumerable<string> GetStagedFiles(string repoDir)
     {
         using var repository = new Repository(repoDir);
-
-        return repository.RetrieveStatus().Modified.Select(file => file.FilePath);
+        var repositoryStatus = repository.RetrieveStatus();
+        return repositoryStatus.Added
+            .Concat(repositoryStatus.Removed)
+            .Concat(repositoryStatus.Staged)
+            .Select(file => file.FilePath);
     }
 }

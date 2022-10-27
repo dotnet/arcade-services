@@ -33,6 +33,8 @@ public class FileSystem : IFileSystem
 
     public string PathCombine(string path1, string path2) => Path.Combine(path1, path2);
 
+    public string PathCombine(string path1, string path2, string path3) => Path.Combine(path1, path2, path3);
+
     public void WriteToFile(string path, string content)
     {
         var dirPath = Path.GetDirectoryName(path) ?? throw new DirectoryNotFoundException($"Invalid path {path}");
