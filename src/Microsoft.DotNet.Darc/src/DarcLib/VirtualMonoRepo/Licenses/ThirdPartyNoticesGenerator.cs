@@ -14,7 +14,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Build.Tasks
 {
-    public class RegenerateThirdPartyNotices
+    public interface IThirdPartyNoticesGenerator
+    {
+        Task UpdateThirtPartyNotices();
+    }
+
+    public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     {
         private static readonly char[] NewlineChars = { '\n', '\r' };
         private static readonly Regex TpnFileName = new(@"third-?party-?notices(.txt)?$", RegexOptions.IgnoreCase);
@@ -23,14 +28,14 @@ namespace Microsoft.DotNet.Build.Tasks
         private readonly IVmrDependencyTracker _dependencyTracker;
         private readonly ILocalGitRepo _localGitClient;
         private readonly IFileSystem _fileSystem;
-        private readonly ILogger<RegenerateThirdPartyNotices> _logger;
+        private readonly ILogger<ThirdPartyNoticesGenerator> _logger;
 
-        public RegenerateThirdPartyNotices(
+        public ThirdPartyNoticesGenerator(
             IVmrInfo vmrInfo,
             IVmrDependencyTracker dependencyTracker,
             ILocalGitRepo localGitClient,
             IFileSystem fileSystem,
-            ILogger<RegenerateThirdPartyNotices> logger)
+            ILogger<ThirdPartyNoticesGenerator> logger)
         {
             _vmrInfo = vmrInfo;
             _dependencyTracker = dependencyTracker;
@@ -39,7 +44,7 @@ namespace Microsoft.DotNet.Build.Tasks
             _logger = logger;
         }
 
-        public void UpdateThirtPartyNotices()
+        public Task UpdateThirtPartyNotices()
         {
             var modifiedNotices = _localGitClient
                 .GetStagedFiles(_vmrInfo.VmrPath)
@@ -60,11 +65,13 @@ namespace Microsoft.DotNet.Build.Tasks
                 // var content = await _fileSystem.ReadAllTextAsync(notice);
                 // var tpn = TpnDocument.Parse(content.Split(NewlineChars));
 
-                
+
             }
 
             _logger.LogInformation("{tpnName} updated", VmrInfo.ThirdPartyNoticesFileName);
             // _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+
+            return Task.CompletedTask;
         }
 
         /*public async Task ExecuteAsync(HttpClient client)

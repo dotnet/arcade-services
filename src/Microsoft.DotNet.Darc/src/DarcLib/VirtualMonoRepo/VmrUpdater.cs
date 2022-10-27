@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.DotNet.Build.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -52,6 +53,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ILogger<VmrUpdater> _logger;
 
     public VmrUpdater(
@@ -60,6 +62,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
+        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
         : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
@@ -70,6 +73,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _remoteFactory = remoteFactory;
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
+        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
     }
 
     public Task UpdateRepository(
@@ -344,6 +348,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
         cancellationToken.ThrowIfCancellationRequested();
 
         Commit(commitMessage, author);

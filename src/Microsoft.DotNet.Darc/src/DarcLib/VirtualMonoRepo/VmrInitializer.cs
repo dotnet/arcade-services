@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.DotNet.Build.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -45,6 +47,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVmrPatchHandler patchHandler,
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
+        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
@@ -54,6 +57,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = vmrInfo.TmpPath;
@@ -154,6 +158,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         cancellationToken.ThrowIfCancellationRequested();
 
         await _patchHandler.ApplyVmrPatches(mapping, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
         cancellationToken.ThrowIfCancellationRequested();
 
         // Commit but do not add files (they were added to index directly)
