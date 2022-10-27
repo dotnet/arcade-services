@@ -38,8 +38,8 @@ public class TpnSectionHeader
 
     public override string ToString() => Format switch
     {
-        TpnSectionHeaderFormat.Separated => SeparatorLine + Environment.NewLine + Environment.NewLine + Name,
-        TpnSectionHeaderFormat.Underlined => Name + Environment.NewLine + SeparatorLine,
+        TpnSectionHeaderFormat.Separated => SeparatorLine + TpnDocument.LineSeparator + TpnDocument.LineSeparator + Name,
+        TpnSectionHeaderFormat.Underlined => Name + TpnDocument.LineSeparator + SeparatorLine,
         TpnSectionHeaderFormat.Numbered => SeparatorLine,
         _ => throw new ArgumentOutOfRangeException(),
     };
@@ -52,7 +52,7 @@ public class TpnSectionHeader
             .Select(s => s.Trim())
             .ToArray();
 
-        var name = string.Join(Environment.NewLine, nameLines);
+        var name = string.Join(TpnDocument.LineSeparator, nameLines);
 
         // If there's a separator line as the last line in the name, this line doesn't indicate
         // a section. It needs to be handled by ParseUnderlined instead.
@@ -127,7 +127,7 @@ public class TpnSectionHeader
             .ToArray();
 
         return new TpnSectionHeader(
-            string.Join(Environment.NewLine, nameLines),
+            string.Join(TpnDocument.LineSeparator, nameLines),
             lines[i],
             TpnSectionHeaderFormat.Underlined,
             i - nameLines.Length,

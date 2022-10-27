@@ -10,6 +10,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
 
 public class TpnDocument
 {
+    public const string LineSeparator = "\n";
+
     public string Preamble { get; set; }
 
     public IEnumerable<TpnSection> Sections { get; set; }
@@ -21,9 +23,9 @@ public class TpnDocument
     }
 
     public override string ToString() =>
-        Preamble + Environment.NewLine +
-        string.Join(Environment.NewLine + Environment.NewLine, Sections) +
-        Environment.NewLine;
+        Preamble + LineSeparator +
+        string.Join(LineSeparator + LineSeparator, Sections) +
+        LineSeparator;
 
     public static TpnDocument Parse(string[] lines)
     {

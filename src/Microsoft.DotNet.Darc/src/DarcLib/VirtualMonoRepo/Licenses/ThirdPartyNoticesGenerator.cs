@@ -74,7 +74,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 
         TpnSection[] newSections = tpns
             .SelectMany(o => o.Sections)
-            .Except(vmrTpn.Sections, new TpnSection.ByHeaderNameComparer())
+            .Except(vmrTpn.Sections, TpnSection.SectionComparer)
             .OrderBy(s => s.Header.Name)
             .ToArray();
 

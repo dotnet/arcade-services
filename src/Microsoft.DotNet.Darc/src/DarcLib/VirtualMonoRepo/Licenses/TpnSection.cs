@@ -9,13 +9,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
 
 public class TpnSection
 {
-    public class ByHeaderNameComparer : EqualityComparer<TpnSection>
-    {
-        public override bool Equals(TpnSection? x, TpnSection? y) =>
-            string.Equals(x?.Header.Name, y?.Header.Name, StringComparison.OrdinalIgnoreCase);
-
-        public override int GetHashCode(TpnSection obj) => obj.Header.Name.GetHashCode();
-    }
+    public static readonly ByHeaderNameComparer SectionComparer = new();
 
     public TpnSectionHeader Header { get; set; }
     public string Content { get; set; }
@@ -26,5 +20,17 @@ public class TpnSection
         Content = content;
     }
 
-    public override string ToString() => Header + Environment.NewLine + Environment.NewLine + Content;
+    public override string ToString()
+        => Header
+           + TpnDocument.LineSeparator
+           + TpnDocument.LineSeparator
+           + Content;
+
+    public class ByHeaderNameComparer : EqualityComparer<TpnSection>
+    {
+        public override bool Equals(TpnSection? x, TpnSection? y) =>
+            string.Equals(x?.Header.Name, y?.Header.Name, StringComparison.OrdinalIgnoreCase);
+
+        public override int GetHashCode(TpnSection obj) => obj.Header.Name.GetHashCode();
+    }
 }
