@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -40,34 +41,48 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
         _logger = logger;
     }
 
-    public Task UpdateThirtPartyNotices()
+    public async Task UpdateThirtPartyNotices()
     {
         var modifiedNotices = _localGitClient
             .GetStagedFiles(_vmrInfo.VmrPath)
-            .Where(path => TpnFileName.IsMatch(path))
-            .Where(_fileSystem.FileExists);
+            .Where(path => TpnFileName.IsMatch(path));
 
         if (!modifiedNotices.Any())
         {
-            return Task.CompletedTask;
         }
 
         _logger.LogInformation("Updating {tpnName}", VmrInfo.ThirdPartyNoticesFileName);
 
-        foreach (var notice in modifiedNotices)
+        foreach (var notice in GetAllNotices())
         {
             _logger.LogDebug("Processing {name}...", notice);
 
             // var content = await _fileSystem.ReadAllTextAsync(notice);
             // var tpn = TpnDocument.Parse(content.Split(NewlineChars));
-
-
         }
 
         _logger.LogInformation("{tpnName} updated", VmrInfo.ThirdPartyNoticesFileName);
         // _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+    }
 
-        return Task.CompletedTask;
+    private IEnumerable<string> GetAllNotices()
+    {
+        var possiblePaths = _dependencyTracker.Mappings
+            .Select(_vmrInfo.GetRelativeRepoSourcesPath)
+            .Concat(_dependencyTracker.GetSubmodules().Select(s => s.Path));
+
+        foreach (var possiblePath in possiblePaths)
+        {
+            var fullPath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.SourcesDir, possiblePath.Replace('/', _fileSystem.DirectorySeparatorChar));
+            
+            foreach (var file in _fileSystem.GetFiles(fullPath))
+            {
+                if (TpnFileName.IsMatch(file))
+                {
+                    yield return file;
+                }
+            }
+        }
     }
 
     /*public async Task ExecuteAsync(HttpClient client)
