@@ -48,7 +48,9 @@ public class TpnSectionHeader
     {
         var nameLines = lines
             .Skip(i + 2)
+            .Reverse()
             .TakeWhile(s => !string.IsNullOrWhiteSpace(s))
+            .Reverse()
             .Select(s => s.Trim())
             .ToArray();
 
@@ -119,7 +121,7 @@ public class TpnSectionHeader
     {
         var nameLines = lines
             .Take(i)
-            .SkipWhile(s => !string.IsNullOrWhiteSpace(s))
+            .SkipWhile(string.IsNullOrWhiteSpace)
             .Select(s => s.Trim())
             .ToArray();
 
