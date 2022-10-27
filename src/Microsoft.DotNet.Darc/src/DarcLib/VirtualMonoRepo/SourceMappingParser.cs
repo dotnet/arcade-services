@@ -58,6 +58,12 @@ public class SourceMappingParser : ISourceMappingParser
         var patchesPath = settings.PatchesPath;
         if (patchesPath is not null)
         {
+            if (patchesPath.Contains('\\') || patchesPath.StartsWith('/'))
+            {
+                throw new Exception($"Invalid value '{patchesPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.PatchesPath)}! " +
+                    $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
+            }
+            
             _vmrInfo.PatchesPath = Path.Combine(_vmrInfo.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
         }
 

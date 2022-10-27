@@ -148,49 +148,15 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task VmrPatchesAreAppliedTest()
-    {
-        // Setup
-        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
-
-        // Act
-        await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
-
-        foreach (var patch in _vmrPatches)
-        {
-            // Verify
-            VerifyGitCall(new[]
-            {
-                "apply",
-                "--cached",
-                "--ignore-space-change",
-                "--directory",
-                $"src/{IndividualRepoName}",
-                patch,
-            });
-        }
-
-        VerifyGitCall(new[]
-        {
-            "checkout",
-            $"src/{IndividualRepoName}",
-        },
-        times: Times.Exactly(_vmrPatches.Count));
-    }
-
-    [Test]
     public async Task PatchedFilesAreRestoredTest()
     {
         // Setup
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", string.Empty);
-
-        const string originalRevision = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
+        var patch = $"{PatchDir}/test-repo.patch";
 
         var patchedFiles = new[]
         {
             "src/roslyn-analyzers/eng/Versions.props",
             "src/foo/bar.xml",
-            "src/xyz.cs",
         };
 
         _fileSystem
@@ -199,46 +165,35 @@ public class VmrPatchHandlerTests
 
         _fileSystem
             .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[1]}"))
-            .Returns(true);
-
-        _fileSystem
-            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[2]}"))
             .Returns(false);
 
+        _vmrInfo
+            .Setup(x => x.GetRelativeRepoSourcesPath(_testRepoMapping))
+            .Returns("src/" + IndividualRepoName);
+
         SetupGitCall(
-            new[] { "apply", "--numstat", _vmrPatches.First() },
+            new[] { "apply", "--numstat", patch },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
                 StandardOutput = $"""
                     0       14      {patchedFiles[0]}
-                    """,
-            },
-            ClonePath);
-
-        SetupGitCall(
-            new[] { "apply", "--numstat", _vmrPatches.Last() },
-            new ProcessExecutionResult()
-            {
-                ExitCode = 0,
-                StandardOutput = $"""
-                    0       8       {patchedFiles[1]}
-                    -       -       {patchedFiles[2]}
+                    -        -      {patchedFiles[1]}
                     """,
             },
             ClonePath);
 
         // Act
-        await _patchHandler.RestorePatchedFilesFromRepo(
+        await _patchHandler.RestoreFilesFromPatch(
             _testRepoMapping,
-            ClonePath,
-            originalRevision,
+            "/tmp/" + IndividualRepoName,
+            patch,
             CancellationToken.None);
 
         // Verify
-        _localGitRepo.Verify(x => x.Checkout(ClonePath, originalRevision, false), Times.Once);
-        _localGitRepo.Verify(x => x.Stage(VmrPath, VmrPath + "/src/" + IndividualRepoName), Times.Once);
+        _localGitRepo.Verify(x => x.Stage(VmrPath, "src/" + IndividualRepoName), Times.Once);
 
+        // Restores a version
         _fileSystem
             .Verify(x => x.CopyFile(
                 ClonePath + '/' + patchedFiles[0],
@@ -246,17 +201,11 @@ public class VmrPatchHandlerTests
                 true),
               Times.Once);
 
+        // File is added by the patch => restore means deleting it
         _fileSystem
-            .Verify(x => x.CopyFile(
-                ClonePath + '/' + patchedFiles[1],
-                VmrPath + "/src/test-repo/" + patchedFiles[1],
-                true),
-              Times.Once);
-
-        _fileSystem
-            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[2]), Times.Once);
+            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[1]), Times.Once);
     }
-    
+
     [Test]
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
