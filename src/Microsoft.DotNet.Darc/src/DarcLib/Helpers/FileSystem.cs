@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.IO;
+using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -46,4 +47,5 @@ public class FileSystem : IFileSystem
     public FileAttributes GetAttributes(string path) => File.GetAttributes(path);
 
     public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
-}
+
+    public Task<string> ReadAllTextAsync(string path) => File.ReadAllTextAsync(path);

@@ -23,6 +23,7 @@ public class VmrInfo : IVmrInfo
     public const string SourcesDir = "src";
     public const string GitInfoSourcesDir = "git-info";
     public const string SourceManifestFileName = "source-manifest.json";
+    public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
 
     public string VmrPath { get; }
 

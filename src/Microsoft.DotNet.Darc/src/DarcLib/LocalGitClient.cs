@@ -390,4 +390,11 @@ public class LocalGitClient : ILocalGitRepo
             .Select(s => new GitSubmoduleInfo(s.Name, s.Path, s.Url, s.IndexCommitId.Sha))
             .ToList();
     }
+
+    public IEnumerable<string> GetStagedFiles(string repoDir)
+    {
+        using var repository = new Repository(repoDir);
+
+        return repository.RetrieveStatus().Modified.Select(file => file.FilePath);
+    }
 }
