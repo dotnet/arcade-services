@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 public class FileSystem : IFileSystem
 {
     public char DirectorySeparatorChar => Path.DirectorySeparatorChar;
-    
+
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
@@ -49,3 +49,4 @@ public class FileSystem : IFileSystem
     public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
 
     public Task<string> ReadAllTextAsync(string path) => File.ReadAllTextAsync(path);
+}

@@ -1,69 +1,66 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.DotNet.Build.Tasks
+#nullable enable
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
+
+public class TpnDocument
 {
-    public class TpnDocument
+    public string Preamble { get; set; }
+
+    public IEnumerable<TpnSection> Sections { get; set; }
+
+    public TpnDocument(string preamble, IEnumerable<TpnSection> sections)
     {
-        public static TpnDocument Parse(string[] lines)
+        Preamble = preamble;
+        Sections = sections;
+    }
+
+    public override string ToString() =>
+        Preamble + Environment.NewLine +
+        string.Join(Environment.NewLine + Environment.NewLine, Sections) +
+        Environment.NewLine;
+
+    public static TpnDocument Parse(string[] lines)
+    {
+        TpnSectionHeader[] headers = TpnSectionHeader.ParseAll(lines).ToArray();
+        var sections = new List<TpnSection>();
+
+        for (int i = 0; i < headers.Length; i++)
         {
-            var headers = TpnSectionHeader.ParseAll(lines).ToArray();
+            var header = headers[i];
+            var headerEndLine = header.StartLine + header.LineLength + 1;
+            var linesUntilNext = lines.Length - headerEndLine;
 
-            var sections = headers
-                .Select((h, i) =>
-                {
-                    int headerEndLine = h.StartLine + h.LineLength + 1;
-                    int linesUntilNext = lines.Length - headerEndLine;
-
-                    if (i + 1 < headers.Length)
-                    {
-                        linesUntilNext = headers[i + 1].StartLine - headerEndLine;
-                    }
-
-                    return new TpnSection
-                    {
-                        Header = h,
-                        Content = string.Join(
-                            Environment.NewLine,
-                            lines
-                                .Skip(headerEndLine)
-                                .Take(linesUntilNext)
-                                // Skip lines in the content that could be confused for separators.
-                                .Where(line => !TpnSectionHeader.IsSeparatorLine(line))
-                                // Trim empty line at the end of the section.
-                                .Reverse()
-                                .SkipWhile(line => string.IsNullOrWhiteSpace(line))
-                                .Reverse())
-                    };
-                })
-                .ToArray();
-
-            if (sections.Length == 0)
+            if (i + 1 < headers.Length)
             {
-                throw new ArgumentException($"No sections found.");
+                linesUntilNext = headers[i + 1].StartLine - headerEndLine;
             }
 
-            return new TpnDocument
-            {
-                Preamble = string.Join(
-                    Environment.NewLine,
-                    lines.Take(sections.First().Header.StartLine)),
-
-                Sections = sections
-            };
+            var content = lines
+                .Skip(headerEndLine)
+                .Take(linesUntilNext)
+                // Skip lines in the content that could be confused for separators
+                .Where(line => !TpnSectionHeader.IsSeparatorLine(line))
+                // Trim empty line at the end of the section
+                .Reverse()
+                .SkipWhile(string.IsNullOrWhiteSpace)
+                .Reverse();
+        
+            sections.Add(new TpnSection(header, string.Join('\n', content)));
         }
 
-        public string Preamble { get; set; }
+        if (sections.Count == 0)
+        {
+            throw new ArgumentException($"No sections found.");
+        }
 
-        public IEnumerable<TpnSection> Sections { get; set; }
-
-        public override string ToString() =>
-            Preamble + Environment.NewLine +
-            string.Join(Environment.NewLine + Environment.NewLine, Sections) +
-            Environment.NewLine;
+        return new TpnDocument(
+            string.Join('\n', lines.Take(sections.First().Header.StartLine)),
+            sections);
     }
 }

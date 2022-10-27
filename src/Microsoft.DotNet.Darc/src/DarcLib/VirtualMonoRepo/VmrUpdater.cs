@@ -9,8 +9,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
-using Microsoft.DotNet.Build.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
