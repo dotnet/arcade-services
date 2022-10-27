@@ -89,12 +89,9 @@ public class TpnSectionHeader
             var line = lines[i].Trim();
             var lineBelow = lines[i + 1].Trim();
 
-            if (line.Length > 2 &&
-                IsSeparatorLine(line) &&
-                string.IsNullOrEmpty(lineBelow))
+            if (line.Length > 2 && IsSeparatorLine(line) && string.IsNullOrEmpty(lineBelow))
             {
                 // 'line' is a separator line. Check around to see what kind it is.
-
                 if (string.IsNullOrEmpty(lineAbove))
                 {
                     var header = ParseSeparated(lines, i);

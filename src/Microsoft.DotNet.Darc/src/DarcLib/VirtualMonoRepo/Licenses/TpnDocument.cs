@@ -14,9 +14,9 @@ public class TpnDocument
 
     public string Preamble { get; set; }
 
-    public IEnumerable<TpnSection> Sections { get; set; }
+    public ICollection<TpnSection> Sections { get; set; }
 
-    public TpnDocument(string preamble, IEnumerable<TpnSection> sections)
+    public TpnDocument(string preamble, ICollection<TpnSection> sections)
     {
         Preamble = preamble;
         Sections = sections;
@@ -56,13 +56,8 @@ public class TpnDocument
             sections.Add(new TpnSection(header, string.Join('\n', content)));
         }
 
-        if (sections.Count == 0)
-        {
-            throw new ArgumentException($"No sections found.");
-        }
-
         return new TpnDocument(
-            string.Join('\n', lines.Take(sections.First().Header.StartLine)),
-            sections);
+            string.Join('\n', lines.Take(sections.FirstOrDefault()?.Header.StartLine ?? lines.Length)),
+            sections.Where(s => !string.IsNullOrWhiteSpace(s.Content)).ToList());
     }
 }

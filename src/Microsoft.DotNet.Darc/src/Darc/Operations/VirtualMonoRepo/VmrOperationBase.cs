@@ -4,18 +4,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -23,9 +18,10 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : IVmrManager
 {
-    private readonly VmrCommandLineOptions _options;
+    private readonly VmrSyncCommandLineOptions _options;
 
-    protected VmrOperationBase(VmrCommandLineOptions options) : base(options, RegisterServices(options))
+    protected VmrOperationBase(VmrSyncCommandLineOptions options)
+        : base(options, options.RegisterServices())
     {
         _options = options;
     }
@@ -81,7 +77,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             foreach (var (mapping, revision) in reposToSync)
             {
                 listener.Token.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, mapping, revision, _options.Recursive, listener.Token);
+                success &= await ExecuteAsync(vmrManager, mapping, revision, listener.Token);
             }
         }
         catch (OperationCanceledException)
@@ -101,21 +97,19 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
-        bool recursive,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         TVmrManager vmrManager,
         SourceMapping mapping,
         string? targetRevision,
-        bool recursive,
         CancellationToken cancellationToken)
     {
         using (Logger.BeginScope(mapping.Name))
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, recursive, cancellationToken);
+                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
@@ -130,24 +124,5 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
                 return false;
             }
         }
-    }
-
-    private static IServiceCollection RegisterServices(VmrCommandLineOptions options)
-    {
-        var services = new ServiceCollection();
-
-        services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(options));
-        services.AddVmrManagers(options.GitLocation, configure: sp =>
-        {
-            var processManager = sp.GetRequiredService<IProcessManager>();
-            var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
-
-            var vmrPath = options.VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
-            var tmpPath = options.TmpPath ?? LocalSettings.GetDarcSettings(options, logger).TemporaryRepositoryRoot;
-
-            return new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath));
-        });
-
-        return services;
     }
 }

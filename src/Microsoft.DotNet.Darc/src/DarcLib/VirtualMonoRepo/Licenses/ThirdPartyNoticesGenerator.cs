@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
 
 public interface IThirdPartyNoticesGenerator
 {
-    Task UpdateThirtPartyNotices();
+    Task UpdateThirtPartyNotices(bool force = false);
 }
 
 public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
@@ -42,9 +42,13 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
         _logger = logger;
     }
 
-    public async Task UpdateThirtPartyNotices()
+    /// <summary>
+    /// Generates the THIRD-PARTY-NOTICES.txt file by assembling other similar files from the whole VMR.
+    /// </summary>
+    /// <param name="force">Force generation (skip check of notice changes)</param>
+    public async Task UpdateThirtPartyNotices(bool force = false)
     {
-        if (!NeedsUpdate())
+        if (!force && !NeedsUpdate())
         {
             return;
         }
@@ -57,9 +61,10 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
             : new TpnDocument(string.Empty, Array.Empty<TpnSection>());
 
         // TODO: Remove?
+        _logger.LogDebug("Current sections:");
         foreach (var s in vmrTpn.Sections.OrderBy(s => s.Header.SingleLineName))
         {
-            _logger.LogDebug($"{s.Header.StartLine + 1}:{s.Header.StartLine + s.Header.LineLength} {s.Header.Format} '{s.Header.SingleLineName}'");
+            _logger.LogDebug("  {section}", $"{s.Header.StartLine + 1}:{s.Header.StartLine + s.Header.LineLength} {s.Header.Format} '{s.Header.SingleLineName}'");
         }
 
         var tpns = new List<TpnDocument>();
@@ -93,7 +98,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 
         _logger.LogDebug("Importing {count} sections...", newSections.Length);
 
-        var newTpn = new TpnDocument(vmrTpn.Preamble, vmrTpn.Sections.Concat(newSections));
+        var newTpn = new TpnDocument(vmrTpn.Preamble, vmrTpn.Sections.Concat(newSections).ToList());
         _fileSystem.WriteToFile(vmrTpnPath, newTpn.ToString());
 
         _logger.LogInformation("{tpnName} updated", VmrInfo.ThirdPartyNoticesFileName);
