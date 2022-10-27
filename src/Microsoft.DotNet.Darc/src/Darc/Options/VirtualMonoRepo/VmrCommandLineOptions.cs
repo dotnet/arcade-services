@@ -33,10 +33,15 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
             var processManager = sp.GetRequiredService<IProcessManager>();
             var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
 
-            var vmrPath = VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            var vmrPath = VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory()) ?? throw new ArgumentException("VMR path not supplied!");
             var tmpPath = TmpPath ?? LocalSettings.GetDarcSettings(this, logger).TemporaryRepositoryRoot;
 
-            return new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath));
+            if (tmpPath != null)
+            {
+                tmpPath = Path.GetFullPath(tmpPath);
+            }
+
+            return new VmrInfo(Path.GetFullPath(vmrPath), tmpPath);
         });
 
         return services;

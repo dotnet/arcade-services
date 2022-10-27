@@ -113,12 +113,9 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
                 continue;
             }
 
-            foreach (var file in _fileSystem.GetFiles(possiblePath))
+            foreach (var tpn in _fileSystem.GetFiles(possiblePath).Where(IsTpnPath))
             {
-                if (TpnFileName.IsMatch(file))
-                {
-                    yield return file;
-                }
+                yield return tpn;
             }
         }
     }
