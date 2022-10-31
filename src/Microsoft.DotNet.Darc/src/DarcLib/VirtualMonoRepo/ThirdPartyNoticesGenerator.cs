@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo.Licenses;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IThirdPartyNoticesGenerator
 {
@@ -47,56 +47,40 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
         var vmrTpnPath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
-        var vmrTpn = _fileSystem.FileExists(vmrTpnPath)
-            ? TpnDocument.Parse((await _fileSystem.ReadAllTextAsync(vmrTpnPath)).Replace("\r\n", "\n").Split('\n'))
-            : new TpnDocument(string.Empty, Array.Empty<TpnSection>());
+        var header = GetTpnHeader(vmrTpnPath);
 
-        // TODO: Remove?
-        _logger.LogDebug("Current sections:");
-        foreach (var s in vmrTpn.Sections.OrderBy(s => s.Header.SingleLineName))
+        using (var tpnWriter = new StreamWriter(vmrTpnPath, append: false))
         {
-            _logger.LogDebug("  {section}", $"{s.Header.StartLine + 1}:{s.Header.StartLine + s.Header.LineLength} {s.Header.Format} '{s.Header.SingleLineName}'");
+            foreach (var headerLine in header)
+            {
+                tpnWriter.WriteLine(headerLine);
+            }
+
+            tpnWriter.WriteLine();
+
+            foreach (var notice in GetAllNotices())
+            {
+                _logger.LogDebug("Processing {name}...", notice);
+
+                var repo = _fileSystem.GetFileName(_fileSystem.GetDirectoryName(notice));
+
+                tpnWriter.WriteLine(new string('#', 45));
+                tpnWriter.WriteLine($"### {repo}");
+                tpnWriter.WriteLine(new string('#', 45));
+                tpnWriter.WriteLine();
+
+                tpnWriter.WriteLine(await _fileSystem.ReadAllTextAsync(notice));
+                tpnWriter.WriteLine();
+            }
         }
-
-        var tpns = new List<TpnDocument>();
-
-        foreach (var notice in GetAllNotices())
-        {
-            _logger.LogDebug("Processing {name}...", notice);
-
-            var content = await _fileSystem.ReadAllTextAsync(notice);
-            tpns.Add(TpnDocument.Parse(content.Replace("\r\n", "\n").Split('\n')));
-        }
-
-        TpnSection[] newSections = tpns
-            .SelectMany(o => o.Sections)
-            .Except(vmrTpn.Sections, TpnSection.SectionComparer)
-            .OrderBy(s => s.Header.Name)
-            .ToArray();
-
-        foreach (TpnSection existing in tpns
-            .SelectMany(r => r.Sections.Except(newSections))
-            .Where(s => !newSections.Contains(s))
-            .OrderBy(s => s.Header.Name))
-        {
-            _logger.LogDebug("Found already-imported section: '{sectionName}'", existing.Header.SingleLineName);
-        }
-
-        foreach (var s in newSections)
-        {
-            _logger.LogDebug("New section to import: '{sectionName}', line {line}", s.Header.SingleLineName, s.Header.StartLine);
-        }
-
-        _logger.LogDebug("Importing {count} sections...", newSections.Length);
-
-        var newTpn = new TpnDocument(vmrTpn.Preamble, vmrTpn.Sections.Concat(newSections).ToList());
-        _fileSystem.WriteToFile(vmrTpnPath, newTpn.ToString());
 
         _logger.LogInformation("{tpnName} updated", VmrInfo.ThirdPartyNoticesFileName);
     }
 
     private IEnumerable<string> GetAllNotices()
     {
+        var paths = new List<string>();
+
         foreach (var possiblePath in _dependencyTracker.Mappings.Select(_vmrInfo.GetRepoSourcesPath))
         {
             if (!_fileSystem.DirectoryExists(possiblePath))
@@ -106,9 +90,35 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 
             foreach (var tpn in _fileSystem.GetFiles(possiblePath).Where(IsTpnPath))
             {
-                yield return tpn;
+                paths.Add(tpn);
             }
         }
+
+        return paths.OrderBy(p => p);
+    }
+
+    /// <summary>
+    /// Reads the header of the THIRD-PARTY-NOTICES file (until 2 empty lines are found).
+    /// </summary>
+    private List<string> GetTpnHeader(string path)
+    {
+        var header = new List<string>();
+
+        using var stream = _fileSystem.GetFileStream(path, FileMode.Open, FileAccess.Read);
+        using var reader = new StreamReader(stream);
+
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (line.StartsWith("####"))
+            {
+                break;
+            }
+
+            header.Add(line);
+        }
+
+        return header;
     }
 
     /// <summary>
