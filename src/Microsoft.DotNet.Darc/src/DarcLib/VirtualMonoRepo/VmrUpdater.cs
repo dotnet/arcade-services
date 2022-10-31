@@ -248,9 +248,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
         string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(mapping))}-{targetRevision}";
+        string currentBranch;
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
-            var branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
+            currentBranch = repo.Head.FriendlyName;
+            Branch branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
             Commands.Checkout(repo, branch);
         }
 
@@ -316,6 +318,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
+            Commands.Checkout(repo, currentBranch);
             repo.Merge(repo.Branches[syncBranchName], DotnetBotCommitSignature, new MergeOptions
             {
                 FastForwardStrategy = FastForwardStrategy.NoFastForward,
