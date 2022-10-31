@@ -56,8 +56,6 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
                 tpnWriter.WriteLine(headerLine);
             }
 
-            tpnWriter.WriteLine();
-
             foreach (var notice in GetAllNotices())
             {
                 _logger.LogDebug("Processing {name}...", notice);
