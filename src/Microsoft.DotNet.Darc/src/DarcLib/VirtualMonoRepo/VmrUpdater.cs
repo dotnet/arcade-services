@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -63,10 +62,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
+        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -366,6 +367,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _patchHandler.ApplyPatch(affectedMapping, patchPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
+
+        await UpdateThirdPartyNotices(cancellationToken);
 
         Commit(commitMessage, author);
     }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.IO;
+using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -9,7 +10,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 public class FileSystem : IFileSystem
 {
     public char DirectorySeparatorChar => Path.DirectorySeparatorChar;
-    
+
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
@@ -32,6 +33,8 @@ public class FileSystem : IFileSystem
 
     public string PathCombine(string path1, string path2) => Path.Combine(path1, path2);
 
+    public string PathCombine(string path1, string path2, string path3) => Path.Combine(path1, path2, path3);
+
     public void WriteToFile(string path, string content)
     {
         var dirPath = Path.GetDirectoryName(path) ?? throw new DirectoryNotFoundException($"Invalid path {path}");
@@ -46,4 +49,6 @@ public class FileSystem : IFileSystem
     public FileAttributes GetAttributes(string path) => File.GetAttributes(path);
 
     public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
+
+    public Task<string> ReadAllTextAsync(string path) => File.ReadAllTextAsync(path);
 }

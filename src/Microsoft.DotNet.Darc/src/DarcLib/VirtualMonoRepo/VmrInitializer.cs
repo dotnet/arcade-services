@@ -45,10 +45,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVmrPatchHandler patchHandler,
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
+        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, versionDetailsParser, logger)
+        : base(vmrInfo, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
@@ -155,6 +157,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         await ApplyVmrPatches(mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        
+        await UpdateThirdPartyNotices(cancellationToken);
 
         // Commit but do not add files (they were added to index directly)
         var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);

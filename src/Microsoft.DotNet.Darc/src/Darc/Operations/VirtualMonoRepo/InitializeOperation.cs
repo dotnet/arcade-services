@@ -13,17 +13,19 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
 {
+    private readonly InitializeCommandLineOptions _options;
+
     public InitializeOperation(InitializeCommandLineOptions options)
         : base(options)
     {
+        _options = options;
     }
 
     protected override async Task ExecuteInternalAsync(
         IVmrInitializer vmrManager,
         SourceMapping mapping,
         string? targetRevision,
-        bool recursive,
         CancellationToken cancellationToken)
         =>
-        await vmrManager.InitializeRepository(mapping, targetRevision, null, recursive, cancellationToken);
+        await vmrManager.InitializeRepository(mapping, targetRevision, null, _options.Recursive, cancellationToken);
 }

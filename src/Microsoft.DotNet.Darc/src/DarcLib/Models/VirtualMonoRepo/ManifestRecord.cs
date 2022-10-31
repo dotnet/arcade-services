@@ -53,3 +53,9 @@ public class SubmoduleRecord : ManifestRecord
     {
     }
 }
+
+// Read-only version that will be visible to outside classes
+public record SubmoduleInfo(string Path, string RemoteUri, string CommitSha)
+{
+    public static SubmoduleInfo FromRecord(SubmoduleRecord other) => new(other.Path, other.RemoteUri, other.CommitSha);
+}

@@ -31,9 +31,16 @@ public interface ILocalGitRepo : IGitRepo
     void Stage(string repoDir, string pathToStage);
 
     /// <summary>
-    /// Returns a list of git submodules registered in a given repository.
+    ///     Returns a list of git submodules registered in a given repository.
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="commit">Which commit the info is retrieved for</param>
     List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit);
+
+    /// <summary>
+    ///     Returns a list of modified staged files.
+    /// </summary>
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <returns>List of currently modified staged files</returns>
+    IEnumerable<string> GetStagedFiles(string repoDir);
 }
