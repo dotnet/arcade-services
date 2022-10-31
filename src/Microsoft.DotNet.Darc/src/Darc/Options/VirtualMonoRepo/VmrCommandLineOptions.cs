@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal abstract class VmrCommandLineOptions : CommandLineOptions
 {
-    [Option("vmr", Required = true, HelpText = "Path to the VMR; defaults to git root above cwd.")]
+    [Option("vmr", Required = true, HelpText = "Path to the VMR; defaults to nearest git root above the current working directory.")]
     public string VmrPath { get; set; } = Environment.CurrentDirectory;
 
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
