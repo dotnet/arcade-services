@@ -322,7 +322,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 CommitOnSuccess = false,
             });
 
-            Commit(commitMessage, DotnetBotCommitSignature);
+            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
     }
 
