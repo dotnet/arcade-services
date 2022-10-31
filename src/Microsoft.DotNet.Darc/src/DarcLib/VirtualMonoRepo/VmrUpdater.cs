@@ -246,29 +246,28 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         reposToUpdate.Enqueue(new DependencyUpdate(mapping, targetRevision, targetVersion, null));
 
+        string commitMessage = $"Recursive update for {mapping.Name} / {GetCurrentVersion(mapping)} → {targetRevision}";
+
+        _logger.LogInformation(commitMessage);
+
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
         string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(mapping))}-{targetRevision}";
         string currentBranch;
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
+            _logger.LogInformation("Creating branch {branchName} for sync commits", syncBranchName);
+            
             currentBranch = repo.Head.FriendlyName;
             Branch branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
             Commands.Checkout(repo, branch);
         }
-
-        string commitMessage = $"Recursive update ({mapping.Name} / {GetCurrentVersion(mapping)} → {targetRevision})";
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
             var mappingToUpdate = repoToUpdate.Mapping;
             var currentSha = GetCurrentVersion(mappingToUpdate);
 
-            if (repoToUpdate.Parent is null)
-            {
-                commitMessage = $"Recursive update ({mappingToUpdate.Name} / {currentSha} → {repoToUpdate.TargetRevision ?? HEAD})";
-                _logger.LogInformation(commitMessage);
-            }
-            else
+            if (repoToUpdate.Parent is not null)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from} → {to}",
                     repoToUpdate.Parent,
@@ -306,18 +305,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        var summaryMessage = new StringBuilder();
-        summaryMessage.AppendLine("Recursive update finished. Updated repositories:");
-
-        foreach (var update in updatedDependencies)
-        {
-            summaryMessage.AppendLine($"  - {update.Mapping.Name} / {update.TargetRevision ?? HEAD}");
-        }
-
-        _logger.LogInformation("{summary}", summaryMessage);
-
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
+            _logger.LogInformation("Merging {branchName} into {mainBranch}", syncBranchName, currentBranch);
             Commands.Checkout(repo, currentBranch);
             repo.Merge(repo.Branches[syncBranchName], DotnetBotCommitSignature, new MergeOptions
             {
@@ -327,6 +317,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
+
+        var summaryMessage = new StringBuilder();
+        summaryMessage.AppendLine("Recursive update finished. Updated repositories:");
+
+        foreach (var update in updatedDependencies)
+        {
+            summaryMessage.AppendLine($"  - {update.Mapping.Name} / {update.TargetRevision ?? HEAD}");
+        }
+
+        _logger.LogInformation("{summary}", summaryMessage);
     }
 
     /// <summary>
