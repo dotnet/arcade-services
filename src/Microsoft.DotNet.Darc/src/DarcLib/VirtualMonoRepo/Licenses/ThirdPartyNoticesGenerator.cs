@@ -97,16 +97,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 
     private IEnumerable<string> GetAllNotices()
     {
-        var repoPaths = _dependencyTracker.Mappings
-            .Select(_vmrInfo.GetRepoSourcesPath);
-
-        var submodulePaths = _dependencyTracker.GetSubmodules()
-            .Select(s => _fileSystem.PathCombine(
-                _vmrInfo.VmrPath,
-                VmrInfo.SourcesDir,
-                s.Path.Replace('/', _fileSystem.DirectorySeparatorChar)));
-
-        foreach (var possiblePath in repoPaths.Concat(submodulePaths))
+        foreach (var possiblePath in _dependencyTracker.Mappings.Select(_vmrInfo.GetRepoSourcesPath))
         {
             if (!_fileSystem.DirectoryExists(possiblePath))
             {
