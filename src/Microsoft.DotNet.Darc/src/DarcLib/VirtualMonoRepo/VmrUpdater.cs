@@ -246,6 +246,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         reposToUpdate.Enqueue(new DependencyUpdate(mapping, targetRevision, targetVersion, null));
 
+        // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
+        string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(mapping))}-{targetRevision}";
+        using (var repo = new Repository(_vmrInfo.VmrPath))
+        {
+            var branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
+            Commands.Checkout(repo, branch);
+        }
+
+        string commitMessage = $"Recursive update ({mapping.Name} / {GetCurrentVersion(mapping)} → {targetRevision})";
+
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
             var mappingToUpdate = repoToUpdate.Mapping;
@@ -253,10 +263,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             if (repoToUpdate.Parent is null)
             {
-                _logger.LogInformation("Starting recursive update for {repo} / {from} → {to}",
-                    mappingToUpdate.Name,
-                    currentSha,
-                    repoToUpdate.TargetRevision ?? HEAD);
+                commitMessage = $"Recursive update ({mappingToUpdate.Name} / {currentSha} → {repoToUpdate.TargetRevision ?? HEAD})";
+                _logger.LogInformation(commitMessage);
             }
             else
             {
@@ -305,6 +313,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         _logger.LogInformation("{summary}", summaryMessage);
+
+        using (var repo = new Repository(_vmrInfo.VmrPath))
+        {
+            repo.Merge(repo.Branches[syncBranchName], DotnetBotCommitSignature, new MergeOptions
+            {
+                FastForwardStrategy = FastForwardStrategy.NoFastForward,
+                CommitOnSuccess = false,
+            });
+
+            Commit(commitMessage, DotnetBotCommitSignature);
+        }
     }
 
     /// <summary>
