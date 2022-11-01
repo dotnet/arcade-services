@@ -212,7 +212,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 commitCount++;          
                 if (commitCount == 20 && commitsToCopy.Count > 3)
                 {
-                    commitMessages.AppendLine($"  [... commit list trimmed ...]");
+                    commitMessages.AppendLine("  [... commit list trimmed ...]");
                     break;
                 }
 
