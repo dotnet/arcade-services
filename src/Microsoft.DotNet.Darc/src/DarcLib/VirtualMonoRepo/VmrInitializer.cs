@@ -146,9 +146,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
+        await _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
         { 
+            VmrInfo.ReadmeFileName,
             VmrInfo.GitInfoSourcesDir,
             _vmrInfo.GetSourceManifestPath() 
         });
