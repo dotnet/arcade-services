@@ -26,10 +26,11 @@ public class CommandAttribute : Attribute
     ///     <code>[Command("example-command")]</code>
     /// </summary>
     /// <param name="name">User typed command name to execute this command</param>
-    public CommandAttribute(string name)
+    public CommandAttribute(string name, params string[] aliases)
     {
         Name = name;
         Description = name;
+        Aliases = aliases;
     }
 
     /// <summary>
@@ -42,17 +43,20 @@ public class CommandAttribute : Attribute
     ///     <code>[Command]</code> attribute
     /// </param>
     /// <param name="name">User typed command name to execute this command</param>
-    public CommandAttribute(Type parent, string name)
+    public CommandAttribute(Type parent, string name, params string[] aliases)
     {
         Parent = parent;
         Name = name;
         Description = name;
+        Aliases = aliases;
     }
 
     /// <summary>
     ///     Name of command as parsed from command line
     /// </summary>
     public string Name { get; }
+
+    public string[] Aliases { get; }
 
     /// <summary>
     ///     If this command is a sub command of some other command set, this is a reference

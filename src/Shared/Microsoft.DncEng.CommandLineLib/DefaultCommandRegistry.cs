@@ -42,6 +42,11 @@ public class DefaultCommandRegistry : ICommandRegistry
             Type parentType = attr.Parent ?? typeof(GlobalCommand);
 
             list.Add((parentType, attr.Name, command));
+        
+            foreach (string alias in attr.Aliases.DefaultIfEmpty())
+            {
+                list.Add((parentType, alias, command));
+            }
         }
 
         return list.ToImmutable();
