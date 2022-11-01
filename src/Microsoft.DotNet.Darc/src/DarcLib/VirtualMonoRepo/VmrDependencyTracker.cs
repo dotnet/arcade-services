@@ -4,9 +4,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -25,8 +23,10 @@ public interface IVmrDependencyTracker
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
-        
-    IReadOnlyCollection<SubmoduleInfo> GetSubmodules();
+
+    IReadOnlyCollection<ISourceComponent> Sources { get; }
+
+    IReadOnlyCollection<ISourceComponent> Submodules { get; }
 }
 
 /// <summary>
@@ -46,8 +46,9 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public IReadOnlyCollection<SubmoduleInfo> GetSubmodules()
-        => _sourceManifest.Submodules.Select(SubmoduleInfo.FromRecord).ToImmutableArray();
+    public IReadOnlyCollection<ISourceComponent> Sources => _sourceManifest.Repositories;
+
+    public IReadOnlyCollection<ISourceComponent> Submodules => _sourceManifest.Submodules;
 
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,

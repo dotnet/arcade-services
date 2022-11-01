@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -17,18 +18,21 @@ namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 /// </summary>
 public class SourceManifest
 {
-    public ICollection<RepositoryRecord> Repositories { get; set; }
-    public ICollection<SubmoduleRecord> Submodules { get; set; }
+    private readonly SortedSet<RepositoryRecord> _repositories;
+    private readonly SortedSet<SubmoduleRecord> _submodules;
 
-    public SourceManifest()
+    public IReadOnlyCollection<ISourceComponent> Repositories => _repositories;
+    public IReadOnlyCollection<ISourceComponent> Submodules => _submodules;
+
+    public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
     {
-        Repositories = new SortedSet<RepositoryRecord>();
-        Submodules = new SortedSet<SubmoduleRecord>();
+        _repositories = new SortedSet<RepositoryRecord>(repositories);
+        _submodules = new SortedSet<SubmoduleRecord>(submodules);
     }
 
     public void UpdateVersion(string repository, string uri, string sha, string packageVersion)
     {
-        var repo = Repositories.FirstOrDefault(r => r.Path == repository);
+        var repo = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repo != null)
         {
             repo.CommitSha = sha;
@@ -37,22 +41,22 @@ public class SourceManifest
         }
         else
         {
-            Repositories.Add(new RepositoryRecord(repository, sha, uri, packageVersion));
+            _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion));
         }
     }
 
     public void RemoveSubmodule(SubmoduleRecord submodule)
     {
-        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
-        if(repo != null)
+        var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
+        if (repo != null)
         {
-            Submodules.Remove(repo);
+            _submodules.Remove(repo);
         }
     }
 
     public void UpdateSubmodule(SubmoduleRecord submodule)
     {
-        var repo = Submodules.FirstOrDefault(r => r.Path == submodule.Path);
+        var repo = _submodules.FirstOrDefault(r => r.Path == submodule.Path);
         if (repo != null)
         {
             repo.CommitSha = submodule.CommitSha;
@@ -60,7 +64,7 @@ public class SourceManifest
         }
         else
         {
-            Submodules.Add(submodule);
+            _submodules.Add(submodule);
         }
     }
 
@@ -76,25 +80,11 @@ public class SourceManifest
         return JsonSerializer.Serialize<SourceManifest>(this, options);
     }
 
-    public static SourceManifest FromJson(Stream stream)
-    {
-        var options = new JsonSerializerOptions
-        {
-            AllowTrailingCommas = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = true,
-        };
-
-        return JsonSerializer.Deserialize<SourceManifest>(stream, options) 
-            ?? throw new Exception($"Failed to deserialize source manifest");
-    }
-
     public static SourceManifest FromJson(string path)
     {
         if (!File.Exists(path))
         {
-            return new SourceManifest();
+            return new SourceManifest(Array.Empty<RepositoryRecord>(), Array.Empty<SubmoduleRecord>());
         }
 
         var options = new JsonSerializerOptions
@@ -102,11 +92,18 @@ public class SourceManifest
             AllowTrailingCommas = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             PropertyNameCaseInsensitive = true,
-            WriteIndented = true,
         };
-        
+
         using var stream = File.Open(path, FileMode.Open, FileAccess.Read);
-        return JsonSerializer.Deserialize<SourceManifest>(stream, options)
+        var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(stream, options)
             ?? throw new Exception($"Failed to deserialize {path}");
+
+        return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
     }
+}
+
+file class SourceManifestWrapper
+{
+    public ICollection<RepositoryRecord> Repositories { get; set; } = Array.Empty<RepositoryRecord>();
+    public ICollection<SubmoduleRecord> Submodules { get; set; } = Array.Empty<SubmoduleRecord>();
 }
