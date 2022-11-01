@@ -205,17 +205,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             // We squash commits and list them in the message
             var commitMessages = new StringBuilder();
             var commitCount = 1;
-            bool commitLimitHit = false;
-            while (!commitLimitHit && commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
+            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
             {
                 // Do not list over 23 commits in the message
                 // If there are more, list first 20
                 commitCount++;          
                 if (commitCount == 20 && commitsToCopy.Count > 3)
                 {
-                    commitLimitHit = true;
                     commitMessages.AppendLine($"  [... commit list trimmed ...]");
-                    continue;
+                    break;
                 }
 
                 commitMessages
