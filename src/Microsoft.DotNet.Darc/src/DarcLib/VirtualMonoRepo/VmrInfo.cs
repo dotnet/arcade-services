@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-#nullable enable
 using System.IO;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrInfo
@@ -25,6 +25,7 @@ public class VmrInfo : IVmrInfo
     public const string GitInfoSourcesDir = "git-info";
     public const string SourceManifestFileName = "source-manifest.json";
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
+    public const string ReadmeFileName = "README.md";
 
     public string VmrPath { get; }
 

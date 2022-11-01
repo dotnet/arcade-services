@@ -17,6 +17,9 @@ public interface IThirdPartyNoticesGenerator
     Task UpdateThirtPartyNotices();
 }
 
+/// <summary>
+/// Class responsible for generating the THIRD-PARTY-NOTICES.txt file for the VMR.
+/// </summary>
 public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
 {
     private static readonly Regex TpnFileName = new(@"third-?party-?notices(.txt)?$", RegexOptions.IgnoreCase);
