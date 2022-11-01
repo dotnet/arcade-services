@@ -43,7 +43,7 @@ public class DefaultCommandRegistry : ICommandRegistry
 
             list.Add((parentType, attr.Name, command));
         
-            foreach (string alias in attr.Aliases.DefaultIfEmpty())
+            foreach (string alias in attr.Aliases ?? Array.Empty<string>())
             {
                 list.Add((parentType, alias, command));
             }
