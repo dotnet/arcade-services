@@ -204,7 +204,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             // We squash commits and list them in the message
             var commitMessages = new StringBuilder();
-            var commitCount = 0;
+            var commitCount = 1;
             bool commitLimitHit = false;
             while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
             {
