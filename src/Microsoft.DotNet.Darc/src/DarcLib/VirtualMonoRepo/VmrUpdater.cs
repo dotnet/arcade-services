@@ -202,9 +202,27 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
+            // We squash commits and list them in the message
             var commitMessages = new StringBuilder();
+            var commitCount = 0;
+            bool commitLimitHit = false;
             while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
             {
+                // Do not list over 23 commits in the message
+                // If there are more, list first 20
+                commitCount++;                
+                if (commitCount == 20 && commitsToCopy.Count > 3)
+                {
+                    commitLimitHit = true;
+                    commitMessages.AppendLine($"  [... commit list trimmed ...]");
+                    continue;
+                }
+
+                if (commitCount > 20 && commitLimitHit)
+                {
+                    continue;
+                }
+
                 commitMessages
                     .AppendLine($"  - {commit.MessageShort}")
                     .AppendLine($"    {mapping.DefaultRemote}/commit/{commit.Id.Sha}");
