@@ -220,7 +220,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
                 if (commitCount > 20 && commitLimitHit)
                 {
-                    continue;
+                    break;
                 }
 
                 commitMessages
