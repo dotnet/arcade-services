@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
-    // Message shown when synchronizing a single commit
+    // Message used when synchronizing a single commit
     private const string SingleCommitMessage =
         $$"""
         [{name}] Sync {newShaShort}: {commitMessage}
@@ -33,10 +33,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {{AUTOMATION_COMMIT_TAG}}
         """;
 
-    // Message shown when synchronizing multiple commits as one
+    // Message used when synchronizing multiple commits as one
     private const string SquashCommitMessage =
         $$"""
-        [{name}] Sync {oldShaShort} → {newShaShort}
+        [{name}] Sync {oldShaShort}{{Arrow}}{newShaShort}
         Diff: {remote}/compare/{oldSha}..{newSha}
         
         From: {remote}/commit/{oldSha}
@@ -47,6 +47,20 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         {{AUTOMATION_COMMIT_TAG}}
         """;
+
+    // Message used when finalizing the sync with a merge commit
+    private const string MergeCommitMessage =
+        $$"""
+        [Recursive sync] {name} / {oldShaShort}{{Arrow}}{newShaShort}
+        
+        Updated repositories:
+        {commitMessage}
+        
+        {{AUTOMATION_COMMIT_TAG}}
+        """;
+
+    // Character we use in the commit messages to indicate the change
+    private const string Arrow = " → ";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
@@ -234,7 +248,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// Always updates to the first version found per repository in the dependency tree.
     /// </summary>
     private async Task UpdateRepositoryRecursively(
-        SourceMapping mapping,
+        SourceMapping rootMapping,
         string? targetRevision,
         string? targetVersion,
         bool noSquash,
@@ -244,14 +258,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var updatedDependencies = new HashSet<DependencyUpdate>();
         var skippedDependencies = new HashSet<DependencyUpdate>();
 
-        reposToUpdate.Enqueue(new DependencyUpdate(mapping, targetRevision, targetVersion, null));
+        reposToUpdate.Enqueue(new DependencyUpdate(rootMapping, targetRevision, targetVersion, null));
 
-        string commitMessage = $"Recursive update for {mapping.Name} / {GetCurrentVersion(mapping)} → {targetRevision}";
-
-        _logger.LogInformation(commitMessage);
+        string originalRootSha = GetCurrentVersion(rootMapping);
+        _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
+            rootMapping.Name,
+            DarcLib.Commit.GetShortSha(originalRootSha),
+            Arrow,
+            targetRevision ?? HEAD);
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(mapping))}-{targetRevision}";
+        string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}";
         string currentBranch;
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
@@ -269,15 +286,23 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             if (repoToUpdate.Parent is not null)
             {
-                _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from} → {to}",
+                _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
                     repoToUpdate.Parent,
                     mappingToUpdate.Name,
                     currentSha,
+                    Arrow,
                     repoToUpdate.TargetRevision ?? HEAD);
             }
 
             await UpdateRepository(mappingToUpdate, repoToUpdate.TargetRevision, repoToUpdate.TargetVersion, noSquash, cancellationToken);
-            updatedDependencies.Add(repoToUpdate);
+            updatedDependencies.Add(repoToUpdate with
+            {
+                // We the SHA again because original target could have been a branch name
+                TargetRevision = GetCurrentVersion(mappingToUpdate),
+
+                // We also store the original version so that later we use it in the commit message
+                TargetVersion = currentSha,
+            });
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
             {
@@ -305,6 +330,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
+        string finalRootSha = GetCurrentVersion(rootMapping);
+        var summaryMessage = new StringBuilder();
+
+        foreach (var update in updatedDependencies)
+        {
+            var fromShort = DarcLib.Commit.GetShortSha(update.TargetVersion);
+            var toShort = DarcLib.Commit.GetShortSha(update.TargetRevision);
+            summaryMessage
+                .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Arrow}{toShort}")
+                .AppendLine($"    {update.Mapping.DefaultRemote}/compare/{update.TargetVersion}..{update.TargetRevision}");
+        }
+
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
             _logger.LogInformation("Merging {branchName} into {mainBranch}", syncBranchName, currentBranch);
@@ -315,18 +352,20 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 CommitOnSuccess = false,
             });
 
+            var commitMessage = PrepareCommitMessage(
+                MergeCommitMessage,
+                rootMapping,
+                originalRootSha,
+                finalRootSha,
+                summaryMessage.ToString());
+
             repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
 
-        var summaryMessage = new StringBuilder();
-        summaryMessage.AppendLine("Recursive update finished. Updated repositories:");
-
-        foreach (var update in updatedDependencies)
-        {
-            summaryMessage.AppendLine($"  - {update.Mapping.Name} / {update.TargetRevision ?? HEAD}");
-        }
-
-        _logger.LogInformation("{summary}", summaryMessage);
+        _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
+            rootMapping.Name,
+            Environment.NewLine,
+            summaryMessage);
     }
 
     /// <summary>

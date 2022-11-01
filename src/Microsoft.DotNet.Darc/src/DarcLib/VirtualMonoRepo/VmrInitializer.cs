@@ -104,7 +104,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                         continue;
                     }
 
-                    _logger.LogDebug("Detected dependency of {parent} - {repo} / {commit} ({version})",
+                    _logger.LogInformation("Detected dependency of {parent} - {repo} / {commit} ({version})",
                         mapping.Name,
                         dependencyMapping.Name,
                         dependency.Commit,
