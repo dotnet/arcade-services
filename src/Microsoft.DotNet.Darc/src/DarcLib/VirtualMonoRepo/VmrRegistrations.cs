@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -46,18 +47,23 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddTransient<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IVmrDependencyTracker>(sp =>
+
+        // These initialize the configuration by reading the JSON files in VMR's src/
+        services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();
             var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
-            var fileSystem = sp.GetRequiredService<IFileSystem>();
-            var mappings = mappingParser.ParseMappings().GetAwaiter().GetResult();
-            var sourceManifest = SourceManifest.FromJson(configuration.GetSourceManifestPath());
-            return new VmrDependencyTracker(configuration, fileSystem, mappings, sourceManifest);
+            return mappingParser.ParseMappings().GetAwaiter().GetResult();
+        });
+        services.TryAddSingleton<ISourceManifest>(sp =>
+        {
+            var configuration = sp.GetRequiredService<IVmrInfo>();
+            return SourceManifest.FromJson(configuration.GetSourceManifestPath());
         });
     }
 }

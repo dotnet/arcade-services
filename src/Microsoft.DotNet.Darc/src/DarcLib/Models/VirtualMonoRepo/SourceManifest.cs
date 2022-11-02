@@ -11,11 +11,22 @@ using System.Text.Json;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
+public interface ISourceManifest
+{
+    IReadOnlyCollection<ISourceComponent> Repositories { get; }
+    IReadOnlyCollection<ISourceComponent> Submodules { get; }
+
+    void RemoveSubmodule(SubmoduleRecord submodule);
+    string ToJson();
+    void UpdateSubmodule(SubmoduleRecord submodule);
+    void UpdateVersion(string repository, string uri, string sha, string packageVersion);
+}
+
 /// <summary>
 /// A model for source-manifest.json file which VMR uses to keep track of
 /// synchronized sources
 /// </summary>
-public class SourceManifest
+public class SourceManifest : ISourceManifest
 {
     private readonly SortedSet<RepositoryRecord> _repositories;
     private readonly SortedSet<SubmoduleRecord> _submodules;
@@ -101,6 +112,9 @@ public class SourceManifest
     }
 }
 
+/// <summary>
+/// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
+/// </summary>
 file class SourceManifestWrapper
 {
     public ICollection<RepositoryRecord> Repositories { get; set; } = Array.Empty<RepositoryRecord>();

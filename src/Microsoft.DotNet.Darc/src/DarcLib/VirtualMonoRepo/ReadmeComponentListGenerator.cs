@@ -25,16 +25,16 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
     private const string ComponentListStartTag = "<!-- component list beginning -->";
     private const string ComponentListEndTag = "<!-- component list end -->";
 
-    private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
 
     public ReadmeComponentListGenerator(
-        IVmrDependencyTracker dependencyTracker,
+        ISourceManifest sourceManifest,
         IVmrInfo vmrInfo,
         IFileSystem fileSystem)
     {
-        _dependencyTracker = dependencyTracker;
+        _sourceManifest = sourceManifest;
         _vmrInfo = vmrInfo;
         _fileSystem = fileSystem;
     }
@@ -78,9 +78,9 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
 
     private async Task WriteComponentList(StreamWriter writer)
     {
-        var submodules = _dependencyTracker.Submodules.OrderBy(s => s.Path).ToList();
+        var submodules = _sourceManifest.Submodules.OrderBy(s => s.Path).ToList();
 
-        foreach (ISourceComponent component in _dependencyTracker.Sources.OrderBy(m => m.Path))
+        foreach (ISourceComponent component in _sourceManifest.Repositories.OrderBy(m => m.Path))
         {
             await WriteComponentListItem(writer, component, 0);
 

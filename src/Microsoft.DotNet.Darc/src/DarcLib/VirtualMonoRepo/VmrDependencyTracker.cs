@@ -24,10 +24,6 @@ public interface IVmrDependencyTracker
     Task UpdateSubmodules(List<SubmoduleRecord> submodules);
 
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
-
-    IReadOnlyCollection<ISourceComponent> Sources { get; }
-
-    IReadOnlyCollection<ISourceComponent> Submodules { get; }
 }
 
 /// <summary>
@@ -47,10 +43,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly IFileSystem _fileSystem;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
-
-    public IReadOnlyCollection<ISourceComponent> Sources => _sourceManifest.Repositories;
-
-    public IReadOnlyCollection<ISourceComponent> Submodules => _sourceManifest.Submodules;
 
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
