@@ -16,8 +16,8 @@ public interface ISourceManifest
     IReadOnlyCollection<ISourceComponent> Repositories { get; }
     IReadOnlyCollection<ISourceComponent> Submodules { get; }
 
-    void RemoveSubmodule(SubmoduleRecord submodule);
     string ToJson();
+    void RemoveSubmodule(SubmoduleRecord submodule);
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string packageVersion);
 }
@@ -116,13 +116,13 @@ public class SourceManifest : ISourceManifest
 
         return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
     }
-}
-
-/// <summary>
-/// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
-/// </summary>
-file class SourceManifestWrapper
-{
-    public ICollection<RepositoryRecord> Repositories { get; init; } = Array.Empty<RepositoryRecord>();
-    public ICollection<SubmoduleRecord> Submodules { get; init; } = Array.Empty<SubmoduleRecord>();
+    
+    /// <summary>
+    /// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
+    /// </summary>
+    private class SourceManifestWrapper
+    {
+        public ICollection<RepositoryRecord> Repositories { get; init; } = Array.Empty<RepositoryRecord>();
+        public ICollection<SubmoduleRecord> Submodules { get; init; } = Array.Empty<SubmoduleRecord>();
+    }
 }
