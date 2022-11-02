@@ -118,7 +118,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             .Select(c => new SubmoduleRecord(relativePath + '/' + c.Path, c.Url, c.After))
             .ToList();
 
-        await _dependencyTracker.UpdateSubmodules(changedRecords);
+        _dependencyTracker.UpdateSubmodules(changedRecords);
 
         if (!mapping.Include.Any())
         {

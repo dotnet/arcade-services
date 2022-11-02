@@ -87,7 +87,13 @@ public class SourceManifest : ISourceManifest
             WriteIndented = true,
         };
 
-        return JsonSerializer.Serialize<SourceManifest>(this, options);
+        var data = new SourceManifestWrapper
+        {
+            Repositories = _repositories,
+            Submodules = _submodules,
+        };
+
+        return JsonSerializer.Serialize(data, options);
     }
 
     public static SourceManifest FromJson(string path)
@@ -117,6 +123,6 @@ public class SourceManifest : ISourceManifest
 /// </summary>
 file class SourceManifestWrapper
 {
-    public ICollection<RepositoryRecord> Repositories { get; set; } = Array.Empty<RepositoryRecord>();
-    public ICollection<SubmoduleRecord> Submodules { get; set; } = Array.Empty<SubmoduleRecord>();
+    public ICollection<RepositoryRecord> Repositories { get; init; } = Array.Empty<RepositoryRecord>();
+    public ICollection<SubmoduleRecord> Submodules { get; init; } = Array.Empty<SubmoduleRecord>();
 }

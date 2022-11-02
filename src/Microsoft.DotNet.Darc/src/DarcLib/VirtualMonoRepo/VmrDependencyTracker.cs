@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 
@@ -19,9 +18,9 @@ public interface IVmrDependencyTracker
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    Task UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
+    void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
 
-    Task UpdateSubmodules(List<SubmoduleRecord> submodules);
+    void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
@@ -36,23 +35,20 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private const string DefaultVersion = "8.0.100";
 
     private readonly Lazy<AllVersionsPropsFile> _repoVersions;
-    private readonly SourceManifest _sourceManifest;
+    private readonly ISourceManifest _sourceManifest;
     private readonly string _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly IFileSystem _fileSystem;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
         IFileSystem fileSystem,
         IReadOnlyCollection<SourceMapping> mappings,
-        SourceManifest sourceManifest)
+        ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _readmeComponentListGenerator = readmeComponentListGenerator;
         _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
         _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
         _sourceManifest = sourceManifest;
@@ -63,7 +59,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _repoVersions.Value.GetVersion(mapping.Name);
 
-    public async Task UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)
+    public void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)
     {
         // TODO: https://github.com/dotnet/source-build/issues/2250
         if (version.PackageVersion is null)
@@ -89,11 +85,9 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));
-
-        await _readmeComponentListGenerator.UpdateReadme();
     }
 
-    public async Task UpdateSubmodules(List<SubmoduleRecord> submodules)
+    public void UpdateSubmodules(List<SubmoduleRecord> submodules)
     {
         foreach (var submodule in submodules)
         {
@@ -104,12 +98,10 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             else
             {
                 _sourceManifest.UpdateSubmodule(submodule);
-            } 
+            }
         }
 
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
-
-        await _readmeComponentListGenerator.UpdateReadme();
     }
 
     private AllVersionsPropsFile LoadAllVersionsFile()

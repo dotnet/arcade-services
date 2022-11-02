@@ -42,34 +42,34 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
     public async Task UpdateReadme()
     {
         string readmePath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ReadmeFileName);
-        string newReadmePath = readmePath + '_';
+        string newReadmePath = _fileSystem.PathCombine(_vmrInfo.TmpPath, VmrInfo.ReadmeFileName + '_');
 
-        using var readStream = _fileSystem.GetFileStream(readmePath, FileMode.Open, FileAccess.Read);
-        using var writeStream = _fileSystem.GetFileStream(newReadmePath, FileMode.Create, FileAccess.Write);
-
-        using var writer = new StreamWriter(writeStream, Encoding.UTF8);
-        using var reader = new StreamReader(readStream);
-
-        string? line;
-        while ((line = await reader.ReadLineAsync()) != null)
+        using (var readStream = _fileSystem.GetFileStream(readmePath, FileMode.Open, FileAccess.Read))
+        using (var writeStream = _fileSystem.GetFileStream(newReadmePath, FileMode.Create, FileAccess.Write))
+        using (var reader = new StreamReader(readStream))
+        using (var writer = new StreamWriter(writeStream, Encoding.UTF8))
         {
-            await writer.WriteLineAsync(line);
-            
-            if (line.Contains(ComponentListStartTag))
+            string? line;
+            while ((line = await reader.ReadLineAsync()) != null)
             {
-                await WriteComponentList(writer);
-                
-                while (!line.Contains(ComponentListEndTag))
-                {
-                    line = reader.ReadLine();
-
-                    if (line == null)
-                    {
-                        throw new Exception("Component list end tag not found in README.md");
-                    }
-                }
-
                 await writer.WriteLineAsync(line);
+
+                if (line.Contains(ComponentListStartTag))
+                {
+                    await WriteComponentList(writer);
+
+                    while (!line.Contains(ComponentListEndTag))
+                    {
+                        line = reader.ReadLine();
+
+                        if (line == null)
+                        {
+                            throw new Exception("Component list end tag not found in README.md");
+                        }
+                    }
+
+                    await writer.WriteLineAsync(line);
+                }
             }
         }
 

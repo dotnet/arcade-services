@@ -35,6 +35,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -46,6 +47,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
@@ -56,6 +58,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _readmeComponentListGenerator = readmeComponentListGenerator;
         _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = vmrInfo.TmpPath;
@@ -146,7 +149,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
+        _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
+        await _readmeComponentListGenerator.UpdateReadme();
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
         { 
             VmrInfo.ReadmeFileName,
