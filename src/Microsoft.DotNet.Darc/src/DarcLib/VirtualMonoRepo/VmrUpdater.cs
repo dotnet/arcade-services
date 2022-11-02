@@ -67,6 +67,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRemoteFactory _remoteFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -77,6 +78,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
@@ -89,6 +91,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _remoteFactory = remoteFactory;
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
+        _readmeComponentListGenerator = readmeComponentListGenerator;
         _fileSystem = fileSystem;
     }
 
@@ -418,8 +421,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new VmrDependencyVersion(toRevision, targetVersion));
+        await _readmeComponentListGenerator.UpdateReadme();
+        
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
         {
+            VmrInfo.ReadmeFileName,
             VmrInfo.GitInfoSourcesDir,
             _vmrInfo.GetSourceManifestPath()
         });

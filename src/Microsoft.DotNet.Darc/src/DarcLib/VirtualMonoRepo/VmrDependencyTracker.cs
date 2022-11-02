@@ -4,9 +4,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -25,8 +23,6 @@ public interface IVmrDependencyTracker
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
-        
-    IReadOnlyCollection<SubmoduleInfo> GetSubmodules();
 }
 
 /// <summary>
@@ -39,21 +35,18 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private const string DefaultVersion = "8.0.100";
 
     private readonly Lazy<AllVersionsPropsFile> _repoVersions;
-    private readonly SourceManifest _sourceManifest;
+    private readonly ISourceManifest _sourceManifest;
     private readonly string _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
 
     public IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    public IReadOnlyCollection<SubmoduleInfo> GetSubmodules()
-        => _sourceManifest.Submodules.Select(SubmoduleInfo.FromRecord).ToImmutableArray();
-
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
         IReadOnlyCollection<SourceMapping> mappings,
-        SourceManifest sourceManifest)
+        ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
         _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
@@ -105,7 +98,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             else
             {
                 _sourceManifest.UpdateSubmodule(submodule);
-            } 
+            }
         }
 
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
