@@ -14,6 +14,7 @@ public interface IVmrInfo
     string VmrPath { get; }
     string? PatchesPath { get; set; }
     string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(VmrPath, VmrInfo.SourcesDir, mapping.Name);
+    string GetRelativeRepoSourcesPath(SourceMapping mapping) => VmrInfo.SourcesDir + "/" + mapping.Name;
     string GetSourceManifestPath() => Path.Combine(VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceManifestFileName);
 }
 
@@ -23,6 +24,7 @@ public class VmrInfo : IVmrInfo
     public const string SourcesDir = "src";
     public const string GitInfoSourcesDir = "git-info";
     public const string SourceManifestFileName = "source-manifest.json";
+    public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
 
     public string VmrPath { get; }
 

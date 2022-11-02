@@ -10,7 +10,6 @@ using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -45,7 +44,7 @@ public class VmrPatchHandlerTests
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<IVmrDependencyTracker> _dependencyTracker = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
-    private readonly Mock<IRemoteFactory> _remoteFactory = new();
+    private readonly Mock<IRepositoryCloneManager> _cloneManager = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
     private VmrPatchHandler _patchHandler = null!;
@@ -82,7 +81,10 @@ public class VmrPatchHandlerTests
         _localGitRepo.Reset();
         _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
 
-        _remoteFactory.Reset();
+        _cloneManager.Reset();
+        _cloneManager
+            .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string uri, string _, CancellationToken _) => "/tmp/" + uri.Split("/").Last());
 
         _processManager.Reset();
         _processManager
@@ -111,7 +113,7 @@ public class VmrPatchHandlerTests
             _vmrInfo.Object,
             _dependencyTracker.Object,
             _localGitRepo.Object,
-            _remoteFactory.Object,
+            _cloneManager.Object,
             _processManager.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
@@ -146,49 +148,15 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task VmrPatchesAreAppliedTest()
-    {
-        // Setup
-        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
-
-        // Act
-        await _patchHandler.ApplyVmrPatches(_testRepoMapping, new CancellationToken());
-
-        foreach (var patch in _vmrPatches)
-        {
-            // Verify
-            VerifyGitCall(new[]
-            {
-                "apply",
-                "--cached",
-                "--ignore-space-change",
-                "--directory",
-                $"src/{IndividualRepoName}",
-                patch,
-            });
-        }
-
-        VerifyGitCall(new[]
-        {
-            "checkout",
-            $"src/{IndividualRepoName}",
-        },
-        times: Times.Exactly(_vmrPatches.Count));
-    }
-
-    [Test]
     public async Task PatchedFilesAreRestoredTest()
     {
         // Setup
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", string.Empty);
-
-        const string originalRevision = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
+        var patch = $"{PatchDir}/test-repo.patch";
 
         var patchedFiles = new[]
         {
             "src/roslyn-analyzers/eng/Versions.props",
             "src/foo/bar.xml",
-            "src/xyz.cs",
         };
 
         _fileSystem
@@ -197,46 +165,35 @@ public class VmrPatchHandlerTests
 
         _fileSystem
             .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[1]}"))
-            .Returns(true);
-
-        _fileSystem
-            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[2]}"))
             .Returns(false);
 
+        _vmrInfo
+            .Setup(x => x.GetRelativeRepoSourcesPath(_testRepoMapping))
+            .Returns("src/" + IndividualRepoName);
+
         SetupGitCall(
-            new[] { "apply", "--numstat", _vmrPatches.First() },
+            new[] { "apply", "--numstat", patch },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
                 StandardOutput = $"""
                     0       14      {patchedFiles[0]}
-                    """,
-            },
-            ClonePath);
-
-        SetupGitCall(
-            new[] { "apply", "--numstat", _vmrPatches.Last() },
-            new ProcessExecutionResult()
-            {
-                ExitCode = 0,
-                StandardOutput = $"""
-                    0       8       {patchedFiles[1]}
-                    -       -       {patchedFiles[2]}
+                    -        -      {patchedFiles[1]}
                     """,
             },
             ClonePath);
 
         // Act
-        await _patchHandler.RestorePatchedFilesFromRepo(
+        await _patchHandler.RestoreFilesFromPatch(
             _testRepoMapping,
-            ClonePath,
-            originalRevision,
+            "/tmp/" + IndividualRepoName,
+            patch,
             CancellationToken.None);
 
         // Verify
-        _localGitRepo.Verify(x => x.Checkout(ClonePath, originalRevision, false), Times.Once);
-        _localGitRepo.Verify(x => x.Stage(VmrPath, VmrPath + "/src/" + IndividualRepoName), Times.Once);
+        _localGitRepo.Verify(x => x.Stage(VmrPath, "src/" + IndividualRepoName), Times.Once);
 
+        // Restores a version
         _fileSystem
             .Verify(x => x.CopyFile(
                 ClonePath + '/' + patchedFiles[0],
@@ -244,17 +201,11 @@ public class VmrPatchHandlerTests
                 true),
               Times.Once);
 
+        // File is added by the patch => restore means deleting it
         _fileSystem
-            .Verify(x => x.CopyFile(
-                ClonePath + '/' + patchedFiles[1],
-                VmrPath + "/src/test-repo/" + patchedFiles[1],
-                true),
-              Times.Once);
-
-        _fileSystem
-            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[2]), Times.Once);
+            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[1]), Times.Once);
     }
-    
+
     [Test]
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
@@ -303,12 +254,6 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
-        var remote = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote.Object);
-
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
@@ -329,9 +274,8 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote.Verify(
-            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Never);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName));
@@ -361,12 +305,6 @@ public class VmrPatchHandlerTests
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
-
-        var remote = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote.Object);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -398,14 +336,13 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                "/tmp/external-1",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote.Verify(
-            x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Once);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -453,22 +390,9 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
-        var submoduleClonePath = "/tmp/D8FC6934CE892A82EE79D572E24A7512";
-
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(submoduleClonePath, SubmoduleSha1))
+            .Setup(x => x.GetGitSubmodules("/tmp/external-1", SubmoduleSha1))
             .Returns(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
-
-        var remote = new Mock<IRemote>();
-        var nestedSubmoduleRemote = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote.Object);
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(nestedSubmoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(nestedSubmoduleRemote.Object);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -501,14 +425,13 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                "/tmp/external-1",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote.Verify(
-            x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Once);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         // Verify diff for the nested submodule
         expectedArgs = GetExpectedGitDiffArguments(
@@ -518,14 +441,13 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/44B69A1449124AD460A08091672021B6",
+                "/tmp/external-2",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        nestedSubmoduleRemote.Verify(
-            x => x.Clone(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Once);
+        _cloneManager
+            .Verify(x => x.PrepareClone(nestedSubmoduleInfo.Url, nestedSubmoduleSha1, It.IsAny<CancellationToken>()), Times.Once);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
 
@@ -574,17 +496,6 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo>());
 
-        var remote = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote.Object);
-
-        // Pretend the submodule was already cloned - no clone should happen then
-        _fileSystem
-            .Setup(x => x.DirectoryExists("/tmp/D8FC6934CE892A82EE79D572E24A7512"))
-            .Returns(true);
-
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
@@ -615,20 +526,13 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                "/tmp/external-1",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote.Verify(
-            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Never);
-
-        _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
-                new[] { "fetch", "--all" }),
-                Times.AtLeastOnce);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -666,17 +570,6 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
 
-        var remote = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote.Object);
-
-        // Pretend the submodule was already cloned - no clone should happen then
-        _fileSystem
-            .Setup(x => x.DirectoryExists("/tmp/D8FC6934CE892A82EE79D572E24A7512"))
-            .Returns(true);
-
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
@@ -707,20 +600,13 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                "/tmp/external-1",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote.Verify(
-            x => x.Clone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Never);
-        
-        _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
-                new[] { "fetch", "--all" }),
-                Times.AtLeastOnce);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(2));
 
@@ -759,17 +645,6 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
 
-        var remote1 = new Mock<IRemote>();
-        var remote2 = new Mock<IRemote>();
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync(_submoduleInfo.Url, It.IsAny<ILogger>()))
-            .ReturnsAsync(remote1.Object);
-
-        _remoteFactory
-            .Setup(x => x.GetRemoteAsync("https://github.com/dotnet/external-2", It.IsAny<ILogger>()))
-            .ReturnsAsync(remote2.Object);
-
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
@@ -800,7 +675,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/D8FC6934CE892A82EE79D572E24A7512",
+                "/tmp/external-1",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -813,18 +688,16 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                "/tmp/44B69A1449124AD460A08091672021B6",
+                "/tmp/external-2",
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        remote1.Verify(
-            x => x.Clone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Once);
+        _cloneManager
+            .Verify(x => x.PrepareClone(_submoduleInfo.Url, SubmoduleSha1, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
-        remote2.Verify(
-            x => x.Clone("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>()),
-            Times.Once);
+        _cloneManager
+            .Verify(x => x.PrepareClone("https://github.com/dotnet/external-2", SubmoduleSha2, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(3));
 
@@ -869,7 +742,7 @@ public class VmrPatchHandlerTests
             _vmrInfo.Object,
             _dependencyTracker.Object,
             _localGitRepo.Object,
-            _remoteFactory.Object,
+            _cloneManager.Object,
             _processManager.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());

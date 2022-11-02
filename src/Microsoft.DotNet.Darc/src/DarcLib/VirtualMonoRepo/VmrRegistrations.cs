@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +22,7 @@ public static class VmrRegistrations
         string tmpPath)
     {
         RegisterManagers(services, gitLocation);
-        services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
+        services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         return services;
     }
 
@@ -45,6 +46,8 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
+        services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IVmrDependencyTracker>(sp =>
         {

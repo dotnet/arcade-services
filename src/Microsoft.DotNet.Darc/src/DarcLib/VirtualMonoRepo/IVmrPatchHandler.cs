@@ -16,7 +16,13 @@ public interface IVmrPatchHandler
         SourceMapping mapping,
         VmrIngestionPatch patch,
         CancellationToken cancellationToken);
-    
+
+    Task ApplyPatch(
+        SourceMapping mapping,
+        string patchPath,
+        CancellationToken cancellationToken)
+        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, mapping.Name), cancellationToken);
+
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         string repoPath,
@@ -26,18 +32,18 @@ public interface IVmrPatchHandler
         string tmpPath,
         CancellationToken cancellationToken);
 
-    Task RestorePatchedFilesFromRepo(
+    Task RestoreFilesFromPatch(
         SourceMapping mapping,
         string clonePath,
-        string originalRevision,
+        string patch,
         CancellationToken cancellationToken);
 
-    Task ApplyVmrPatches(
-        SourceMapping mapping,
-        CancellationToken cancellationToken);
+    IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping);
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
-    Task CloneOrFetch(string repoUri, string checkoutRef, string destPath);
+    Task<IReadOnlyCollection<string>> GetPatchedFiles(
+        string repoPath,
+        string patchPath,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>

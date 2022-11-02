@@ -25,6 +25,8 @@ public abstract class VmrManagerBase : IVmrManager
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
+    private readonly ILocalGitRepo _localGitClient;
     private readonly ILogger _logger;
 
     public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
@@ -33,12 +35,16 @@ public abstract class VmrManagerBase : IVmrManager
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyInfo,
         IVersionDetailsParser versionDetailsParser,
+        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        ILocalGitRepo localGitClient,
         ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
         _dependencyInfo = dependencyInfo;
         _versionDetailsParser = versionDetailsParser;
+        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
+        _localGitClient = localGitClient;
     }
 
     protected void Commit(string commitMessage, Signature author)
@@ -87,7 +93,20 @@ public abstract class VmrManagerBase : IVmrManager
         return result;
     }
 
-    protected string GetClonePath(SourceMapping mapping) => Path.Combine(_vmrInfo.TmpPath, mapping.Name);
+    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
+    {
+        var isTpnUpdated = _localGitClient
+            .GetStagedFiles(_vmrInfo.VmrPath)
+            .Where(ThirdPartyNoticesGenerator.IsTpnPath)
+            .Any();
+
+        if (isTpnUpdated)
+        {
+            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
+            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

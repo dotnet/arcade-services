@@ -5,11 +5,15 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("initialize", HelpText = "Initializes new repo(s) that haven't been synchronized into the VMR yet.")]
-internal class InitializeCommandLineOptions : VmrCommandLineOptions
+internal class InitializeCommandLineOptions : VmrSyncCommandLineOptions
 {
+    [Option('r', "recursive", Required = false, HelpText = $"Process also dependencies (from {VersionFiles.VersionDetailsXml}) recursively.")]
+    public bool Recursive { get; set; } = false;
+    
     public override Operation GetOperation() => new InitializeOperation(this);
 }

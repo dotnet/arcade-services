@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +38,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
@@ -49,7 +47,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitRepo localGitRepo,
-        IRemoteFactory remoteFactory,
+        IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
@@ -57,7 +55,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitRepo = localGitRepo;
-        _remoteFactory = remoteFactory;
+        _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -275,111 +273,46 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
         _logger.LogDebug("{output}", result.ToString());
-        
-        // After we apply the diff to the index, working tree won't have the files so they will be missing
-        // We have to reset working tree to the index then
-        // This will end up having the working tree match what is staged
-        _logger.LogInformation("Resetting the working tree...");
-        args = new[] { "checkout", destPath };
-        result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
 
-        if (result.Succeeded)
-        {
-            _logger.LogDebug("{output}", result.ToString());
-            return;
-        }
-
-        // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-        // We can just remove the working tree folder then
-        if (result.StandardError.Contains($"pathspec '{destPath}' did not match any file(s) known to git"))
-        {
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", destPath);
-            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, destPath), true);
-        }
+        await ResetWorkingTreeDirectory(destPath);
     }
 
-    /// <summary>
-    /// For all files for which we have patches in VMR, restore their original version from the repo.
-    /// This is because VMR contains already patched versions of these files and new updates from the repo wouldn't apply.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    /// <param name="clonePath">Path were the individual repo was cloned to</param>
-    /// <param name="originalRevision">Revision from which we were updating</param>
-    public async Task RestorePatchedFilesFromRepo(
+    public async Task RestoreFilesFromPatch(
         SourceMapping mapping,
         string clonePath,
-        string originalRevision,
+        string patch,
         CancellationToken cancellationToken)
     {
-        var vmrPatches = GetVmrPatches(mapping);
-        if (vmrPatches.Length == 0)
-        {
-            return;
-        }
-
-        _logger.LogInformation("Restoring files with patches for {mappingName}..", mapping.Name);
-
-        _localGitRepo.Checkout(clonePath, originalRevision);
-
+        _logger.LogDebug("Restoring patched files from a VMR patch `{patch}`..", patch);
+        
         var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
 
-        foreach (var patch in vmrPatches)
+        foreach (var patchedFile in await GetPatchedFiles(clonePath, patch, cancellationToken))
         {
-            _logger.LogDebug("Processing VMR patch `{patch}`..", patch);
+            // git always works with forward slashes (even on Windows)
+            string relativePath = _fileSystem.DirectorySeparatorChar != '/'
+                ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
+                : patchedFile;
 
-            foreach (var patchedFile in await GetFilesInPatch(clonePath, patch, cancellationToken))
+            var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
+            var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
+
+            if (_fileSystem.FileExists(originalFile))
             {
-                // git always works with forward slashes (even on Windows)
-                string relativePath = _fileSystem.DirectorySeparatorChar != '/'
-                    ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
-                    : patchedFile;
-
-                var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
-                var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
-
-                if (_fileSystem.FileExists(originalFile))
-                {
-                    // Copy old revision to VMR
-                    _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
-                    _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-                }
-                else
-                {
-                    // File is being added by the patch - we need to remove it
-                    _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
-                    _fileSystem.DeleteFile(destination);
-                }
+                // Copy old revision to VMR
+                _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
+                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+            }
+            else
+            {
+                // File is being added by the patch - we need to remove it
+                _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
+                _fileSystem.DeleteFile(destination);
             }
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        _localGitRepo.Stage(_vmrInfo.VmrPath, repoSourcesPath);
-
-        _logger.LogDebug("Files from VMR patches for {mappingName} restored", mapping.Name);
-    }
-
-    /// <summary>
-    /// Applies VMR patches onto files of given mapping's subrepository.
-    /// These files are stored in the VMR and applied on top of the individual repos.
-    /// </summary>
-    /// <param name="mapping">Mapping</param>
-    public async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
-    {
-        var vmrPatches = GetVmrPatches(mapping);
-        if (vmrPatches.Length == 0)
-        {
-            return;
-        }
-
-        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
-
-        foreach (var patchFile in vmrPatches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogDebug("Applying {patch}..", patchFile);
-            await ApplyPatch(mapping, new(patchFile, mapping.Name), cancellationToken);
-        }
+        _localGitRepo.Stage(_vmrInfo.VmrPath, _vmrInfo.GetRelativeRepoSourcesPath(mapping));
     }
 
     /// <summary>
@@ -388,7 +321,10 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    private async Task<IReadOnlyCollection<string>> GetFilesInPatch(string repoPath, string patchPath, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(
+        string repoPath,
+        string patchPath,
+        CancellationToken cancellationToken)
     {
         var result = await _processManager.ExecuteGit(repoPath, new[] { "apply", "--numstat", patchPath }, cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
@@ -480,12 +416,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
-
-        // Clone path of submodules needs to be derived from the URL
-        // We can't use the path from the submodule as we could be changing the remote of the submodule
-        var urlHash = CreateMD5(change.Url);
-        var clonePath = _fileSystem.PathCombine(tmpPath, urlHash);
-        await CloneOrFetch(change.Url, checkoutCommit, clonePath);
+        var clonePath = await _cloneManager.PrepareClone(change.Url, checkoutCommit, cancellationToken);   
 
         // We are only interested in filters specific to submodule's path
         ImmutableArray<string> GetSubmoduleFilters(IReadOnlyCollection<string> filters)
@@ -532,7 +463,34 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private string[] GetVmrPatches(SourceMapping mapping)
+    private async Task ResetWorkingTreeDirectory(string path)
+    {
+        // After we apply the diff to the index, working tree won't have the files so they will be missing
+        // We have to reset working tree to the index then
+        // This will end up having the working tree match what is staged
+        _logger.LogInformation("Cleaning the working tree directory {path}...", path);
+        var args = new[] { "checkout", path };
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        
+        if (result.Succeeded)
+        {
+            _logger.LogDebug("{output}", result.ToString());
+        }
+        else if (result.StandardError.Contains($"pathspec '{path}' did not match any file(s) known to git"))
+        {
+            // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+            // We can just remove the working tree folder then
+            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", path);
+            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, path), true);
+        }
+
+        // Also remove untracked files (in case files were removed in index)
+        args = new[] { "clean", "-df", path };
+        result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        result.ThrowIfFailed("Failed to clean the working tree!");
+    }
+
+    public IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping)
     {
         if (_vmrInfo.PatchesPath is null)
         {
@@ -548,33 +506,5 @@ public class VmrPatchHandler : IVmrPatchHandler
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10870): Move to IRemote
-    public async Task CloneOrFetch(string repoUri, string checkoutRef, string destPath)
-    {
-        if (_fileSystem.DirectoryExists(destPath))
-        {
-            _logger.LogInformation("Clone of {repo} found, pulling new changes...", repoUri);
-
-            _localGitRepo.Checkout(destPath, checkoutRef);
-
-            var result = await _processManager.ExecuteGit(destPath, "fetch", "--all");
-            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {destPath}");
-            _logger.LogDebug("{output}", result.ToString());
-
-            return;
-        }
-
-        var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
-        remoteRepo.Clone(repoUri, checkoutRef, destPath, checkoutSubmodules: false, null);
-    }
-
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
-
-    public static string CreateMD5(string input)
-    {
-        using var md5 = MD5.Create();
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = md5.ComputeHash(inputBytes);
-        return Convert.ToHexString(hashBytes);
-    }
 }
