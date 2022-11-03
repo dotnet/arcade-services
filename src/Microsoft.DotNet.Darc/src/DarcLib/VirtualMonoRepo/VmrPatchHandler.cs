@@ -177,7 +177,8 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too
         // We only do it when processing the root mapping, not its submodules
-        if (relativePath == mapping.Name && (_vmrInfo.ContentPath?.StartsWith(_vmrInfo.GetRepoSourcesPath(mapping)) ?? false))
+        var sourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
+        if (relativePath == mapping.Name && (_vmrInfo.ContentPath?.StartsWith(sourcesPath) ?? false))
         {
             _logger.LogInformation("Mapping {mapping} contains VMR's non-src/ content. Creating patch for it too..", mapping.Name);
 
@@ -196,7 +197,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
 
             // We take the content path from the VMR config and map it onto the cloned repo
-            var contentDir = _vmrInfo.ContentPath.Substring(_vmrInfo.GetRepoSourcesPath(mapping).Length + 1);
+            var contentDir = _vmrInfo.ContentPath.Substring(sourcesPath.Length + 1);
             contentDir = _fileSystem.PathCombine(repoPath, contentDir);
 
             result = await _processManager.Execute(

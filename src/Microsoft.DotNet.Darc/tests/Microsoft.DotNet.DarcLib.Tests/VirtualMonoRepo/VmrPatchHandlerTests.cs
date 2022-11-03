@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -236,7 +237,68 @@ public class VmrPatchHandlerTests
         _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
 
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName)); 
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName));
+    }
+
+    [Test]
+    public async Task CreatePatchesWithVmrContentPathTest()
+    {
+        // Setup
+        string expectedPatchName1 = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName2 = $"{PatchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+
+        _vmrInfo
+            .SetupGet(x => x.ContentPath)
+            .Returns(VmrPath + $"/src/{_testRepoMapping.Name}/SourceBuild/tarball/content");
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            ClonePath,
+            Sha1,
+            Sha2,
+            PatchDir,
+            "/tmp",
+            CancellationToken.None);
+
+        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName1, Sha1, Sha2, null);
+
+        // Verify
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                ClonePath,
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        expectedArgs = new[]
+        {
+            "diff",
+            "--patch",
+            "--relative",
+            "--binary",
+            "--output",
+            expectedPatchName2,
+            $"{Sha1}..{Sha2}",
+            "--",
+            "."
+        };
+        
+        _processManager
+            .Verify(x => x.Execute(
+                "git",
+                expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                $"{ClonePath}/SourceBuild/tarball/content",
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+
+        patches.Should().HaveCount(2);
+        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName1, "src/" + IndividualRepoName));
+        patches.Last().Should().Be(new VmrIngestionPatch(expectedPatchName2, null));
     }
 
     [Test]
