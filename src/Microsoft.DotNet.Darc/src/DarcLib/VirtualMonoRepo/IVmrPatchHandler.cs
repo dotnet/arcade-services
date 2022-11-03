@@ -21,7 +21,7 @@ public interface IVmrPatchHandler
         SourceMapping mapping,
         string patchPath,
         CancellationToken cancellationToken)
-        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, mapping.Name), cancellationToken);
+        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, VmrInfo.SourcesDir + '/' + mapping.Name), cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
@@ -51,4 +51,4 @@ public interface IVmrPatchHandler
 /// </summary>
 /// <param name="Path">Path where the patch is located</param>
 /// <param name="ApplicationPath">Relative path within the VMR to which the patch is applied onto</param>
-public record VmrIngestionPatch(string Path, string ApplicationPath);
+public record VmrIngestionPatch(string Path, string? ApplicationPath);
