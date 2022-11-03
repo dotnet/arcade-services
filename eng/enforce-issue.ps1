@@ -4,6 +4,8 @@ param (
 	$PullRequestId
 )
 
+Write-Host "Pull request ID: $PullRequestId"
+
 $prDetail = Invoke-WebRequest `
 	-UseBasicParsing `
 	-Uri "https://api.github.com/repos/dotnet/arcade-services/pulls/$PullRequestId" `
