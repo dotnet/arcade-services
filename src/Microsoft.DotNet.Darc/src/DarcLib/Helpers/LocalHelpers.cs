@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
@@ -134,9 +135,10 @@ public static class LocalHelpers
         Directory.CreateDirectory(workingDirectory);
 
         ExecuteGitCommand(gitLocation, $"init {repoFolderName}", logger, workingDirectory);
+        string configKey = $"http.{repoUri}.extraheader";
+        string configEnv = ComposeEnvVarArgs(configKey, user, pat);
 
         workingDirectory = Path.Combine(workingDirectory, repoFolderName);
-        repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
 
         ExecuteGitCommand(gitLocation, $"remote add {remote} {repoUri}", logger, workingDirectory, secretToMask: pat);
         ExecuteGitCommand(gitLocation, "config core.sparsecheckout true", logger, workingDirectory);
@@ -146,10 +148,32 @@ public static class LocalHelpers
 
         File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
-        ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= pull --depth=1 {remote} {branch}", logger, workingDirectory, secretToMask: pat);
+        ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= pull --depth=1 {configEnv} {remote} {branch}", logger, workingDirectory, secretToMask: pat);
         ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
 
         return workingDirectory;
+    }
+
+    private static string ComposeEnvVarArgs(
+        string configKey,
+        string username,
+        string password)
+    {
+        string configValue = $"AUTHORIZATION: {GenerateAuthHeader(username, password)}";
+
+        string envVariableName = $"env_var_{configKey}";
+        Environment.SetEnvironmentVariable(envVariableName, configValue);
+
+        return $"--config-env={configKey}={envVariableName}";
+    }
+
+
+    public static string GenerateAuthHeader(string username, string password)
+    {
+        // use basic auth header with username:password in base64encoding.
+        string authHeader = $"{username ?? string.Empty}:{password ?? string.Empty}";
+        string base64encodedAuthHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes(authHeader));
+        return $"basic {base64encodedAuthHeader}";
     }
 
     /// <summary>
