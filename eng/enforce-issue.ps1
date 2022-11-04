@@ -1,14 +1,12 @@
 [CmdletBinding()]
 param (
 	[Parameter(Mandatory = $True)]
-	$PullRequestId
+	$PullRequestNumber
 )
-
-Write-Host "Pull request ID: $PullRequestId"
 
 $prDetail = Invoke-WebRequest `
 	-UseBasicParsing `
-	-Uri "https://api.github.com/repos/dotnet/arcade-services/pulls/$PullRequestId" `
+	-Uri "https://api.github.com/repos/dotnet/arcade-services/pulls/$PullRequestNumber" `
 | ConvertFrom-Json
 
 if ($prDetail.draft) {
@@ -18,7 +16,7 @@ if ($prDetail.draft) {
 
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
-	Write-Error "Link to the corresponding GitHub issue is missing in the PR description. Check failed."
+	Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub issue is missing in the PR description. Check failed."
 	exit 1
 }
 
@@ -29,13 +27,13 @@ try {
 	| ConvertFrom-Json
 }
 catch {
-	Write-Error "Error fetching issue dotnet/$($matches[1])#$($matches[2]) from arcade. Does it exist?"
+	Write-Host "##vso[task.LogIssue type=error;]Error fetching issue dotnet/$($matches[1])#$($matches[2]) from arcade. Does it exist?"
 	exit 1
 }
 
 $issueHasReleaseNotes = $issueDetail.body -Match "### Release Note Description(?:\r?\n)+([^\s]+)"
 if (-not $issueHasReleaseNotes) {
-	Write-Error "Linked GitHub issue does not have release notes. Check failed."
+	Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
 	exit 1
 }
 
