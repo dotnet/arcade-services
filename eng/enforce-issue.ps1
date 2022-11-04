@@ -32,9 +32,14 @@ catch {
 }
 
 $issueHasReleaseNotes = $issueDetail.body -Match "### Release Note Description(?:\r?\n)+([^\s]+)"
-if (-not $issueHasReleaseNotes) {
+$issueIsAzdoMirror = $issueDetail.title -like "AzDO Issue*"
+if (-not $issueHasReleaseNotes -and -not $issueIsAzdoMirror) {
 	Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
+	Write-Host "Ensure your issue has release notes. They should be in the following format:`n`n### Release Note Description`n<Stick your notes here>`n"
 	exit 1
+}
+elseif ($issueIsAzdoMirror) {
+	Write-Host "##vso[task.LogIssue type=warning;]Linked GitHub issue is a mirrored Azure DevOps workitem. Please ensure the workitem has release notes in it."
 }
 
 Write-Host "PR links a GitHub issue. Check passed."
