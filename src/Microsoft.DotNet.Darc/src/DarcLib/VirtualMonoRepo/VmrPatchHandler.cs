@@ -272,7 +272,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return;
         }
 
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath);
+        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
