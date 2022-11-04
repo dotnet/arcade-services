@@ -10,11 +10,40 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrInfo
 {
+    /// <summary>
+    /// Path for temporary files (individual repo clones, created patches, etc.)
+    /// </summary>
     string TmpPath { get; }
+
+    /// <summary>
+    /// Path to the root of the VMR
+    /// </summary>
     string VmrPath { get; }
+
+    /// <summary>
+    /// Path within the VMR where VMR patches are stored
+    /// (these patches are applied on top of the synchronized content)
+    /// </summary>
     string? PatchesPath { get; set; }
+
+    /// <summary>
+    /// Path within the VMR from where the non-src/ files are copied from.
+    /// </summary>
+    string? ContentPath { get; set; }
+
+    /// <summary>
+    /// Gets a full path leading to sources belonging to a given repo (mapping)
+    /// </summary>
     string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(VmrPath, VmrInfo.SourcesDir, mapping.Name);
+
+    /// <summary>
+    /// Gets a relative UNIX path to sources belonging to a given repo (suitable for git operations)
+    /// </summary>
     string GetRelativeRepoSourcesPath(SourceMapping mapping) => VmrInfo.SourcesDir + "/" + mapping.Name;
+
+    /// <summary>
+    /// Gets a full path leading to the source manifest JSON file.
+    /// </summary>
     string GetSourceManifestPath() => Path.Combine(VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceManifestFileName);
 }
 
@@ -30,6 +59,8 @@ public class VmrInfo : IVmrInfo
     public string VmrPath { get; }
 
     public string TmpPath { get; }
+
+    public string? ContentPath { get; set; }
 
     public string? PatchesPath { get; set; }
 
