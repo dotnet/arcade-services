@@ -172,7 +172,7 @@ public class VmrPatchHandlerTests
             .Returns("src/" + IndividualRepoName);
 
         SetupGitCall(
-            new[] { "apply", "--numstat", patch },
+            new[] { "apply", "--numstat", patch, "--allow-empty" },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
