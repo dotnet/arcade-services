@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -30,7 +32,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         {{AUTOMATION_COMMIT_TAG}}
         """;
-    
+
+    // Message used when finalizing the initialization with a merge commit
+    private const string MergeCommitMessage =
+        $$"""
+        Recursive initialization for {name} / {newShaShort}
+
+        {{AUTOMATION_COMMIT_TAG}}
+        """;
+
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
@@ -75,6 +85,17 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
+        
+        string initBranchName = $"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}";
+        string currentBranch;
+        using (var repo = new Repository(_vmrInfo.VmrPath))
+        {
+            _logger.LogInformation("Creating a temporary branch {branchName} for initialization commits", initBranchName);
+
+            currentBranch = repo.Head.FriendlyName;
+            Branch branch = repo.Branches.Add(initBranchName, HEAD, allowOverwrite: true);
+            Commands.Checkout(repo, branch);
+        }
 
         var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
         reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
@@ -117,6 +138,25 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 }
             }
         }
+
+        string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
+
+        using (var repo = new Repository(_vmrInfo.VmrPath))
+        {
+            _logger.LogInformation("Merging {branchName} into {mainBranch}", initBranchName, currentBranch);
+            Commands.Checkout(repo, currentBranch);
+            repo.Merge(repo.Branches[initBranchName], DotnetBotCommitSignature, new MergeOptions
+            {
+                FastForwardStrategy = FastForwardStrategy.NoFastForward,
+                CommitOnSuccess = false,
+            });
+
+            var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping, oldSha: null, newSha);
+
+            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
+        }
+
+        _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
 
     private async Task InitializeRepository(

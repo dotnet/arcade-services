@@ -281,7 +281,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetRevision ?? HEAD);
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        string syncBranchName = $"sync/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}";
+        string syncBranchName = $"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}";
         string currentBranch;
         using (var repo = new Repository(_vmrInfo.VmrPath))
         {
