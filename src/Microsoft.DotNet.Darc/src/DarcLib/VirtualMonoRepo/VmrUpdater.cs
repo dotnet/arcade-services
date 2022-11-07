@@ -122,7 +122,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             throw new EmptySyncException($"No new remote changes detected for {mapping.Name}");
         }
 
-        _logger.LogInformation("Synchronizing {name} from {current} to {repo}@{revision}{oneByOne}",
+        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
         string clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
@@ -281,16 +281,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetRevision ?? HEAD);
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        string syncBranchName = $"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}";
-        string currentBranch;
-        using (var repo = new Repository(_vmrInfo.VmrPath))
-        {
-            _logger.LogInformation("Creating branch {branchName} for sync commits", syncBranchName);
-            
-            currentBranch = repo.Head.FriendlyName;
-            Branch branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
-            Commands.Checkout(repo, branch);
-        }
+        var workBranch = CreateWorkBranch($"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}");
 
         // Dependencies that were already updated during this run
         var updatedDependencies = new HashSet<DependencyUpdate>();
@@ -361,25 +352,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.Mapping.DefaultRemote}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
-        using (var repo = new Repository(_vmrInfo.VmrPath))
-        {
-            _logger.LogInformation("Merging {branchName} into {mainBranch}", syncBranchName, currentBranch);
-            Commands.Checkout(repo, currentBranch);
-            repo.Merge(repo.Branches[syncBranchName], DotnetBotCommitSignature, new MergeOptions
-            {
-                FastForwardStrategy = FastForwardStrategy.NoFastForward,
-                CommitOnSuccess = false,
-            });
-
-            var commitMessage = PrepareCommitMessage(
-                MergeCommitMessage,
-                rootMapping,
-                originalRootSha,
-                finalRootSha,
-                summaryMessage.ToString());
-
-            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
-        }
+        var commitMessage = PrepareCommitMessage(
+            MergeCommitMessage,
+            rootMapping,
+            originalRootSha,
+            finalRootSha,
+            summaryMessage.ToString());
+        
+        workBranch.MergeBack(commitMessage);
 
         _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
             rootMapping.Name,
