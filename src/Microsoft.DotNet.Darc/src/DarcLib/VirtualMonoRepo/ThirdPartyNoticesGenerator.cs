@@ -101,6 +101,11 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     private List<string> GetTpnHeader(string path)
     {
         var header = new List<string>();
+        
+        if (!_fileSystem.FileExists(path))
+        {
+            return header;
+        }
 
         using var stream = _fileSystem.GetFileStream(path, FileMode.Open, FileAccess.Read);
         using var reader = new StreamReader(stream);

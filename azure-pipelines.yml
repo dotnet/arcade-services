@@ -23,7 +23,21 @@ pr:
 - production
 
 stages:
+- stage: GitHub_Issue_Verification
+  displayName: GitHub Issue Verification
+  condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.SourceBranch'], 'refs/heads/production'))
+  jobs:
+    - job: VerifyGitHubIssue
+      displayName: Verify GitHub Issue Link included in all PRs
+      pool: 
+        vmImage: 'windows-latest'
+      steps:
+        - checkout: self
+        - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
+          displayName: Enforce GitHub issue link presence
+
 - stage: build
+  dependsOn: []
   displayName: Build
   # Three phases for each of the three OSes we want to run on
   jobs:

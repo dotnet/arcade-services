@@ -109,7 +109,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
         var patches = new List<VmrIngestionPatch>
         {
-            new(patchName, relativePath)
+            new(patchName, VmrInfo.SourcesDir + '/' + relativePath)
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
@@ -175,6 +175,40 @@ public class VmrPatchHandler : IVmrPatchHandler
             distance == "1" ? string.Empty : "s",
             StringUtils.GetHumanReadableFileSize(patchName));
 
+        // If current mapping hosts VMR's non-src/ content, synchronize it too
+        // We only do it when processing the root mapping, not its submodules
+        var sourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
+        if (relativePath == mapping.Name && (_vmrInfo.ContentPath?.StartsWith(sourcesPath) ?? false))
+        {
+            _logger.LogInformation("Mapping {mapping} contains VMR's non-src/ content. Creating patch for it too..", mapping.Name);
+
+            patchName = _fileSystem.PathCombine(destDir, $"root-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
+            args = new List<string>
+            {
+                "diff",
+                "--patch",
+                "--relative", // Relative paths so that we can apply the patch on VMR's root dir
+                "--binary", // Include binary contents as base64
+                "--output", // Store the diff in a .patch file
+                patchName,
+                $"{sha1}..{sha2}",
+                "--",
+                ".", // Apply for a given directory (we will call this from the content dir)
+            };
+
+            // We take the content path from the VMR config and map it onto the cloned repo
+            var contentDir = _vmrInfo.ContentPath.Substring(sourcesPath.Length + 1);
+            contentDir = _fileSystem.PathCombine(repoPath, contentDir);
+
+            result = await _processManager.Execute(
+                _processManager.GitExecutable,
+                args,
+                workingDir: contentDir,
+                cancellationToken: cancellationToken);
+
+            patches.Add(new VmrIngestionPatch(patchName, null));
+        }
+
         if (!submoduleChanges.Any())
         {
             return patches;
@@ -238,18 +272,13 @@ public class VmrPatchHandler : IVmrPatchHandler
             return;
         }
 
-        // We have to give git a relative path with forward slashes where to apply the patch
-        var destPath = VmrInfo.SourcesDir + '/' + patch.ApplicationPath;
-
-        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, destPath);
+        _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
         (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
-        _fileSystem.CreateDirectory(destPath);
-
-        var args = new[]
+        var args = new List<string>
         {
             "apply",
 
@@ -262,19 +291,22 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             // Options to help with CR/LF and similar problems
             "--ignore-space-change",
-
-            // Where to apply the patch into
-            "--directory",
-            destPath,
-
-            patch.Path,
         };
 
+        // Where to apply the patch into (usualy src/[repo name] but can be root for VMR's non-src/ content)
+        if (patch.ApplicationPath != null)
+        {
+            args.Add("--directory");
+            args.Add(patch.ApplicationPath);
+        }
+
+        args.Add(patch.Path);
+
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed($"Failed to apply the patch for {destPath}");
+        result.ThrowIfFailed($"Failed to apply the patch for {patch.ApplicationPath ?? "/"}");
         _logger.LogDebug("{output}", result.ToString());
 
-        await ResetWorkingTreeDirectory(destPath);
+        await ResetWorkingTreeDirectory(patch.ApplicationPath ?? ".");
     }
 
     public async Task RestoreFilesFromPatch(

@@ -42,6 +42,11 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
     public async Task UpdateReadme()
     {
         string readmePath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ReadmeFileName);
+        if (!_fileSystem.FileExists(readmePath))
+        {
+            return;
+        }
+
         string newReadmePath = _fileSystem.PathCombine(_vmrInfo.TmpPath, VmrInfo.ReadmeFileName + '_');
 
         using (var readStream = _fileSystem.GetFileStream(readmePath, FileMode.Open, FileAccess.Read))

@@ -268,9 +268,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool noSquash,
         CancellationToken cancellationToken)
     {
+        // Dependencies that will be updated during this run
         var reposToUpdate = new Queue<DependencyUpdate>();
-        var updatedDependencies = new HashSet<DependencyUpdate>();
-        var skippedDependencies = new HashSet<DependencyUpdate>();
 
         reposToUpdate.Enqueue(new DependencyUpdate(rootMapping, targetRevision, targetVersion, null));
 
@@ -292,6 +291,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Branch branch = repo.Branches.Add(syncBranchName, HEAD, allowOverwrite: true);
             Commands.Checkout(repo, branch);
         }
+
+        // Dependencies that were already updated during this run
+        var updatedDependencies = new HashSet<DependencyUpdate>();
+
+        // Dependencies that were already up-to-date so they won't be updated
+        var skippedDependencies = new HashSet<DependencyUpdate>();
 
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
@@ -320,8 +325,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
             {
-                if (updatedDependencies.Any(d => d.Mapping == dependencyMapping) ||
-                    skippedDependencies.Any(d => d.Mapping == dependencyMapping))
+                var processedDependencies = reposToUpdate.Concat(updatedDependencies).Concat(skippedDependencies);
+                if (processedDependencies.Any(d => d.Mapping == dependencyMapping))
                 {
                     continue;
                 }

@@ -63,8 +63,20 @@ public class SourceMappingParser : ISourceMappingParser
                 throw new Exception($"Invalid value '{patchesPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.PatchesPath)}! " +
                     $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
             }
-            
+
             _vmrInfo.PatchesPath = Path.Combine(_vmrInfo.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        var contentPath = settings.ContentPath;
+        if (contentPath is not null)
+        {
+            if (contentPath.Contains('\\') || contentPath.StartsWith('/'))
+            {
+                throw new Exception($"Invalid value '{contentPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.ContentPath)}! " +
+                    $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/content).");
+            }
+
+            _vmrInfo.ContentPath = Path.Combine(_vmrInfo.VmrPath, contentPath.Replace('/', Path.DirectorySeparatorChar));
         }
 
         var mappings = settings.Mappings
@@ -123,6 +135,8 @@ public class SourceMappingParser : ISourceMappingParser
         };
 
         public string? PatchesPath { get; set; }
+
+        public string? ContentPath { get; set; }
 
         public List<SourceMappingSetting> Mappings { get; set; } = new();
     }
