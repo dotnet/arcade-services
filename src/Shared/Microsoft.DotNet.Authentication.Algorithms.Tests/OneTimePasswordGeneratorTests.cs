@@ -1,4 +1,5 @@
 using System;
+using Microsoft.DotNet.Authentication.Algorithms;
 using NUnit.Framework;
 
 namespace Microsoft.DncEng.SecretManager.Tests;
