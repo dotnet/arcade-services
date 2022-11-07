@@ -165,8 +165,7 @@ public abstract class VmrManagerBase : IVmrManager
     }
     
     /// <summary>
-    /// Helper method that creates a new git branch that we can make changes to.
-    /// After we're done, the branch can be merged into the original branch.
+    /// Helper class that creates a new git branch when initialized and can merge this branch back into the original branch.
     /// </summary>
     private class WorkBranch : IWorkBranch
     {
