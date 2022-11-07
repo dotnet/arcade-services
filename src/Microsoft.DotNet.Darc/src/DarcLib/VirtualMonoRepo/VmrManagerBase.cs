@@ -152,4 +152,64 @@ public abstract class VmrManagerBase : IVmrManager
     }
 
     protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
+
+    /// <summary>
+    /// Helper method that creates a new git branch that we can make changes to.
+    /// After we're done, the branch can be merged into the original branch.
+    /// </summary>
+    protected IWorkBranch CreateWorkBranch(string branchName) => WorkBranch.CreateWorkBranch(_vmrInfo.VmrPath, branchName, _logger);
+
+    protected interface IWorkBranch
+    {
+        void MergeBack(string commitMessage);
+    }
+    
+    /// <summary>
+    /// Helper class that creates a new git branch when initialized and can merge this branch back into the original branch.
+    /// </summary>
+    private class WorkBranch : IWorkBranch
+    {
+        private readonly string _repoPath;
+        private readonly string _currentBranch;
+        private readonly string _workBranch;
+        private readonly ILogger _logger;
+
+        private WorkBranch(string repoPath, string currentBranch, string workBranch, ILogger logger)
+        {
+            _repoPath = repoPath;
+            _currentBranch = currentBranch;
+            _workBranch = workBranch;
+            _logger = logger;
+        }
+
+        public static WorkBranch CreateWorkBranch(string repoPath, string branchName, ILogger logger)
+        {
+            string originalBranch;
+
+            using (var repo = new Repository(repoPath))
+            {
+                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
+
+                originalBranch = repo.Head.FriendlyName;
+                Branch branch = repo.Branches.Add(branchName, HEAD, allowOverwrite: true);
+                Commands.Checkout(repo, branch);
+            }
+
+            return new WorkBranch(repoPath, originalBranch, branchName, logger);
+        }
+
+        public void MergeBack(string commitMessage)
+        {
+            using var repo = new Repository(_repoPath);
+            _logger.LogInformation("Merging {branchName} into {mainBranch}", _workBranch, _currentBranch);
+            Commands.Checkout(repo, _currentBranch);
+            repo.Merge(repo.Branches[_workBranch], DotnetBotCommitSignature, new MergeOptions
+            {
+                FastForwardStrategy = FastForwardStrategy.NoFastForward,
+                CommitOnSuccess = false,
+            });
+
+            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
+        }
+    }
 }

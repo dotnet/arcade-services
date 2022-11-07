@@ -30,7 +30,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         {{AUTOMATION_COMMIT_TAG}}
         """;
-    
+
+    // Message used when finalizing the initialization with a merge commit
+    private const string MergeCommitMessage =
+        $$"""
+        Recursive initialization for {name} / {newShaShort}
+
+        {{AUTOMATION_COMMIT_TAG}}
+        """;
+
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
@@ -76,6 +84,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
+        var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
+
         var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
         reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
 
@@ -86,7 +96,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 // Repository has already been initialized
                 continue;
             }
-            
+
             await InitializeRepository(repoToUpdate.mapping, repoToUpdate.targetRevision, repoToUpdate.targetVersion, cancellationToken);
 
             // When initializing dependencies, we initialize always to the first version of the dependency we've seen
@@ -117,6 +127,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 }
             }
         }
+
+        string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
+
+        var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping, oldSha: null, newSha);
+        workBranch.MergeBack(commitMessage);
+
+        _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
 
     private async Task InitializeRepository(
