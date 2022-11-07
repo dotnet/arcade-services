@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace Microsoft.DncEng.SecretManager;
+namespace Microsoft.DotNet.Authentication.Algorithms;
 
 public class OneTimePasswordGenerator
 {
@@ -12,8 +12,9 @@ public class OneTimePasswordGenerator
     {
         _seed = ConvertFromBase32(secretBase32Encoded);
     }
+    
     public string Generate(DateTimeOffset timestamp)
-    {            
+    {
         byte[] timestampBy30sBytes = BitConverter.GetBytes(timestamp.ToUnixTimeSeconds() / 30);
         Array.Reverse((Array)timestampBy30sBytes);
         byte[] hash;

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web" ToolsVersion="Current">
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <SignAssembly>false</SignAssembly>

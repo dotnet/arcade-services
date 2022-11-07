@@ -1,5 +1,6 @@
 using Microsoft.DncEng.CommandLineLib;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Authentication.Algorithms;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes;
 
