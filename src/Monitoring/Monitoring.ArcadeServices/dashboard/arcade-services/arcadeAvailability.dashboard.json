@@ -1819,7 +1819,7 @@
         {
           "colorMode": "critical",
           "op": "lt",
-          "value": 10,
+          "value": 4,
           "visible": true
         }
       ],
