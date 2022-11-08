@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,13 +14,14 @@ namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
 public interface ISourceManifest
 {
-    IReadOnlyCollection<ISourceComponent> Repositories { get; }
+    IReadOnlyCollection<IVersionedSourceComponent> Repositories { get; }
     IReadOnlyCollection<ISourceComponent> Submodules { get; }
 
     string ToJson();
     void RemoveSubmodule(SubmoduleRecord submodule);
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string packageVersion);
+    VmrDependencyVersion? GetVersion(string repository);
 }
 
 /// <summary>
@@ -31,7 +33,7 @@ public class SourceManifest : ISourceManifest
     private readonly SortedSet<RepositoryRecord> _repositories;
     private readonly SortedSet<SubmoduleRecord> _submodules;
 
-    public IReadOnlyCollection<ISourceComponent> Repositories => _repositories;
+    public IReadOnlyCollection<IVersionedSourceComponent> Repositories => _repositories;
     public IReadOnlyCollection<ISourceComponent> Submodules => _submodules;
 
     public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
@@ -116,7 +118,20 @@ public class SourceManifest : ISourceManifest
 
         return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
     }
-    
+
+    public VmrDependencyVersion? GetVersion(string repository)
+    {
+        var repositoryRecord = _repositories.FirstOrDefault(r => r.Path == repository);
+        if (repositoryRecord != null)
+        {
+            return new(repositoryRecord.CommitSha, repositoryRecord.PackageVersion);
+        } 
+        else
+        {
+            return null;
+        }
+    }
+
     /// <summary>
     /// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
     /// </summary>

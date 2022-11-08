@@ -15,7 +15,6 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
 {
     Dictionary<string, string> Versions { get; }
 
-    VmrDependencyVersion? GetVersion(string repository);
     void UpdateVersion(string repository, string sha, string packageVersion);
 }
 
@@ -37,20 +36,14 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         Versions = versions;
     }
 
-    public VmrDependencyVersion? GetVersion(string repository)
+    public AllVersionsPropsFile(IReadOnlyCollection<IVersionedSourceComponent> repositoryRecords)
+        : base(orderPropertiesAscending: true)
     {
-        var key = SanitizePropertyName(repository) + ShaPropertyName;
-        Versions.TryGetValue(key, out var sha);
-
-        if (sha is null)
+        Versions = new Dictionary<string, string>();
+        foreach(var repo in repositoryRecords)
         {
-            return null;
+            UpdateVersion(repo.Path, repo.CommitSha, repo.PackageVersion);
         }
-
-        key = SanitizePropertyName(repository) + PackageVersionPropertyName;
-        Versions.TryGetValue(key, out var version);
-
-        return new(sha, version);
     }
 
     public void UpdateVersion(string repository, string sha, string packageVersion)
