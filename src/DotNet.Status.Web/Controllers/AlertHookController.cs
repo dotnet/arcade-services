@@ -182,7 +182,7 @@ public class AlertHookController : ControllerBase
 
 </details>
 
-{(options.NotificationTarget == "@dotnet/dnceng" ? "### Release Note Description" : "")}
+{(options.NotificationTarget == "@dotnet/dnceng" ? "### Release Note Description\nDo not include in release notes. (Note to devs: change this if this alert results in a code change.)" : "")}
 ".Replace("\r\n","\n")
         };
 
