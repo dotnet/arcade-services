@@ -181,6 +181,8 @@ public class AlertHookController : ControllerBase
 {string.Format(BodyLabelTextFormat, GetUniqueIdentifier(notification))}
 
 </details>
+
+{(options.NotificationTarget == "@dotnet/dnceng" ? "### Release Note Description" : "")}
 ".Replace("\r\n","\n")
         };
 
