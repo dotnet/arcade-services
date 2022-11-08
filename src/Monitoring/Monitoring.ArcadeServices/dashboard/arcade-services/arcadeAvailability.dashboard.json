@@ -1664,7 +1664,7 @@
             },
             "reducer": {
               "params": [],
-              "type": "max"
+              "type": "avg"
             },
             "type": "query"
           }
@@ -1782,7 +1782,7 @@
             "dimensionFilters": [
               {
                 "dimension": "cloud/roleName",
-                "filter": "fabric:/Helix/AutoScaleActorService' or cloud/roleName eq 'fabric:/Helix/ProcessAutoScaleService",
+                "filter": "fabric:/Helix/AutoScaleActorService",
                 "operator": "eq"
               }
             ],
@@ -1793,7 +1793,7 @@
             "resourceName": "[parameter(dotnet-eng-appinsights-resourcename)]",
             "timeGrain": "auto",
             "timeGrains": [],
-            "top": "10"
+            "top": "100"
           },
           "azureResourceGraph": {
             "resultFormat": "table"
@@ -1819,7 +1819,7 @@
         {
           "colorMode": "critical",
           "op": "lt",
-          "value": 1,
+          "value": 20,
           "visible": true
         }
       ],

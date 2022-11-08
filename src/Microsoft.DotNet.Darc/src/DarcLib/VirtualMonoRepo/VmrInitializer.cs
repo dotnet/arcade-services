@@ -30,11 +30,20 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         {{AUTOMATION_COMMIT_TAG}}
         """;
-    
+
+    // Message used when finalizing the initialization with a merge commit
+    private const string MergeCommitMessage =
+        $$"""
+        Recursive initialization for {name} / {newShaShort}
+
+        {{AUTOMATION_COMMIT_TAG}}
+        """;
+
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -46,6 +55,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
@@ -56,6 +66,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _readmeComponentListGenerator = readmeComponentListGenerator;
         _fileSystem = fileSystem;
         _logger = logger;
         _tmpPath = vmrInfo.TmpPath;
@@ -73,6 +84,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
+        var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
+
         var reposToUpdate = new Queue<(SourceMapping mapping, string? targetRevision, string? targetVersion)>();
         reposToUpdate.Enqueue((mapping, targetRevision, targetVersion));
 
@@ -83,7 +96,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 // Repository has already been initialized
                 continue;
             }
-            
+
             await InitializeRepository(repoToUpdate.mapping, repoToUpdate.targetRevision, repoToUpdate.targetVersion, cancellationToken);
 
             // When initializing dependencies, we initialize always to the first version of the dependency we've seen
@@ -104,7 +117,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                         continue;
                     }
 
-                    _logger.LogDebug("Detected dependency of {parent} - {repo} / {commit} ({version})",
+                    _logger.LogInformation("Detected dependency of {parent} - {repo} / {commit} ({version})",
                         mapping.Name,
                         dependencyMapping.Name,
                         dependency.Commit,
@@ -114,6 +127,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                 }
             }
         }
+
+        string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
+
+        var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping, oldSha: null, newSha);
+        workBranch.MergeBack(commitMessage);
+
+        _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
 
     private async Task InitializeRepository(
@@ -147,8 +167,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         }
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
+        await _readmeComponentListGenerator.UpdateReadme();
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
         { 
+            VmrInfo.ReadmeFileName,
             VmrInfo.GitInfoSourcesDir,
             _vmrInfo.GetSourceManifestPath() 
         });

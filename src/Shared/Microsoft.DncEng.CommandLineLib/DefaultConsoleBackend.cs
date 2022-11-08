@@ -12,6 +12,7 @@ public class DefaultConsoleBackend : IConsoleBackend
 {
     public TextWriter Out => Console.Out;
     public TextWriter Error => Console.Error;
+    public TextReader In => Console.In;
 
     public void SetColor(ConsoleColor color)
     {
