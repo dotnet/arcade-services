@@ -28,6 +28,11 @@ public interface ISourceComponent
     }
 }
 
+public interface IVersionedSourceComponent : ISourceComponent
+{
+    public string PackageVersion { get; }
+}
+
 /// <summary>
 /// Represents a record in the source-manifest.json file which VMR uses to keep track of
 /// synchronized sources
@@ -56,7 +61,7 @@ public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceCom
     }
 }
 
-public class RepositoryRecord : ManifestRecord
+public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
 {
     public RepositoryRecord(string path, string remoteUri, string commitSha, string packageVersion) 
         : base(path, remoteUri, commitSha)
