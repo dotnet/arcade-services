@@ -30,7 +30,7 @@ public interface ISourceComponent
 
 public interface IVersionedSourceComponent : ISourceComponent
 {
-    public string PackageVersion { get; }
+    string PackageVersion { get; }
 }
 
 /// <summary>
