@@ -23,15 +23,18 @@ public interface IVmrInfo
     string VmrPath { get; }
 
     /// <summary>
-    /// Path within the VMR where VMR patches are stored
-    /// (these patches are applied on top of the synchronized content)
+    /// Path within the VMR where VMR patches are stored.
+    /// These patches are applied on top of the synchronized content.
+    /// The Path is UNIX style and relative (e.g. "src/patches").
     /// </summary>
     string? PatchesPath { get; set; }
 
     /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
+    /// Paths are UNIX style and relative.
+    /// Example: ("src/installer/eng/common", "eng/common")
     /// </summary>
-    IReadOnlyCollection<(string Source, string Destination)> AdditionalMappings { get; set; }
+    IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; }
 
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
@@ -64,7 +67,7 @@ public class VmrInfo : IVmrInfo
 
     public string? PatchesPath { get; set; }
 
-    public IReadOnlyCollection<(string Source, string Destination)> AdditionalMappings { get; set; } = Array.Empty<(string Source, string Destination)>();
+    public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
     public VmrInfo(string vmrPath, string tmpPath)
     {
