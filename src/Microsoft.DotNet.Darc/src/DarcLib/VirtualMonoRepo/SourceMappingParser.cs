@@ -63,9 +63,9 @@ public class SourceMappingParser : ISourceMappingParser
             var additionalMappings = new List<(string Source, string? Destination)>();
             foreach (var additionalMapping in settings.AdditionalMappings)
             {
-                if (additionalMapping.Source is null)
+                if (NormalizePath(additionalMapping.Source) is null || !additionalMapping.Source.StartsWith($"{VmrInfo.SourcesDir}/"))
                 {
-                    throw new Exception($"Invalid additional mapping: {additionalMapping.Source} -> {additionalMapping.Destination}");
+                    throw new Exception($"Additional mapping for {additionalMapping.Destination} needs to declare the source pointing to src/");
                 }
 
                 additionalMappings.Add((additionalMapping.Source, NormalizePath(additionalMapping.Destination)));
