@@ -74,6 +74,9 @@ public class VmrPatchHandlerTests
             .Setup(x => x.PatchesPath)
             .Returns(VmrPath + "/patches");
         _vmrInfo
+            .Setup(x => x.AdditionalMappings)
+            .Returns(Array.Empty<(string, string?)>());
+        _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
 
@@ -241,15 +244,33 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task CreatePatchesWithVmrContentPathTest()
+    public async Task CreatePatchesWithAdditionalMappingsTest()
     {
         // Setup
         string expectedPatchName1 = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedPatchName2 = $"{PatchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName2 = $"{PatchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
+        string expectedPatchName3 = $"{PatchDir}/eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
 
+        _vmrInfo.Reset();
         _vmrInfo
-            .SetupGet(x => x.ContentPath)
-            .Returns(VmrPath + $"/src/{_testRepoMapping.Name}/SourceBuild/tarball/content");
+            .SetupGet(x => x.VmrPath)
+            .Returns(VmrPath);
+        _vmrInfo
+            .Setup(x => x.PatchesPath)
+            .Returns("eng/patches");
+        _vmrInfo
+            .SetupGet(x => x.AdditionalMappings)
+            .Returns(new[]
+            {
+                ($"src/{_testRepoMapping.Name}/SourceBuild/tarball/content", null),
+                ($"src/{_testRepoMapping.Name}/eng/common", "eng/common"),
+            });
+        _vmrInfo
+            .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
+            .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
+        _vmrInfo
+            .Setup(x => x.GetRelativeRepoSourcesPath(It.IsAny<SourceMapping>()))
+            .Returns((SourceMapping mapping) => "src/" + mapping.Name);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -283,7 +304,7 @@ public class VmrPatchHandlerTests
             "--",
             "."
         };
-        
+
         _processManager
             .Verify(x => x.Execute(
                 "git",
@@ -293,12 +314,35 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
+        expectedArgs = new[]
+        {
+            "diff",
+            "--patch",
+            "--relative",
+            "--binary",
+            "--output",
+            expectedPatchName3,
+            $"{Sha1}..{Sha2}",
+            "--",
+            "."
+        };
+
+        _processManager
+            .Verify(x => x.Execute(
+                "git",
+                expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                $"{ClonePath}/eng/common",
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
         _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
 
-        patches.Should().HaveCount(2);
-        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName1, "src/" + IndividualRepoName));
-        patches.Last().Should().Be(new VmrIngestionPatch(expectedPatchName2, null));
+        patches.Should().Equal(
+            new VmrIngestionPatch(expectedPatchName1, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedPatchName2, null),
+            new VmrIngestionPatch(expectedPatchName3, "eng/common"));
     }
 
     [Test]
