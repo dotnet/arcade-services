@@ -56,8 +56,7 @@ public class SourceMappingParser : ISourceMappingParser
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
-        _vmrInfo.PatchesPath = settings.PatchesPath;
-        ValidateRelativePath(_vmrInfo.PatchesPath);
+        _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
 
         if (settings.AdditionalMappings is not null)
         {
@@ -69,15 +68,7 @@ public class SourceMappingParser : ISourceMappingParser
                     throw new Exception($"Invalid additional mapping: {additionalMapping.Source} -> {additionalMapping.Destination}");
                 }
 
-                ValidateRelativePath(additionalMapping.Destination);
-                // Destination null means we apply it to the root of the VMR
-                var destination = additionalMapping.Destination switch
-                {
-                    "" or "." or "/" => null,
-                    _ => additionalMapping.Destination,
-                };
-
-                paths.Add((additionalMapping.Source, destination));
+                paths.Add((additionalMapping.Source, NormalizePath(additionalMapping.Destination)));
             }
 
             _vmrInfo.AdditionalMappings = paths.ToImmutableArray();
@@ -129,11 +120,11 @@ public class SourceMappingParser : ISourceMappingParser
             Exclude: exclude.ToImmutableArray());
     }
 
-    private static void ValidateRelativePath(string? relativePath)
+    private static string? NormalizePath(string? relativePath)
     {
         if (relativePath is null || relativePath == "." || relativePath == "/" || relativePath.Length == 0)
         {
-            return;
+            return null;
         }
 
         if (relativePath.Contains('\\') || relativePath.StartsWith('/'))
@@ -141,6 +132,8 @@ public class SourceMappingParser : ISourceMappingParser
             throw new Exception($"Invalid value '{relativePath}' in {VmrInfo.SourceMappingsFileName}. " +
                 $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
         }
+
+        return relativePath;
     }
 
     private class SourceMappingFile
