@@ -13,6 +13,14 @@ if ($prDetail.draft) {
 	Write-Host "Draft PR does not have to have GitHub issue specified. Check passed."
 	exit 0
 }
+elseif ($prDetail.title -match "\[\w+\] Update dependencies from") {
+	Write-Host "Dependency update PRs don't need release notes. Check passed."
+	exit 0
+}
+elseif ($prDetail.title -match "\[automated\]") {
+	Write-Host "Automated PRs don't need release notes. Check passed."
+	exit 0
+}
 
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
@@ -36,6 +44,7 @@ $issueIsAzdoMirror = $issueDetail.title -like "AzDO Issue*"
 if (-not $issueHasReleaseNotes -and -not $issueIsAzdoMirror) {
 	Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
 	Write-Host "Ensure your issue has release notes. They should be in the following format:`n`n### Release Note Description`n<Stick your notes here>`n"
+	Write-Host "For more information, see https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/983/ReleaseNotesGuidance?anchor=mechanics"
 	exit 1
 }
 elseif ($issueIsAzdoMirror) {
