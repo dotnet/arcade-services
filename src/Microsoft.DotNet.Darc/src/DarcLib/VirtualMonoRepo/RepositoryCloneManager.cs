@@ -94,7 +94,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         var hasher = new XxHash64(0);
         byte[] inputBytes = Encoding.ASCII.GetBytes(input);
         hasher.Append(inputBytes);
-        byte[] hashBytes = hasher.GetHashAndReset();
+        byte[] hashBytes = hasher.GetCurrentHash();
         return Convert.ToHexString(hashBytes);
     }
 }
