@@ -13,6 +13,10 @@ if ($prDetail.draft) {
 	Write-Host "Draft PR does not have to have GitHub issue specified. Check passed."
 	exit 0
 }
+elseif ($prDetail.title -match "\[\w+\] Update dependencies from") {
+	Write-Host "Dependency update PRs don't need release notes. Check passed."
+	exit 0
+}
 
 $hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
 if (-not $hasIssue) {
