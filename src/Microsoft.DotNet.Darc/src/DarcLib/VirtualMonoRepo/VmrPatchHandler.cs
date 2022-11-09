@@ -10,7 +10,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -542,7 +541,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         var mappingPatchesPath = _fileSystem.PathCombine(
             _vmrInfo.VmrPath,
-            _vmrInfo.PatchesPath.Replace('/', Path.DirectorySeparatorChar),
+            _vmrInfo.PatchesPath.Replace('/', _fileSystem.DirectorySeparatorChar),
             mapping.Name);
 
         if (!_fileSystem.DirectoryExists(mappingPatchesPath))
