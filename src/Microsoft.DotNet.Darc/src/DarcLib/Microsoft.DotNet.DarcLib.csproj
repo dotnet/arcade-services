@@ -18,6 +18,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="System.IO.Hashing" />
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
   </ItemGroup>
