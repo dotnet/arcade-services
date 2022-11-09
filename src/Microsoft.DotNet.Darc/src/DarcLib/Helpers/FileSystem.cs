@@ -44,6 +44,8 @@ public class FileSystem : IFileSystem
 
     public void CopyFile(string sourceFileName, string destFileName, bool overwrite = false) => File.Copy(sourceFileName, destFileName, overwrite);
 
+    public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false) => File.Move(sourceFileName, destFileName, overwrite);
+
     public Stream GetFileStream(string path, FileMode mode, FileAccess access) => new FileStream(path, mode, access);
 
     public FileAttributes GetAttributes(string path) => File.GetAttributes(path);

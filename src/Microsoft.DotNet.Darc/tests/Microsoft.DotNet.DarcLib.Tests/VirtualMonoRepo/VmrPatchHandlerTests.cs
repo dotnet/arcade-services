@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -123,14 +124,14 @@ public class VmrPatchHandlerTests
     public async Task PatchIsAppliedTest()
     {
         // Setup
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", IndividualRepoName);
+        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", "src/" + IndividualRepoName);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
         await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
 
         // Verify
-        VerifyGitCall(new[]
+        VerifyGitCall(new List<string>
         {
             "apply",
             "--cached",
@@ -140,7 +141,7 @@ public class VmrPatchHandlerTests
             patch.Path,
         });
         
-        VerifyGitCall(new[]
+        VerifyGitCall(new string[]
         {
             "checkout",
             $"src/{IndividualRepoName}",
@@ -172,7 +173,7 @@ public class VmrPatchHandlerTests
             .Returns("src/" + IndividualRepoName);
 
         SetupGitCall(
-            new[] { "apply", "--numstat", patch },
+            new[] { "apply", "--numstat", "--allow-empty", patch },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
@@ -236,7 +237,68 @@ public class VmrPatchHandlerTests
         _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
 
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName)); 
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName));
+    }
+
+    [Test]
+    public async Task CreatePatchesWithVmrContentPathTest()
+    {
+        // Setup
+        string expectedPatchName1 = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName2 = $"{PatchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+
+        _vmrInfo
+            .SetupGet(x => x.ContentPath)
+            .Returns(VmrPath + $"/src/{_testRepoMapping.Name}/SourceBuild/tarball/content");
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            ClonePath,
+            Sha1,
+            Sha2,
+            PatchDir,
+            "/tmp",
+            CancellationToken.None);
+
+        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName1, Sha1, Sha2, null);
+
+        // Verify
+        _processManager
+            .Verify(x => x.ExecuteGit(
+                ClonePath,
+                expectedArgs,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        expectedArgs = new[]
+        {
+            "diff",
+            "--patch",
+            "--relative",
+            "--binary",
+            "--output",
+            expectedPatchName2,
+            $"{Sha1}..{Sha2}",
+            "--",
+            "."
+        };
+        
+        _processManager
+            .Verify(x => x.Execute(
+                "git",
+                expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                $"{ClonePath}/SourceBuild/tarball/content",
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+
+        patches.Should().HaveCount(2);
+        patches.First().Should().Be(new VmrIngestionPatch(expectedPatchName1, "src/" + IndividualRepoName));
+        patches.Last().Should().Be(new VmrIngestionPatch(expectedPatchName2, null));
     }
 
     [Test]
@@ -278,7 +340,7 @@ public class VmrPatchHandlerTests
             .Verify(x => x.PrepareClone(_submoduleInfo.Url, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 
         patches.Should().ContainSingle();
-        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, IndividualRepoName));
+        patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName));
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Exactly(1));
 
@@ -360,8 +422,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
-            new VmrIngestionPatch(expectedSubmodulePatchName, IndividualRepoName + '/' + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedSubmodulePatchName, "src/" + IndividualRepoName + '/' + _submoduleInfo.Path),
         });
     }
 
@@ -474,9 +536,9 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
-            new VmrIngestionPatch(expectedSubmodulePatchName, IndividualRepoName + "/" + _submoduleInfo.Path),
-            new VmrIngestionPatch(expectedNestedSubmodulePatchName, IndividualRepoName + "/" + _submoduleInfo.Path + "/" + nestedSubmoduleInfo.Path),
+            new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedSubmodulePatchName, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedNestedSubmodulePatchName, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path + "/" + nestedSubmoduleInfo.Path),
         });
     }
 
@@ -550,8 +612,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
-            new VmrIngestionPatch(expectedSubmodulePatchName, IndividualRepoName + "/" + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedSubmodulePatchName, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path),
         });
     }
 
@@ -624,8 +686,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
-            new VmrIngestionPatch(expectedSubmodulePatchName, IndividualRepoName + "/" + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedSubmodulePatchName, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path),
         });
     }
 
@@ -720,9 +782,9 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, IndividualRepoName),
-            new VmrIngestionPatch(expectedSubmodulePatchName1, IndividualRepoName + "/" + _submoduleInfo.Path),
-            new VmrIngestionPatch(expectedSubmodulePatchName2, IndividualRepoName + "/" + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedPatchName, "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedSubmodulePatchName1, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path),
+            new VmrIngestionPatch(expectedSubmodulePatchName2, "src/" + IndividualRepoName + "/" + _submoduleInfo.Path),
         });
     }
 
@@ -747,14 +809,14 @@ public class VmrPatchHandlerTests
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
 
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", IndividualRepoName);
+        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", "src/" + IndividualRepoName);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
         await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
 
         // Verify
-        VerifyGitCall(new[]
+        VerifyGitCall(new List<string>
         {
             "apply",
             "--cached",
@@ -765,7 +827,7 @@ public class VmrPatchHandlerTests
         },
         VmrPath + "/");
 
-        VerifyGitCall(new[]
+        VerifyGitCall(new string[]
         {
             "checkout",
             $"src/{IndividualRepoName}",
@@ -781,6 +843,19 @@ public class VmrPatchHandlerTests
     }
 
     private void VerifyGitCall(string[] expectedArguments, string repoDir = VmrPath, Times? times = null)
+    {
+        _processManager
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+    }
+
+    private void SetupGitCall(IEnumerable<string> expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
+    {
+        _processManager
+            .Setup(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(result);
+    }
+
+    private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir = VmrPath, Times? times = null)
     {
         _processManager
             .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
