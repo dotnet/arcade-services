@@ -60,7 +60,7 @@ public class SourceMappingParser : ISourceMappingParser
 
         if (settings.AdditionalMappings is not null)
         {
-            var paths = new List<(string Source, string? Destination)>();
+            var additionalMappings = new List<(string Source, string? Destination)>();
             foreach (var additionalMapping in settings.AdditionalMappings)
             {
                 if (additionalMapping.Source is null)
@@ -68,10 +68,10 @@ public class SourceMappingParser : ISourceMappingParser
                     throw new Exception($"Invalid additional mapping: {additionalMapping.Source} -> {additionalMapping.Destination}");
                 }
 
-                paths.Add((additionalMapping.Source, NormalizePath(additionalMapping.Destination)));
+                additionalMappings.Add((additionalMapping.Source, NormalizePath(additionalMapping.Destination)));
             }
 
-            _vmrInfo.AdditionalMappings = paths.ToImmutableArray();
+            _vmrInfo.AdditionalMappings = additionalMappings.ToImmutableArray();
         }
 
         var mappings = settings.Mappings
