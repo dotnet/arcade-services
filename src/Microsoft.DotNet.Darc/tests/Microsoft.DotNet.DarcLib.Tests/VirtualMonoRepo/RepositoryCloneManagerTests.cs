@@ -19,7 +19,7 @@ public class RepositoryCloneManagerTests
     private const string TmpDir = "/data/tmp";
     private const string RepoUri = "https://github.com/dotnet/test-repo";
     private const string Ref = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
-    private const string ClonePath = $"{TmpDir}/09223AF35006792CE00C85E10CC54588";
+    private const string ClonePath = $"{TmpDir}/62B2F7243B6B94DA";
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
