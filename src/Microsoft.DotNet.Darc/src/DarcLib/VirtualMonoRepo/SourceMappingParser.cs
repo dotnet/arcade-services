@@ -21,7 +21,8 @@ public interface ISourceMappingParser
 
 /// <summary>
 /// Class responsible for parsing the source-mappings.json file.
-/// TODO (https://github.com/dotnet/arcade/issues/11226): Link to source-mappings.json documentation
+/// More details about source-mappings.json are directly in the file or at
+/// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Design-And-Operation.md#repository-source-mappings
 /// </summary>
 public class SourceMappingParser : ISourceMappingParser
 {
@@ -55,28 +56,25 @@ public class SourceMappingParser : ISourceMappingParser
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
-        var patchesPath = settings.PatchesPath;
-        if (patchesPath is not null)
+        if (settings.PatchesPath is not null)
         {
-            if (patchesPath.Contains('\\') || patchesPath.StartsWith('/'))
-            {
-                throw new Exception($"Invalid value '{patchesPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.PatchesPath)}! " +
-                    $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
-            }
-
-            _vmrInfo.PatchesPath = Path.Combine(_vmrInfo.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
+            _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
         }
 
-        var contentPath = settings.ContentPath;
-        if (contentPath is not null)
+        if (settings.AdditionalMappings is not null)
         {
-            if (contentPath.Contains('\\') || contentPath.StartsWith('/'))
+            var paths = new List<(string Source, string Destination)>();
+            foreach (var additionalMapping in settings.AdditionalMappings)
             {
-                throw new Exception($"Invalid value '{contentPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.ContentPath)}! " +
-                    $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/content).");
+                if (additionalMapping.Source is null || additionalMapping.Destination is null)
+                {
+                    throw new Exception($"Invalid additional mapping: {additionalMapping.Source} -> {additionalMapping.Destination}");
+                }
+
+                paths.Add((additionalMapping.Source.Replace('/', Path.DirectorySeparatorChar), NormalizePath(additionalMapping.Destination)));
             }
 
-            _vmrInfo.ContentPath = Path.Combine(_vmrInfo.VmrPath, contentPath.Replace('/', Path.DirectorySeparatorChar));
+            _vmrInfo.AdditionalMappings = paths.ToImmutableArray();
         }
 
         var mappings = settings.Mappings
@@ -125,6 +123,17 @@ public class SourceMappingParser : ISourceMappingParser
             Exclude: exclude.ToImmutableArray());
     }
 
+    private string NormalizePath(string relativePath)
+    {
+        if (relativePath.Contains('\\') || relativePath.StartsWith('/'))
+        {
+            throw new Exception($"Invalid value '{relativePath}' in {VmrInfo.SourceMappingsFileName}. " +
+                $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
+        }
+
+        return Path.Combine(_vmrInfo.VmrPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+    }
+
     private class SourceMappingFile
     {
         public SourceMappingSetting Defaults { get; set; } = new()
@@ -136,9 +145,9 @@ public class SourceMappingParser : ISourceMappingParser
 
         public string? PatchesPath { get; set; }
 
-        public string? ContentPath { get; set; }
-
         public List<SourceMappingSetting> Mappings { get; set; } = new();
+
+        public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
     }
 
     private class SourceMappingSetting
@@ -150,5 +159,11 @@ public class SourceMappingParser : ISourceMappingParser
         public string[]? Include { get; set; }
         public string[]? Exclude { get; set; }
         public bool IgnoreDefaults { get; set; }
+    }
+
+    private class AdditionalMappingSetting
+    {
+        public string? Source { get; set; }
+        public string? Destination { get; set; }
     }
 }
