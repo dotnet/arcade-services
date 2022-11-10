@@ -97,8 +97,13 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
     {
         // TODO (https://github.com/dotnet/arcade/issues/10549): Add also non-GitHub implementations
         string[] uriParts = component.RemoteUri.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string repo = $"{uriParts[^2]}/{uriParts[^1]}";
+        if (repo.EndsWith(".git"))
+        {
+            repo = repo[..^4];
+        }
 
         await writer.WriteLineAsync($"{new string(' ', indentation)}- `{VmrInfo.SourcesDir}/{component.Path}`  ");
-        await writer.WriteLineAsync($"{new string(' ', indentation)}*[{uriParts[^2]}/{uriParts[^1]}@{Commit.GetShortSha(component.CommitSha)}]({component.GetPublicUrl()})*");
+        await writer.WriteLineAsync($"{new string(' ', indentation)}*[{repo}@{Commit.GetShortSha(component.CommitSha)}]({component.GetPublicUrl()})*");
     }
 }
