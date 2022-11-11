@@ -523,9 +523,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             var patchedFiles = await _patchHandler.GetPatchedFiles(clonePath, patch.Path, cancellationToken);
             var affectedPatches = patchedFiles
+                .Select(path => _vmrInfo.GetRelativeRepoSourcesPath(updatedMapping) + "/" + path)
                 .Where(path => path.StartsWith(_vmrInfo.PatchesPath) && path.EndsWith(".patch"))
                 .Select(path => path.Replace('/', _fileSystem.DirectorySeparatorChar))
-                .Select(path => _fileSystem.PathCombine(_vmrInfo.GetRepoSourcesPath(updatedMapping), path));
+                .Select(path => _fileSystem.PathCombine(_vmrInfo.VmrPath, path));
 
             foreach (var affectedPatch in affectedPatches)
             {
