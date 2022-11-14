@@ -47,7 +47,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
-    private readonly string _tmpPath;
+    private readonly RootPath _tmpPath;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
@@ -144,7 +144,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
 
-        string clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         using var clone = new Repository(clonePath);
@@ -168,7 +168,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
         await _readmeComponentListGenerator.UpdateReadme();
-        Commands.Stage(new Repository(_vmrInfo.VmrPath), new[]
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
         { 
             VmrInfo.ReadmeFileName,
             VmrInfo.GitInfoSourcesDir,
