@@ -50,6 +50,7 @@ stages:
   - build
   - Validate
   - ValidateSecrets
+  - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
