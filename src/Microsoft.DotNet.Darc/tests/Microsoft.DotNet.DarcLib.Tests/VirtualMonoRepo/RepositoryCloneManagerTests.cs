@@ -28,12 +28,12 @@ public class RepositoryCloneManagerTests
 
     private RepositoryCloneManager _manager = null!;
 
-    private readonly RootPath _tmpDir;
-    private readonly RootPath _clonePath;
+    private readonly FilePath _tmpDir;
+    private readonly FilePath _clonePath;
 
     public RepositoryCloneManagerTests()
     {
-        _tmpDir = new UnixRootPath("/data/tmp");
+        _tmpDir = new UnixPath("/data/tmp");
         _clonePath = _tmpDir / "62B2F7243B6B94DA";
     }
 

@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// The concatenation works thanks to overloading of the / operator:
 ///     var combinedPath = rootPath / "src" / "MyProject.csproj";
 /// </summary>
-public abstract class RootPath
+public abstract class FilePath
 {
     private readonly char _separator;
 
@@ -21,11 +21,11 @@ public abstract class RootPath
 
     public int Length => Path.Length;
 
-    public RootPath(string rootPath, char separator) : this(rootPath, separator, true)
+    public FilePath(string rootPath, char separator) : this(rootPath, separator, true)
     {
     }
 
-    protected RootPath(string path, char separator, bool normalizePath)
+    protected FilePath(string path, char separator, bool normalizePath)
     {
         Path = normalizePath ? NormalizePath(path) : path;
         _separator = separator;
@@ -33,15 +33,15 @@ public abstract class RootPath
 
     public override string ToString() => Path;
 
-    public static RootPath operator /(RootPath left, RootPath right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
+    public static FilePath operator /(FilePath left, FilePath right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
 
-    public static RootPath operator /(RootPath left, string right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
+    public static FilePath operator /(FilePath left, string right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
 
-    public static RootPath operator /(string left, RootPath right) => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
+    public static FilePath operator /(string left, FilePath right) => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
 
-    public static implicit operator string(RootPath p) => p.Path;
+    public static implicit operator string(FilePath p) => p.Path;
 
-    protected abstract RootPath CreateMergedPath(string path);
+    protected abstract FilePath CreateMergedPath(string path);
 
     protected abstract string NormalizePath(string s);
 
@@ -58,7 +58,7 @@ public abstract class RootPath
         };
     }
 
-    public override bool Equals(object? obj) => Path.Equals((obj as RootPath)?.Path ?? obj as string);
+    public override bool Equals(object? obj) => Path.Equals((obj as FilePath)?.Path ?? obj as string);
 
     public override int GetHashCode() => Path.GetHashCode();
 }
@@ -66,17 +66,17 @@ public abstract class RootPath
 /// <summary>
 /// Smart path that defaults to using whatever is the current directory separator.
 /// </summary>
-public class NativeRootPath : RootPath
+public class NativePath : FilePath
 {
-    public NativeRootPath(string rootPath) : this(rootPath, true)
+    public NativePath(string rootPath) : this(rootPath, true)
     {
     }
 
-    private NativeRootPath(string rootPath, bool normalize) : base(rootPath, System.IO.Path.DirectorySeparatorChar, normalize)
+    private NativePath(string rootPath, bool normalize) : base(rootPath, System.IO.Path.DirectorySeparatorChar, normalize)
     {
     }
 
-    protected override RootPath CreateMergedPath(string path) => new NativeRootPath(path, false);
+    protected override FilePath CreateMergedPath(string path) => new NativePath(path, false);
 
     protected override string NormalizePath(string s) =>
         System.IO.Path.DirectorySeparatorChar == '/'
@@ -87,17 +87,17 @@ public class NativeRootPath : RootPath
 /// <summary>
 /// Smart path that uses the UNIX style (forward-slashes) for directory separation.
 /// </summary>
-public class UnixRootPath : RootPath
+public class UnixPath : FilePath
 {
-    public UnixRootPath(string rootPath) : this(rootPath, true)
+    public UnixPath(string rootPath) : this(rootPath, true)
     {
     }
 
-    private UnixRootPath(string rootPath, bool normalize) : base(rootPath, '/', normalize)
+    private UnixPath(string rootPath, bool normalize) : base(rootPath, '/', normalize)
     {
     }
 
-    protected override RootPath CreateMergedPath(string path) => new UnixRootPath(path, false);
+    protected override FilePath CreateMergedPath(string path) => new UnixPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 }
@@ -105,17 +105,17 @@ public class UnixRootPath : RootPath
 /// <summary>
 /// Smart path that uses the Windows style (back-slashes) for directory separation.
 /// </summary>
-public class WindowsRootPath : RootPath
+public class WindowsPath : FilePath
 {
-    public WindowsRootPath(string rootPath) : this(rootPath, true)
+    public WindowsPath(string rootPath) : this(rootPath, true)
     {
     }
 
-    private WindowsRootPath(string rootPath, bool normalize) : base(rootPath, '\\', normalize)
+    private WindowsPath(string rootPath, bool normalize) : base(rootPath, '\\', normalize)
     {
     }
 
-    protected override RootPath CreateMergedPath(string path) => new WindowsRootPath(path, false);
+    protected override FilePath CreateMergedPath(string path) => new WindowsPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('/', '\\');
 }

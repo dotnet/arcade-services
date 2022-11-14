@@ -47,9 +47,9 @@ public class VmrPatchHandlerTests
     private readonly Mock<IFileSystem> _fileSystem = new();
     private VmrPatchHandler _patchHandler = null!;
 
-    private readonly UnixRootPath _vmrPath;
-    private readonly UnixRootPath _clonePath;
-    private readonly UnixRootPath _patchDir;
+    private readonly UnixPath _vmrPath;
+    private readonly UnixPath _clonePath;
+    private readonly UnixPath _patchDir;
 
     private readonly SourceMapping _testRepoMapping = new(
         Name: IndividualRepoName,
@@ -66,9 +66,9 @@ public class VmrPatchHandlerTests
 
     public VmrPatchHandlerTests()
     {
-        _vmrPath = new UnixRootPath("/data/vmr");
-        _clonePath = new UnixRootPath("/tmp/" + IndividualRepoName);
-        _patchDir = new UnixRootPath("/tmp/patch");
+        _vmrPath = new UnixPath("/data/vmr");
+        _clonePath = new UnixPath("/tmp/" + IndividualRepoName);
+        _patchDir = new UnixPath("/tmp/patch");
     }
     
     [SetUp]
@@ -96,7 +96,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixRootPath("/tmp/" + uri.Split("/").Last()));
+            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
 
         _processManager.Reset();
         _processManager
@@ -194,7 +194,7 @@ public class VmrPatchHandlerTests
         // Act
         await _patchHandler.RestoreFilesFromPatch(
             _testRepoMapping,
-            new UnixRootPath("/tmp/" + IndividualRepoName),
+            new UnixPath("/tmp/" + IndividualRepoName),
             patch,
             CancellationToken.None);
 
@@ -227,7 +227,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -277,7 +277,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName1, Sha1, Sha2, null);
@@ -365,7 +365,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
@@ -417,7 +417,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -505,7 +505,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -607,7 +607,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -681,7 +681,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -756,7 +756,7 @@ public class VmrPatchHandlerTests
             Sha1,
             Sha2,
             _patchDir,
-            new UnixRootPath("/tmp"),
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -837,7 +837,7 @@ public class VmrPatchHandlerTests
         _vmrInfo.Reset();
         _vmrInfo
             .SetupGet(x => x.VmrPath)
-            .Returns(new UnixRootPath("/data/vmr/"));
+            .Returns(new UnixPath("/data/vmr/"));
         _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => _vmrPath / VmrInfo.SourcesDir / mapping.Name);

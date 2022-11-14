@@ -15,12 +15,12 @@ public interface IVmrInfo
     /// <summary>
     /// Path for temporary files (individual repo clones, created patches, etc.)
     /// </summary>
-    RootPath TmpPath { get; }
+    FilePath TmpPath { get; }
 
     /// <summary>
     /// Path to the root of the VMR
     /// </summary>
-    RootPath VmrPath { get; }
+    FilePath VmrPath { get; }
 
     /// <summary>
     /// Path within the VMR where VMR patches are stored.
@@ -39,12 +39,12 @@ public interface IVmrInfo
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
     /// </summary>
-    RootPath GetRepoSourcesPath(SourceMapping mapping);
+    FilePath GetRepoSourcesPath(SourceMapping mapping);
 
     /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
-    RootPath GetSourceManifestPath();
+    FilePath GetSourceManifestPath();
 }
 
 public class VmrInfo : IVmrInfo
@@ -60,29 +60,29 @@ public class VmrInfo : IVmrInfo
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string ThirdPartyNoticesTemplatePath = "eng/bootstrap/THIRD-PARTY-NOTICES.template.txt";
 
-    public static UnixRootPath RelativeSourcesDir { get; } = new("src");
+    public static UnixPath RelativeSourcesDir { get; } = new("src");
 
-    public RootPath VmrPath { get; }
+    public FilePath VmrPath { get; }
 
-    public RootPath TmpPath { get; }
+    public FilePath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
-    public VmrInfo(RootPath vmrPath, RootPath tmpPath)
+    public VmrInfo(FilePath vmrPath, FilePath tmpPath)
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;
     }
 
-    public VmrInfo(string vmrPath, string tmpPath) : this(new NativeRootPath(vmrPath), new NativeRootPath(tmpPath))
+    public VmrInfo(string vmrPath, string tmpPath) : this(new NativePath(vmrPath), new NativePath(tmpPath))
     {
     }
 
-    public RootPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
+    public FilePath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
 
-    public static RootPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+    public static FilePath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
-    public RootPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
+    public FilePath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

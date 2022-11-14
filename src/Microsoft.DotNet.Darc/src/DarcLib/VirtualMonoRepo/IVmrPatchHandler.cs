@@ -26,16 +26,16 @@ public interface IVmrPatchHandler
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        RootPath repoPath,
+        FilePath repoPath,
         string sha1,
         string sha2,
-        RootPath destDir,
-        RootPath tmpPath,
+        FilePath destDir,
+        FilePath tmpPath,
         CancellationToken cancellationToken);
 
     Task RestoreFilesFromPatch(
         SourceMapping mapping,
-        RootPath clonePath,
+        FilePath clonePath,
         string patch,
         CancellationToken cancellationToken);
 

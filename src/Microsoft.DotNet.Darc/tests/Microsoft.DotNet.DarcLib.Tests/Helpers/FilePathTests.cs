@@ -10,13 +10,13 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 [TestFixture]
-public class RootPathTests
+public class FilePathTests
 {
     [Test]
     public void UnixStylePathsCombineWell()
     {
-        var path1 = new UnixRootPath("src/");
-        var path2 = new UnixRootPath("/some/path/foo.jpg");
+        var path1 = new UnixPath("src/");
+        var path2 = new UnixPath("/some/path/foo.jpg");
 
         path1.Path.Should().Be("src/");
         path2.Path.Should().Be("/some/path/foo.jpg");
@@ -25,14 +25,14 @@ public class RootPathTests
         (path1 / "/something/else").Path.Should().Be("src/something/else");
         ("/something/else" / path1).Path.Should().Be("/something/else/src/");
         (path1 / "something\\else").Path.Should().Be("src/something/else");
-        new UnixRootPath("something\\else").Path.Should().Be("something/else");
+        new UnixPath("something\\else").Path.Should().Be("something/else");
     }
 
     [Test]
     public void WindowsStylePathsCombineWell()
     {
-        var path1 = new WindowsRootPath("D:\\foo\\bar");
-        var path2 = new WindowsRootPath("some/path/foo.jpg");
+        var path1 = new WindowsPath("D:\\foo\\bar");
+        var path2 = new WindowsPath("some/path/foo.jpg");
 
         path1.Path.Should().Be("D:\\foo\\bar");
         path2.Path.Should().Be("some\\path\\foo.jpg");
@@ -45,8 +45,8 @@ public class RootPathTests
     [Test]
     public void NativeStylePathsCombineWell()
     {
-        var path1 = new NativeRootPath("foo\\bar\\");
-        var path2 = new NativeRootPath("some/path/foo.jpg");
+        var path1 = new NativePath("foo\\bar\\");
+        var path2 = new NativePath("some/path/foo.jpg");
 
         (path1 / path2).Path.Should().Be(
             Path.Combine(
