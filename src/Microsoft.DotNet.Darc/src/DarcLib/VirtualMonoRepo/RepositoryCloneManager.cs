@@ -4,7 +4,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
+using System.IO.Hashing;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,7 +56,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hash = CreateMD5(repoUri);
+        var hash = GetCloneDirName(repoUri);
         var clonePath = _fileSystem.PathCombine(_vmrInfo.TmpPath, hash);
 
         if (_upToDateRepos.Contains(repoUri))
@@ -89,11 +89,12 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     }
 
     // We store clones in directories named as a hash of the repo URI
-    private static string CreateMD5(string input)
+    private static string GetCloneDirName(string input)
     {
-        using var md5 = MD5.Create();
+        var hasher = new XxHash64(0);
         byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = md5.ComputeHash(inputBytes);
+        hasher.Append(inputBytes);
+        byte[] hashBytes = hasher.GetCurrentHash();
         return Convert.ToHexString(hashBytes);
     }
 }

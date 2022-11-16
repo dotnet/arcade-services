@@ -3,29 +3,29 @@
   <ProductDependencies>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SignTool" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.VersionTools" Version="6.0.0-beta.22531.5">
+    <Dependency Name="Microsoft.DotNet.VersionTools" Version="6.0.0-beta.22560.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>ebe7fe2c2bd5143690e7150552562c9e44e3b0b5</Sha>
+      <Sha>a0fd54b5c2dc3e23aa8466bd4638462df4303633</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

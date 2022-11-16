@@ -511,7 +511,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         patchesToRestore.AddRange(_patchHandler.GetVmrPatches(updatedMapping).Select(patch => (updatedMapping, patch)));
 
         // If we are not updating the mapping that the VMR patches come from, we're done
-        if (_vmrInfo.PatchesPath == null || !_vmrInfo.PatchesPath.StartsWith(_vmrInfo.GetRepoSourcesPath(updatedMapping)))
+        if (_vmrInfo.PatchesPath == null || !_vmrInfo.PatchesPath.StartsWith(_vmrInfo.GetRelativeRepoSourcesPath(updatedMapping)))
         {
             return patchesToRestore;
         }
@@ -523,9 +523,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             var patchedFiles = await _patchHandler.GetPatchedFiles(clonePath, patch.Path, cancellationToken);
             var affectedPatches = patchedFiles
+                .Select(path => _vmrInfo.GetRelativeRepoSourcesPath(updatedMapping) + "/" + path)
+                .Where(path => path.StartsWith(_vmrInfo.PatchesPath) && path.EndsWith(".patch"))
                 .Select(path => path.Replace('/', _fileSystem.DirectorySeparatorChar))
-                .Select(path => _fileSystem.PathCombine(_vmrInfo.GetRepoSourcesPath(updatedMapping), path))
-                .Where(path => path.StartsWith(_vmrInfo.PatchesPath) && path.EndsWith(".patch"));
+                .Select(path => _fileSystem.PathCombine(_vmrInfo.VmrPath, path));
 
             foreach (var affectedPatch in affectedPatches)
             {

@@ -16,13 +16,19 @@ public interface ISourceComponent
     // TODO (https://github.com/dotnet/arcade/issues/10549): Add also non-GitHub implementations
     public string GetPublicUrl()
     {
-        var url = RemoteUri + "/commit/" + CommitSha;
-        url = url.Replace("//", "/");
+        var url = RemoteUri;
 
         if (url.EndsWith(".git"))
         {
             url = url[..^4];
         }
+
+        if (!url.EndsWith('/'))
+        {
+            url += '/';
+        }
+
+        url += "commit/" + CommitSha;
 
         return url;
     }

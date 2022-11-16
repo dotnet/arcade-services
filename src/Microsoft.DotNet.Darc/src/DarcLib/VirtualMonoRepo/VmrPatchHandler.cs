@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -177,12 +178,17 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too
         // We only do it when processing the root mapping, not its submodules
-        var sourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
-        if (relativePath == mapping.Name && (_vmrInfo.ContentPath?.StartsWith(sourcesPath) ?? false))
+        var relativeRepoPath = _vmrInfo.GetRelativeRepoSourcesPath(mapping);
+        int i = 1;
+        foreach (var (source, destination) in _vmrInfo.AdditionalMappings.Where(m => m.Source.StartsWith(relativeRepoPath)))
         {
-            _logger.LogInformation("Mapping {mapping} contains VMR's non-src/ content. Creating patch for it too..", mapping.Name);
+            var relativeClonePath = source.Substring(relativeRepoPath.Length + 1);
 
-            patchName = _fileSystem.PathCombine(destDir, $"root-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
+            _logger.LogInformation("Detected 'non-src/' mapped content in {source}. Creating patch..", source);
+
+            patchName = $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
+            patchName = _fileSystem.PathCombine(destDir, patchName);
+
             args = new List<string>
             {
                 "diff",
@@ -197,8 +203,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
 
             // We take the content path from the VMR config and map it onto the cloned repo
-            var contentDir = _vmrInfo.ContentPath.Substring(sourcesPath.Length + 1);
-            contentDir = _fileSystem.PathCombine(repoPath, contentDir);
+            var contentDir = _fileSystem.PathCombine(repoPath, relativeClonePath.Replace('/', _fileSystem.DirectorySeparatorChar));
 
             result = await _processManager.Execute(
                 _processManager.GitExecutable,
@@ -206,7 +211,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 workingDir: contentDir,
                 cancellationToken: cancellationToken);
 
-            patches.Add(new VmrIngestionPatch(patchName, null));
+            patches.Add(new VmrIngestionPatch(patchName, destination));
         }
 
         if (!submoduleChanges.Any())
@@ -298,6 +303,11 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             args.Add("--directory");
             args.Add(patch.ApplicationPath);
+
+            if (!_fileSystem.DirectoryExists(patch.ApplicationPath))
+            {
+                _fileSystem.CreateDirectory(patch.ApplicationPath);
+            }
         }
 
         args.Add(patch.Path);
@@ -529,7 +539,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             return Array.Empty<string>();
         }
 
-        var mappingPatchesPath = _fileSystem.PathCombine(_vmrInfo.PatchesPath, mapping.Name);
+        var mappingPatchesPath = _fileSystem.PathCombine(
+            _vmrInfo.VmrPath,
+            _vmrInfo.PatchesPath.Replace('/', _fileSystem.DirectorySeparatorChar),
+            mapping.Name);
+
         if (!_fileSystem.DirectoryExists(mappingPatchesPath))
         {
             return Array.Empty<string>();
