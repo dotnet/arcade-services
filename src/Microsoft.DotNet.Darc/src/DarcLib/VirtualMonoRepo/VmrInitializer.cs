@@ -47,7 +47,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
-    private readonly FilePath _tmpPath;
+    private readonly LocalPath _tmpPath;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,

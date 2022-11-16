@@ -75,11 +75,11 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files that can be applied on the VMR</returns>
     public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        FilePath repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        FilePath destDir,
-        FilePath tmpPath,
+        LocalPath destDir,
+        LocalPath tmpPath,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
@@ -93,11 +93,11 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
-        FilePath repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        FilePath destDir,
-        FilePath tmpPath,
+        LocalPath destDir,
+        LocalPath tmpPath,
         UnixPath relativePath,
         CancellationToken cancellationToken)
     {
@@ -319,7 +319,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     public async Task RestoreFilesFromPatch(
         SourceMapping mapping,
-        FilePath clonePath,
+        LocalPath clonePath,
         string patch,
         CancellationToken cancellationToken)
     {
@@ -444,8 +444,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files with relatives path respective to the VMR</returns>
     private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
         SourceMapping mapping,
-        FilePath destDir,
-        FilePath tmpPath,
+        LocalPath destDir,
+        LocalPath tmpPath,
         UnixPath relativePath,
         SubmoduleChange change,
         CancellationToken cancellationToken)

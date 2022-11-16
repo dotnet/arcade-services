@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 [TestFixture]
-public class FilePathTests
+public class LocalPathTests
 {
     [Test]
     public void UnixStylePathsCombineWell()

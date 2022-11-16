@@ -33,7 +33,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     private readonly AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
-    private readonly FilePath _allVersionsFilePath;
+    private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
 

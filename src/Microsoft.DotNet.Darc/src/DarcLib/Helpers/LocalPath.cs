@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// The concatenation works thanks to overloading of the / operator:
 ///     var combinedPath = rootPath / "src" / "MyProject.csproj";
 /// </summary>
-public abstract class FilePath
+public abstract class LocalPath
 {
     private readonly char _separator;
 
@@ -21,11 +21,11 @@ public abstract class FilePath
 
     public int Length => Path.Length;
 
-    public FilePath(string rootPath, char separator) : this(rootPath, separator, true)
+    public LocalPath(string rootPath, char separator) : this(rootPath, separator, true)
     {
     }
 
-    protected FilePath(string path, char separator, bool normalizePath)
+    protected LocalPath(string path, char separator, bool normalizePath)
     {
         Path = normalizePath ? NormalizePath(path) : path;
         _separator = separator;
@@ -33,15 +33,15 @@ public abstract class FilePath
 
     public override string ToString() => Path;
 
-    public static FilePath operator /(FilePath left, FilePath right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
+    public static LocalPath operator /(LocalPath left, LocalPath right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
 
-    public static FilePath operator /(FilePath left, string right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
+    public static LocalPath operator /(LocalPath left, string right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
 
-    public static FilePath operator /(string left, FilePath right) => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
+    public static LocalPath operator /(string left, LocalPath right) => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
 
-    public static implicit operator string(FilePath p) => p.Path;
+    public static implicit operator string(LocalPath p) => p.Path;
 
-    protected abstract FilePath CreateMergedPath(string path);
+    protected abstract LocalPath CreateMergedPath(string path);
 
     protected abstract string NormalizePath(string s);
 
@@ -58,7 +58,7 @@ public abstract class FilePath
         };
     }
 
-    public override bool Equals(object? obj) => Path.Equals((obj as FilePath)?.Path ?? obj as string);
+    public override bool Equals(object? obj) => Path.Equals((obj as LocalPath)?.Path ?? obj as string);
 
     public override int GetHashCode() => Path.GetHashCode();
 }
@@ -66,7 +66,7 @@ public abstract class FilePath
 /// <summary>
 /// Smart path that defaults to using whatever is the current directory separator.
 /// </summary>
-public class NativePath : FilePath
+public class NativePath : LocalPath
 {
     public NativePath(string rootPath) : this(rootPath, true)
     {
@@ -76,7 +76,7 @@ public class NativePath : FilePath
     {
     }
 
-    protected override FilePath CreateMergedPath(string path) => new NativePath(path, false);
+    protected override LocalPath CreateMergedPath(string path) => new NativePath(path, false);
 
     protected override string NormalizePath(string s) =>
         System.IO.Path.DirectorySeparatorChar == '/'
@@ -87,7 +87,7 @@ public class NativePath : FilePath
 /// <summary>
 /// Smart path that uses the UNIX style (forward-slashes) for directory separation.
 /// </summary>
-public class UnixPath : FilePath
+public class UnixPath : LocalPath
 {
     public UnixPath(string rootPath) : this(rootPath, true)
     {
@@ -97,7 +97,7 @@ public class UnixPath : FilePath
     {
     }
 
-    protected override FilePath CreateMergedPath(string path) => new UnixPath(path, false);
+    protected override LocalPath CreateMergedPath(string path) => new UnixPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 }
@@ -105,7 +105,7 @@ public class UnixPath : FilePath
 /// <summary>
 /// Smart path that uses the Windows style (back-slashes) for directory separation.
 /// </summary>
-public class WindowsPath : FilePath
+public class WindowsPath : LocalPath
 {
     public WindowsPath(string rootPath) : this(rootPath, true)
     {
@@ -115,7 +115,7 @@ public class WindowsPath : FilePath
     {
     }
 
-    protected override FilePath CreateMergedPath(string path) => new WindowsPath(path, false);
+    protected override LocalPath CreateMergedPath(string path) => new WindowsPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('/', '\\');
 }

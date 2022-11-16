@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IRepositoryCloneManager
 {
-    Task<FilePath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+    Task<LocalPath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -52,7 +52,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         _logger = logger;
     }
 
-    public async Task<FilePath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken)
+    public async Task<LocalPath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

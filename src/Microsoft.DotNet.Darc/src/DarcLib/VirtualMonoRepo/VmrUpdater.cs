@@ -125,7 +125,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
 
-        FilePath clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        LocalPath clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -375,7 +375,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string fromRevision,
         string toRevision,
         string? targetVersion,
-        FilePath clonePath,
+        LocalPath clonePath,
         string commitMessage,
         Signature author,
         CancellationToken cancellationToken)
@@ -438,7 +438,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<IReadOnlyCollection<(SourceMapping Mapping, string Path)>> RestoreVmrPatchedFiles(
         SourceMapping mapping,
-        FilePath clonePath,
+        LocalPath clonePath,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
     {
@@ -503,7 +503,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// <param name="patches">Patches of currently synchronized changes</param>
     private async Task<IReadOnlyCollection<(SourceMapping Mapping, string Path)>> GetVmrPatchesToRestore(
         SourceMapping updatedMapping,
-        FilePath clonePath,
+        LocalPath clonePath,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
     {

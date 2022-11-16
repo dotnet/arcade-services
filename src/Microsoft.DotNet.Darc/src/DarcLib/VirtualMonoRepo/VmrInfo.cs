@@ -15,12 +15,12 @@ public interface IVmrInfo
     /// <summary>
     /// Path for temporary files (individual repo clones, created patches, etc.)
     /// </summary>
-    FilePath TmpPath { get; }
+    LocalPath TmpPath { get; }
 
     /// <summary>
     /// Path to the root of the VMR
     /// </summary>
-    FilePath VmrPath { get; }
+    LocalPath VmrPath { get; }
 
     /// <summary>
     /// Path within the VMR where VMR patches are stored.
@@ -39,12 +39,12 @@ public interface IVmrInfo
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
     /// </summary>
-    FilePath GetRepoSourcesPath(SourceMapping mapping);
+    LocalPath GetRepoSourcesPath(SourceMapping mapping);
 
     /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
-    FilePath GetSourceManifestPath();
+    LocalPath GetSourceManifestPath();
 }
 
 public class VmrInfo : IVmrInfo
@@ -62,15 +62,15 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
-    public FilePath VmrPath { get; }
+    public LocalPath VmrPath { get; }
 
-    public FilePath TmpPath { get; }
+    public LocalPath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
-    public VmrInfo(FilePath vmrPath, FilePath tmpPath)
+    public VmrInfo(LocalPath vmrPath, LocalPath tmpPath)
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;
@@ -80,9 +80,9 @@ public class VmrInfo : IVmrInfo
     {
     }
 
-    public FilePath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
+    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
 
-    public static FilePath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+    public static LocalPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
-    public FilePath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
+    public LocalPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

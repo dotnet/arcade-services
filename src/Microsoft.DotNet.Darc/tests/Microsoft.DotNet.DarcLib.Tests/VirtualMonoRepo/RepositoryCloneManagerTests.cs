@@ -28,8 +28,8 @@ public class RepositoryCloneManagerTests
 
     private RepositoryCloneManager _manager = null!;
 
-    private readonly FilePath _tmpDir;
-    private readonly FilePath _clonePath;
+    private readonly LocalPath _tmpDir;
+    private readonly LocalPath _clonePath;
 
     public RepositoryCloneManagerTests()
     {
