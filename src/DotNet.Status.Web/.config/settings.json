@@ -59,25 +59,25 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
@@ -121,6 +121,12 @@
         "Owner": "dotnet",
         "Name": "arcade",
         "Labels": [ "Build Failed", "First Responder" ]
+      },
+      {
+        "Id": "dotnet-arcade-frops",
+        "Owner": "dotnet",
+        "Name": "arcade",
+        "Labels": [ "Build Failed", "FROps" ]
       },
       {
         "Id": "dotnet-aspnetcore-infra",
