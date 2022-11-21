@@ -9,15 +9,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class RemoteRepoBase : ClonableRepoBase
+public class RemoteRepoBase : GitRepoCloner
 {
-    protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache)
+    protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache, ILogger logger, string accessToken)
+        : base(accessToken, logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;

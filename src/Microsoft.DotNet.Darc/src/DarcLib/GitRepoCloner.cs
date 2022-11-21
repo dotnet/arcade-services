@@ -1,13 +1,32 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using Microsoft.DotNet.DarcLib.Helpers;
 using System.IO;
 using System.Linq;
 using System;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
-public class ClonableRepoBase
+public class GitRepoCloner : IGitRepoCloner
 {
+    private readonly ILogger _logger;
+    private readonly string _personalAccessToken;
+
+    public GitRepoCloner(string personalAccessToken, ILogger logger)
+    {
+        _logger = logger;
+        _personalAccessToken = personalAccessToken;
+    }
+
+    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory = null)
+    {
+        Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
+    }
+
     /// <summary>
     ///     Clone a remote git repo.
     /// </summary>
@@ -17,7 +36,7 @@ public class ClonableRepoBase
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
     /// <returns></returns>
-    protected void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, ILogger logger, string pat, string gitDirectory)
+    protected static void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, ILogger logger, string pat, string? gitDirectory)
     {
         string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
         LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
@@ -62,6 +81,10 @@ public class ClonableRepoBase
             {
                 Directory.Move(repoPath, gitDirectory);
                 File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
+            } 
+            else
+            {
+                gitDirectory = repoPath;
             }
 
             if (checkoutSubmodules)
@@ -105,7 +128,7 @@ public class ClonableRepoBase
 
             // The worktree is stored in the .gitdir/config file, so we have to change it
             // to get it to check out to the correct place.
-            LibGit2Sharp.ConfigurationEntry<string> oldWorkTree = null;
+            LibGit2Sharp.ConfigurationEntry<string>? oldWorkTree = null;
             using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
             {
                 oldWorkTree = subRepo.Config.Get<string>("core.worktree");

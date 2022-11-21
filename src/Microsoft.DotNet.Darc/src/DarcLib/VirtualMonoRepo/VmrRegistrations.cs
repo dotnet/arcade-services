@@ -58,7 +58,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IClonableRepoFactory, ClonableRepoFactory>();
+        services.TryAddSingleton<IGitRepoClonerFactory, GitRepoClonerFactory>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
