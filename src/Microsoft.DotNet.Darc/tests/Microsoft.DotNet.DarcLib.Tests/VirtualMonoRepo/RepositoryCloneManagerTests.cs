@@ -23,9 +23,8 @@ public class RepositoryCloneManagerTests
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
-    private readonly Mock<IRemoteFactory> _remoteFactory = new();
-    private readonly Mock<IRemote> _remote = new();
-
+    private readonly Mock<IGitRepoClonerFactory> _remoteFactory = new();
+    private readonly Mock<IGitRepoCloner> _remote = new();
     private RepositoryCloneManager _manager = null!;
 
     private readonly LocalPath _tmpDir;
@@ -60,7 +59,7 @@ public class RepositoryCloneManagerTests
 
         _remote.Reset();
         _remoteFactory.Reset();
-        _remoteFactory.SetReturnsDefault(Task.FromResult(_remote.Object));
+        _remoteFactory.SetReturnsDefault(_remote.Object);
 
         _manager = new RepositoryCloneManager(
             _vmrInfo.Object,
@@ -81,7 +80,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetRemoteAsync(RepoUri, It.IsAny<ILogger>()), Times.Once);
+        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Once);
         _remote.Verify(x => x.Clone(RepoUri, Ref, _clonePath, false, null), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, "main", false), Times.Exactly(2));
     }
@@ -92,13 +91,13 @@ public class RepositoryCloneManagerTests
         _fileSystem
             .Setup(x => x.DirectoryExists(_clonePath))
             .Returns(true);
-        
+
         var path = await _manager.PrepareClone(RepoUri, Ref, default);
         path.Should().Be(_clonePath);
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetRemoteAsync(RepoUri, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, Ref, _clonePath, false, null), Times.Never);
         _processManager.Verify(x => x.ExecuteGit(_clonePath, "fetch", "--all"), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, Ref, false), Times.Once);
