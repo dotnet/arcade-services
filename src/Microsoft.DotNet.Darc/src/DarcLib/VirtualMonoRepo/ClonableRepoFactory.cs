@@ -37,7 +37,7 @@ public class ClonableRepoFactory : IClonableRepoFactory
         }
         else
         {
-            throw new NotImplementedException($"Unknown repo url type {repoUrl}");
+            throw new NotImplementedException($"Unsupported repository remote {repoUrl}");
         }
         
 
