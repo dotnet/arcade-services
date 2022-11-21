@@ -29,6 +29,7 @@ steps:
   condition: succeededOrFailed()
 
 - powershell: |
+    # Prepare an empty VMR
     $vmrDir = "$(Agent.TempDirectory)\vmr"
     New-Item -Path "$vmrDir\src" -ItemType directory
     Copy-Item -Path "$(Build.SourcesDirectory)\src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.Darc.Tests\inputs\source-mappings.json" -Destination "$vmrDir\src"
@@ -37,10 +38,13 @@ steps:
     git -C "$vmrDir" init --initial-branch main
     git -C "$vmrDir" add -A
     git -C "$vmrDir" commit -m "Initial commit"
+
+    # Get SHAs of last few commits to sync between them
     $response = Invoke-RestMethod -Uri "https://api.github.com/repos/dotnet/command-line-api/commits?per_page=5"
     $firstSha = $response[0].sha
     $secondSha = $response[4].sha
 
+    # Initialize a couple of repos in the VMR
     $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr initialize `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
@@ -50,6 +54,7 @@ steps:
     --verbose                      `
     command-line-api:$firstSha
 
+    # Update the repos in the VMR with some new commits
     $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr update `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
