@@ -30,11 +30,11 @@ public class GitRepoClonerFactory : IGitRepoClonerFactory
         {
             return new GitRepoCloner(string.Empty, logger);
         } 
-        else if(repoUri.Host == "github.com")
+        if (repoUri.Host == "github.com")
         {
             return new GitRepoCloner(_vmrRemoteConfig.GitHubToken, logger);
         }
-        else if(repoUri.Host == "dev.azure.com")
+        if (repoUri.Host == "dev.azure.com")
         {
             return new GitRepoCloner(_vmrRemoteConfig.AzureDevOpsToken, logger);
         }

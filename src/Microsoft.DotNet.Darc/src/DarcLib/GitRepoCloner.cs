@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System;
 using Microsoft.Extensions.Logging;
+using LibGit2Sharp;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -22,11 +23,6 @@ public class GitRepoCloner : IGitRepoCloner
         _personalAccessToken = personalAccessToken;
     }
 
-    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory = null)
-    {
-        Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
-    }
-
     /// <summary>
     ///     Clone a remote git repo.
     /// </summary>
@@ -36,45 +32,45 @@ public class GitRepoCloner : IGitRepoCloner
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
     /// <returns></returns>
-    protected static void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, ILogger logger, string pat, string? gitDirectory)
+    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
     {
         string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
-        LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
+        CloneOptions cloneOptions = new()
         {
             Checkout = false,
             CredentialsProvider = (url, user, cred) =>
-                new LibGit2Sharp.UsernamePasswordCredentials
+                new UsernamePasswordCredentials
                 {
                     // The PAT is actually the only thing that matters here, the username
                     // will be ignored.
                     Username = dotnetMaestro,
-                    Password = pat
+                    Password = _personalAccessToken
                 },
         };
-        logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
+        _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
         try
         {
-            logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
-            string repoPath = LibGit2Sharp.Repository.Clone(
+            _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
+            string repoPath = Repository.Clone(
                 repoUri,
                 targetDirectory,
                 cloneOptions);
 
-            LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+            CheckoutOptions checkoutOptions = new()
             {
-                CheckoutModifiers = LibGit2Sharp.CheckoutModifiers.Force,
+                CheckoutModifiers = CheckoutModifiers.Force,
             };
 
-            logger.LogDebug($"Reading local repo from {repoPath}");
-            using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+            _logger.LogDebug($"Reading local repo from {repoPath}");
+            using (Repository localRepo = new(repoPath))
             {
                 if (commit == null)
                 {
                     commit = localRepo.Head.Reference.TargetIdentifier;
-                    logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
+                    _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                 }
-                logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, logger);
+                _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
             }
             // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
             if (gitDirectory != null)
@@ -89,8 +85,8 @@ public class GitRepoCloner : IGitRepoCloner
 
             if (checkoutSubmodules)
             {
-                using var localRepo = new LibGit2Sharp.Repository(targetDirectory);
-                CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, logger);
+                using var localRepo = new Repository(targetDirectory);
+                CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
             }
         }
         catch (Exception exc)
@@ -99,12 +95,12 @@ public class GitRepoCloner : IGitRepoCloner
         }
     }
 
-    private static void CheckoutSubmodules(LibGit2Sharp.Repository repo, LibGit2Sharp.CloneOptions submoduleCloneOptions, string gitDirParentPath, ILogger log)
+    private static void CheckoutSubmodules(Repository repo, CloneOptions submoduleCloneOptions, string gitDirParentPath, ILogger log)
     {
-        foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+        foreach (Submodule sub in repo.Submodules)
         {
             log.LogDebug($"Updating submodule {sub.Name} at {sub.Path} for {repo.Info.WorkingDirectory}.  GitDirParent: {gitDirParentPath}");
-            repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
+            repo.Submodules.Update(sub.Name, new SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
 
             string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
             string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
@@ -119,7 +115,7 @@ public class GitRepoCloner : IGitRepoCloner
 
             // File.WriteAllText gets access denied for some reason
             using (FileStream s = File.OpenWrite(subRepoGitFilePath))
-            using (StreamWriter w = new StreamWriter(s))
+            using (StreamWriter w = new(s))
             {
                 w.Write($"gitdir: {relocatedGitDirPath}");
                 w.Flush();
@@ -128,8 +124,8 @@ public class GitRepoCloner : IGitRepoCloner
 
             // The worktree is stored in the .gitdir/config file, so we have to change it
             // to get it to check out to the correct place.
-            LibGit2Sharp.ConfigurationEntry<string>? oldWorkTree = null;
-            using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+            ConfigurationEntry<string>? oldWorkTree = null;
+            using (Repository subRepo = new(subRepoPath))
             {
                 oldWorkTree = subRepo.Config.Get<string>("core.worktree");
                 if (oldWorkTree != null)
@@ -143,10 +139,10 @@ public class GitRepoCloner : IGitRepoCloner
                 }
             }
 
-            using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+            using (Repository subRepo = new(subRepoPath))
             {
                 log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
-                subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
+                subRepo.Reset(ResetMode.Hard, subRepo.Commits.QueryBy(new CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
 
                 // Now we reset the worktree back so that when we can initialize a Repository
                 // from it, instead of having to figure out which hash of the repo was most recently checked out.
