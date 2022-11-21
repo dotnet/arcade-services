@@ -31,7 +31,7 @@ public class ClonableRepoFactory : IClonableRepoFactory
         {
             gitClient = new ClonableRepo(_vmrRemoteConfig.GitHubToken, logger);
         }
-        else if(repoUri.Host == "dev.azure.com")
+        else if (repoUri.Host == "dev.azure.com" || repoUri.Host == "visualstudio.com")
         {
             gitClient = new ClonableRepo(_vmrRemoteConfig.AzureDevOpsToken, logger);
         }
