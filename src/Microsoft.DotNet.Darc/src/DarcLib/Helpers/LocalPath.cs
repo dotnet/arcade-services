@@ -7,11 +7,11 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 /// <summary>
 /// Smart file path wrapper that allows easy combining and makes sure separators conform to the desired way.
-/// They support concatenation where the left-most (root) path decides the shape of the outcome.
+/// They support concatenation where the left-most path decides the shape of the outcome.
 /// (e.g. "C:\foo" / "src/something" returns "C:\foo\src\something")
 /// 
 /// The concatenation works thanks to overloading of the / operator:
-///     var combinedPath = rootPath / "src" / "MyProject.csproj";
+///     var combinedPath = someLocalPath / "src" / "MyProject.csproj";
 /// </summary>
 public abstract class LocalPath
 {
@@ -21,7 +21,7 @@ public abstract class LocalPath
 
     public int Length => Path.Length;
 
-    public LocalPath(string rootPath, char separator) : this(rootPath, separator, true)
+    protected LocalPath(string path, char separator) : this(path, separator, true)
     {
     }
 
@@ -33,11 +33,14 @@ public abstract class LocalPath
 
     public override string ToString() => Path;
 
-    public static LocalPath operator /(LocalPath left, LocalPath right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
+    public static LocalPath operator /(LocalPath left, LocalPath right)
+        => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right.Path)));
 
-    public static LocalPath operator /(LocalPath left, string right) => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
+    public static LocalPath operator /(LocalPath left, string right)
+        => left.CreateMergedPath(left.Combine(left.Path, left.NormalizePath(right)));
 
-    public static LocalPath operator /(string left, LocalPath right) => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
+    public static LocalPath operator /(string left, LocalPath right)
+        => right.CreateMergedPath(right.Combine(right.NormalizePath(left), right.Path));
 
     public static implicit operator string(LocalPath p) => p.Path;
 
@@ -68,20 +71,18 @@ public abstract class LocalPath
 /// </summary>
 public class NativePath : LocalPath
 {
-    public NativePath(string rootPath) : this(rootPath, true)
+    public NativePath(string path) : this(path, true)
     {
     }
 
-    private NativePath(string rootPath, bool normalize) : base(rootPath, System.IO.Path.DirectorySeparatorChar, normalize)
+    private NativePath(string path, bool normalize) : base(path, System.IO.Path.DirectorySeparatorChar, normalize)
     {
     }
 
     protected override LocalPath CreateMergedPath(string path) => new NativePath(path, false);
 
-    protected override string NormalizePath(string s) =>
-        System.IO.Path.DirectorySeparatorChar == '/'
-            ? s.Replace('\\', '/')
-            : s.Replace('/', '\\');
+    protected override string NormalizePath(string s)
+        => System.IO.Path.DirectorySeparatorChar == '/' ? s.Replace('\\', '/') : s.Replace('/', '\\');
 }
 
 /// <summary>
@@ -89,11 +90,11 @@ public class NativePath : LocalPath
 /// </summary>
 public class UnixPath : LocalPath
 {
-    public UnixPath(string rootPath) : this(rootPath, true)
+    public UnixPath(string path) : this(path, true)
     {
     }
 
-    private UnixPath(string rootPath, bool normalize) : base(rootPath, '/', normalize)
+    private UnixPath(string path, bool normalize) : base(path, '/', normalize)
     {
     }
 
@@ -107,11 +108,11 @@ public class UnixPath : LocalPath
 /// </summary>
 public class WindowsPath : LocalPath
 {
-    public WindowsPath(string rootPath) : this(rootPath, true)
+    public WindowsPath(string path) : this(path, true)
     {
     }
 
-    private WindowsPath(string rootPath, bool normalize) : base(rootPath, '\\', normalize)
+    private WindowsPath(string path, bool normalize) : base(path, '\\', normalize)
     {
     }
 
