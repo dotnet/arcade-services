@@ -27,7 +27,6 @@ public class RepositoryCloneManagerTests
     private readonly Mock<IFileSystem> _fileSystem = new();
     private readonly Mock<IClonableRepoFactory> _remoteFactory = new();
     private readonly Mock<IClonableGitRepo> _remote = new();
-    
     private RepositoryCloneManager _manager = null!;
 
     [SetUp]
