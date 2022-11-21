@@ -7,11 +7,9 @@ using System.IO;
 using CommandLine;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -25,23 +23,19 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
     public IServiceCollection RegisterServices()
     {
+        var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
+        var localDarcSettings = LocalSettings.LoadSettingsFile();
+
         var services = new ServiceCollection();
 
         services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(this));
-        services.AddVmrManagers(GitLocation, configure: sp =>
+
+        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, configure: sp =>
         {
-            var processManager = sp.GetRequiredService<IProcessManager>();
-            var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
+            var gitHubToken = GitHubPat ?? localDarcSettings.GitHubToken;
+            var azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings.AzureDevOpsToken;
 
-            var vmrPath = VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory()) ?? throw new ArgumentException("VMR path not supplied!");
-            var tmpPath = TmpPath ?? LocalSettings.GetDarcSettings(this, logger).TemporaryRepositoryRoot;
-
-            if (tmpPath != null)
-            {
-                tmpPath = Path.GetFullPath(tmpPath);
-            }
-
-            return new VmrInfo(Path.GetFullPath(vmrPath), tmpPath);
+            return new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken);
         });
 
         return services;

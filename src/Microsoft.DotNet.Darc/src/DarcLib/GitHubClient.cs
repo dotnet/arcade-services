@@ -53,7 +53,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache)
+        : base(gitExecutable, temporaryRepositoryPath, cache, logger, accessToken)
     {
         _personalAccessToken = accessToken;
         _logger = logger;
@@ -1203,19 +1203,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             return GitDiff.UnknownDiff();
         }
-    }
-
-    /// <summary>
-    ///     Clone a remote repository.
-    /// </summary>
-    /// <param name="repoUri">Repository uri to clone</param>
-    /// <param name="commit">Commit, branch, or tag to checkout</param>
-    /// <param name="targetDirectory">Directory to clone into</param>
-    /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
-    /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
-    {
-        Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
     }
 
     /// <summary>
