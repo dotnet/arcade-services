@@ -29,7 +29,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IClonableRepoFactory _remoteFactory;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
@@ -39,7 +39,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         ILocalGitRepo localGitRepo,
-        IRemoteFactory remoteFactory,
+        IClonableRepoFactory remoteFactory,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
@@ -69,7 +69,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", repoUri, clonePath);
-            var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
+            var remoteRepo = _remoteFactory.GetRemote(repoUri, _logger);
             remoteRepo.Clone(repoUri, checkoutRef, clonePath, checkoutSubmodules: false, null);
             cancellationToken.ThrowIfCancellationRequested();
         }

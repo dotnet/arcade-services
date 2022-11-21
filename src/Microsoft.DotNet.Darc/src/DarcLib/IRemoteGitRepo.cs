@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface IRemoteGitRepo : IGitRepo
+    public interface IRemoteGitRepo : IClonableGitRepo, IGitRepo
     {
         /// <summary>
         /// Specifies whether functions with a retry field should employ retries
@@ -161,7 +161,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetDirectory">Directory to clone to</param>
         /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
         /// <param name="gitDirectory">Location for .git directory, or null for default</param>
-        void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null);
+        //void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null);
 
         /// <summary>
         ///     Delete a pull request's branch if it still exists
