@@ -43,9 +43,13 @@ steps:
     $response = Invoke-RestMethod -Uri "https://api.github.com/repos/dotnet/command-line-api/commits?per_page=5"
     $firstSha = $response[0].sha
     $secondSha = $response[4].sha
+    $darc = "$(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe"
+
+    # Prepare darc settings
+    $darc authenticate --clear
 
     # Initialize a couple of repos in the VMR
-    $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr initialize `
+    $darc vmr initialize `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
     --azdev-pat "N/A"              `
@@ -55,7 +59,7 @@ steps:
     command-line-api:$firstSha
 
     # Update the repos in the VMR with some new commits
-    $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr update `
+    $darc vmr update `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
     --azdev-pat "N/A"              `
