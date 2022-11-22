@@ -46,10 +46,10 @@ steps:
     $darc = "$(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe"
 
     # Prepare darc settings
-    $darc authenticate --clear
+    "$darc" authenticate --clear
 
     # Initialize a couple of repos in the VMR
-    $darc vmr initialize `
+    "$darc" vmr initialize `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
     --azdev-pat "N/A"              `
@@ -59,7 +59,7 @@ steps:
     command-line-api:$firstSha
 
     # Update the repos in the VMR with some new commits
-    $darc vmr update `
+    "$darc" vmr update `
     --vmr "$vmrDir"                `
     --tmp "$(Agent.TempDirectory)" `
     --azdev-pat "N/A"              `
