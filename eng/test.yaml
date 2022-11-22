@@ -42,7 +42,7 @@ steps:
     # Get SHAs of last few commits to sync between them
     $response = Invoke-RestMethod -Uri "https://api.github.com/repos/dotnet/command-line-api/commits?per_page=5"
     $firstSha = $response[0].sha
-    $secondSha = $response[4].sha
+    $secondSha = $response[-1].sha
 
     # Prepare darc settings
     $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe authenticate --clear
