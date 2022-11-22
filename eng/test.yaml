@@ -28,6 +28,47 @@ steps:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
+- powershell: |
+    # Prepare an empty VMR
+    $vmrDir = "$(Agent.TempDirectory)\vmr"
+    New-Item -Path "$vmrDir\src" -ItemType directory
+    Copy-Item -Path "$(Build.SourcesDirectory)\src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.Darc.Tests\inputs\source-mappings.json" -Destination "$vmrDir\src"
+    git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com"
+    git config --global user.name "dotnet-maestro[bot]"
+    git -C "$vmrDir" init --initial-branch main
+    git -C "$vmrDir" add -A
+    git -C "$vmrDir" commit -m "Initial commit"
+
+    # Get SHAs of last few commits to sync between them
+    $response = Invoke-RestMethod -Uri "https://api.github.com/repos/dotnet/command-line-api/commits?per_page=5"
+    $firstSha = $response[0].sha
+    $secondSha = $response[-1].sha
+
+    # Prepare darc settings
+    $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe authenticate --clear
+
+    # Initialize a couple of repos in the VMR
+    $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr initialize `
+    --vmr "$vmrDir"                `
+    --tmp "$(Agent.TempDirectory)" `
+    --azdev-pat "N/A"              `
+    --github-pat "N/A"             `
+    --recursive                    `
+    --verbose                      `
+    command-line-api:$firstSha
+
+    # Update the repos in the VMR with some new commits
+    $(Build.SourcesDirectory)\artifacts\bin\Microsoft.DotNet.Darc\Debug\net6.0\publish\Microsoft.DotNet.Darc.exe vmr update `
+    --vmr "$vmrDir"                `
+    --tmp "$(Agent.TempDirectory)" `
+    --azdev-pat "N/A"              `
+    --github-pat "N/A"             `
+    --recursive                    `
+    --verbose                      `
+    command-line-api:$secondSha
+  displayName: Test VMR tooling
+  condition: and(succeeded(), in(variables['Build.Reason'], 'PullRequest'), eq(variables['_BuildConfig'], 'Debug'))
+
 - task: Powershell@2
   inputs: 
     targetType: filePath
