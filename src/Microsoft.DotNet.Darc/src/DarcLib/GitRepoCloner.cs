@@ -15,9 +15,9 @@ namespace Microsoft.DotNet.DarcLib;
 public class GitRepoCloner : IGitRepoCloner
 {
     private readonly ILogger _logger;
-    private readonly string _personalAccessToken;
+    private readonly string? _personalAccessToken;
 
-    public GitRepoCloner(string personalAccessToken, ILogger logger)
+    public GitRepoCloner(string? personalAccessToken, ILogger logger)
     {
         _logger = logger;
         _personalAccessToken = personalAccessToken;

@@ -25,17 +25,23 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
         var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
         LocalSettings localDarcSettings = null;
 
-        try
-        {
-            localDarcSettings = LocalSettings.LoadSettingsFile(this);
-        }
-        catch (DarcException)
-        {
-            // we want to allow null values for GitHubToken and AzureDevOpsToken 
-        }
+        var gitHubToken = GitHubPat;
+        var azureDevOpsToken = AzureDevOpsPat;
 
-        var gitHubToken = GitHubPat ?? localDarcSettings?.GitHubToken;
-        var azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings?.AzureDevOpsToken;
+        if (gitHubToken == null || azureDevOpsToken == null)
+        {
+            try
+            {
+                localDarcSettings = LocalSettings.LoadSettingsFile(this);
+            }
+            catch (DarcException)
+            {
+                // The VMR synchronization often works with public repositories where tokens are not required
+            }
+
+            gitHubToken = localDarcSettings?.GitHubToken;
+            azureDevOpsToken = localDarcSettings?.AzureDevOpsToken;
+        }
 
         var services = new ServiceCollection();
 
