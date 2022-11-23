@@ -30,8 +30,8 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
         try
         {
             var localDarcSettings = LocalSettings.LoadSettingsFile(this);
-            gitHubToken = GitHubPat ?? (localDarcSettings?.GitHubToken);
-            azureDevOpsToken = AzureDevOpsPat ?? (localDarcSettings?.AzureDevOpsToken);
+            gitHubToken = GitHubPat ?? localDarcSettings?.GitHubToken;
+            azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings?.AzureDevOpsToken;
         }
         catch (DarcException)
         {
