@@ -24,7 +24,19 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
     public IServiceCollection RegisterServices()
     {
         var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
-        var localDarcSettings = LocalSettings.LoadSettingsFile();
+        string gitHubToken = null;
+        string azureDevOpsToken = null;
+
+        try
+        {
+            var localDarcSettings = LocalSettings.LoadSettingsFile(this);
+            gitHubToken = GitHubPat ?? (localDarcSettings?.GitHubToken);
+            azureDevOpsToken = AzureDevOpsPat ?? (localDarcSettings?.AzureDevOpsToken);
+        }
+        catch (DarcException)
+        {
+
+        }
 
         var services = new ServiceCollection();
 
@@ -32,9 +44,6 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
         services.AddVmrManagers(GitLocation, VmrPath, tmpPath, configure: sp =>
         {
-            var gitHubToken = GitHubPat ?? localDarcSettings.GitHubToken;
-            var azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings.AzureDevOpsToken;
-
             return new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken);
         });
 
