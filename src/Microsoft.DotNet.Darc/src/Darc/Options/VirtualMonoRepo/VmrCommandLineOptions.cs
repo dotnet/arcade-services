@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using CommandLine;
 using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,17 +23,29 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
     public IServiceCollection RegisterServices()
     {
         var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
-        var localDarcSettings = LocalSettings.LoadSettingsFile(this);
+        LocalSettings localDarcSettings = null;
+
+        var gitHubToken = GitHubPat;
+        var azureDevOpsToken = AzureDevOpsPat;
+
+        if (gitHubToken == null || azureDevOpsToken == null)
+        {
+            try
+            {
+                localDarcSettings = LocalSettings.LoadSettingsFile(this);
+            }
+            catch (DarcException)
+            {
+                // The VMR synchronization often works with public repositories where tokens are not required
+            }
+
+            gitHubToken = localDarcSettings?.GitHubToken;
+            azureDevOpsToken = localDarcSettings?.AzureDevOpsToken;
+        }
 
         var services = new ServiceCollection();
 
-        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, configure: sp =>
-        {
-            var gitHubToken = GitHubPat ?? localDarcSettings.GitHubToken;
-            var azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings.AzureDevOpsToken;
-
-            return new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken);
-        });
+        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
 
         return services;
     }
