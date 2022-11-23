@@ -13,7 +13,7 @@ namespace RolloutScorer;
 
 public class ScoreCommand : Command
 {
-    private RolloutScorer _rolloutScorer = new RolloutScorer();
+    private readonly RolloutScorer _rolloutScorer = new();
     private bool _showHelp;
 
     public ScoreCommand() : base("score", "Scores the specified rollout")
@@ -91,10 +91,10 @@ public class ScoreCommand : Command
         }
 
         // Get the AzDO & GitHub PATs from key vault
-        AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
+        AzureServiceTokenProvider tokenProvider = new();
         SecretBundle githubPat;
         SecretBundle storageAccountConnectionString;
-        using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
+        using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
         {
             Console.WriteLine("Fetching PATs from key vault.");
             _rolloutScorer.SetupHttpClient((await kv.GetSecretAsync(_rolloutScorer.AzdoConfig.KeyVaultUri, _rolloutScorer.AzdoConfig.PatSecretName)).Value);
@@ -174,10 +174,10 @@ public class UploadCommand : Command
         }
 
         // Get the GitHub PAT and storage account connection string from key vault
-        AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
+        AzureServiceTokenProvider tokenProvider = new();
         SecretBundle githubPat;
         SecretBundle storageAccountConnectionString;
-        using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
+        using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
         {
             Console.WriteLine("Fetching PAT and connection string from key vault.");
             githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);

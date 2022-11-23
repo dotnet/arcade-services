@@ -20,7 +20,7 @@ public static class RolloutScorerFunction
     [FunctionName("RolloutScorerFunction")]
     public static async Task Run([TimerTrigger("0 0 0 * * *")]TimerInfo myTimer, ILogger log)
     {
-        AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
+        AzureServiceTokenProvider tokenProvider = new();
 
         string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
         log.LogInformation($"INFO: Deployment Environment: {deploymentEnvironment}");
