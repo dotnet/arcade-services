@@ -26,26 +26,25 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
         var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
         string gitHubToken = null;
         string azureDevOpsToken = null;
+        LocalSettings localDarcSettings = null;
 
         try
         {
-            var localDarcSettings = LocalSettings.LoadSettingsFile(this);
-            gitHubToken = GitHubPat ?? (localDarcSettings?.GitHubToken);
-            azureDevOpsToken = AzureDevOpsPat ?? (localDarcSettings?.AzureDevOpsToken);
+            localDarcSettings = LocalSettings.LoadSettingsFile(this);
         }
         catch (DarcException)
         {
-
+            // we want to allow null values for GitHubToken and AzureDevOpsToken 
         }
+
+        gitHubToken = GitHubPat ?? localDarcSettings?.GitHubToken;
+        azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings?.AzureDevOpsToken;
 
         var services = new ServiceCollection();
 
         services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(this));
 
-        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, configure: sp =>
-        {
-            return new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken);
-        });
+        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
 
         return services;
     }
