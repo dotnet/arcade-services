@@ -2,10 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 
@@ -36,7 +33,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     private readonly AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
-    private readonly string _allVersionsFilePath;
+    private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
 
@@ -49,7 +46,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
+        _allVersionsFilePath = vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
         _sourceManifest = sourceManifest;
         _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
@@ -104,5 +101,5 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
     }
 
-    private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(_vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, $"{mapping.Name}.props");
+    private string GetGitInfoFilePath(SourceMapping mapping) => _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{mapping.Name}.props";
 }

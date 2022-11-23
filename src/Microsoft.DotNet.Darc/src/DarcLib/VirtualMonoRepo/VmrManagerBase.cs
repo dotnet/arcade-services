@@ -65,10 +65,7 @@ public abstract class VmrManagerBase : IVmrManager
         SourceMapping mapping,
         CancellationToken cancellationToken)
     {
-        var versionDetailsPath = Path.Combine(
-            _vmrInfo.GetRepoSourcesPath(mapping),
-            VersionFiles.VersionDetailsXml.Replace('/', Path.DirectorySeparatorChar));
-
+        var versionDetailsPath = _vmrInfo.GetRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml;
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
 
         var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent, true)

@@ -9,7 +9,6 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -24,8 +23,6 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
     public IServiceCollection RegisterServices()
     {
         var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
-        string gitHubToken = null;
-        string azureDevOpsToken = null;
         LocalSettings localDarcSettings = null;
 
         try
@@ -37,12 +34,10 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
             // we want to allow null values for GitHubToken and AzureDevOpsToken 
         }
 
-        gitHubToken = GitHubPat ?? localDarcSettings?.GitHubToken;
-        azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings?.AzureDevOpsToken;
+        var gitHubToken = GitHubPat ?? localDarcSettings?.GitHubToken;
+        var azureDevOpsToken = AzureDevOpsPat ?? localDarcSettings?.AzureDevOpsToken;
 
         var services = new ServiceCollection();
-
-        services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(this));
 
         services.AddVmrManagers(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
 
