@@ -20,7 +20,7 @@ public static class RolloutScorerFunction
     [FunctionName("RolloutScorerFunction")]
     public static async Task Run([TimerTrigger("0 0 0 * * *")]TimerInfo myTimer, ILogger log)
     {
-        AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
+        AzureServiceTokenProvider tokenProvider = new();
 
         string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
         log.LogInformation($"INFO: Deployment Environment: {deploymentEnvironment}");
@@ -33,7 +33,7 @@ public static class RolloutScorerFunction
 
         log.LogInformation("INFO: Getting cloud tables...");
         CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey.Value);
-        CloudTable deploymentsTable = new CloudTable(new Uri(deploymentTableSasUriBundle.Value));
+        CloudTable deploymentsTable = new(new Uri(deploymentTableSasUriBundle.Value));
 
         List<ScorecardEntity> scorecardEntries = await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
         scorecardEntries.Sort((x, y) => x.Date.CompareTo(y.Date));
@@ -51,15 +51,17 @@ public static class RolloutScorerFunction
 
         if (relevantDeployments.Count() > 0)
         {
-            log.LogInformation("INFO: Checking to see if the most recent deployment occurred more than two days ago...");
+            log.LogInformation($"INFO: Checking to see if the most recent deployment occurred more than {ScoringBufferInDays} days ago...");
             // We have only want to score if the buffer period has elapsed since the last deployment
-            if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays))
+            // Alternatively, if too much time has elapsed since that deployment started, it means there's the BAD BUG and we should just assume this rollout completed
+            if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays)
+                || ((relevantDeployments.Last().Started ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays + 1) && relevantDeployments.Last().Ended is null))
             {
                 var scorecards = new List<Scorecard>();
 
                 log.LogInformation("INFO: Rollouts will be scored. Fetching GitHub PAT...");
                 SecretBundle githubPat;
-                using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
+                using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                 {
                     githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
                 }
@@ -67,8 +69,17 @@ public static class RolloutScorerFunction
                 // We'll score the deployments by service
                 foreach (var deploymentGroup in relevantDeployments.GroupBy(d => d.Service))
                 {
+                    foreach (var deployment in deploymentGroup)
+                    {
+                        if (deployment.Ended is null)
+                        {
+                            deployment.Ended = DateTimeOffset.UtcNow;
+                            await deploymentsTable.ExecuteAsync(TableOperation.Replace(deployment));
+                        }
+                    }
+
                     log.LogInformation($"INFO: Scoring {deploymentGroup?.Count() ?? -1} rollouts for repo '{deploymentGroup.Key}'");
-                    RolloutScorer.RolloutScorer rolloutScorer = new RolloutScorer.RolloutScorer
+                    RolloutScorer.RolloutScorer rolloutScorer = new()
                     {
                         Repo = deploymentGroup.Key,
                         RolloutStartDate = deploymentGroup.First().Started.GetValueOrDefault().Date,
@@ -85,7 +96,7 @@ public static class RolloutScorerFunction
                         .Find(a => a.Name == rolloutScorer.RepoConfig.AzdoInstance);
 
                     log.LogInformation($"INFO: Fetching AzDO PAT from KeyVault...");
-                    using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
+                    using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                     {
                         rolloutScorer.SetupHttpClient(
                             (await kv.GetSecretAsync(rolloutScorer.AzdoConfig.KeyVaultUri, rolloutScorer.AzdoConfig.PatSecretName)).Value);
