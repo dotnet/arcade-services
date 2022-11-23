@@ -64,7 +64,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
@@ -73,7 +72,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
-        IRemoteFactory remoteFactory,
         IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
@@ -88,7 +86,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger = logger;
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _remoteFactory = remoteFactory;
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _readmeComponentListGenerator = readmeComponentListGenerator;
@@ -116,11 +113,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         var currentSha = GetCurrentVersion(mapping);
-
-        if (targetRevision is null || targetRevision == HEAD && !await HasRemoteUpdates(mapping, currentSha))
-        {
-            throw new EmptySyncException($"No new remote changes detected for {mapping.Name}");
-        }
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
             mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
@@ -544,16 +536,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return patchesToRestore
             .DistinctBy(p => p.Path) // Make sure we don't restore the same patch twice
             .ToArray();
-    }
-
-    /// <summary>
-    /// Checks remotely if there are any newer commits (whether it even makes sense to clone).
-    /// </summary>
-    private async Task<bool> HasRemoteUpdates(SourceMapping mapping, string currentSha)
-    {
-        var remoteRepo = await _remoteFactory.GetRemoteAsync(mapping.DefaultRemote, _logger);
-        var lastCommit = await remoteRepo.GetLatestCommitAsync(mapping.DefaultRemote, mapping.DefaultRef);
-        return !lastCommit.Equals(currentSha, StringComparison.InvariantCultureIgnoreCase);
     }
 
     private string GetCurrentVersion(SourceMapping mapping)
