@@ -21,8 +21,8 @@ public static class VmrRegistrations
         string gitLocation,
         string vmrPath,
         string tmpPath,
-        string gitHubToken,
-        string azureDevOpsToken)
+        string? gitHubToken,
+        string? azureDevOpsToken)
     {
         RegisterManagers(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
