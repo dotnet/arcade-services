@@ -4,8 +4,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -15,12 +15,12 @@ public interface IVmrInfo
     /// <summary>
     /// Path for temporary files (individual repo clones, created patches, etc.)
     /// </summary>
-    string TmpPath { get; }
+    LocalPath TmpPath { get; }
 
     /// <summary>
     /// Path to the root of the VMR
     /// </summary>
-    string VmrPath { get; }
+    LocalPath VmrPath { get; }
 
     /// <summary>
     /// Path within the VMR where VMR patches are stored.
@@ -39,23 +39,18 @@ public interface IVmrInfo
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
     /// </summary>
-    string GetRepoSourcesPath(SourceMapping mapping) => Path.Combine(VmrPath, VmrInfo.SourcesDir, mapping.Name);
-
-    /// <summary>
-    /// Gets a relative UNIX path to sources belonging to a given repo (suitable for git operations)
-    /// </summary>
-    string GetRelativeRepoSourcesPath(SourceMapping mapping) => VmrInfo.SourcesDir + "/" + mapping.Name;
+    LocalPath GetRepoSourcesPath(SourceMapping mapping);
 
     /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
-    string GetSourceManifestPath() => Path.Combine(VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceManifestFileName);
+    LocalPath GetSourceManifestPath();
 }
 
 public class VmrInfo : IVmrInfo
 {
-    public const string SourceMappingsFileName = "source-mappings.json";
     public const string SourcesDir = "src";
+    public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "git-info";
     public const string SourceManifestFileName = "source-manifest.json";
     
@@ -65,17 +60,29 @@ public class VmrInfo : IVmrInfo
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string ThirdPartyNoticesTemplatePath = "eng/bootstrap/THIRD-PARTY-NOTICES.template.txt";
 
-    public string VmrPath { get; }
+    public static UnixPath RelativeSourcesDir { get; } = new("src");
 
-    public string TmpPath { get; }
+    public LocalPath VmrPath { get; }
+
+    public LocalPath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
-    public VmrInfo(string vmrPath, string tmpPath)
+    public VmrInfo(LocalPath vmrPath, LocalPath tmpPath)
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;
     }
+
+    public VmrInfo(string vmrPath, string tmpPath) : this(new NativePath(vmrPath), new NativePath(tmpPath))
+    {
+    }
+
+    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
+
+    public static LocalPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+
+    public LocalPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

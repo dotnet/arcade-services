@@ -41,13 +41,13 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
 
     public async Task UpdateReadme()
     {
-        string readmeTemplatePath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ReadmeTemplatePath.Replace('/', _fileSystem.DirectorySeparatorChar));
+        var readmeTemplatePath = _vmrInfo.VmrPath / VmrInfo.ReadmeTemplatePath;
         if (!_fileSystem.FileExists(readmeTemplatePath))
         {
             return;
         }
 
-        string readmePath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ReadmeFileName);
+        var readmePath = _vmrInfo.VmrPath / VmrInfo.ReadmeFileName;
 
         using var readStream = _fileSystem.GetFileStream(readmeTemplatePath, FileMode.Open, FileAccess.Read);
         using var writeStream = _fileSystem.GetFileStream(readmePath, FileMode.Create, FileAccess.Write);
@@ -103,7 +103,7 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
             repo = repo[..^4];
         }
 
-        await writer.WriteLineAsync($"{new string(' ', indentation)}- `{VmrInfo.SourcesDir}/{component.Path}`  ");
+        await writer.WriteLineAsync($"{new string(' ', indentation)}- `{VmrInfo.RelativeSourcesDir / component.Path}`  ");
         await writer.WriteLineAsync($"{new string(' ', indentation)}*[{repo}@{Commit.GetShortSha(component.CommitSha)}]({component.GetPublicUrl()})*");
     }
 }

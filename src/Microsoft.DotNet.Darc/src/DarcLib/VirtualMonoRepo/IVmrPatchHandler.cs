@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -21,20 +22,20 @@ public interface IVmrPatchHandler
         SourceMapping mapping,
         string patchPath,
         CancellationToken cancellationToken)
-        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, VmrInfo.SourcesDir + '/' + mapping.Name), cancellationToken);
+        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, VmrInfo.RelativeSourcesDir / mapping.Name), cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        string repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        string destDir,
-        string tmpPath,
+        LocalPath destDir,
+        LocalPath tmpPath,
         CancellationToken cancellationToken);
 
     Task RestoreFilesFromPatch(
         SourceMapping mapping,
-        string clonePath,
+        LocalPath clonePath,
         string patch,
         CancellationToken cancellationToken);
 
