@@ -361,10 +361,16 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchPath,
         CancellationToken cancellationToken)
     {
-        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", "--allow-empty", patchPath }, cancellationToken);
+        var files = new List<string>();
+        if (_fileSystem.GetFileInfo(repoPath).Length == 0)
+        {
+            _logger.LogDebug("Patch {patch} is empty. Skipping file enumeration..", patchPath);
+            return files;
+        }
+
+        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
-        var files = new List<string>();
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))
         {
             var match = GitPatchSummaryLine.Match(line);

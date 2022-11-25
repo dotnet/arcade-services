@@ -103,7 +103,7 @@ public class RolloutUploader
 
             TreeResponse currentTree = await githubClient.Git.Tree.Get(githubConfig.ScorecardsGithubOrg,
                 githubConfig.ScorecardsGithubRepo, newBranchRef);
-            NewTree newTree = new NewTree
+            NewTree newTree = new()
             {
                 BaseTree = currentTree.Sha,
             };
@@ -121,7 +121,7 @@ public class RolloutUploader
                 string scorecardBatchFilePath =
                     $"{githubConfig.ScorecardsDirectoryPath}Scorecard_{scorecardBatch.Date.Date:yyyy-MM-dd}.md";
 
-                NewTreeItem markdownBlob = new NewTreeItem
+                NewTreeItem markdownBlob = new()
                 {
                     Path = scorecardBatchFilePath,
                     Mode = _gitFileBlobMode,
@@ -134,18 +134,18 @@ public class RolloutUploader
             TreeResponse treeResponse = await githubClient.Git.Tree.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newTree);
 
             // Commit the new response to the new branch
-            NewCommit newCommit = new NewCommit("Add scorecards for " +
+            NewCommit newCommit = new("Add scorecards for " +
                                                 string.Join(", ", scorecardBatches.Select(s => s.Date.Date.ToString("yyyy-MM-dd"))),
                 treeResponse.Sha,
                 newBranch.Object.Sha);
             Commit commit = await githubClient.Git.Commit
                 .Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newCommit);
 
-            ReferenceUpdate update = new ReferenceUpdate(commit.Sha);
+            ReferenceUpdate update = new(commit.Sha);
             Reference updatedRef = await githubClient.Git.Reference.Update(githubConfig.ScorecardsGithubOrg,
                 githubConfig.ScorecardsGithubRepo, newBranchRef, update);
 
-            PullRequestRequest prRequest = new PullRequestRequest
+            PullRequestRequest prRequest = new()
             {
                 Base = TargetBranch,
                 Head = newBranchName,
@@ -156,7 +156,7 @@ public class RolloutUploader
                 (await githubClient.PullRequest.GetAllForRepository(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo)).ToList();
             if (!prs.Any(pr => pr.Head.Ref == newBranchName))
             {
-                NewPullRequest newPullRequest = new NewPullRequest(newCommit.Message, newBranchName, TargetBranch);
+                NewPullRequest newPullRequest = new(newCommit.Message, newBranchName, TargetBranch);
                 await githubClient.PullRequest.Create(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, newPullRequest);
             }
         }
@@ -165,7 +165,7 @@ public class RolloutUploader
         CloudTable table = Utilities.GetScorecardsCloudTable(storageAccountKey);
         foreach (Scorecard scorecard in scorecards)
         {
-            ScorecardEntity scorecardEntity = new ScorecardEntity(scorecard.Date, scorecard.Repo.Repo)
+            ScorecardEntity scorecardEntity = new(scorecard.Date, scorecard.Repo.Repo)
             {
                 TotalScore = scorecard.TotalScore,
                 TimeToRolloutSeconds = scorecard.TimeToRollout.TotalSeconds,
@@ -241,7 +241,7 @@ public class RolloutUploader
             return "";
         }
         githubIssueUris.Sort();
-        Dictionary<string, string> githubIssues = githubIssueUris.Distinct().ToDictionary(i => i.Substring(i.LastIndexOf('/') + 1), i => i);
+        Dictionary<string, string> githubIssues = githubIssueUris.Distinct().ToDictionary(i => i[(i.LastIndexOf('/') + 1)..], i => i);
 
         return $"Relevant GitHub issues: {string.Join(", ", githubIssues.Select(i => $"[#{i.Key}]({i.Value})"))}";
     }
