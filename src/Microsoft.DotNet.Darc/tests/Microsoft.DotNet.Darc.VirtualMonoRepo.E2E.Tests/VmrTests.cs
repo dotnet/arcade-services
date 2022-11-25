@@ -42,6 +42,13 @@ public class VmrTests
         baseDir = Path.Combine(Path.GetTempPath(), "_vmrTests");
     }
 
+    [OneTimeSetUp]
+    public async Task GitConfig()
+    {
+        await processManager.Execute("git", new string[] { "config", "--global", "user.email", Constants.DarcBotEmail });
+        await processManager.Execute("git", new string[] { "config", "--global", "user.name", Constants.DarcBotName });
+    }
+
     [SetUp]
     public async Task SetUp()
     {
