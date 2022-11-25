@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -179,8 +180,11 @@ public class VmrPatchHandlerTests
             .Setup(x => x.FileExists($"{_clonePath}/{patchedFiles[1]}"))
             .Returns(false);
 
+        _fileSystem
+            .SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Length == 1024 && x.Exists));
+
         SetupGitCall(
-            new[] { "apply", "--numstat", "--allow-empty", patch },
+            new[] { "apply", "--numstat", patch },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,

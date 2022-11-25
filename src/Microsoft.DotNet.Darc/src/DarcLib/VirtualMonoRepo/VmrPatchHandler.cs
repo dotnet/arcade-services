@@ -368,7 +368,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return files;
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", "--allow-empty", patchPath }, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))
