@@ -72,7 +72,6 @@ public class VmrTests
         Directory.CreateDirectory(_externalRepoPath);
 
         var sourceMappings = string.Format(@"{{
-            ""patchesPath"": ""src/installer/src/SourceBuild/tarball/patches"",
             ""defaults"": {{
               ""defaultRef"": ""main"",
               ""exclude"": [
@@ -104,6 +103,7 @@ public class VmrTests
     [TearDown]
     public void CleanUpOutputFile()
     {
+        Trace.Flush();
         try
         {
             if (_tempDir is not null)
@@ -123,7 +123,7 @@ public class VmrTests
         var commit = await GetRepoLastCommit(_testRepoPath);
         
         var res = await processManager.Execute(darcExecutable, new string[] { "vmr", "initialize", "--debug", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        TestContext.Error.WriteLine(res.StandardOutput);
+        TestContext.Progress.WriteLine(res.StandardOutput);
         res.ExitCode.Should().Be(0);
 
         var expectedFiles = new List<string>
