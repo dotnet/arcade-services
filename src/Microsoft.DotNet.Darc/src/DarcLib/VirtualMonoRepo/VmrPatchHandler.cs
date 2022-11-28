@@ -362,7 +362,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         CancellationToken cancellationToken)
     {
         var files = new List<string>();
-        if (_fileSystem.GetFileInfo(repoPath).Length == 0)
+        if (_fileSystem.GetFileInfo(patchPath).Length == 0)
         {
             _logger.LogDebug("Patch {patch} is empty. Skipping file enumeration..", patchPath);
             return files;
