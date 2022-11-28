@@ -43,6 +43,11 @@ public class ServiceHostEventListener : EventListener
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
+        if (!_loggers.TryGetValue(eventData.EventSource.Name, out var logger))
+        {
+            return;
+        }
+
         var level = eventData.Level switch
         {
             EventLevel.LogAlways => LogLevel.Critical,
@@ -54,10 +59,6 @@ public class ServiceHostEventListener : EventListener
             _ => LogLevel.None,
         };
 
-        if (!_loggers.TryGetValue(eventData.EventSource.Name, out var logger))
-        {
-            return;
-        }
 
         if (eventData.PayloadNames is not null && eventData.Payload is not null)
         {
