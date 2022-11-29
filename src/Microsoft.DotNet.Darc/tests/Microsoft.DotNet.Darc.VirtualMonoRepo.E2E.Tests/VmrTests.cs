@@ -126,10 +126,7 @@ public class VmrTests
         var commit = await GetRepoLastCommit(_testRepoPath);
         
         var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--debug", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        TestContext.Progress.WriteLine(res.StandardOutput);
-        TestContext.Progress.WriteLine(res.StandardError);
-        //res.StandardError.Should().Be($"[0.0.99-dev / Microsoft.DotNet.Darc.dll] darc command issued: vmr initialize --debug --vmr {_vmrPath.Path.Replace("\\", "\\\\")} --tmp {_tmpPath.Path.Replace("\\", "\\\\")} test -repo:{commit}\r\ninfo: Creating a temporary work branch init/test-repo/{commit}\r\ninfo: Initializing test-repo at {commit}..\r\ndbug: Cloning {_testRepoPath.Path.Replace("\\", "\\\\")} to ");
-        res.ExitCode.Should().Be(0);
+        Assert.True(res.ExitCode == 0, res.StandardError);
         
         var expectedFiles = new List<string>
         {
@@ -292,10 +289,8 @@ public class VmrTests
 
     private async Task CheckAllIsCommited(string repo)
     {
-        var gitStatus = await processManager.ExecuteGit(repo, "status");
-        var statusLog = gitStatus.StandardOutput;
-        statusLog.Should().NotContain("Changes to be committed");
-        statusLog.Should().NotContain("Changes not staged for commit");
+        var gitStatus = await processManager.ExecuteGit(repo, "status", "--porcelain");
+        gitStatus.StandardOutput.Should().Be(string.Empty);
     }
 
     private ICollection<string> GetAllFilesInDirectory(DirectoryInfo directory)
