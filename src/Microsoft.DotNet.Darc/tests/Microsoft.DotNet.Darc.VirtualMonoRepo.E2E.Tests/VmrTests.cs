@@ -125,7 +125,7 @@ public class VmrTests
     {
         var commit = await GetRepoLastCommit(_testRepoPath);
         
-        var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--debug", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
+        var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
         Assert.True(res.ExitCode == 0, res.StandardError);
         
         var expectedFiles = new List<string>
