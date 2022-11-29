@@ -33,6 +33,7 @@ public class VmrTests
     private readonly string darcExecutable;
     private readonly string darcDll;
 
+
     public VmrTests()
     {
         processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
@@ -124,8 +125,8 @@ public class VmrTests
     public async Task RepoIsInitializedTest()
     {
         var commit = await GetRepoLastCommit(_testRepoPath);
-        
-        var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
+        string? root = processManager.FindGitRoot(darcExecutable);
+        var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" }, workingDir:root);
         Assert.True(res.ExitCode == 0, res.StandardError);
         
         var expectedFiles = new List<string>
@@ -165,8 +166,7 @@ public class VmrTests
         };
 
         CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
-        File.ReadAllText(_vmrPath / "src" / "test-repo" / "test-repo-file.txt")
-            .Should().Contain("Change in test repo file");
+        CheckFileContents(_vmrPath / "src" / "test-repo" / "test-repo-file.txt", "Test repo fileChange in test repo file");
         await CheckAllIsCommited(_vmrPath);
     }
 
@@ -285,6 +285,12 @@ public class VmrTests
     {
         var filesInDir = GetAllFilesInDirectory(directory).OrderBy(x => x).ToList();
         filesInDir.Should().BeEquivalentTo(expectedFiles);
+    }
+
+    private void CheckFileContents(LocalPath filePath, string expected)
+    {
+        var fileContent = File.ReadAllText(filePath);
+        fileContent.Should().BeEquivalentTo(expected);
     }
 
     private async Task CheckAllIsCommited(string repo)
