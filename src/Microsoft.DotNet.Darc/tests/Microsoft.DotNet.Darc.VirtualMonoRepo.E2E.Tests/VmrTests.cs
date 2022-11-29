@@ -38,7 +38,7 @@ public class VmrTests
         processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
         var assembly = Assembly.GetAssembly(typeof(VmrTests)) ?? throw new Exception("Assembly not found");
         darcExecutable = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.exe");
-        darcDll = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.dll");
+        darcDll = Path.Join(Path.GetDirectoryName(assembly.Location), "..", "..", "..", "Microsoft.DotNet.Darc", "Debug", "net6.0", "Microsoft.DotNet.Darc.dll");
         //darcExecutable = Path.Join(assembly.Location, "..", "Microsoft.DotNet.Darc.exe");
         var tmpPath = new NativePath(Path.GetTempPath());
         baseDir = tmpPath / "_vmrTests";
