@@ -19,6 +19,7 @@ using System.Diagnostics;
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 [TestFixture]
+[NonParallelizable]
 public class VmrTests
 {
     private LocalPath _tempDir = null!;
@@ -35,8 +36,8 @@ public class VmrTests
     {
         processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
         var assembly = Assembly.GetAssembly(typeof(VmrTests)) ?? throw new Exception("Assembly not found");
-
-        darcExecutable = Path.Join(assembly.Location, "..", "Microsoft.DotNet.Darc.exe");
+        darcExecutable = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.exe");
+        //darcExecutable = Path.Join(assembly.Location, "..", "Microsoft.DotNet.Darc.exe");
         var tmpPath = new NativePath(Path.GetTempPath());
         baseDir = tmpPath / "_vmrTests";
     }
@@ -118,14 +119,17 @@ public class VmrTests
     }
 
     [Test]
+    [NonParallelizable]
     public async Task RepoIsInitializedTest()
     {
         var commit = await GetRepoLastCommit(_testRepoPath);
         
         var res = await processManager.Execute(darcExecutable, new string[] { "vmr", "initialize", "--debug", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
         TestContext.Progress.WriteLine(res.StandardOutput);
+        TestContext.Progress.WriteLine(res.StandardError);
+        res.StandardOutput.Should().Be($"[0.0.99-dev / Microsoft.DotNet.Darc.dll] darc command issued: vmr initialize --debug --vmr {_vmrPath.Path.Replace("\\", "\\\\")} --tmp {_tmpPath.Path.Replace("\\", "\\\\")} test -repo:{commit}\r\ninfo: Creating a temporary work branch init/test-repo/{commit}\r\ninfo: Initializing test-repo at {commit}..\r\ndbug: Cloning {_testRepoPath.Path.Replace("\\", "\\\\")} to ");
         res.ExitCode.Should().Be(0);
-
+        
         var expectedFiles = new List<string>
         {
             _vmrPath / "git-info" / "AllRepoVersions.props",
@@ -140,6 +144,7 @@ public class VmrTests
     }
 
     [Test]
+    [NonParallelizable]
     public async Task FileChangesAreSyncedTest()
     {
         await RepoIsInitializedTest();
@@ -168,6 +173,7 @@ public class VmrTests
     }
 
     [Test]
+    [NonParallelizable]
     public async Task FileIsIncludedTest()
     {
         await RepoIsInitializedTest();
@@ -194,6 +200,7 @@ public class VmrTests
     }
 
     [Test]
+    [NonParallelizable]
     public async Task RepoIsUpdatedWithAddedSubmoduleTest()
     {
         await RepoIsInitializedTest();
