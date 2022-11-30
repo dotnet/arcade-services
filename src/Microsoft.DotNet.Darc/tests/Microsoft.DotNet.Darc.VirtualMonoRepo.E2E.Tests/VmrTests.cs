@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using System.Diagnostics;
 using Castle.DynamicProxy;
+using Microsoft.VisualStudio.Services.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
@@ -28,39 +29,31 @@ public class VmrTests
     private LocalPath _externalRepoPath = null!;
     private LocalPath _vmrPath = null!;
     private LocalPath _tmpPath = null!;
-    private readonly LocalPath baseDir;
-    private readonly IProcessManager processManager;
-    private readonly string darcExecutable;
-    private readonly string darcDll;
+    private readonly LocalPath _baseDir;
+    private readonly IProcessManager _processManager;
+    private readonly string _darcDll;
 
 
     public VmrTests()
     {
-        processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
+        _processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
         var assembly = Assembly.GetAssembly(typeof(VmrTests)) ?? throw new Exception("Assembly not found");
-        darcExecutable = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.exe");
-        darcDll = Path.Join(Path.GetDirectoryName(assembly.Location), "..", "..", "..", "Microsoft.DotNet.Darc", "Debug", "net6.0", "Microsoft.DotNet.Darc.dll");
-        //darcExecutable = Path.Join(assembly.Location, "..", "Microsoft.DotNet.Darc.exe");
+        _darcDll = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.dll");
         var tmpPath = new NativePath(Path.GetTempPath());
-        baseDir = tmpPath / "_vmrTests";
+        _baseDir = tmpPath / "_vmrTests";
     }
 
     [OneTimeSetUp]
-    public void StartTest()
+    public async Task SetUpGit()
     {
-        Trace.Listeners.Add(new ConsoleTraceListener());
-    }
-
-    [OneTimeTearDown]
-    public void EndTest()
-    {
-        Trace.Flush();
+        await _processManager.Execute("git", new[] { "config", "user.email", Constants.DarcBotEmail });
+        await _processManager.Execute("git", new[] { "config", "user.name", Constants.DarcBotName });
     }
 
     [SetUp]
     public async Task SetUp()
     {
-        _tempDir = baseDir / Path.GetRandomFileName();
+        _tempDir = _baseDir / Path.GetRandomFileName();
         Directory.CreateDirectory(_tempDir);
 
         _testRepoPath = _tempDir / "test-repo";
@@ -106,7 +99,6 @@ public class VmrTests
     [TearDown]
     public void CleanUpOutputFile()
     {
-        Trace.Flush();
         try
         {
             if (_tempDir is not null)
@@ -125,10 +117,8 @@ public class VmrTests
     public async Task RepoIsInitializedTest()
     {
         var commit = await GetRepoLastCommit(_testRepoPath);
-        string? root = processManager.FindGitRoot(darcExecutable);
-        var res = await processManager.Execute("dotnet", new string[] { darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" }, workingDir:root);
-        Assert.True(res.ExitCode == 0, res.StandardError);
-        
+        await CallDarcInitialize("test-repo", commit);
+
         var expectedFiles = new List<string>
         {
             _vmrPath / "git-info" / "AllRepoVersions.props",
@@ -152,9 +142,7 @@ public class VmrTests
         await CommitAll(_testRepoPath, "Changing a file in the repo");
 
         var commit = await GetRepoLastCommit(_testRepoPath);
-
-        var res = await processManager.Execute(darcExecutable, new string[] { "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        res.ExitCode.Should().Be(0);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFiles = new List<string>
         {
@@ -178,10 +166,9 @@ public class VmrTests
 
         File.Move(_testRepoPath / "excluded" / "excluded.txt", _testRepoPath / "excluded.txt");
         await CommitAll(_testRepoPath, "Move a file from excluded to included folder");
+        
         var commit = await GetRepoLastCommit(_testRepoPath);
-
-        var res = await processManager.Execute(darcExecutable, new string[] { "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        res.ExitCode.Should().Be(0);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFiles = new List<string>
         {
@@ -199,7 +186,7 @@ public class VmrTests
 
     [Test]
     [NonParallelizable]
-    public async Task RepoIsUpdatedWithAddedSubmoduleTest()
+    public async Task SubmodulesAreInlinedProperlyTest()
     {
         await RepoIsInitializedTest();
 
@@ -213,9 +200,7 @@ public class VmrTests
         await CommitAll(_testRepoPath, "Add submodule");
 
         var commit = await GetRepoLastCommit(_testRepoPath);
-
-        var res = await processManager.Execute(darcExecutable, new string[] { "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        res.ExitCode.Should().Be(0);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFiles = new List<string>
         {
@@ -236,12 +221,11 @@ public class VmrTests
         File.WriteAllText(_externalRepoPath / "additional-file.txt", "New external repo file");
         await CommitAll(_externalRepoPath, "Adding new file in the submodule");
 
-        await processManager.ExecuteGit(_testRepoPath / submoduleRelativePath, new string[] { "pull", "origin", "main" }, CancellationToken.None);
+        await _processManager.ExecuteGit(_testRepoPath / submoduleRelativePath, new string[] { "pull", "origin", "main" }, CancellationToken.None);
         await CommitAll(_testRepoPath, "Checkout submodule");
+        
         commit = await GetRepoLastCommit(_testRepoPath);
-
-        res = await processManager.Execute(darcExecutable, new string[] { "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        res.ExitCode.Should().Be(0);
+        await CallDarcUpdate("test-repo", commit);
 
         expectedFiles = new List<string>
         {
@@ -262,10 +246,9 @@ public class VmrTests
 
         await RemoveSubmodule(_testRepoPath, submoduleRelativePath, submoduleName);
         await CommitAll(_testRepoPath, "Remove the submodule");
+        
         commit = await GetRepoLastCommit(_testRepoPath);
-
-        res = await processManager.Execute(darcExecutable, new string[] { "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"test-repo:{commit}" });
-        res.ExitCode.Should().Be(0);
+        await CallDarcUpdate("test-repo", commit);
 
         expectedFiles = new List<string>
         {
@@ -295,8 +278,20 @@ public class VmrTests
 
     private async Task CheckAllIsCommited(string repo)
     {
-        var gitStatus = await processManager.ExecuteGit(repo, "status", "--porcelain");
+        var gitStatus = await _processManager.ExecuteGit(repo, "status", "--porcelain");
         gitStatus.StandardOutput.Should().Be(string.Empty);
+    }
+
+    private async Task CallDarcInitialize(string repoName, string commit)
+    {
+        var res = await _processManager.Execute("dotnet", new string[] { _darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"{repoName}:{commit}" });
+        Assert.True(res.ExitCode == 0, res.StandardError);
+    }
+
+    private async Task CallDarcUpdate(string repoName, string commit)
+    {
+        var res = await _processManager.Execute("dotnet", new string[] { _darcDll, "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"{repoName}:{commit}" });
+        Assert.True(res.ExitCode == 0, res.StandardError);
     }
 
     private ICollection<string> GetAllFilesInDirectory(DirectoryInfo directory)
@@ -320,45 +315,46 @@ public class VmrTests
 
     private async Task ConfigureGit(LocalPath repo)
     {
-        await processManager.ExecuteGit(repo, "config", "user.email", Constants.DarcBotEmail);
-        await processManager.ExecuteGit(repo, "config", "user.name", Constants.DarcBotName);
+        await _processManager.ExecuteGit(repo, "config", "user.email", Constants.DarcBotEmail);
+        await _processManager.ExecuteGit(repo, "config", "user.name", Constants.DarcBotName);
     }
 
     private async Task CommitAll(LocalPath repo, string commitMessage)
     {
-        await processManager.ExecuteGit(repo, "add", "-A");
-        await processManager.ExecuteGit(repo, "commit", "-m", commitMessage);
+        await _processManager.ExecuteGit(repo, "add", "-A");
+        await _processManager.ExecuteGit(repo, "commit", "-m", commitMessage);
     }
 
     private async Task InitialCommit(LocalPath repo)
     {
-        await processManager.ExecuteGit(repo, "init", "-b", "main");
+        await _processManager.ExecuteGit(repo, "init", "-b", "main");
         await ConfigureGit(repo);
         await CommitAll(repo, "Initial commit");
     }
 
     private async Task<string> GetRepoLastCommit(LocalPath repo)
     {
-        var log = await processManager.ExecuteGit(repo, "log", "--format=format:%H");
+        var log = await _processManager.ExecuteGit(repo, "log", "--format=format:%H");
         return log.StandardOutput.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).First();
     }
 
     private async Task InitializeSubmodule(LocalPath repo, string submoduleName, string submoduleUrl, string pathInRepo)
     {
-        await processManager.ExecuteGit(repo, 
+        await _processManager.ExecuteGit(repo,
+            "-c", "protocol.file.allow=always",
             "submodule", "add", "--name", 
                 submoduleName, "--", submoduleUrl, pathInRepo);
         
-        await processManager.ExecuteGit(repo,
+        await _processManager.ExecuteGit(repo,
             "submodule update", "--init", "--recursive",
                 submoduleName, "--", submoduleUrl, pathInRepo);
     }
 
     private async Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath, string submoduleName)
     {
-        await processManager.ExecuteGit(repo, "submodule", "deinit", "-f", submoduleRelativePath);
+        await _processManager.ExecuteGit(repo, "submodule", "deinit", "-f", submoduleRelativePath);
         DeleteDirectory(repo / ".git" / "modules" / submoduleName);
-        await processManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
+        await _processManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
     }
 
     private void DeleteDirectory(string targetDir)
