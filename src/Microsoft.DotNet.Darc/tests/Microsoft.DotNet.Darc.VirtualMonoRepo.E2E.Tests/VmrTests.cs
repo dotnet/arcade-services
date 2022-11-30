@@ -18,7 +18,6 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 [TestFixture]
-[NonParallelizable]
 public class VmrTests
 {
     private LocalPath _currentTestDirectory = null!;
@@ -132,7 +131,6 @@ public class VmrTests
     }
 
     [Test]
-    [NonParallelizable]
     public async Task RepoIsInitializedTest()
     {
         var commit = await GetRepoLastCommit(_privateRepoPath);
@@ -152,7 +150,6 @@ public class VmrTests
     }
 
     [Test]
-    [NonParallelizable]
     public async Task FileChangesAreSyncedTest()
     {
         await RepoIsInitializedTest();
@@ -178,7 +175,6 @@ public class VmrTests
     }
 
     [Test]
-    [NonParallelizable]
     public async Task FileIsIncludedTest()
     {
         await RepoIsInitializedTest();
@@ -204,7 +200,6 @@ public class VmrTests
     }
 
     [Test]
-    [NonParallelizable]
     public async Task SubmodulesAreInlinedProperlyTest()
     {
         await RepoIsInitializedTest();
