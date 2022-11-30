@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -76,16 +75,16 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files that can be applied on the VMR</returns>
     public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        string repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        string destDir,
-        string tmpPath,
+        LocalPath destDir,
+        LocalPath tmpPath,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
-        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, mapping.Name, cancellationToken);
+        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, new UnixPath(mapping.Name), cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
@@ -94,29 +93,29 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
-        string repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        string destDir,
-        string tmpPath,
-        string relativePath,
+        LocalPath destDir,
+        LocalPath tmpPath,
+        UnixPath relativePath,
         CancellationToken cancellationToken)
     {
-        if (repoPath.EndsWith(".git"))
+        if (_fileSystem.GetFileName(repoPath.Path) == ".git")
         {
-            repoPath = _fileSystem.GetDirectoryName(repoPath)!;
+            repoPath = new NativePath(_fileSystem.GetDirectoryName(repoPath)!);
         }
 
-        var patchName = _fileSystem.PathCombine(destDir, $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch");
+        var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
         var patches = new List<VmrIngestionPatch>
         {
-            new(patchName, VmrInfo.SourcesDir + '/' + relativePath)
+            new(patchName, VmrInfo.RelativeSourcesDir / relativePath)
         };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
 
         var changedRecords = submoduleChanges
-            .Select(c => new SubmoduleRecord(relativePath + '/' + c.Path, c.Url, c.After))
+            .Select(c => new SubmoduleRecord(relativePath / c.Path, c.Url, c.After))
             .ToList();
 
         _dependencyTracker.UpdateSubmodules(changedRecords);
@@ -178,7 +177,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too
         // We only do it when processing the root mapping, not its submodules
-        var relativeRepoPath = _vmrInfo.GetRelativeRepoSourcesPath(mapping);
+        var relativeRepoPath = VmrInfo.GetRelativeRepoSourcesPath(mapping);
         int i = 1;
         foreach (var (source, destination) in _vmrInfo.AdditionalMappings.Where(m => m.Source.StartsWith(relativeRepoPath)))
         {
@@ -186,8 +185,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             _logger.LogInformation("Detected 'non-src/' mapped content in {source}. Creating patch..", source);
 
-            patchName = $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
-            patchName = _fileSystem.PathCombine(destDir, patchName);
+            patchName = destDir / $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
             args = new List<string>
             {
@@ -203,7 +201,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
 
             // We take the content path from the VMR config and map it onto the cloned repo
-            var contentDir = _fileSystem.PathCombine(repoPath, relativeClonePath.Replace('/', _fileSystem.DirectorySeparatorChar));
+            var contentDir = repoPath / relativeClonePath;
 
             result = await _processManager.Execute(
                 _processManager.GitExecutable,
@@ -321,7 +319,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     public async Task RestoreFilesFromPatch(
         SourceMapping mapping,
-        string clonePath,
+        LocalPath clonePath,
         string patch,
         CancellationToken cancellationToken)
     {
@@ -331,13 +329,8 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         foreach (var patchedFile in await GetPatchedFiles(clonePath, patch, cancellationToken))
         {
-            // git always works with forward slashes (even on Windows)
-            string relativePath = _fileSystem.DirectorySeparatorChar != '/'
-                ? patchedFile.Replace('/', _fileSystem.DirectorySeparatorChar)
-                : patchedFile;
-
-            var originalFile = _fileSystem.PathCombine(clonePath, relativePath);
-            var destination = _fileSystem.PathCombine(repoSourcesPath, relativePath);
+            var originalFile = clonePath / patchedFile;
+            var destination = repoSourcesPath / patchedFile;
 
             if (_fileSystem.FileExists(originalFile))
             {
@@ -354,7 +347,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         // Stage the restored files (all future patches are applied to index directly)
-        _localGitRepo.Stage(_vmrInfo.VmrPath, _vmrInfo.GetRelativeRepoSourcesPath(mapping));
+        _localGitRepo.Stage(_vmrInfo.VmrPath, VmrInfo.GetRelativeRepoSourcesPath(mapping));
     }
 
     /// <summary>
@@ -368,10 +361,16 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchPath,
         CancellationToken cancellationToken)
     {
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "apply", "--numstat", "--allow-empty", patchPath }, cancellationToken);
+        var files = new List<string>();
+        if (_fileSystem.GetFileInfo(patchPath).Length == 0)
+        {
+            _logger.LogDebug("Patch {patch} is empty. Skipping file enumeration..", patchPath);
+            return files;
+        }
+
+        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
-        var files = new List<string>();
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))
         {
             var match = GitPatchSummaryLine.Match(line);
@@ -451,9 +450,9 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files with relatives path respective to the VMR</returns>
     private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
         SourceMapping mapping,
-        string destDir,
-        string tmpPath,
-        string relativePath,
+        LocalPath destDir,
+        LocalPath tmpPath,
+        UnixPath relativePath,
         SubmoduleChange change,
         CancellationToken cancellationToken)
     {
@@ -491,7 +490,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var submodulePath = change.Path;
         if (!string.IsNullOrEmpty(relativePath))
         {
-            submodulePath = relativePath + '/' + submodulePath;
+            submodulePath = relativePath / submodulePath;
         }
 
         return await CreatePatchesRecursive(
@@ -501,33 +500,33 @@ public class VmrPatchHandler : IVmrPatchHandler
             change.After,
             destDir,
             tmpPath,
-            submodulePath,
+            new UnixPath(submodulePath),
             cancellationToken);
     }
 
-    private async Task ResetWorkingTreeDirectory(string path)
+    private async Task ResetWorkingTreeDirectory(string relativePath)
     {
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
         // This will end up having the working tree match what is staged
-        _logger.LogInformation("Cleaning the working tree directory {path}...", path);
-        var args = new[] { "checkout", path };
+        _logger.LogInformation("Cleaning the working tree directory {path}...", relativePath);
+        var args = new string[] { "checkout", relativePath };
         var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         
         if (result.Succeeded)
         {
             _logger.LogDebug("{output}", result.ToString());
         }
-        else if (result.StandardError.Contains($"pathspec '{path}' did not match any file(s) known to git"))
+        else if (result.StandardError.Contains($"pathspec '{relativePath}' did not match any file(s) known to git"))
         {
             // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
             // We can just remove the working tree folder then
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", path);
-            _fileSystem.DeleteDirectory(_fileSystem.PathCombine(_vmrInfo.VmrPath, path), true);
+            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
+            _fileSystem.DeleteDirectory(_vmrInfo.VmrPath / relativePath, true);
         }
 
         // Also remove untracked files (in case files were removed in index)
-        args = new[] { "clean", "-df", path };
+        args = new string[] { "clean", "-df", relativePath };
         result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
@@ -539,11 +538,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return Array.Empty<string>();
         }
 
-        var mappingPatchesPath = _fileSystem.PathCombine(
-            _vmrInfo.VmrPath,
-            _vmrInfo.PatchesPath.Replace('/', _fileSystem.DirectorySeparatorChar),
-            mapping.Name);
-
+        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mapping.Name;
         if (!_fileSystem.DirectoryExists(mappingPatchesPath))
         {
             return Array.Empty<string>();

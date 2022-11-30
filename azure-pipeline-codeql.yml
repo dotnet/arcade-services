@@ -6,9 +6,6 @@ parameters:
   default: true
 
 variables:
-  # CG is handled in the primary CI pipeline
-- name: skipComponentGovernanceDetection
-  value: true
   # Force CodeQL enabled so it may be run on any branch
 - name: Codeql.Enabled
   value: true

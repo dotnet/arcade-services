@@ -20,20 +20,26 @@ public static class VmrRegistrations
         this IServiceCollection services,
         string gitLocation,
         string vmrPath,
-        string tmpPath)
+        string tmpPath,
+        string? gitHubToken,
+        string? azureDevOpsToken)
     {
         RegisterManagers(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        services.TryAddSingleton(new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken));
         return services;
     }
 
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
         string gitLocation,
-        Func<IServiceProvider, IVmrInfo> configure)
+        string vmrPath,
+        string tmpPath,
+        Func<IServiceProvider, VmrRemoteConfiguration> configure)
     {
         RegisterManagers(services, gitLocation);
-        services.TryAddSingleton<IVmrInfo>(configure);
+        services.TryAddSingleton(configure);
+        services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
         return services;
     }
 
@@ -52,6 +58,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddSingleton<IFileSystem, FileSystem>();
+        services.TryAddSingleton<IGitRepoClonerFactory, GitRepoClonerFactory>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>

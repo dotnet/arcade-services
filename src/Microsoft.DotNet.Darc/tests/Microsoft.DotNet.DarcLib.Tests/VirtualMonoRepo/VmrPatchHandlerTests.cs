@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,14 +21,11 @@ namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 public class VmrPatchHandlerTests
 {
-    private const string VmrPath = "/data/vmr";
     private const string IndividualRepoName = "test-repo";
-    private const string ClonePath = "/tmp/" + IndividualRepoName;
     private const string Sha1 = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
     private const string Sha2 = "605fdaa751bd5b76f9846801cebf5814e700f9ef";
     private const string SubmoduleSha1 = "839e1e3b415fc2747dde68f47d940faa414020ec";
     private const string SubmoduleSha2 = "bd5b76f98468017131aabe68f47d758f08b1c5ab";
-    private const string PatchDir = "/tmp/patch";
 
     private readonly GitSubmoduleInfo _submoduleInfo = new(
         "external-1",
@@ -50,6 +48,10 @@ public class VmrPatchHandlerTests
     private readonly Mock<IFileSystem> _fileSystem = new();
     private VmrPatchHandler _patchHandler = null!;
 
+    private readonly UnixPath _vmrPath;
+    private readonly UnixPath _clonePath;
+    private readonly UnixPath _patchDir;
+
     private readonly SourceMapping _testRepoMapping = new(
         Name: IndividualRepoName,
         DefaultRemote: "https://github.com/dotnet/test-repo",
@@ -62,6 +64,13 @@ public class VmrPatchHandlerTests
             "src/**/tests/**/*.*", 
             "submodules/external-1/LICENSE.md",
         });
+
+    public VmrPatchHandlerTests()
+    {
+        _vmrPath = new UnixPath("/data/vmr");
+        _clonePath = new UnixPath("/tmp/" + IndividualRepoName);
+        _patchDir = new UnixPath("/tmp/patch");
+    }
     
     [SetUp]
     public void SetUp()
@@ -69,16 +78,16 @@ public class VmrPatchHandlerTests
         _vmrInfo.Reset();
         _vmrInfo
             .SetupGet(x => x.VmrPath)
-            .Returns(VmrPath);
+            .Returns(_vmrPath);
         _vmrInfo
             .Setup(x => x.PatchesPath)
-            .Returns(VmrPath + "/patches");
+            .Returns(_vmrPath + "/patches");
         _vmrInfo
             .Setup(x => x.AdditionalMappings)
             .Returns(Array.Empty<(string, string?)>());
         _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
-            .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
+            .Returns((SourceMapping mapping) => _vmrPath / VmrInfo.SourcesDir / mapping.Name);
 
         _dependencyTracker.Reset();
 
@@ -88,7 +97,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => "/tmp/" + uri.Split("/").Last());
+            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
 
         _processManager.Reset();
         _processManager
@@ -107,10 +116,10 @@ public class VmrPatchHandlerTests
             .Setup(x => x.PathCombine(It.IsAny<string>(), It.IsAny<string>()))
             .Returns((string first, string second) => (first + "/" + second).Replace("//", null));
         _fileSystem
-            .Setup(x => x.GetFiles($"{VmrPath}/patches/{IndividualRepoName}"))
+            .Setup(x => x.GetFiles($"{_vmrPath}/patches/{IndividualRepoName}"))
             .Returns(_vmrPatches.ToArray());
         _fileSystem
-            .Setup(x => x.DirectoryExists($"{VmrPath}/patches/{IndividualRepoName}"))
+            .Setup(x => x.DirectoryExists($"{_vmrPath}/patches/{IndividualRepoName}"))
             .Returns(true);
 
         _patchHandler = new VmrPatchHandler(
@@ -127,7 +136,7 @@ public class VmrPatchHandlerTests
     public async Task PatchIsAppliedTest()
     {
         // Setup
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", "src/" + IndividualRepoName);
+        var patch = new VmrIngestionPatch($"{_patchDir}/test-repo.patch", "src/" + IndividualRepoName);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
@@ -155,7 +164,7 @@ public class VmrPatchHandlerTests
     public async Task PatchedFilesAreRestoredTest()
     {
         // Setup
-        var patch = $"{PatchDir}/test-repo.patch";
+        var patch = $"{_patchDir}/test-repo.patch";
 
         var patchedFiles = new[]
         {
@@ -164,19 +173,18 @@ public class VmrPatchHandlerTests
         };
 
         _fileSystem
-            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[0]}"))
+            .Setup(x => x.FileExists($"{_clonePath}/{patchedFiles[0]}"))
             .Returns(true);
 
         _fileSystem
-            .Setup(x => x.FileExists($"{ClonePath}/{patchedFiles[1]}"))
+            .Setup(x => x.FileExists($"{_clonePath}/{patchedFiles[1]}"))
             .Returns(false);
 
-        _vmrInfo
-            .Setup(x => x.GetRelativeRepoSourcesPath(_testRepoMapping))
-            .Returns("src/" + IndividualRepoName);
+        _fileSystem
+            .SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Length == 1024 && x.Exists));
 
         SetupGitCall(
-            new[] { "apply", "--numstat", "--allow-empty", patch },
+            new[] { "apply", "--numstat", patch },
             new ProcessExecutionResult()
             {
                 ExitCode = 0,
@@ -185,45 +193,45 @@ public class VmrPatchHandlerTests
                     -        -      {patchedFiles[1]}
                     """,
             },
-            ClonePath);
+            _clonePath);
 
         // Act
         await _patchHandler.RestoreFilesFromPatch(
             _testRepoMapping,
-            "/tmp/" + IndividualRepoName,
+            new UnixPath("/tmp/" + IndividualRepoName),
             patch,
             CancellationToken.None);
 
         // Verify
-        _localGitRepo.Verify(x => x.Stage(VmrPath, "src/" + IndividualRepoName), Times.Once);
+        _localGitRepo.Verify(x => x.Stage(_vmrPath, "src/" + IndividualRepoName), Times.Once);
 
         // Restores a version
         _fileSystem
             .Verify(x => x.CopyFile(
-                ClonePath + '/' + patchedFiles[0],
-                VmrPath + "/src/test-repo/" + patchedFiles[0],
+                _clonePath + '/' + patchedFiles[0],
+                _vmrPath + "/src/test-repo/" + patchedFiles[0],
                 true),
               Times.Once);
 
         // File is added by the patch => restore means deleting it
         _fileSystem
-            .Verify(x => x.DeleteFile(VmrPath + "/src/test-repo/" + patchedFiles[1]), Times.Once);
+            .Verify(x => x.DeleteFile(_vmrPath + "/src/test-repo/" + patchedFiles[1]), Times.Once);
     }
 
     [Test]
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -231,7 +239,7 @@ public class VmrPatchHandlerTests
         // Verify
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -247,14 +255,14 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithAdditionalMappingsTest()
     {
         // Setup
-        string expectedPatchName1 = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedPatchName2 = $"{PatchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
-        string expectedPatchName3 = $"{PatchDir}/eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
+        string expectedPatchName1 = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName2 = $"{_patchDir}/root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
+        string expectedPatchName3 = $"{_patchDir}/eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
 
         _vmrInfo.Reset();
         _vmrInfo
             .SetupGet(x => x.VmrPath)
-            .Returns(VmrPath);
+            .Returns(_vmrPath);
         _vmrInfo
             .Setup(x => x.PatchesPath)
             .Returns("eng/patches");
@@ -265,21 +273,15 @@ public class VmrPatchHandlerTests
                 ($"src/{_testRepoMapping.Name}/SourceBuild/tarball/content", null),
                 ($"src/{_testRepoMapping.Name}/eng/common", "eng/common"),
             });
-        _vmrInfo
-            .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
-            .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
-        _vmrInfo
-            .Setup(x => x.GetRelativeRepoSourcesPath(It.IsAny<SourceMapping>()))
-            .Returns((SourceMapping mapping) => "src/" + mapping.Name);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName1, Sha1, Sha2, null);
@@ -287,7 +289,7 @@ public class VmrPatchHandlerTests
         // Verify
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -310,7 +312,7 @@ public class VmrPatchHandlerTests
                 "git",
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
-                $"{ClonePath}/SourceBuild/tarball/content",
+                $"{_clonePath}/SourceBuild/tarball/content",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -332,7 +334,7 @@ public class VmrPatchHandlerTests
                 "git",
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
-                $"{ClonePath}/eng/common",
+                $"{_clonePath}/eng/common",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -349,25 +351,25 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleWithoutChangesTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         // Return the same info for both
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
@@ -375,7 +377,7 @@ public class VmrPatchHandlerTests
         // Verify
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -400,26 +402,26 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleAddedTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo>());
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -428,7 +430,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -483,17 +485,17 @@ public class VmrPatchHandlerTests
             "https://github.com/dotnet/external-2",
             nestedSubmoduleSha1);
 
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
-        string expectedNestedSubmodulePatchName = $"{PatchDir}/{nestedSubmoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(nestedSubmoduleSha1)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        string expectedNestedSubmodulePatchName = $"{_patchDir}/{nestedSubmoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(nestedSubmoduleSha1)}.patch";
         
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo>());
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
@@ -503,11 +505,11 @@ public class VmrPatchHandlerTests
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -516,7 +518,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -590,26 +592,26 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleRemovedTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo>());
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -618,7 +620,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -665,25 +667,25 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleCommitChangedTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -692,7 +694,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -739,26 +741,26 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleUrlChangedTest()
     {
         // Setup
-        string expectedPatchName = $"{PatchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName1 = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
-        string expectedSubmodulePatchName2 = $"{PatchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        string expectedSubmodulePatchName1 = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
+        string expectedSubmodulePatchName2 = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha1))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(ClonePath, Sha2))
+            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
             .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,
-            ClonePath,
+            _clonePath,
             Sha1,
             Sha2,
-            PatchDir,
-            "/tmp",
+            _patchDir,
+            new UnixPath("/tmp"),
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -767,7 +769,7 @@ public class VmrPatchHandlerTests
 
         _processManager
             .Verify(x => x.ExecuteGit(
-                ClonePath,
+                _clonePath,
                 expectedArgs,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -839,10 +841,10 @@ public class VmrPatchHandlerTests
         _vmrInfo.Reset();
         _vmrInfo
             .SetupGet(x => x.VmrPath)
-            .Returns(VmrPath + "/");
+            .Returns(new UnixPath("/data/vmr/"));
         _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
-            .Returns((SourceMapping mapping) => VmrPath + "/src/" + mapping.Name);
+            .Returns((SourceMapping mapping) => _vmrPath / VmrInfo.SourcesDir / mapping.Name);
 
         _patchHandler = new VmrPatchHandler(
             _vmrInfo.Object,
@@ -853,7 +855,7 @@ public class VmrPatchHandlerTests
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
 
-        var patch = new VmrIngestionPatch($"{PatchDir}/test-repo.patch", "src/" + IndividualRepoName);
+        var patch = new VmrIngestionPatch($"{_patchDir}/test-repo.patch", "src/" + IndividualRepoName);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
@@ -869,37 +871,34 @@ public class VmrPatchHandlerTests
             $"src/{IndividualRepoName}",
             patch.Path,
         },
-        VmrPath + "/");
+        _vmrPath + "/");
 
         VerifyGitCall(new string[]
         {
             "checkout",
             $"src/{IndividualRepoName}",
         },
-        VmrPath + "/");
+        _vmrPath + "/");
     }
 
-    private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
+    private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir)
     {
         _processManager
             .Setup(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
     }
 
-    private void VerifyGitCall(string[] expectedArguments, string repoDir = VmrPath, Times? times = null)
+    private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
+
+    private void VerifyGitCall(string[] expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
+
+    private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
             .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
-    private void SetupGitCall(IEnumerable<string> expectedArguments, ProcessExecutionResult result, string repoDir = VmrPath)
-    {
-        _processManager
-            .Setup(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
-    }
-
-    private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir = VmrPath, Times? times = null)
+    private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
             .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());

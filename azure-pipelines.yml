@@ -6,8 +6,6 @@ variables:
     value: true
   - name: _DotNetArtifactsCategory
     value: .NETCore
-  - name: skipComponentGovernanceDetection
-    value: true
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - group: SDL_Settings
 
@@ -25,7 +23,7 @@ pr:
 stages:
 - stage: GitHub_Issue_Verification
   displayName: GitHub Issue Verification
-  condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.SourceBranch'], 'refs/heads/production'))
+  condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['System.PullRequest.TargetBranch'], 'refs/heads/production'), ne(variables['System.PullRequest.SourceBranch'], 'refs/heads/production'))
   jobs:
     - job: VerifyGitHubIssue
       displayName: Verify GitHub Issue Link included in all PRs

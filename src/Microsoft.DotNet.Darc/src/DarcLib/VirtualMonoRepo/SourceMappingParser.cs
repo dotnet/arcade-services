@@ -35,7 +35,7 @@ public class SourceMappingParser : ISourceMappingParser
 
     public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings()
     {
-        var mappingFilePath = Path.Combine(_vmrInfo.VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceMappingsFileName);
+        var mappingFilePath = _vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
