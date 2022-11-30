@@ -22,6 +22,9 @@ namespace Microsoft.DncEng.SecretManager.SecretTypes
 
         protected override async Task<SecretData> RotateValue(Parameters parameters, RotationContext context, CancellationToken cancellationToken)
         {
+            // Adding this to suppress the warning about not having the 'await' operator in an async method
+            await context.GetSecretValue(new SecretReference(context.SecretName));
+
             throw new HumanInterventionRequiredException($"Pgp key pair secret rotation required. Human intervention required. Please go to https://aka.ms/signalr-java-publishing and follow the instructions at the bottom of the page");
         }
     }
