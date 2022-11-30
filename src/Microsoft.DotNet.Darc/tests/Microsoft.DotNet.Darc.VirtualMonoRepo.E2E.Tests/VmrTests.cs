@@ -2,16 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using FluentAssertions;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
 #nullable enable
@@ -353,8 +353,6 @@ public class VmrTests
 
     private async Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath, string submoduleName)
     {
-        await _processManager.ExecuteGit(repo, "submodule", "deinit", "-f", submoduleRelativePath);
-        DeleteDirectory(repo / ".git" / "modules" / submoduleName);
         await _processManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
     }
 
