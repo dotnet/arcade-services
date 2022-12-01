@@ -147,14 +147,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var clone = new Repository(clonePath);
-        var commit = GetCommit(clone, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
+        string commitSha = GetShaForRef(clonePath, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
 
         var patches = await _patchHandler.CreatePatches(
             mapping,
             clonePath,
             Constants.EmptyGitObject,
-            commit.Id.Sha,
+            commitSha,
             _tmpPath,
             _tmpPath,
             cancellationToken);
@@ -166,7 +165,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, new(commit.Id.Sha, targetVersion));
+        _dependencyTracker.UpdateDependencyVersion(mapping, new(commitSha, targetVersion));
         await _readmeComponentListGenerator.UpdateReadme();
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
         { 
@@ -183,7 +182,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await UpdateThirdPartyNotices(cancellationToken);
 
         // Commit but do not add files (they were added to index directly)
-        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commit.Id.Sha);
+        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commitSha);
         Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", mapping.Name);

@@ -121,15 +121,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        LibGit2Sharp.Commit currentCommit;
-        LibGit2Sharp.Commit targetCommit;
-        using (var clone = new Repository(clonePath))
-        {
-            currentCommit = GetCommit(clone, currentSha);
-            targetCommit = GetCommit(clone, targetRevision);
-        }
-
-        targetRevision = targetCommit.Id.Sha;
+        targetRevision = GetShaForRef(clonePath, targetRevision);
 
         if (currentSha == targetRevision)
         {
@@ -200,7 +192,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     mapping,
                     currentSha,
                     commitToCopy.Sha,
-                    commitToCopy.Sha == targetCommit.Sha ? targetVersion : null,
+                    commitToCopy.Sha == targetRevision ? targetVersion : null,
                     clonePath,
                     message,
                     commitToCopy.Author,
@@ -284,7 +276,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
             var mappingToUpdate = repoToUpdate.Mapping;
-            var currentSha = GetCurrentVersion(mappingToUpdate);
+            string currentSha = GetCurrentVersion(mappingToUpdate);
 
             if (repoToUpdate.Parent is not null)
             {
@@ -320,7 +312,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     TargetVersion: dependency.Version,
                     Parent: mappingToUpdate.Name);
 
-                var dependencySha = GetCurrentVersion(dependencyMapping);
+                string dependencySha;
+                try
+                {
+                    dependencySha = GetCurrentVersion(dependencyMapping);
+                }
+                catch (RepositoryNotInitializedException)
+                {
+                    _logger.LogWarning("{parent}'s dependency {repo} has not been initialized in the VMR yet, repository will be initialized",
+                        mappingToUpdate.Name,
+                        dependencyMapping.Name);
+
+                    dependencySha = Constants.EmptyGitObject;
+                    _dependencyTracker.UpdateDependencyVersion(dependencyMapping, new VmrDependencyVersion(dependencySha, null));
+                }
+
                 if (dependencySha == dependency.Commit)
                 {
                     _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.RepoUri, dependencySha);
@@ -544,7 +550,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (version is null)
         {
-            throw new InvalidOperationException($"Repository {mapping.Name} has not been initialized yet");
+            throw new RepositoryNotInitializedException($"Repository {mapping.Name} has not been initialized yet");
         }
 
         return version.Sha;
@@ -555,4 +561,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? TargetRevision,
         string? TargetVersion,
         string? Parent);
+
+    private class RepositoryNotInitializedException : Exception
+    {
+        public RepositoryNotInitializedException(string message)
+            : base(message)
+        {
+        }
+    }
 }
