@@ -457,7 +457,7 @@ public class VmrTests
     private async Task CheckAllIsCommited(string repo)
     {
         var gitStatus = await _processManager.ExecuteGit(repo, "status", "--porcelain");
-        gitStatus.StandardOutput.Should().Be(string.Empty);
+        gitStatus.StandardOutput.Should().BeEmpty();
     }
 
     private async Task CallDarcInitialize(string vmrPath, string tmpPath, string repository, string commit)
@@ -513,7 +513,7 @@ public class VmrTests
     private async Task<string> GetRepoLastCommit(LocalPath repo)
     {
         var log = await _processManager.ExecuteGit(repo, "log", "--format=format:%H");
-        return log.StandardOutput.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).First();
+        return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
     private async Task InitializeSubmodule(
