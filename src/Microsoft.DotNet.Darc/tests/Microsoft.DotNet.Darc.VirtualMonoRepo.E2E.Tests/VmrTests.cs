@@ -34,6 +34,9 @@ public class VmrTests
     private readonly IProcessManager _processManager;
     private readonly string _darcDll;
     private readonly string _sourceMappingsTemplate;
+    private readonly string _emptyVersionDetails;
+    private readonly string _versionDetailsName = "Version.Details.xml";
+    private readonly string _sourceMappingsName = "source-mappings.json";
 
 
     public VmrTests()
@@ -65,12 +68,7 @@ public class VmrTests
             ]
         }}";
 
-    }
-
-    [OneTimeSetUp]
-    public async Task SetUpCommonRepos()
-    {
-        var emptyVersionDetails = 
+        _emptyVersionDetails =
             @"<?xml version=""1.0"" encoding=""utf-8""?>
                <Dependencies>
                 <ProductDependencies>
@@ -79,6 +77,11 @@ public class VmrTests
                 </ToolsetDependencies>
                </Dependencies>";
 
+    }
+
+    [OneTimeSetUp]
+    public async Task SetUpCommonRepos()
+    {
         Directory.CreateDirectory(_testsDirectory);
 
         _commonPrivateRepoPath = _testsDirectory / "test-repo";
@@ -86,6 +89,7 @@ public class VmrTests
         _commonDependencyRepoPath = _testsDirectory / "dependency";
        
         Directory.CreateDirectory(_commonVmrPath);
+        Directory.CreateDirectory(_commonVmrPath / "src");
         Directory.CreateDirectory(_commonDependencyRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath / "excluded");
@@ -94,9 +98,8 @@ public class VmrTests
         File.WriteAllText(_commonPrivateRepoPath / "test-repo-file.txt", "Test repo file");
         File.WriteAllText(_commonPrivateRepoPath / "excluded" / "excluded.txt", "File to be excluded");
         File.WriteAllText(_commonDependencyRepoPath / "dependencyFile.txt", "File in the dependency repo");
-        File.WriteAllText(_commonDependencyRepoPath / "eng" / "Version.Details.xml", emptyVersionDetails);
-        Directory.CreateDirectory(_commonVmrPath / "src");
-        
+        File.WriteAllText(_commonDependencyRepoPath / "eng" / _versionDetailsName, _emptyVersionDetails);
+       
         await InitialCommit(_commonVmrPath);
         await InitialCommit(_commonPrivateRepoPath);
         await InitialCommit(_commonDependencyRepoPath);
@@ -135,7 +138,7 @@ public class VmrTests
         CopyDirectory(_commonDependencyRepoPath, _dependencyRepoPath);
 
         File.WriteAllText(
-            _vmrPath / "src" / "source-mappings.json",
+            _vmrPath / "src" / _sourceMappingsName,
             string.Format(_sourceMappingsTemplate,
             _privateRepoPath.Path.Replace("\\", "\\\\"),
             _dependencyRepoPath.Path.Replace("\\", "\\\\")));
@@ -144,20 +147,20 @@ public class VmrTests
 
         var versionDetails = 
             @"<?xml version=""1.0"" encoding=""utf-8""?>
-                <Dependencies>
-                  <ProductDependencies>
-                  </ProductDependencies>
-                  <ToolsetDependencies>
-                    <Dependency Name=""Dependency"" Version=""8.0.0"">
-                      <Uri>{0}</Uri>
-                      <Sha>{1}</Sha>
-                      <SourceBuild RepoName=""dependency"" ManagedOnly=""true"" />
-                    </Dependency>
-                  </ToolsetDependencies>
-                </Dependencies>";
+            <Dependencies>
+            <ProductDependencies>
+            </ProductDependencies>
+            <ToolsetDependencies>
+            <Dependency Name=""Dependency"" Version=""8.0.0"">
+            <Uri>{0}</Uri>
+            <Sha>{1}</Sha>
+            <SourceBuild RepoName=""dependency"" ManagedOnly=""true"" />
+            </Dependency>
+            </ToolsetDependencies>
+            </Dependencies>";
 
         var commit = await GetRepoLastCommit(_dependencyRepoPath);
-        File.WriteAllText(_privateRepoPath / "eng" / "Version.Details.xml", string.Format(versionDetails, new object[] { _dependencyRepoPath.Path, commit }));
+        File.WriteAllText(_privateRepoPath / "eng" / _versionDetailsName, string.Format(versionDetails, new object[] { _dependencyRepoPath.Path, commit }));
         await CommitAll(_privateRepoPath, "Add version details file");
     }
 
@@ -334,18 +337,103 @@ public class VmrTests
         await CheckAllIsCommited(_vmrPath);
     }
 
-    private static List<LocalPath> GetExpectedFilesInVmr(LocalPath vmrPath, string[] syncedRepos, List<LocalPath> reposFiles)
+    [Test]
+    public async Task NonSrcContentIsSyncedTest()
+    {
+        var repoName = "special-repo";
+        var repoPath = _testsDirectory / repoName;
+        var filePath = repoPath / "content" / "special-file.txt";
+        var versionDetailsPath = repoPath / "eng" / _versionDetailsName;
+        var sourceMappingsPath = _vmrPath / "src" / _sourceMappingsName;
+
+        // add additional mappings in source-mappings.json
+
+        var sourceMappings = @"{{
+            ""additionalMappings"": [
+               {{
+                   ""source"": ""src/special-repo/content"",
+                   ""destination"": """"
+               }}
+            ],
+            ""defaults"": {{
+              ""defaultRef"": ""main"",
+              ""exclude"": [
+                ""**/*.dll""
+              ]
+            }},
+            ""mappings"": [
+              {{
+                ""name"": ""special-repo"",
+                ""defaultRemote"": ""{0}""
+              }}
+            ]
+        }}";
+
+        
+        Directory.CreateDirectory(repoPath);
+        Directory.CreateDirectory(repoPath / "content" );
+        Directory.CreateDirectory(repoPath / "eng");
+        File.WriteAllText(
+            filePath,
+            "A file that needs to be copied outside of the src folder");
+        File.WriteAllText(versionDetailsPath, _emptyVersionDetails);
+
+        await InitialCommit(repoPath);
+
+        File.WriteAllText(
+            sourceMappingsPath,
+            string.Format(
+                sourceMappings,
+                new[] 
+                {
+                    repoPath.Path.Replace("\\", "\\\\"),
+                }));
+        
+        await CommitAll(_vmrPath, "Replace source mappings");
+
+        // Initialize the repo
+
+        var commit = await GetRepoLastCommit(repoPath);
+        await CallDarcInitialize(_vmrPath, _tmpPath, repoName, commit);
+
+        var expectedFilesFromRepos = new List<LocalPath>
+        {
+            _vmrPath / "src" / repoName / "content" / "special-file.txt",
+            _vmrPath / "special-file.txt"
+        };
+
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { repoName},
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
+        await CheckAllIsCommited(_vmrPath);
+
+        // Change a file in the mapped folder
+
+        File.AppendAllText(filePath, "ccc");
+        await CommitAll(repoPath, "Change file");
+        commit = await GetRepoLastCommit(repoPath);
+        await CallDarcUpdate(_vmrPath, _tmpPath, repoName, commit);
+
+        CheckFileContents(_vmrPath / "special-file.txt", "A file that needs to be copied outside of the src folderccc");
+        await CheckAllIsCommited(_vmrPath);
+    }
+
+    private List<LocalPath> GetExpectedFilesInVmr(LocalPath vmrPath, string[] syncedRepos, List<LocalPath> reposFiles)
     {
         var expectedFiles = new List<LocalPath>
         {
             vmrPath / "git-info" / "AllRepoVersions.props",
             vmrPath / "src" / "source-manifest.json",
-            vmrPath / "src" / "source-mappings.json",
+            vmrPath / "src" / _sourceMappingsName,
         };
 
         foreach(var repo in syncedRepos)
         {
-            expectedFiles.Add(vmrPath / "src" / repo / "eng" / "Version.Details.xml");
+            expectedFiles.Add(vmrPath / "src" / repo / "eng" / _versionDetailsName);
             expectedFiles.Add(vmrPath / "git-info" / $"{repo}.props");
         }
         
