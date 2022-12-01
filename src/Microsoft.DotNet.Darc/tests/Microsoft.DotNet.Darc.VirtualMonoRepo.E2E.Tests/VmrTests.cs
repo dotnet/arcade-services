@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Collections;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -22,9 +23,11 @@ public class VmrTests
 {
     private LocalPath _currentTestDirectory = null!;
     private LocalPath _commonPrivateRepoPath = null!;
+    private LocalPath _commonDependencyRepoPath = null!;
     private LocalPath _commonVmrPath = null!;
     private LocalPath _privateRepoPath = null!;
     private LocalPath _externalRepoPath = null!;
+    private LocalPath _dependencyRepoPath = null!;
     private LocalPath _vmrPath = null!;
     private LocalPath _tmpPath = null!;
     private readonly LocalPath _testsDirectory;
@@ -54,30 +57,49 @@ public class VmrTests
                   ""externals/external-repo/**/*.exe"",
                   ""excluded/*""
                 ]
+              }},
+              {{
+                ""name"": ""dependency"",
+                ""defaultRemote"": ""{1}""
               }}
             ]
         }}";
+
     }
 
     [OneTimeSetUp]
     public async Task SetUpCommonRepos()
     {
+        var emptyVersionDetails = 
+            @"<?xml version=""1.0"" encoding=""utf-8""?>
+               <Dependencies>
+                <ProductDependencies>
+                </ProductDependencies>
+                <ToolsetDependencies>
+                </ToolsetDependencies>
+               </Dependencies>";
+
         Directory.CreateDirectory(_testsDirectory);
 
         _commonPrivateRepoPath = _testsDirectory / "test-repo";
         _commonVmrPath = _testsDirectory / "vmr";
+        _commonDependencyRepoPath = _testsDirectory / "dependency";
        
         Directory.CreateDirectory(_commonVmrPath);
+        Directory.CreateDirectory(_commonDependencyRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath / "excluded");
-        
+        Directory.CreateDirectory(_commonPrivateRepoPath / "eng");
+        Directory.CreateDirectory(_commonDependencyRepoPath / "eng");
         File.WriteAllText(_commonPrivateRepoPath / "test-repo-file.txt", "Test repo file");
         File.WriteAllText(_commonPrivateRepoPath / "excluded" / "excluded.txt", "File to be excluded");
-
+        File.WriteAllText(_commonDependencyRepoPath / "dependencyFile.txt", "File in the dependency repo");
+        File.WriteAllText(_commonDependencyRepoPath / "eng" / "Version.Details.xml", emptyVersionDetails);
         Directory.CreateDirectory(_commonVmrPath / "src");
         
         await InitialCommit(_commonVmrPath);
         await InitialCommit(_commonPrivateRepoPath);
+        await InitialCommit(_commonDependencyRepoPath);
     }
 
     [OneTimeTearDown]
@@ -105,13 +127,38 @@ public class VmrTests
         _tmpPath = _currentTestDirectory / "tmp";
         _privateRepoPath = _currentTestDirectory / "test-repo";
         _vmrPath = _currentTestDirectory / "vmr";
+        _dependencyRepoPath = _currentTestDirectory / "dependency"; 
 
         Directory.CreateDirectory(_tmpPath);
         CopyDirectory(_commonVmrPath, _vmrPath);
         CopyDirectory(_commonPrivateRepoPath, _privateRepoPath);
+        CopyDirectory(_commonDependencyRepoPath, _dependencyRepoPath);
 
-        File.WriteAllText(_vmrPath / "src" / "source-mappings.json", string.Format(_sourceMappingsTemplate, _privateRepoPath.Path.Replace("\\", "\\\\")));
-        await CommitAll(_vmrPath, "Add source mappings"); 
+        File.WriteAllText(
+            _vmrPath / "src" / "source-mappings.json",
+            string.Format(_sourceMappingsTemplate,
+            _privateRepoPath.Path.Replace("\\", "\\\\"),
+            _dependencyRepoPath.Path.Replace("\\", "\\\\")));
+
+        await CommitAll(_vmrPath, "Add source mappings");
+
+        var versionDetails = 
+            @"<?xml version=""1.0"" encoding=""utf-8""?>
+                <Dependencies>
+                  <ProductDependencies>
+                  </ProductDependencies>
+                  <ToolsetDependencies>
+                    <Dependency Name=""Dependency"" Version=""8.0.0"">
+                      <Uri>{0}</Uri>
+                      <Sha>{1}</Sha>
+                      <SourceBuild RepoName=""dependency"" ManagedOnly=""true"" />
+                    </Dependency>
+                  </ToolsetDependencies>
+                </Dependencies>";
+
+        var commit = await GetRepoLastCommit(_dependencyRepoPath);
+        File.WriteAllText(_privateRepoPath / "eng" / "Version.Details.xml", string.Format(versionDetails, new object[] { _dependencyRepoPath.Path, commit }));
+        await CommitAll(_privateRepoPath, "Add version details file");
     }
 
     [TearDown]
@@ -134,18 +181,21 @@ public class VmrTests
     public async Task RepoIsInitializedTest()
     {
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcInitialize("test-repo", commit);
+        await CallDarcInitialize(_vmrPath, _tmpPath, "test-repo", commit);
 
-        var expectedFiles = new List<string>
+        var expectedFilesFromRepos = new List<LocalPath> 
         {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt"
+            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            _vmrPath / "src" / "dependency" / "dependencyFile.txt" 
         };
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath.ToString()), expectedFiles);
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+        
+        CheckDirectoryContents(_vmrPath.ToString(), expectedFiles);
         await CheckAllIsCommited(_vmrPath);
     }
 
@@ -158,19 +208,23 @@ public class VmrTests
         await CommitAll(_privateRepoPath, "Changing a file in the repo");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
 
-        var expectedFiles = new List<string>
+        var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
             _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            _vmrPath / "src" / "dependency" / "dependencyFile.txt"
         };
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
-        CheckFileContents(_vmrPath / "src" / "test-repo" / "test-repo-file.txt", "Test repo fileChange in test repo file");
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckFileContents(_vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            "Test repo fileChange in test repo file");
         await CheckAllIsCommited(_vmrPath);
     }
 
@@ -183,19 +237,22 @@ public class VmrTests
         await CommitAll(_privateRepoPath, "Move a file from excluded to included folder");
         
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
 
-        var expectedFiles = new List<string>
+        var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
+            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            _vmrPath / "src" / "dependency" / "dependencyFile.txt",
             _vmrPath / "src" / "test-repo" / "excluded.txt",
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt"
         };
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
         await CheckAllIsCommited(_vmrPath);
     }
 
@@ -210,25 +267,27 @@ public class VmrTests
         await InitialCommit(_externalRepoPath);
 
         var submoduleRelativePath = new NativePath("externals") / "external-repo";
-        var submoduleName = "submodule1";
-        await InitializeSubmodule(_privateRepoPath, submoduleName, _externalRepoPath, submoduleRelativePath); 
+        await InitializeSubmodule(_privateRepoPath, "submodule1", _externalRepoPath, submoduleRelativePath); 
         await CommitAll(_privateRepoPath, "Add submodule");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
 
-        var expectedFiles = new List<string>
+        var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
+            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            _vmrPath / "src" / "dependency" / "dependencyFile.txt",
             _vmrPath / "src" / "test-repo" / ".gitmodules",
-            _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt",
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt"
+            _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt"
         };
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
         await CheckAllIsCommited(_vmrPath);
 
         // Add a file in the submodule
@@ -236,56 +295,72 @@ public class VmrTests
         File.WriteAllText(_externalRepoPath / "additional-file.txt", "New external repo file");
         await CommitAll(_externalRepoPath, "Adding new file in the submodule");
 
-        await _processManager.ExecuteGit(_privateRepoPath / submoduleRelativePath, new string[] { "pull", "origin", "main" }, CancellationToken.None);
+        await _processManager.ExecuteGit(_privateRepoPath / submoduleRelativePath,
+            new string[] { "pull", "origin", "main" },
+            CancellationToken.None);
+
         await CommitAll(_privateRepoPath, "Checkout submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
 
-        expectedFiles = new List<string>
-        {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
-            _vmrPath / "src" / "test-repo" / ".gitmodules",
-            _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "additional-file.txt",
-            _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt",
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt"
-        };
+        expectedFiles.Add(_vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "additional-file.txt");
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
+        CheckDirectoryContents(_vmrPath, expectedFiles);
         await CheckAllIsCommited(_vmrPath);
 
         // Remove submodule
 
-        await RemoveSubmodule(_privateRepoPath, submoduleRelativePath, submoduleName);
+        await RemoveSubmodule(_privateRepoPath, submoduleRelativePath);
         await CommitAll(_privateRepoPath, "Remove the submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
 
-        expectedFiles = new List<string>
+        expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "git-info" / "AllRepoVersions.props",
-            _vmrPath / "git-info" / "test-repo.props",
-            _vmrPath / "src" / "source-manifest.json",
-            _vmrPath / "src" / "source-mappings.json",
+            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
+            _vmrPath / "src" / "dependency" / "dependencyFile.txt",
             _vmrPath / "src" / "test-repo" / ".gitmodules",
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt"
         };
 
-        CheckDirectoryContents(new DirectoryInfo(_vmrPath), expectedFiles);
+        expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
         await CheckAllIsCommited(_vmrPath);
     }
 
-    private void CheckDirectoryContents(DirectoryInfo directory, IList<string> expectedFiles)
+    private static List<LocalPath> GetExpectedFilesInVmr(LocalPath vmrPath, string[] syncedRepos, List<LocalPath> reposFiles)
     {
-        var filesInDir = GetAllFilesInDirectory(directory).OrderBy(x => x).ToList();
+        var expectedFiles = new List<LocalPath>
+        {
+            vmrPath / "git-info" / "AllRepoVersions.props",
+            vmrPath / "src" / "source-manifest.json",
+            vmrPath / "src" / "source-mappings.json",
+        };
+
+        foreach(var repo in syncedRepos)
+        {
+            expectedFiles.Add(vmrPath / "src" / repo / "eng" / "Version.Details.xml");
+            expectedFiles.Add(vmrPath / "git-info" / $"{repo}.props");
+        }
+        
+        expectedFiles.AddRange(reposFiles);
+        
+        return expectedFiles;
+    }
+
+    private void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
+    {
+        var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
         filesInDir.Should().BeEquivalentTo(expectedFiles);
     }
 
-    private void CheckFileContents(LocalPath filePath, string expected)
+    private static void CheckFileContents(LocalPath filePath, string expected)
     {
         var fileContent = File.ReadAllText(filePath);
         fileContent.Should().BeEquivalentTo(expected);
@@ -297,15 +372,34 @@ public class VmrTests
         gitStatus.StandardOutput.Should().Be(string.Empty);
     }
 
-    private async Task CallDarcInitialize(string repoName, string commit)
+    private async Task CallDarcInitialize(string vmrPath, string tmpPath, string repository, string commit)
     {
-        var res = await _processManager.Execute("dotnet", new string[] { _darcDll, "vmr", "initialize", "--verbose", "--vmr", _vmrPath, "--tmp", _tmpPath, $"{repoName}:{commit}" });
-        Assert.True(res.ExitCode == 0, res.StandardError);
+        await CallDarcVmrCommand("initialize", vmrPath, tmpPath, new[] { $"{repository}:{commit}" });
     }
 
-    private async Task CallDarcUpdate(string repoName, string commit)
+    private async Task CallDarcUpdate(string vmrPath, string tmpPath, string repository, string commit)
     {
-        var res = await _processManager.Execute("dotnet", new string[] { _darcDll, "vmr", "update", "--vmr", _vmrPath, "--tmp", _tmpPath, $"{repoName}:{commit}" });
+        await CallDarcVmrCommand("update", vmrPath, tmpPath, new[] { $"{repository}:{commit}" });
+    }
+
+    private async Task CallDarcVmrCommand(string command, string vmrPath, string tmpPath, string[] arguments)
+    {
+        var args = new List<string>
+        {
+            _darcDll,
+            "vmr",
+            command,
+            "--recursive",
+            "--vmr",
+            vmrPath,
+            "--tmp",
+            tmpPath
+        };
+
+        args.AddRange(arguments);
+
+        var res = await _processManager.Execute("dotnet", args);
+        //res.ExitCode.Should().Be(0, res.StandardError);
         Assert.True(res.ExitCode == 0, res.StandardError);
     }
 
@@ -334,19 +428,37 @@ public class VmrTests
         return log.StandardOutput.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).First();
     }
 
-    private async Task InitializeSubmodule(LocalPath repo, string submoduleName, string submoduleUrl, string pathInRepo)
+    private async Task InitializeSubmodule(
+        LocalPath repo,
+        string submoduleName,
+        string submoduleUrl,
+        string pathInRepo)
     {
-        await _processManager.ExecuteGit(repo,
-            "-c", "protocol.file.allow=always",
-            "submodule", "add", "--name", 
-                submoduleName, "--", submoduleUrl, pathInRepo);
+        await _processManager.ExecuteGit(
+            repo,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            "--name", 
+            submoduleName,
+            "--",
+            submoduleUrl,
+            pathInRepo);
         
-        await _processManager.ExecuteGit(repo,
-            "submodule update", "--init", "--recursive",
-                submoduleName, "--", submoduleUrl, pathInRepo);
+        await _processManager.ExecuteGit(
+            repo,
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+            submoduleName,
+            "--",
+            submoduleUrl,
+            pathInRepo);
     }
 
-    private async Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath, string submoduleName)
+    private async Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath)
     {
         await _processManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
     }
@@ -373,16 +485,16 @@ public class VmrTests
         }
     }
 
-    private ICollection<string> GetAllFilesInDirectory(DirectoryInfo directory)
+    private ICollection<LocalPath> GetAllFilesInDirectory(DirectoryInfo directory)
     {
-        var files = new List<string>();
+        var files = new List<LocalPath>();
 
         if (directory.Name == ".git")
         {
             return files;
         }
 
-        files.AddRange(directory.GetFiles().Select(f => f.FullName));
+        files.AddRange(directory.GetFiles().Select(f => new NativePath(f.FullName)));
 
         foreach (var subDir in directory.GetDirectories())
         {
