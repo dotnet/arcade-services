@@ -32,7 +32,7 @@ public class VmrSyncToolingE2ETest
     private LocalPath _tmpPath = null!;
     private readonly LocalPath _testsDirectory;
     private readonly IProcessManager _processManager;
-    private readonly string _darcDll;
+    private readonly string _darcExecutable;
     private readonly string _sourceMappingsTemplate;
     private readonly string _emptyVersionDetails;
     private readonly string _versionDetailsName = "Version.Details.xml";
@@ -42,7 +42,7 @@ public class VmrSyncToolingE2ETest
     {
         _processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
         var assembly = Assembly.GetAssembly(typeof(VmrSyncToolingE2ETest)) ?? throw new Exception("Assembly not found");
-        _darcDll = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.dll");
+        _darcExecutable = Path.Join(Path.GetDirectoryName(assembly.Location), "Microsoft.DotNet.Darc.exe");
         _testsDirectory = new NativePath(Path.GetTempPath()) / "_vmrTests" / Path.GetRandomFileName();
         _sourceMappingsTemplate = @"{{
             ""defaults"": {{
@@ -182,28 +182,7 @@ public class VmrSyncToolingE2ETest
     [Test]
     public async Task RepoIsInitializedTest()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
-
-        var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcInitialize(_vmrPath, _tmpPath, "test-repo", commit);
-
-        var expectedFilesFromRepos = new List<LocalPath> 
-        {
-            testRepoFilePath, 
-            dependencyFilePath
-        };
-
-        var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
-            new[] { "test-repo", "dependency" },
-            expectedFilesFromRepos
-        );
-        
-        CheckDirectoryContents(_vmrPath, expectedFiles);
-        CheckFileContents(testRepoFilePath, "Test repo file");
-        CheckFileContents(dependencyFilePath, "File in the dependency repo");
-        await CheckAllIsCommited(_vmrPath);
+        await EnsureTestRepoIsInitialized();
     }
 
     [Test]
@@ -212,13 +191,13 @@ public class VmrSyncToolingE2ETest
         var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
         var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
 
-        await RepoIsInitializedTest();
+        await EnsureTestRepoIsInitialized();
 
         File.WriteAllText(_privateRepoPath / "test-repo-file.txt", "Test changes in repo file");
         await CommitAll(_privateRepoPath, "Changing a file in the repo");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -241,13 +220,13 @@ public class VmrSyncToolingE2ETest
     [Test]
     public async Task FileIsIncludedTest()
     {
-        await RepoIsInitializedTest();
+        await EnsureTestRepoIsInitialized();
 
         File.Move(_privateRepoPath / "excluded" / "excluded.txt", _privateRepoPath / "excluded.txt");
         await CommitAll(_privateRepoPath, "Move a file from excluded to included folder");
         
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -275,7 +254,7 @@ public class VmrSyncToolingE2ETest
         var submoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt";
         var additionalSubmoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "additional-file.txt";
 
-        await RepoIsInitializedTest();
+        await EnsureTestRepoIsInitialized();
 
         _externalRepoPath = _currentTestDirectory / "external-repo";
         Directory.CreateDirectory(_externalRepoPath);
@@ -287,7 +266,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Add submodule");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
+        await CallDarcUpdate("test-repo", commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -321,7 +300,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Checkout submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
+        await CallDarcUpdate("test-repo", commit);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
 
@@ -334,7 +313,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Remove the submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, "test-repo", commit);
+        await CallDarcUpdate("test-repo", commit);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
@@ -400,7 +379,7 @@ public class VmrSyncToolingE2ETest
         // Initialize the repo
 
         var commit = await GetRepoLastCommit(repoPath);
-        await CallDarcInitialize(_vmrPath, _tmpPath, repoName, commit);
+        await CallDarcInitialize(repoName, commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -422,7 +401,7 @@ public class VmrSyncToolingE2ETest
         File.WriteAllText(filePath, "A file with a change that needs to be copied outside of the src folder");
         await CommitAll(repoPath, "Change file");
         commit = await GetRepoLastCommit(repoPath);
-        await CallDarcUpdate(_vmrPath, _tmpPath, repoName, commit);
+        await CallDarcUpdate(repoName, commit);
 
         CheckFileContents(_vmrPath / "special-file.txt", "A file with a change that needs to be copied outside of the src folder");
         await CheckAllIsCommited(_vmrPath);
@@ -469,33 +448,58 @@ public class VmrSyncToolingE2ETest
         gitStatus.StandardOutput.Should().BeEmpty();
     }
 
-    private async Task CallDarcInitialize(string vmrPath, string tmpPath, string repository, string commit)
+    private async Task EnsureTestRepoIsInitialized()
     {
-        await CallDarcVmrCommand("initialize", vmrPath, tmpPath, new[] { $"{repository}:{commit}" });
+        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
+        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
+
+        var commit = await GetRepoLastCommit(_privateRepoPath);
+        await CallDarcInitialize("test-repo", commit);
+
+        var expectedFilesFromRepos = new List<LocalPath>
+        {
+            testRepoFilePath,
+            dependencyFilePath
+        };
+
+        var expectedFiles = GetExpectedFilesInVmr(
+            _vmrPath,
+            new[] { "test-repo", "dependency" },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckFileContents(testRepoFilePath, "Test repo file");
+        CheckFileContents(dependencyFilePath, "File in the dependency repo");
+        await CheckAllIsCommited(_vmrPath);
     }
 
-    private async Task CallDarcUpdate(string vmrPath, string tmpPath, string repository, string commit)
+    private async Task CallDarcInitialize(string repository, string commit)
     {
-        await CallDarcVmrCommand("update", vmrPath, tmpPath, new[] { $"{repository}:{commit}" });
+        await CallDarcVmrCommand("initialize", new[] { $"{repository}:{commit}" });
     }
 
-    private async Task CallDarcVmrCommand(string command, string vmrPath, string tmpPath, string[] arguments)
+    private async Task CallDarcUpdate(string repository, string commit)
+    {
+        await CallDarcVmrCommand("update", new[] { $"{repository}:{commit}" });
+    }
+
+    private async Task CallDarcVmrCommand(string command, string[] arguments)
     {
         var args = new List<string>
         {
-            _darcDll,
             "vmr",
             command,
             "--recursive",
             "--vmr",
-            vmrPath,
+            _vmrPath,
             "--tmp",
-            tmpPath
+            _tmpPath
         };
 
         args.AddRange(arguments);
 
-        var res = await _processManager.Execute("dotnet", args);
+        var res = await _processManager.Execute(_darcExecutable, args);
         res.ExitCode.Should().Be(0, res.StandardError);
     }
 
