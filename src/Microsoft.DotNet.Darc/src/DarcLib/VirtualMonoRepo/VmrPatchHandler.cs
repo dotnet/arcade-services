@@ -323,9 +323,9 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken)
     {
-        var files = new List<string>();
+        var files = new List<UnixPath>();
         if (_fileSystem.GetFileInfo(patchPath).Length == 0)
         {
             _logger.LogDebug("Patch {patch} is empty. Skipping file enumeration..", patchPath);
@@ -340,7 +340,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             var match = GitPatchSummaryLine.Match(line);
             if (match.Success)
             {
-                files.Add(match.Groups["file"].Value);
+                files.Add(new UnixPath(match.Groups["file"].Value));
             }
         }
 
