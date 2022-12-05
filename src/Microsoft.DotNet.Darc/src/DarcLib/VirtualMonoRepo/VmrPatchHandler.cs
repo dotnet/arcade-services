@@ -260,7 +260,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
+    public async Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -317,49 +317,13 @@ public class VmrPatchHandler : IVmrPatchHandler
         await ResetWorkingTreeDirectory(patch.ApplicationPath ?? ".");
     }
 
-    public async Task RestoreFilesFromPatch(
-        SourceMapping mapping,
-        LocalPath clonePath,
-        string patch,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogDebug("Restoring patched files from a VMR patch `{patch}`..", patch);
-        
-        var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
-
-        foreach (var patchedFile in await GetPatchedFiles(clonePath, patch, cancellationToken))
-        {
-            var originalFile = clonePath / patchedFile;
-            var destination = repoSourcesPath / patchedFile;
-
-            if (_fileSystem.FileExists(originalFile))
-            {
-                // Copy old revision to VMR
-                _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
-                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-            }
-            else
-            {
-                // File is being added by the patch - we need to remove it
-                _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
-                _fileSystem.DeleteFile(destination);
-            }
-        }
-
-        // Stage the restored files (all future patches are applied to index directly)
-        _localGitRepo.Stage(_vmrInfo.VmrPath, VmrInfo.GetRelativeRepoSourcesPath(mapping));
-    }
-
     /// <summary>
     /// Resolves a list of all files that are part of a given patch diff.
     /// </summary>
     /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(
-        string repoPath,
-        string patchPath,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken)
     {
         var files = new List<string>();
         if (_fileSystem.GetFileInfo(patchPath).Length == 0)
@@ -368,7 +332,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return files;
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken);
+        var result = await _processManager.Execute("git", new string[] { "apply", "--numstat", patchPath }, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))
