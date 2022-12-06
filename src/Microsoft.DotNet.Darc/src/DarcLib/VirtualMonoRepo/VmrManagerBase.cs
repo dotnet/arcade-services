@@ -53,7 +53,8 @@ public abstract class VmrManagerBase : IVmrManager
 
         var watch = Stopwatch.StartNew();
         using var repository = new Repository(_vmrInfo.VmrPath);
-        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
+        var options = new CommitOptions { AllowEmptyCommit = true };
+        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature, options);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }

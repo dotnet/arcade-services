@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -102,14 +103,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         return updateDependencies
             ? UpdateRepositoryRecursively(mapping, targetRevision, targetVersion, noSquash, cancellationToken)
-            : UpdateRepository(mapping, targetRevision, targetVersion, noSquash, cancellationToken);
+            : UpdateRepositoryInternal(mapping, targetRevision, targetVersion, noSquash, reapplyVmrPatches: true, cancellationToken);
     }
 
-    private async Task UpdateRepository(
+    private async Task<IReadOnlyCollection<(SourceMapping Mapping, string Path)>> UpdateRepositoryInternal(
         SourceMapping mapping,
         string? targetRevision,
         string? targetVersion,
         bool noSquash,
+        bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
         var currentSha = GetCurrentVersion(mapping);
@@ -126,7 +128,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         if (currentSha == targetRevision)
         {
             _logger.LogInformation("No new commits found to synchronize");
-            return;
+            return Array.Empty<(SourceMapping Mapping, string Path)>();
         }
 
         using var repo = new Repository(clonePath);
@@ -170,38 +172,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(targetRevision));
         }
 
-        // When we go one by one, we basically "copy" the commits.
-        // Let's do the same in case we don't explicitly go one by one but we only have one commit..
-        if ((noSquash || commitsToCopy.Count == 1) && !arbitraryCommits)
-        {
-            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                    mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
-
-                var message = PrepareCommitMessage(
-                    SingleCommitMessage,
-                    mapping,
-                    currentSha,
-                    commitToCopy.Id.Sha,
-                    commitToCopy.Message);
-
-                await UpdateRepoToRevision(
-                    mapping,
-                    currentSha,
-                    commitToCopy.Sha,
-                    commitToCopy.Sha == targetRevision ? targetVersion : null,
-                    clonePath,
-                    message,
-                    commitToCopy.Author,
-                    cancellationToken);
-
-                currentSha = commitToCopy.Id.Sha;
-            }
-        }
-        else
+        // When we don't need to copy the commits one by one and we have more than 1 to mirror,
+        // do them in bulk
+        if (!noSquash && commitsToCopy.Count != 1 || arbitraryCommits)
         {
             // We squash commits and list them in the message
             var commitMessages = new StringBuilder();
@@ -229,7 +202,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 targetRevision,
                 commitMessages.ToString());
 
-            await UpdateRepoToRevision(
+            return await UpdateRepoToRevision(
                 mapping,
                 currentSha,
                 targetRevision,
@@ -237,8 +210,42 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 clonePath,
                 message,
                 DotnetBotCommitSignature,
+                reapplyVmrPatches,
                 cancellationToken);
         }
+
+        var vmrPatchesToRestore = new List<(SourceMapping Mapping, string Path)>();
+        while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _logger.LogInformation("Updating {repo} from {current} to {next}..",
+                mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
+
+            var message = PrepareCommitMessage(
+                SingleCommitMessage,
+                mapping,
+                currentSha,
+                commitToCopy.Id.Sha,
+                commitToCopy.Message);
+
+            var patches = await UpdateRepoToRevision(
+                mapping,
+                currentSha,
+                commitToCopy.Sha,
+                commitToCopy.Sha == targetRevision ? targetVersion : null,
+                clonePath,
+                message,
+                commitToCopy.Author,
+                reapplyVmrPatches,
+                cancellationToken);
+
+            vmrPatchesToRestore.AddRange(vmrPatchesToRestore);
+
+            currentSha = commitToCopy.Id.Sha;
+        }
+
+        return vmrPatchesToRestore.DistinctBy(patch => patch.Path).ToImmutableList();
     }
 
     /// <summary>
@@ -273,6 +280,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Dependencies that were already up-to-date so they won't be updated
         var skippedDependencies = new HashSet<DependencyUpdate>();
 
+        var vmrPatchesToReapply = new List<(SourceMapping Mapping, string Path)>();
         while (reposToUpdate.TryDequeue(out var repoToUpdate))
         {
             var mappingToUpdate = repoToUpdate.Mapping;
@@ -288,7 +296,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     repoToUpdate.TargetRevision ?? HEAD);
             }
 
-            await UpdateRepository(mappingToUpdate, repoToUpdate.TargetRevision, repoToUpdate.TargetVersion, noSquash, cancellationToken);
+            var patchesToReapply = await UpdateRepositoryInternal(
+                mappingToUpdate,
+                repoToUpdate.TargetRevision,
+                repoToUpdate.TargetVersion,
+                noSquash,
+                false,
+                cancellationToken);
+
+            vmrPatchesToReapply.AddRange(patchesToReapply);
+
             updatedDependencies.Add(repoToUpdate with
             {
                 // We the SHA again because original target could have been a branch name
@@ -350,6 +367,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.Mapping.DefaultRemote}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
+        if (vmrPatchesToReapply.Any())
+        {
+            await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
+        }
+
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
             rootMapping,
@@ -368,7 +391,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// <summary>
     /// Synchronizes given repo in VMR onto given revision.
     /// </summary>
-    private async Task UpdateRepoToRevision(
+    private async Task<IReadOnlyCollection<(SourceMapping Mapping, string Path)>> UpdateRepoToRevision(
         SourceMapping mapping,
         string fromRevision,
         string toRevision,
@@ -376,6 +399,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         LocalPath clonePath,
         string commitMessage,
         Signature author,
+        bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -415,23 +439,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        foreach (var (affectedMapping, patchPath) in vmrPatchesToRestore)
+        if (reapplyVmrPatches)
         {
-            if (!_fileSystem.FileExists(patchPath))
-            {
-                // Patch was removed, so it doesn't exist anymore
-                _logger.LogDebug("Not re-applying {patch} as it was removed", patchPath);
-                continue;
-            }
-            
-            // Re-apply VMR patch back
-            await _patchHandler.ApplyPatch(affectedMapping, patchPath, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            await ReapplyVmrPatches(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
         }
 
         await UpdateThirdPartyNotices(cancellationToken);
 
         Commit(commitMessage, author);
+
+        return vmrPatchesToRestore;
     }
 
     private async Task<IReadOnlyCollection<(SourceMapping Mapping, string Path)>> RestoreVmrPatchedFiles(
@@ -539,9 +556,35 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        return patchesToRestore
-            .DistinctBy(p => p.Path) // Make sure we don't restore the same patch twice
-            .ToArray();
+        return patchesToRestore;
+    }
+
+    private async Task ReapplyVmrPatches(
+        IReadOnlyCollection<(SourceMapping Mapping, string Path)> patches,
+        CancellationToken cancellationToken)
+    {
+        if (patches.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("Re-applying {count} VMR patch{s}...",
+            patches.Count,
+            patches.Count > 1 ? "es" : string.Empty);
+
+        foreach (var (affectedMapping, patchPath) in patches)
+        {
+            if (!_fileSystem.FileExists(patchPath))
+            {
+                // Patch was removed, so it doesn't exist anymore
+                _logger.LogDebug("Not re-applying {patch} as it was removed", patchPath);
+                continue;
+            }
+
+            // Re-apply VMR patch back
+            await _patchHandler.ApplyPatch(affectedMapping, patchPath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
     }
 
     private string GetCurrentVersion(SourceMapping mapping)
