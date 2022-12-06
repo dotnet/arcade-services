@@ -500,7 +500,7 @@ public class VmrSyncToolingE2ETest
         args.AddRange(arguments);
 
         var res = await _processManager.Execute(_darcExecutable, args);
-        res.ExitCode.Should().Be(0, res.StandardError);
+        res.ExitCode.Should().Be(0, res.ToString());
     }
 
     private async Task ConfigureGit(LocalPath repo)
