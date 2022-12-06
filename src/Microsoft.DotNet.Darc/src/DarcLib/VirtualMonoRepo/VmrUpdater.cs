@@ -367,7 +367,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .AppendLine($"    {update.Mapping.DefaultRemote}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
-        await ReapplyVmrPatches(vmrPatchesToReapply, cancellationToken);
+        await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path), cancellationToken);
         Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
 
         var commitMessage = PrepareCommitMessage(
@@ -438,7 +438,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (reapplyVmrPatches)
         {
-            await ReapplyVmrPatches(vmrPatchesToRestore, cancellationToken);
+            await ReapplyVmrPatches(vmrPatchesToRestore.DistinctBy(p => p.Path), cancellationToken);
         }
 
         await UpdateThirdPartyNotices(cancellationToken);
@@ -553,13 +553,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
         }
 
-        return patchesToRestore
-            .DistinctBy(p => p.Path) // Make sure we don't restore the same patch twice
-            .ToArray();
+        return patchesToRestore;
     }
 
     private async Task ReapplyVmrPatches(
-        IReadOnlyCollection<(SourceMapping Mapping, string Path)> patches,
+        IEnumerable<(SourceMapping Mapping, string Path)> patches,
         CancellationToken cancellationToken)
     {
         foreach (var (affectedMapping, patchPath) in patches)
