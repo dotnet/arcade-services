@@ -271,7 +271,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (info.Length == 0)
         {
-            _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
+            _logger.LogDebug("No changes in {patch}", patch.Path);
             return;
         }
 
