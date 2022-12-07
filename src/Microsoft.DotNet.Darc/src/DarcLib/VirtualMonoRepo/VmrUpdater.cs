@@ -495,19 +495,21 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             if (!_fileSystem.FileExists(patch.Path))
             {
                 // Patch is being added, so it doesn't exist yet
-                _logger.LogDebug("Not applying {patch} as will be added", patch.Path);
+                _logger.LogDebug("Not restoring {patch} as it will be added during the sync", patch.Path);
                 continue;
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _logger.LogDebug("Restoring patched files from a VMR patch `{patch}`..", patch.Path);
+            _logger.LogDebug("Detecting patched files from a VMR patch `{patch}`..", patch.Path);
 
             IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
 
             affectedFiles.AddRange(patchedFiles
                .Select(path => (RelativePath: path, VmrPath: patch.ApplicationPath != null ? patch.ApplicationPath / path : new UnixPath("")))
                .Select(p => (p.RelativePath, p.VmrPath, FindComponentForFile(p.VmrPath))));
+
+            _logger.LogDebug("{count} files restored from a VMR patch `{patch}`..", patchedFiles.Count, patch.Path);
         }
 
         _logger.LogInformation("Found {count} files affected by VMR patches. Restoring original files...",
