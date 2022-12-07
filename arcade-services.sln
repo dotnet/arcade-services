@@ -201,13 +201,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.PatGenerat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.PatGenerator.Tests", "src\Microsoft.DncEng.PatGenerator.Tests\Microsoft.DncEng.PatGenerator.Tests.csproj", "{13083751-8ED5-4668-9C71-2B56724BA14B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.GitHub.Authentication.Tests", "src\Shared\Microsoft.DotNet.GitHub.Authentication.Tests\Microsoft.DotNet.GitHub.Authentication.Tests.csproj", "{907149A6-902B-4BED-956C-6478D58C7578}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.GitHub.Authentication.Tests", "src\Shared\Microsoft.DotNet.GitHub.Authentication.Tests\Microsoft.DotNet.GitHub.Authentication.Tests.csproj", "{907149A6-902B-4BED-956C-6478D58C7578}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Darc", "Darc", "{C0B90032-033F-4C3E-809F-BD3339E1E313}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Authentication.Algorithms", "src\Shared\Microsoft.DotNet.Authentication.Algorithms\Microsoft.DotNet.Authentication.Algorithms.csproj", "{98119800-E540-4928-8354-5E21E1384169}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Authentication.Algorithms", "src\Shared\Microsoft.DotNet.Authentication.Algorithms\Microsoft.DotNet.Authentication.Algorithms.csproj", "{98119800-E540-4928-8354-5E21E1384169}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Authentication.Algorithms.Tests", "src\Shared\Microsoft.DotNet.Authentication.Algorithms.Tests\Microsoft.DotNet.Authentication.Algorithms.Tests.csproj", "{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Authentication.Algorithms.Tests", "src\Shared\Microsoft.DotNet.Authentication.Algorithms.Tests\Microsoft.DotNet.Authentication.Algorithms.Tests.csproj", "{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests", "src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests.csproj", "{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1143,6 +1145,18 @@ Global
 		{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5}.Release|x64.Build.0 = Release|Any CPU
 		{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5}.Release|x86.ActiveCfg = Release|Any CPU
 		{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5}.Release|x86.Build.0 = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|x64.Build.0 = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Debug|x86.Build.0 = Debug|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|x64.ActiveCfg = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|x64.Build.0 = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|x86.ActiveCfg = Release|Any CPU
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1212,6 +1226,7 @@ Global
 		{907149A6-902B-4BED-956C-6478D58C7578} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{98119800-E540-4928-8354-5E21E1384169} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
+		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8} = {C0B90032-033F-4C3E-809F-BD3339E1E313}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}
