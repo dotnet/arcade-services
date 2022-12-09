@@ -45,9 +45,9 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
         var services = new ServiceCollection();
         services
-            .AddTransient<GitRepoFactory>()
+            .AddTransient<GitFileManagerFactory>()
             .AddVmrManagers(
-                sp => sp.GetRequiredService<GitRepoFactory>(),
+                sp => sp.GetRequiredService<GitFileManagerFactory>(),
                 GitLocation,
                 VmrPath,
                 tmpPath,

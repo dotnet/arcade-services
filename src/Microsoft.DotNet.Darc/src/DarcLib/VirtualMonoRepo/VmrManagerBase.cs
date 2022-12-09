@@ -28,7 +28,7 @@ public abstract class VmrManagerBase : IVmrManager
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ILocalGitRepo _localGitClient;
-    private readonly IGitFileManager _gitFileManager;
+    private readonly IGitFileManagerFactory _gitFileManagerFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
@@ -41,7 +41,7 @@ public abstract class VmrManagerBase : IVmrManager
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ILocalGitRepo localGitClient,
-        IGitFileManager gitFileManager,
+        IGitFileManagerFactory gitFileManagerFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
@@ -52,7 +52,7 @@ public abstract class VmrManagerBase : IVmrManager
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _localGitClient = localGitClient;
-        _gitFileManager = gitFileManager;
+        _gitFileManagerFactory = gitFileManagerFactory;
         _fileSystem = fileSystem;
     }
 
@@ -149,7 +149,8 @@ public abstract class VmrManagerBase : IVmrManager
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
         }
 
-        return await _gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
+        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     /// <summary>

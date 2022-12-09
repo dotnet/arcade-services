@@ -11,26 +11,32 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Helpers;
 
-public class GitRepoFactory : IGitRepoFactory
+public class GitFileManagerFactory : IGitFileManagerFactory
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly VmrRemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
-    private readonly ILogger<GitRepoFactory> _logger;
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly ILogger<GitFileManagerFactory> _logger;
 
-    public GitRepoFactory(
+    public GitFileManagerFactory(
         IVmrInfo vmrInfo,
         VmrRemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
-        ILogger<GitRepoFactory> logger)
+        IVersionDetailsParser versionDetailsParser,
+        ILogger<GitFileManagerFactory> logger)
     {
         _vmrInfo = vmrInfo;
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
+        _versionDetailsParser = versionDetailsParser;
         _logger = logger;
     }
 
-    public IGitRepo CreateGitRepo(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
+    public IGitFileManager Create(string repoUri)
+        => new GitFileManager(CreateGitRepo(repoUri), _versionDetailsParser, _logger);
+
+    private IGitRepo CreateGitRepo(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _processManager.GitExecutable,

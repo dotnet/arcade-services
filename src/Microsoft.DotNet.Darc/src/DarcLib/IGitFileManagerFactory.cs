@@ -4,7 +4,7 @@
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IGitRepoFactory
+public interface IGitFileManagerFactory
 {
-    IGitRepo CreateGitRepo(string repoUri);
+    IGitFileManager Create(string repoUri);
 }

@@ -18,7 +18,7 @@ public static class VmrRegistrations
 {
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
-        Func<IServiceProvider, IGitRepoFactory> gitRepoFactoryProvider,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
@@ -28,13 +28,13 @@ public static class VmrRegistrations
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         services.TryAddSingleton(new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken));
-        services.TryAddSingleton(gitRepoFactoryProvider);
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
-        Func<IServiceProvider, IGitRepoFactory> gitRepoFactoryProvider,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
@@ -43,7 +43,7 @@ public static class VmrRegistrations
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton(configure);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
-        services.TryAddSingleton(gitRepoFactoryProvider);
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
@@ -63,7 +63,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
-        services.TryAddTransient<IGitFileManager, GitFileManager>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
