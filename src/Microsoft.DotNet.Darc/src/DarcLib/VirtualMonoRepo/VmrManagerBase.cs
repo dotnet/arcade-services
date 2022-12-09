@@ -68,21 +68,6 @@ public abstract class VmrManagerBase : IVmrManager
         _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
 
-    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
-    {
-        var isTpnUpdated = _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath)
-            .Where(ThirdPartyNoticesGenerator.IsTpnPath)
-            .Any();
-
-        if (isTpnUpdated)
-        {
-            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
-            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-    }
-
     /// <summary>
     /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
@@ -153,6 +138,21 @@ public abstract class VmrManagerBase : IVmrManager
 
         var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
         return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+    }
+
+    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
+    {
+        var isTpnUpdated = _localGitClient
+            .GetStagedFiles(_vmrInfo.VmrPath)
+            .Where(ThirdPartyNoticesGenerator.IsTpnPath)
+            .Any();
+
+        if (isTpnUpdated)
+        {
+            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
+            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
     }
 
     /// <summary>
