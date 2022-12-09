@@ -5,12 +5,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -23,28 +23,37 @@ public abstract class VmrManagerBase : IVmrManager
     protected const string HEAD = "HEAD";
 
     private readonly IVmrInfo _vmrInfo;
+    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ILocalGitRepo _localGitClient;
+    private readonly IGitFileManager _gitFileManager;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
+        ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyInfo,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ILocalGitRepo localGitClient,
+        IGitFileManager gitFileManager,
+        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
+        _sourceManifest = sourceManifest;
         _dependencyInfo = dependencyInfo;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _localGitClient = localGitClient;
+        _gitFileManager = gitFileManager;
+        _fileSystem = fileSystem;
     }
 
     protected void Commit(string commitMessage, Signature author)
@@ -59,14 +68,31 @@ public abstract class VmrManagerBase : IVmrManager
         _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
 
+    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
+    {
+        var isTpnUpdated = _localGitClient
+            .GetStagedFiles(_vmrInfo.VmrPath)
+            .Where(ThirdPartyNoticesGenerator.IsTpnPath)
+            .Any();
+
+        if (isTpnUpdated)
+        {
+            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
+            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+    }
+
     /// <summary>
-    /// Parses Version.Details.xml of a given mapping and returns the list of source build dependencies (+ their mapping).
+    /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IList<(DependencyDetail dependency, SourceMapping mapping)>> GetDependencies(
-        SourceMapping mapping,
+    protected async Task<IList<(DependencyDetail dependency, SourceMapping mapping)>> GetAllDependencies(
+        string remoteRepoUri,
+        string commitSha,
         CancellationToken cancellationToken)
     {
-        var versionDetailsPath = _vmrInfo.GetRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml;
+        var result = new List<(DependencyDetail, SourceMapping)>();
+        /*var versionDetailsPath = _vmrInfo.GetRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml;
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
 
         var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent, true)
@@ -88,22 +114,22 @@ public abstract class VmrManagerBase : IVmrManager
             result.Add((dependency, dependencyMapping));
         }
 
-        return result;
+        return result;*/
     }
 
-    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
+    private async Task<IEnumerable<DependencyDetail>> GetRepoDependencies(string remoteRepoUri, string commitSha)
     {
-        var isTpnUpdated = _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath)
-            .Where(ThirdPartyNoticesGenerator.IsTpnPath)
-            .Any();
-
-        if (isTpnUpdated)
+        // Check if we have the file locally
+        var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
+        if (localVersion?.CommitSha == commitSha)
         {
-            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
-            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
-            cancellationToken.ThrowIfCancellationRequested();
+            // TODO: Do not use mapping.DefaultRemote
+            var path = _vmrInfo.VmrPath / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var content = await _fileSystem.ReadAllTextAsync(path);
+            return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
         }
+
+        return await _gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     /// <summary>
