@@ -1354,25 +1354,6 @@ internal class GatherDropOperation : Operation
     }
 
     /// <summary>
-    ///     Determine whether this location is an azure devops build url.
-    /// </summary>
-    /// <param name="location">Location</param>
-    /// <returns>True if the location is an Azure Devops uri, false otherwise.</returns>
-    /// <remarks>
-    ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
-    /// </remarks>
-    private static bool IsAzureDevOpsArtifactsUrl(string location)
-    {
-        if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
-        {
-            // Can't parse the location as a URI.  Some other kind of location?
-            return false;
-        }
-
-        return locationUri.Host.Equals("dev.azure.com") && location.EndsWith("/artifacts");
-    }
-
-    /// <summary>
     ///     Gets the base uri of a blob uri
     /// </summary>
     /// <param name="blobUri">Uri of the blob</param>
