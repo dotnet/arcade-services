@@ -126,6 +126,8 @@ public abstract class VmrManagerBase : IVmrManager
                         update.Mapping.Name,
                         update.RemoteUri,
                         update.TargetRevision);
+
+                    reposToScan.Enqueue(update);
                 }
             }
         }
@@ -144,7 +146,7 @@ public abstract class VmrManagerBase : IVmrManager
         var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
         if (localVersion?.CommitSha == commitSha)
         {
-            var path = _vmrInfo.VmrPath / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var path = _vmrInfo.VmrPath / VmrInfo.RelativeSourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
             var content = await _fileSystem.ReadAllTextAsync(path);
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
         }

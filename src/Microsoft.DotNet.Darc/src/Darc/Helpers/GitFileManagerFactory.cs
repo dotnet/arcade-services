@@ -17,42 +17,42 @@ public class GitFileManagerFactory : IGitFileManagerFactory
     private readonly VmrRemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly ILogger<GitFileManagerFactory> _logger;
+    private readonly ILoggerFactory _loggerFactory;
 
     public GitFileManagerFactory(
         IVmrInfo vmrInfo,
         VmrRemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
         IVersionDetailsParser versionDetailsParser,
-        ILogger<GitFileManagerFactory> logger)
+        ILoggerFactory loggerFactory)
     {
         _vmrInfo = vmrInfo;
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
         _versionDetailsParser = versionDetailsParser;
-        _logger = logger;
+        _loggerFactory = loggerFactory;
     }
 
     public IGitFileManager Create(string repoUri)
-        => new GitFileManager(CreateGitRepo(repoUri), _versionDetailsParser, _logger);
+        => new GitFileManager(CreateGitRepo(repoUri), _versionDetailsParser, _loggerFactory.CreateLogger<GitFileManager>());
 
     private IGitRepo CreateGitRepo(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _processManager.GitExecutable,
             _remoteConfiguration.AzureDevOpsToken,
-            _logger,
+            _loggerFactory.CreateLogger<AzureDevOpsClient>(),
             _vmrInfo.TmpPath),
 
         GitRepoType.GitHub => new GitHubClient(
             _processManager.GitExecutable,
             _remoteConfiguration.GitHubToken,
-            _logger,
+            _loggerFactory.CreateLogger<GitHubClient>(),
             _vmrInfo.TmpPath,
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalGitClient(_processManager.GitExecutable, _logger),
+        GitRepoType.Local => new LocalGitClient(_processManager.GitExecutable, _loggerFactory.CreateLogger<LocalGitClient>()),
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };
 }

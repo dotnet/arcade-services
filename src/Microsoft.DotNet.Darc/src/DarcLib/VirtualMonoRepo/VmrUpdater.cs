@@ -263,8 +263,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         targetRevision ??= HEAD;
 
-        var rootUpdate = new DependencyUpdate(rootMapping, rootMapping.DefaultRemote, targetRevision, targetVersion, null);
-
         string originalRootSha = GetCurrentVersion(rootMapping);
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootMapping.Name,
@@ -272,22 +270,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Arrow,
             targetRevision);
 
+        var rootUpdate = new DependencyUpdate(rootMapping, rootMapping.DefaultRemote, targetRevision, targetVersion, null);
         var updates = (await GetAllDependencies(rootUpdate, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping))
-            .ToList();
+            .Select(mapping => mapping.Name);
 
         if (extraneousMappings.Any())
         {
             var separator = $"{Environment.NewLine}  - ";
-            _logger.LogWarning($"The following mappings do not appear in current update's dependency tree:{separator}",
-                string.Join(separator, extraneousMappings.Select(mapping => mapping.Name)));
+            _logger.LogWarning($"The following mappings do not appear in current update's dependency tree:{separator}{{extraMappings}}",
+                string.Join(separator, extraneousMappings));
         }
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        var workBranch = CreateWorkBranch(
-            $"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}");
+        var workBranch = CreateWorkBranch($"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}");
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<(SourceMapping Mapping, string Path)>();
