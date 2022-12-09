@@ -86,35 +86,56 @@ public abstract class VmrManagerBase : IVmrManager
     /// <summary>
     /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IList<(DependencyDetail dependency, SourceMapping mapping)>> GetAllDependencies(
-        string remoteRepoUri,
-        string commitSha,
-        CancellationToken cancellationToken)
+    protected async Task<IEnumerable<DependencyUpdate>> GetAllDependencies(DependencyUpdate root, CancellationToken cancellationToken)
     {
-        var result = new List<(DependencyDetail, SourceMapping)>();
-        /*var versionDetailsPath = _vmrInfo.GetRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml;
-        var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
-
-        var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent, true)
-            .Where(dep => dep.SourceBuild is not null);
-
-        var result = new List<(DependencyDetail, SourceMapping)>();
-
-        foreach (var dependency in dependencies)
+        var transitiveDependencies = new Dictionary<SourceMapping, DependencyUpdate>
         {
-            var dependencyMapping = Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName);
+            { root.Mapping, root },
+        };
 
-            if (dependencyMapping is null)
+        var reposToScan = new Queue<DependencyUpdate>();
+        reposToScan.Enqueue(transitiveDependencies.Values.Single());
+
+        _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
+
+        while (reposToScan.TryDequeue(out var repo))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var repoDependencies = (await GetRepoDependencies(repo.RemoteUri, repo.TargetRevision))
+                .Where(dep => dep.SourceBuild is not null);
+
+            foreach (var dependency in repoDependencies)
             {
-                throw new InvalidOperationException(
-                    $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
-                    $"for a {VersionFiles.VersionDetailsXml} dependency {dependency.Name}");
-            }
+                var mapping = _dependencyInfo.Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName)
+                    ?? throw new InvalidOperationException(
+                        $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
+                        $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
 
-            result.Add((dependency, dependencyMapping));
+                var update = new DependencyUpdate(
+                    mapping,
+                    dependency.RepoUri,
+                    dependency.Commit,
+                    dependency.Version,
+                    repo.Mapping);
+
+                if (transitiveDependencies.TryAdd(mapping, update))
+                {
+                    _logger.LogDebug("Detected {parent}'s dependency {name} ({uri} / {sha})",
+                        repo.Mapping.Name,
+                        update.Mapping.Name,
+                        update.RemoteUri,
+                        update.TargetRevision);
+                }
+            }
         }
 
-        return result;*/
+        _logger.LogInformation("Found {count} transitive dependencies for {mapping}:{revision}..",
+            transitiveDependencies.Count,
+            root.Mapping.Name,
+            root.TargetRevision);
+
+        return transitiveDependencies.Values;
     }
 
     private async Task<IEnumerable<DependencyDetail>> GetRepoDependencies(string remoteRepoUri, string commitSha)
@@ -123,7 +144,6 @@ public abstract class VmrManagerBase : IVmrManager
         var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
         if (localVersion?.CommitSha == commitSha)
         {
-            // TODO: Do not use mapping.DefaultRemote
             var path = _vmrInfo.VmrPath / localVersion.Path / VersionFiles.VersionDetailsXml;
             var content = await _fileSystem.ReadAllTextAsync(path);
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
@@ -242,4 +262,11 @@ public abstract class VmrManagerBase : IVmrManager
             repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
     }
+
+    protected record DependencyUpdate(
+        SourceMapping Mapping,
+        string RemoteUri,
+        string TargetRevision,
+        string? TargetVersion,
+        SourceMapping? Parent);
 }
