@@ -44,8 +44,15 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
         }
 
         var services = new ServiceCollection();
-
-        services.AddVmrManagers(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
+        services
+            .AddTransient<GitFileManagerFactory>()
+            .AddVmrManagers(
+                sp => sp.GetRequiredService<GitFileManagerFactory>(),
+                GitLocation,
+                VmrPath,
+                tmpPath,
+                gitHubToken,
+                azureDevOpsToken);
 
         return services;
     }

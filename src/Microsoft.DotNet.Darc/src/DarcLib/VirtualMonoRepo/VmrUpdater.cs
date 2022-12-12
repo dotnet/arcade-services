@@ -79,10 +79,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
+        IGitFileManagerFactory gitFileManagerFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
+        ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
@@ -259,100 +261,90 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        // Dependencies that will be updated during this run
-        var reposToUpdate = new Queue<DependencyUpdate>();
-
-        reposToUpdate.Enqueue(new DependencyUpdate(rootMapping, targetRevision, targetVersion, null));
+        targetRevision ??= HEAD;
 
         string originalRootSha = GetCurrentVersion(rootMapping);
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootMapping.Name,
             DarcLib.Commit.GetShortSha(originalRootSha),
             Arrow,
-            targetRevision ?? HEAD);
+            targetRevision);
+
+        var rootUpdate = new DependencyUpdate(rootMapping, rootMapping.DefaultRemote, targetRevision, targetVersion, null);
+        var updates = (await GetAllDependencies(rootUpdate, cancellationToken)).ToList();
+
+        var extraneousMappings = _dependencyTracker.Mappings
+            .Where(mapping => !updates.Any(update => update.Mapping == mapping))
+            .Select(mapping => mapping.Name);
+
+        if (extraneousMappings.Any())
+        {
+            var separator = $"{Environment.NewLine}  - ";
+            _logger.LogWarning($"The following mappings do not appear in current update's dependency tree:{separator}{{extraMappings}}",
+                string.Join(separator, extraneousMappings));
+        }
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
         var workBranch = CreateWorkBranch($"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}");
 
+        // Collection of all affected VMR patches we will need to restore after the sync
+        var vmrPatchesToReapply = new List<(SourceMapping Mapping, string Path)>();
+
         // Dependencies that were already updated during this run
         var updatedDependencies = new HashSet<DependencyUpdate>();
 
-        // Dependencies that were already up-to-date so they won't be updated
-        var skippedDependencies = new HashSet<DependencyUpdate>();
-
-        var vmrPatchesToReapply = new List<(SourceMapping Mapping, string Path)>();
-        while (reposToUpdate.TryDequeue(out var repoToUpdate))
+        foreach (DependencyUpdate update in updates)
         {
-            var mappingToUpdate = repoToUpdate.Mapping;
-            string currentSha = GetCurrentVersion(mappingToUpdate);
+            cancellationToken.ThrowIfCancellationRequested();
 
-            if (repoToUpdate.Parent is not null)
+            string currentSha;
+            try
+            {
+                currentSha = GetCurrentVersion(update.Mapping);
+            }
+            catch (RepositoryNotInitializedException)
+            {
+                _logger.LogWarning("Dependency {repo} has not been initialized in the VMR yet, repository will be initialized",
+                    update.Mapping.Name);
+
+                currentSha = Constants.EmptyGitObject;
+                _dependencyTracker.UpdateDependencyVersion(update.Mapping, new VmrDependencyVersion(currentSha, null));
+            }
+
+            if (currentSha == update.TargetRevision)
+            {
+                _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", update.Mapping.Name, currentSha);
+                continue;
+            }
+
+            if (update.Parent is not null)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
-                    repoToUpdate.Parent,
-                    mappingToUpdate.Name,
+                    update.Parent,
+                    update.Mapping.Name,
                     currentSha,
                     Arrow,
-                    repoToUpdate.TargetRevision ?? HEAD);
+                    update.TargetRevision);
             }
 
             var patchesToReapply = await UpdateRepositoryInternal(
-                mappingToUpdate,
-                repoToUpdate.TargetRevision,
-                repoToUpdate.TargetVersion,
+                update.Mapping,
+                update.TargetRevision,
+                update.TargetVersion,
                 noSquash,
                 false,
                 cancellationToken);
 
             vmrPatchesToReapply.AddRange(patchesToReapply);
 
-            updatedDependencies.Add(repoToUpdate with
+            updatedDependencies.Add(update with
             {
                 // We the SHA again because original target could have been a branch name
-                TargetRevision = GetCurrentVersion(mappingToUpdate),
+                TargetRevision = GetCurrentVersion(update.Mapping),
 
                 // We also store the original version so that later we use it in the commit message
                 TargetVersion = currentSha,
             });
-
-            foreach (var (dependency, dependencyMapping) in await GetDependencies(mappingToUpdate, cancellationToken))
-            {
-                var processedDependencies = reposToUpdate.Concat(updatedDependencies).Concat(skippedDependencies);
-                if (processedDependencies.Any(d => d.Mapping == dependencyMapping))
-                {
-                    continue;
-                }
-
-                var dependencyUpdate = new DependencyUpdate(
-                    Mapping: dependencyMapping,
-                    TargetRevision: dependency.Commit,
-                    TargetVersion: dependency.Version,
-                    Parent: mappingToUpdate.Name);
-
-                string dependencySha;
-                try
-                {
-                    dependencySha = GetCurrentVersion(dependencyMapping);
-                }
-                catch (RepositoryNotInitializedException)
-                {
-                    _logger.LogWarning("{parent}'s dependency {repo} has not been initialized in the VMR yet, repository will be initialized",
-                        mappingToUpdate.Name,
-                        dependencyMapping.Name);
-
-                    dependencySha = Constants.EmptyGitObject;
-                    _dependencyTracker.UpdateDependencyVersion(dependencyMapping, new VmrDependencyVersion(dependencySha, null));
-                }
-
-                if (dependencySha == dependency.Commit)
-                {
-                    _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", dependency.RepoUri, dependencySha);
-                    skippedDependencies.Add(dependencyUpdate);
-                    continue;
-                }
-
-                reposToUpdate.Enqueue(dependencyUpdate);
-            }
         }
 
         string finalRootSha = GetCurrentVersion(rootMapping);
@@ -598,12 +590,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         return version.Sha;
     }
-
-    private record DependencyUpdate(
-        SourceMapping Mapping,
-        string? TargetRevision,
-        string? TargetVersion,
-        string? Parent);
 
     private class RepositoryNotInitializedException : Exception
     {

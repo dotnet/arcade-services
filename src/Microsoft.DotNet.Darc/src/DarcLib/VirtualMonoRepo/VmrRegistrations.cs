@@ -18,32 +18,36 @@ public static class VmrRegistrations
 {
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
         string? gitHubToken,
         string? azureDevOpsToken)
     {
-        RegisterManagers(services, gitLocation);
+        RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         services.TryAddSingleton(new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken));
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
         Func<IServiceProvider, VmrRemoteConfiguration> configure)
     {
-        RegisterManagers(services, gitLocation);
+        RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton(configure);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
-    private static void RegisterManagers(IServiceCollection services, string gitLocation)
+    private static void RegisterCommonServices(IServiceCollection services, string gitLocation)
     {
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ILocalGitRepo>(sp => ActivatorUtilities.CreateInstance<LocalGitClient>(sp, gitLocation));
@@ -56,14 +60,13 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
-        services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
-        services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IGitRepoClonerFactory, GitRepoClonerFactory>();
+        services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
+        services.TryAddTransient<IFileSystem, FileSystem>();
+        services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
         {
-            var configuration = sp.GetRequiredService<IVmrInfo>();
             var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
             return mappingParser.ParseMappings().GetAwaiter().GetResult();
         });
