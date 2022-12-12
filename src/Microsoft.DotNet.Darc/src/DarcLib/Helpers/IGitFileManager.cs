@@ -10,6 +10,11 @@ using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
+
+/// <summary>
+/// Represents various actions around files in git that can be performed on a local repository or even remotely.
+/// Most of these are connected to the Maestro dependency flow system.
+/// </summary>
 public interface IGitFileManager
 {
     Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
