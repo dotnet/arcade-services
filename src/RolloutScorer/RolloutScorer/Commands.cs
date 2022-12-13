@@ -1,6 +1,5 @@
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.KeyVault.Models;
-using Microsoft.Azure.Services.AppAuthentication;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Logging;
 using Mono.Options;
 using System;
@@ -91,17 +90,25 @@ public class ScoreCommand : Command
         }
 
         // Get the AzDO & GitHub PATs from key vault
-        AzureServiceTokenProvider tokenProvider = new();
-        SecretBundle githubPat;
-        SecretBundle storageAccountConnectionString;
-        using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
-        {
-            Console.WriteLine("Fetching PATs from key vault.");
-            _rolloutScorer.SetupHttpClient((await kv.GetSecretAsync(_rolloutScorer.AzdoConfig.KeyVaultUri, _rolloutScorer.AzdoConfig.PatSecretName)).Value);
-            githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
-            _rolloutScorer.SetupGithubClient(githubPat.Value);
-            storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
-        }
+        Console.WriteLine("Fetching PATs from key vault.");
+
+        Uri azdoPatVaultUri = new(_rolloutScorer.AzdoConfig.KeyVaultUri);
+        string azdoPatSecretName = _rolloutScorer.AzdoConfig.PatSecretName;
+        SecretClient azdoPatSecretClient = new(azdoPatVaultUri, new DefaultAzureCredential());
+        KeyVaultSecret azdoPatVaultSecret = await azdoPatSecretClient.GetSecretAsync(azdoPatSecretName);
+
+        _rolloutScorer.SetupHttpClient(azdoPatVaultSecret.Value);
+
+        Uri githubPatVaultUri = new(Utilities.KeyVaultUri);
+        string githubPatSecretName = Utilities.GitHubPatSecretName;
+        SecretClient githubPatSecretClient = new(githubPatVaultUri, new DefaultAzureCredential());
+        KeyVaultSecret githubPatVaultSecret = await githubPatSecretClient.GetSecretAsync(githubPatSecretName);
+        string githubPat = githubPatVaultSecret.Value;
+
+        _rolloutScorer.SetupGithubClient(githubPat);
+
+        KeyVaultSecret storageAccountConnectionStringVaultSecret = await githubPatSecretClient.GetSecretAsync(ScorecardsStorageAccount.KeySecretName);
+        string storageAccountConnectionString = storageAccountConnectionStringVaultSecret.Value;
 
         try
         {
@@ -130,7 +137,7 @@ public class ScoreCommand : Command
         if (_rolloutScorer.Upload)
         {
             Console.WriteLine("Directly uploading results.");
-            await RolloutUploader.UploadResultsAsync(new List<Scorecard> { scorecard }, Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value, _rolloutScorer.GithubConfig);
+            await RolloutUploader.UploadResultsAsync(new List<Scorecard> { scorecard }, Utilities.GetGithubClient(githubPat), storageAccountConnectionString, _rolloutScorer.GithubConfig);
         }
 
         if (_rolloutScorer.SkipOutput)
@@ -174,16 +181,10 @@ public class UploadCommand : Command
         }
 
         // Get the GitHub PAT and storage account connection string from key vault
-        AzureServiceTokenProvider tokenProvider = new();
-        SecretBundle githubPat;
-        SecretBundle storageAccountConnectionString;
-        using (KeyVaultClient kv = new(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
-        {
-            Console.WriteLine("Fetching PAT and connection string from key vault.");
-            githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
-            storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
-        }
+        SecretClient keyVaultClient = new(new Uri(Utilities.KeyVaultUri), new DefaultAzureCredential());
+        KeyVaultSecret githubPatVaultSecret = (await keyVaultClient.GetSecretAsync(Utilities.GitHubPatSecretName)).Value;
+        KeyVaultSecret storageAccountVaultSecret = (await keyVaultClient.GetSecretAsync(ScorecardsStorageAccount.KeySecretName)).Value;
 
-        return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value);
+        return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.GetGithubClient(githubPatVaultSecret.Value), storageAccountVaultSecret.Value);
     }
 }
