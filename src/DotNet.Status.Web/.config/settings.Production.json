@@ -10,7 +10,7 @@
     "TitlePrefix": "Production - "
   },
   "DataProtection": {
-    "KeyBlobUri": "",
+    "KeyBlobUri": "https://dotnetengstatusprod.blob.core.windows.net/site/keys.xml",
     "DataProtectionKeyUri": "https://dotneteng-status-prod.vault.azure.net/keys/dotnet-status-data-protection/"
   },
   "Grafana": {
