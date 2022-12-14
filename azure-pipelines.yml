@@ -23,7 +23,7 @@ pr:
 stages:
 - stage: GitHub_Issue_Verification
   displayName: GitHub Issue Verification
-  condition: and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables['System.PullRequest.TargetBranch'], 'refs/heads/production'), ne(variables['System.PullRequest.SourceBranch'], 'refs/heads/production'))
+  condition: and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
   jobs:
     - job: VerifyGitHubIssue
       displayName: Verify GitHub Issue Link included in all PRs

@@ -304,7 +304,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             if (!_fileSystem.DirectoryExists(patch.ApplicationPath))
             {
-                _fileSystem.CreateDirectory(patch.ApplicationPath);
+                _fileSystem.CreateDirectory(_vmrInfo.VmrPath / patch.ApplicationPath);
             }
         }
 

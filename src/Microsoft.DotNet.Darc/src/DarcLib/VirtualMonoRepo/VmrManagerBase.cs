@@ -5,12 +5,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -23,28 +23,37 @@ public abstract class VmrManagerBase : IVmrManager
     protected const string HEAD = "HEAD";
 
     private readonly IVmrInfo _vmrInfo;
+    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyInfo;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly ILocalGitRepo _localGitClient;
+    private readonly IGitFileManagerFactory _gitFileManagerFactory;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
+        ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyInfo,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         ILocalGitRepo localGitClient,
+        IGitFileManagerFactory gitFileManagerFactory,
+        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
         _logger = logger;
         _vmrInfo = vmrInfo;
+        _sourceManifest = sourceManifest;
         _dependencyInfo = dependencyInfo;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _localGitClient = localGitClient;
+        _gitFileManagerFactory = gitFileManagerFactory;
+        _fileSystem = fileSystem;
     }
 
     protected void Commit(string commitMessage, Signature author)
@@ -53,41 +62,82 @@ public abstract class VmrManagerBase : IVmrManager
 
         var watch = Stopwatch.StartNew();
         using var repository = new Repository(_vmrInfo.VmrPath);
-        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature);
+        var options = new CommitOptions { AllowEmptyCommit = true };
+        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature, options);
 
         _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
-    /// Parses Version.Details.xml of a given mapping and returns the list of source build dependencies (+ their mapping).
+    /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IList<(DependencyDetail dependency, SourceMapping mapping)>> GetDependencies(
-        SourceMapping mapping,
-        CancellationToken cancellationToken)
+    protected async Task<IEnumerable<DependencyUpdate>> GetAllDependencies(DependencyUpdate root, CancellationToken cancellationToken)
     {
-        var versionDetailsPath = _vmrInfo.GetRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml;
-        var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath, cancellationToken);
-
-        var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent, true)
-            .Where(dep => dep.SourceBuild is not null);
-
-        var result = new List<(DependencyDetail, SourceMapping)>();
-
-        foreach (var dependency in dependencies)
+        var transitiveDependencies = new Dictionary<SourceMapping, DependencyUpdate>
         {
-            var dependencyMapping = Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName);
+            { root.Mapping, root },
+        };
 
-            if (dependencyMapping is null)
+        var reposToScan = new Queue<DependencyUpdate>();
+        reposToScan.Enqueue(transitiveDependencies.Values.Single());
+
+        _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
+
+        while (reposToScan.TryDequeue(out var repo))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var repoDependencies = (await GetRepoDependencies(repo.RemoteUri, repo.TargetRevision))
+                .Where(dep => dep.SourceBuild is not null);
+
+            foreach (var dependency in repoDependencies)
             {
-                throw new InvalidOperationException(
-                    $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
-                    $"for a {VersionFiles.VersionDetailsXml} dependency {dependency.Name}");
-            }
+                var mapping = _dependencyInfo.Mappings.FirstOrDefault(m => m.Name == dependency.SourceBuild.RepoName)
+                    ?? throw new InvalidOperationException(
+                        $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
+                        $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
 
-            result.Add((dependency, dependencyMapping));
+                var update = new DependencyUpdate(
+                    mapping,
+                    dependency.RepoUri,
+                    dependency.Commit,
+                    dependency.Version,
+                    repo.Mapping);
+
+                if (transitiveDependencies.TryAdd(mapping, update))
+                {
+                    _logger.LogDebug("Detected {parent}'s dependency {name} ({uri} / {sha})",
+                        repo.Mapping.Name,
+                        update.Mapping.Name,
+                        update.RemoteUri,
+                        update.TargetRevision);
+
+                    reposToScan.Enqueue(update);
+                }
+            }
         }
 
-        return result;
+        _logger.LogInformation("Found {count} transitive dependencies for {mapping}:{revision}..",
+            transitiveDependencies.Count,
+            root.Mapping.Name,
+            root.TargetRevision);
+
+        return transitiveDependencies.Values;
+    }
+
+    private async Task<IEnumerable<DependencyDetail>> GetRepoDependencies(string remoteRepoUri, string commitSha)
+    {
+        // Check if we have the file locally
+        var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
+        if (localVersion?.CommitSha == commitSha)
+        {
+            var path = _vmrInfo.VmrPath / VmrInfo.RelativeSourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var content = await _fileSystem.ReadAllTextAsync(path);
+            return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
+        }
+
+        var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
+        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
@@ -139,13 +189,19 @@ public abstract class VmrManagerBase : IVmrManager
         return template;
     }
 
-    protected static LibGit2Sharp.Commit GetCommit(Repository repository, string? sha)
+    protected static string GetShaForRef(string repoPath, string? gitRef)
     {
-        var commit = sha is null
-            ? repository.Commits.FirstOrDefault()
-            : repository.Lookup<LibGit2Sharp.Commit>(sha);
+        if (gitRef == Constants.EmptyGitObject)
+        {
+            return gitRef;
+        }
 
-        return commit ?? throw new InvalidOperationException($"Failed to find commit {sha} in {repository.Info.Path}");
+        using var repository = new Repository(repoPath);
+        var commit = gitRef is null
+            ? repository.Commits.FirstOrDefault()
+            : repository.Lookup<LibGit2Sharp.Commit>(gitRef);
+
+        return commit?.Id.Sha ?? throw new InvalidOperationException($"Failed to find commit {gitRef} in {repository.Info.Path}");
     }
 
     protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
@@ -209,4 +265,11 @@ public abstract class VmrManagerBase : IVmrManager
             repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
     }
+
+    protected record DependencyUpdate(
+        SourceMapping Mapping,
+        string RemoteUri,
+        string TargetRevision,
+        string? TargetVersion,
+        SourceMapping? Parent);
 }
