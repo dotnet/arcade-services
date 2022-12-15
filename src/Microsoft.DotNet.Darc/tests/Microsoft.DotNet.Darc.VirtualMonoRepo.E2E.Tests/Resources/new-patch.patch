@@ -1,0 +1,11 @@
+diff --git a/test-repo-file.txt b/test-repo-file.txt
+index 2ad314b..d1402a5 100644
+--- a/test-repo-file.txt
++++ b/test-repo-file.txt
+@@ -1,5 +1,5 @@
+ File in the test repo
+ patches will change the next lines
+-AAA
++TTT
+ BBB
+ end of changes
