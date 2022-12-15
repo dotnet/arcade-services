@@ -472,7 +472,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         ISourceComponent FindComponentForFile(string file)
         {
-            return sources.FirstOrDefault(component => ("src/" + component.Path).StartsWith(file))
+            return sources.FirstOrDefault(component => file.StartsWith("src/" + component.Path))
                 ?? throw new Exception($"Failed to find mapping/submodule for file '{file}'");
         }
 
@@ -506,6 +506,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Found {count} files affected by VMR patches. Restoring original files...",
             affectedFiles.Count);
 
+        using var repository = new Repository(_vmrInfo.VmrPath);
+
         // We will group files by where they come from (remote URI + SHA) so that we do as few clones as possible
         var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RelativePath, x.VmrPath));
         foreach (var group in groups)
@@ -537,6 +539,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
                     _fileSystem.DeleteFile(destination);
                 }
+
+                Commands.Stage(repository, pathInVmr);
             }
         }
 
