@@ -10,17 +10,22 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions.Collections;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 [TestFixture]
 public class VmrSyncToolingE2ETest
 {
+    // Repository that is being synchronized into the VMR
+    public const string TestRepoName = "test-repo";
+
+    // Repository that is a dependency of the test-repo
+    public const string DependencyRepoName = "dependency";
+    
     private LocalPath _currentTestDirectory = null!;
     private LocalPath _commonPrivateRepoPath = null!;
     private LocalPath _commonDependencyRepoPath = null!;
@@ -35,8 +40,6 @@ public class VmrSyncToolingE2ETest
     private readonly string _darcExecutable;
     private readonly string _sourceMappingsTemplate;
     private readonly string _emptyVersionDetails;
-    private readonly string _versionDetailsName = "Version.Details.xml";
-
 
     public VmrSyncToolingE2ETest()
     {
@@ -83,12 +86,12 @@ public class VmrSyncToolingE2ETest
     {
         Directory.CreateDirectory(_testsDirectory);
 
-        _commonPrivateRepoPath = _testsDirectory / "test-repo";
+        _commonPrivateRepoPath = _testsDirectory / TestRepoName;
         _commonVmrPath = _testsDirectory / "vmr";
-        _commonDependencyRepoPath = _testsDirectory / "dependency";
+        _commonDependencyRepoPath = _testsDirectory / DependencyRepoName;
        
         Directory.CreateDirectory(_commonVmrPath);
-        Directory.CreateDirectory(_commonVmrPath / "src");
+        Directory.CreateDirectory(_commonVmrPath / VmrInfo.SourcesDir);
         Directory.CreateDirectory(_commonDependencyRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath);
         Directory.CreateDirectory(_commonPrivateRepoPath / "excluded");
@@ -97,7 +100,7 @@ public class VmrSyncToolingE2ETest
         File.WriteAllText(_commonPrivateRepoPath / "test-repo-file.txt", "Test repo file");
         File.WriteAllText(_commonPrivateRepoPath / "excluded" / "excluded.txt", "File to be excluded");
         File.WriteAllText(_commonDependencyRepoPath / "dependencyFile.txt", "File in the dependency repo");
-        File.WriteAllText(_commonDependencyRepoPath / "eng" / _versionDetailsName, _emptyVersionDetails);
+        File.WriteAllText(_commonDependencyRepoPath / VersionFiles.VersionDetailsXml, _emptyVersionDetails);
        
         await InitialCommit(_commonVmrPath);
         await InitialCommit(_commonPrivateRepoPath);
@@ -127,9 +130,9 @@ public class VmrSyncToolingE2ETest
         Directory.CreateDirectory(_currentTestDirectory);
 
         _tmpPath = _currentTestDirectory / "tmp";
-        _privateRepoPath = _currentTestDirectory / "test-repo";
+        _privateRepoPath = _currentTestDirectory / TestRepoName;
         _vmrPath = _currentTestDirectory / "vmr";
-        _dependencyRepoPath = _currentTestDirectory / "dependency"; 
+        _dependencyRepoPath = _currentTestDirectory / DependencyRepoName; 
 
         Directory.CreateDirectory(_tmpPath);
         CopyDirectory(_commonVmrPath, _vmrPath);
@@ -137,7 +140,7 @@ public class VmrSyncToolingE2ETest
         CopyDirectory(_commonDependencyRepoPath, _dependencyRepoPath);
 
         File.WriteAllText(
-            _vmrPath / "src" / "source-mappings.json",
+            _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
             string.Format(_sourceMappingsTemplate,
             _privateRepoPath.Path.Replace("\\", "\\\\"),
             _dependencyRepoPath.Path.Replace("\\", "\\\\")));
@@ -159,7 +162,7 @@ public class VmrSyncToolingE2ETest
             </Dependencies>";
 
         var commit = await GetRepoLastCommit(_dependencyRepoPath);
-        File.WriteAllText(_privateRepoPath / "eng" / _versionDetailsName, string.Format(versionDetails, new object[] { _dependencyRepoPath.Path, commit }));
+        File.WriteAllText(_privateRepoPath / VersionFiles.VersionDetailsXml, string.Format(versionDetails, new object[] { _dependencyRepoPath.Path, commit }));
         await CommitAll(_privateRepoPath, "Add version details file");
     }
 
@@ -188,8 +191,8 @@ public class VmrSyncToolingE2ETest
     [Test]
     public async Task FileChangesAreSyncedTest()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
+        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / TestRepoName / "test-repo-file.txt";
+        var dependencyFilePath = _vmrPath / VmrInfo.SourcesDir / DependencyRepoName / "dependencyFile.txt";
 
         await EnsureTestRepoIsInitialized();
 
@@ -197,7 +200,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Changing a file in the repo");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(TestRepoName, commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -207,7 +210,7 @@ public class VmrSyncToolingE2ETest
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { TestRepoName, DependencyRepoName },
             expectedFilesFromRepos
         );
 
@@ -226,33 +229,33 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Move a file from excluded to included folder");
         
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(TestRepoName, commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
-            _vmrPath / "src" / "dependency" / "dependencyFile.txt",
-            _vmrPath / "src" / "test-repo" / "excluded.txt",
+            _vmrPath / VmrInfo.SourcesDir / TestRepoName / "test-repo-file.txt",
+            _vmrPath / VmrInfo.SourcesDir / DependencyRepoName / "dependencyFile.txt",
+            _vmrPath / VmrInfo.SourcesDir / TestRepoName / "excluded.txt",
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { TestRepoName, DependencyRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CheckFileContents(_vmrPath / "src" / "test-repo" / "excluded.txt", "File to be excluded");
+        CheckFileContents(_vmrPath / VmrInfo.SourcesDir / TestRepoName / "excluded.txt", "File to be excluded");
         await CheckAllIsCommited(_vmrPath);
     }
 
     [Test]
     public async Task SubmodulesAreInlinedProperlyTest()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
-        var submoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt";
-        var additionalSubmoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "additional-file.txt";
+        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / TestRepoName / "test-repo-file.txt";
+        var dependencyFilePath = _vmrPath / VmrInfo.SourcesDir / DependencyRepoName / "dependencyFile.txt";
+        var submoduleFilePath = _vmrPath / VmrInfo.SourcesDir / TestRepoName / "externals" / "external-repo" / "external-repo-file.txt";
+        var additionalSubmoduleFilePath = _vmrPath / VmrInfo.SourcesDir / TestRepoName / "externals" / "external-repo" / "additional-file.txt";
 
         await EnsureTestRepoIsInitialized();
 
@@ -266,19 +269,19 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Add submodule");
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(TestRepoName, commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
             testRepoFilePath,
             dependencyFilePath,
             submoduleFilePath,
-            _vmrPath / "src" / "test-repo" / ".gitmodules",
+            _vmrPath / VmrInfo.SourcesDir / TestRepoName / ".gitmodules",
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { TestRepoName, DependencyRepoName },
             expectedFilesFromRepos
         );
 
@@ -300,7 +303,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Checkout submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(TestRepoName, commit);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
 
@@ -313,7 +316,7 @@ public class VmrSyncToolingE2ETest
         await CommitAll(_privateRepoPath, "Remove the submodule");
         
         commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcUpdate("test-repo", commit);
+        await CallDarcUpdate(TestRepoName, commit);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
@@ -328,8 +331,8 @@ public class VmrSyncToolingE2ETest
         var repoName = "special-repo";
         var repoPath = _currentTestDirectory / repoName;
         var filePath = repoPath / "content" / "special-file.txt";
-        var versionDetailsPath = repoPath / "eng" / _versionDetailsName;
-        var sourceMappingsPath = _vmrPath / "src" / "source-mappings.json";
+        var versionDetailsPath = repoPath / VersionFiles.VersionDetailsXml;
+        var sourceMappingsPath = _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
 
         // add additional mappings in source-mappings.json
 
@@ -383,7 +386,7 @@ public class VmrSyncToolingE2ETest
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "src" / repoName / "content" / "special-file.txt",
+            _vmrPath / VmrInfo.SourcesDir / repoName / "content" / "special-file.txt",
             _vmrPath / "special-file.txt"
         };
 
@@ -414,15 +417,15 @@ public class VmrSyncToolingE2ETest
     {
         var expectedFiles = new List<LocalPath>
         {
-            vmrPath / "git-info" / "AllRepoVersions.props",
-            vmrPath / "src" / "source-manifest.json",
-            vmrPath / "src" / "source-mappings.json",
+            vmrPath / VmrInfo.GitInfoSourcesDir / "AllRepoVersions.props",
+            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName,
+            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
         };
 
         foreach(var repo in syncedRepos)
         {
-            expectedFiles.Add(vmrPath / "src" / repo / "eng" / _versionDetailsName);
-            expectedFiles.Add(vmrPath / "git-info" / $"{repo}.props");
+            expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionDetailsXml);
+            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
         
         expectedFiles.AddRange(reposFiles);
@@ -450,11 +453,11 @@ public class VmrSyncToolingE2ETest
 
     private async Task EnsureTestRepoIsInitialized()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependencyFile.txt";
+        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / TestRepoName / "test-repo-file.txt";
+        var dependencyFilePath = _vmrPath / VmrInfo.SourcesDir / DependencyRepoName / "dependencyFile.txt";
 
         var commit = await GetRepoLastCommit(_privateRepoPath);
-        await CallDarcInitialize("test-repo", commit);
+        await CallDarcInitialize(TestRepoName, commit);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -464,7 +467,7 @@ public class VmrSyncToolingE2ETest
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { "test-repo", DependencyRepoName },
             expectedFilesFromRepos
         );
 
