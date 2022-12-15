@@ -20,7 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 
-#nullable enable
+
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public abstract class VmrTestsBase

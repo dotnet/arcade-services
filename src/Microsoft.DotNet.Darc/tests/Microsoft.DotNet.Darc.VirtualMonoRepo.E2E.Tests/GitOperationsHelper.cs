@@ -10,7 +10,6 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class GitOperationsHelper

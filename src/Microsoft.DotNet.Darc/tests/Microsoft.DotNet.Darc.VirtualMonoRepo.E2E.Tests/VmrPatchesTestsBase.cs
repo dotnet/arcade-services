@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-#nullable enable
+
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrPatchesTestsBase : VmrTestsBase

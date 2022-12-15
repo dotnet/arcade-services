@@ -13,7 +13,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-#nullable enable
+
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [SetUpFixture]
