@@ -5,7 +5,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -15,22 +17,21 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 public class VmrSyncAdditionalMappingsTest : VmrTestsBase
 {
     private readonly string _repoName = "special-repo";
+    private readonly string _fileName = "special-file.txt";
+    private readonly string _fileRelativePath = new NativePath("content") / "special-file.txt";
     private string _filePath = null!;
 
     [Test]
     public async Task NonSrcContentIsSyncedTest()
     {
-        var versionDetailsPath = _specialRepoPath / "eng" / Constants.VersionDetailsName;
-        var sourceMappingsPath = _vmrPath / "src" / "source-mappings.json";
-
         // Initialize the repo
 
         await InitializeRepoAtLastCommit(_repoName, _specialRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "src" / _repoName / "content" / "special-file.txt",
-            _vmrPath / "special-file.txt"
+            _vmrPath / VmrInfo.SourcesDir / _repoName / _fileRelativePath,
+            _vmrPath / _fileName
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
@@ -48,13 +49,13 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
         await GitOperations.CommitAll(_specialRepoPath, "Change file");
         await UpdateRepoToLastCommit(_repoName, _specialRepoPath);
 
-        CheckFileContents(_vmrPath / "special-file.txt", "A file with a change that needs to be copied outside of the src folder");
+        CheckFileContents(_vmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
         await GitOperations.CheckAllIsCommited(_vmrPath);
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
-        _filePath = _specialRepoPath / "content" / "special-file.txt";
+        _filePath = _specialRepoPath / _fileRelativePath;
 
         Directory.CreateDirectory(_specialRepoPath);
         Directory.CreateDirectory(_specialRepoPath / "content");
@@ -62,7 +63,7 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
         File.WriteAllText(
             _filePath,
             "A file that needs to be copied outside of the src folder");
-        File.WriteAllText(_specialRepoPath / "eng" / Constants.VersionDetailsName, Constants.EmptyVersionDetails);
+        File.WriteAllText(_specialRepoPath / VersionFiles.VersionDetailsXml, Constants.EmptyVersionDetails);
 
         await GitOperations.InitialCommit(_specialRepoPath);
     }
@@ -85,12 +86,11 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
             new AdditionalMapping("src/special-repo/content", "")
         };
 
+        var sourceMappingsPath = _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
+
         var sm = GenerateSourceMappings(mappings, "", additionalMappings);
 
-        File.WriteAllText(
-            _vmrPath / "src" / "source-mappings.json",
-            sm);
-
+        File.WriteAllText(sourceMappingsPath, sm);
         await GitOperations.CommitAll(_vmrPath, "Replace source mappings");
     }
 }

@@ -4,9 +4,9 @@
 
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -15,114 +15,126 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 [TestFixture]
 public class VmrSyncRepoChangesTest :  VmrTestsBase
 {
-    private readonly string _testFileName = "test-repo-file.txt";
+    private readonly string _dependencyFileName = "dependency-file.txt";
+    private LocalPath _productRepoPath = null!;
+    private LocalPath _productRepoFilePath = null!;
+    private LocalPath _dependencyRepoFilePath = null!;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _productRepoPath = _vmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName;
+        _productRepoFilePath = _productRepoPath / Constants.ProductRepoFileName;
+        _dependencyRepoFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.DependencyRepoName / _dependencyFileName;
+    }
 
     [Test]
     public async Task FileChangesAreSyncedTest()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependency-file.txt";
-
         await EnsureTestRepoIsInitialized();
 
-        File.WriteAllText(_privateRepoPath / "test-repo-file.txt", "Test changes in repo file");
+        File.WriteAllText(_privateRepoPath / Constants.ProductRepoFileName, "Test changes in repo file");
         await GitOperations.CommitAll(_privateRepoPath, "Changing a file in the repo");
 
-        await UpdateRepoToLastCommit("test-repo", _privateRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoFilePath,
-            dependencyFilePath
+            _productRepoFilePath,
+            _dependencyRepoFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CheckFileContents(testRepoFilePath, "Test changes in repo file");
-        CheckFileContents(dependencyFilePath, "File in dependency");
+        CheckFileContents(_productRepoFilePath, "Test changes in repo file");
+        CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         await GitOperations.CheckAllIsCommited(_vmrPath);
     }
 
     [Test]
     public async Task FileIsIncludedTest()
     {
-        Directory.CreateDirectory(_privateRepoPath / "excluded");
-        File.WriteAllText(_privateRepoPath / "excluded" / "excluded.txt", "File to be excluded");
+        var excludedDir = _privateRepoPath / "excluded";
+        var excludedFileName = "excluded.txt";
+        var excludedFile = excludedDir / excludedFileName;
+
+
+        Directory.CreateDirectory(excludedDir);
+        File.WriteAllText(excludedFile, "File to be excluded");
         await GitOperations.CommitAll(_privateRepoPath, "Create an excluded file");
 
         await EnsureTestRepoIsInitialized();
 
-        File.Move(_privateRepoPath / "excluded" / "excluded.txt", _privateRepoPath / "excluded.txt");
+        File.Move(excludedFile, _privateRepoPath / excludedFileName);
         await GitOperations.CommitAll(_privateRepoPath, "Move a file from excluded to included folder");
 
-        await UpdateRepoToLastCommit("test-repo", _privateRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "src" / "test-repo" / "test-repo-file.txt",
-            _vmrPath / "src" / "dependency" / "dependency-file.txt",
-            _vmrPath / "src" / "test-repo" / "excluded.txt",
+            _productRepoFilePath,
+            _dependencyRepoFilePath,
+            _productRepoPath / excludedFileName,
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CheckFileContents(_vmrPath / "src" / "test-repo" / "excluded.txt", "File to be excluded");
+        CheckFileContents(_productRepoPath / excludedFileName, "File to be excluded");
         await GitOperations.CheckAllIsCommited(_vmrPath);
     }
 
     [Test]
     public async Task SubmodulesAreInlinedProperlyTest()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependency-file.txt";
         var submoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "external-repo-file.txt";
-        var additionalSubmoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / "additional-file.txt";
+        var additionalFileName = "additional-file.txt";
+        var additionalSubmoduleFilePath = _vmrPath / "src" / "test-repo" / "externals" / "external-repo" / additionalFileName;
+        var submoduleName = "submodule1";
 
         await EnsureTestRepoIsInitialized();
 
-        var submoduleRelativePath = new NativePath("externals") / "external-repo";
-        await GitOperations.InitializeSubmodule(_privateRepoPath, "submodule1", _externalRepoPath, submoduleRelativePath);
+        var submoduleRelativePath = new NativePath("externals") / Constants.SubmoduleRepoName;
+        await GitOperations.InitializeSubmodule(_privateRepoPath, submoduleName, _externalRepoPath, submoduleRelativePath);
         await GitOperations.CommitAll(_privateRepoPath, "Add submodule");
-        await UpdateRepoToLastCommit("test-repo", _privateRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoFilePath,
-            dependencyFilePath,
-            submoduleFilePath,
-            _vmrPath / "src" / "test-repo" / ".gitmodules",
+            _productRepoFilePath,
+            _dependencyRepoFilePath,
+            submoduleFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, "test-repo-file.txt");
-        CheckFileContents(dependencyFilePath, "File in dependency");
+        CompareFileContents(_productRepoFilePath, Constants.ProductRepoFileName);
+        CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         CheckFileContents(submoduleFilePath, "File in external-repo");
         await GitOperations.CheckAllIsCommited(_vmrPath);
 
         // Add a file in the submodule
 
-        File.WriteAllText(_externalRepoPath / "additional-file.txt", "New external repo file");
+        File.WriteAllText(_externalRepoPath / additionalFileName, "New external repo file");
         await GitOperations.CommitAll(_externalRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(_privateRepoPath / submoduleRelativePath);
         
         await GitOperations.CommitAll(_privateRepoPath, "Checkout submodule");
-        await UpdateRepoToLastCommit("test-repo", _privateRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
 
@@ -133,7 +145,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
         await GitOperations.RemoveSubmodule(_privateRepoPath, submoduleRelativePath);
         await GitOperations.CommitAll(_privateRepoPath, "Remove the submodule");
-        await UpdateRepoToLastCommit("test-repo", _privateRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
@@ -146,12 +158,12 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
     {
         var dependenciesMap = new Dictionary<string, List<Dependency>>
         {
-            {Constants.TestRepoName,  new List<Dependency> {new Dependency("dependency", _dependencyRepoPath) } }
+            {Constants.ProductRepoName,  new List<Dependency> {new Dependency(Constants.DependencyRepoName, _dependencyRepoPath) } }
         };
 
         await CopyRepoAndCreateVersionDetails(
             _currentTestDirectory,
-            Constants.TestRepoName,
+            Constants.ProductRepoName,
             dependenciesMap);
 
         CopyDirectory(VmrTestsOneTimeSetUp.CommonExternalRepoPath, _externalRepoPath);
@@ -163,39 +175,36 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var mappings = new List<SourceMapping>
         {
-            new SourceMapping("dependency", _dependencyRepoPath.Path.Replace("\\", "\\\\")),
-            new SourceMapping("test-repo", _privateRepoPath.Path.Replace("\\", "\\\\"),
+            new SourceMapping(Constants.DependencyRepoName, _dependencyRepoPath.Path.Replace("\\", "\\\\")),
+            new SourceMapping(Constants.ProductRepoName, _privateRepoPath.Path.Replace("\\", "\\\\"),
             new List<string> { "externals/external-repo/**/*.exe", "excluded/*" })
         };
 
         var sm = GenerateSourceMappings(mappings);
 
-        File.WriteAllText(_vmrPath / "src" / "source-mappings.json", sm);
+        File.WriteAllText(_vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName, sm);
         await GitOperations.CommitAll(_vmrPath, "Add source mappings");
     }
 
     private async Task EnsureTestRepoIsInitialized()
     {
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
-        var dependencyFilePath = _vmrPath / "src" / "dependency" / "dependency-file.txt";
-
-        await InitializeRepoAtLastCommit("test-repo", _privateRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoFilePath,
-            dependencyFilePath
+            _productRepoFilePath,
+            _dependencyRepoFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "dependency" },
+            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, _testFileName);
-        CheckFileContents(dependencyFilePath, "File in dependency");
+        CompareFileContents(_productRepoFilePath, Constants.ProductRepoFileName);
+        CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         await GitOperations.CheckAllIsCommited(_vmrPath);
     }
 }

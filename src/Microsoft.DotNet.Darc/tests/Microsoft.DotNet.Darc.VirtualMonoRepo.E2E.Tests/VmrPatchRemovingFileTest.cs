@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -21,31 +22,31 @@ public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
     [Test]
     public async Task VmrPatchAddsFileTest()
     {
-        var patchPathInRepo = _installerRepoPath / "patches" / "test-repo" / patchFileName;
+        var patchPathInRepo = installerPatchesDir / patchFileName;
 
-        await InitializeRepoAtLastCommit(installerRepoName, _installerRepoPath);
-        await InitializeRepoAtLastCommit(Constants.TestRepoName, _privateRepoPath);
+        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
+        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.ProductRepoFileName;
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / "src" / "installer" / "patches" / "test-repo" / patchFileName,
+            vmrPatchesDir / patchFileName,
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { Constants.TestRepoName, installerRepoName },
+            new[] { Constants.ProductRepoName, Constants.InstallerRepoName },
             expectedFilesFromRepos);
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
 
         File.Delete(patchPathInRepo);
         await GitOperations.CommitAll(_installerRepoPath, "Remove the patch file");
-        await UpdateRepoToLastCommit("installer", _installerRepoPath);
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
 
         expectedFiles.Add(testRepoFilePath);
-        expectedFiles.Remove(_vmrPath / "src" / "installer" / "patches" / "test-repo" / patchFileName);
+        expectedFiles.Remove(vmrPatchesDir / patchFileName);
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
     }

@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Web;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +36,7 @@ public abstract class VmrTestsBase
     protected LocalPath _specialRepoPath = null!;
     protected LocalPath _installerRepoPath = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
+    protected VmrInfo vmrInfo = null!;
 
     [SetUp]
     public async Task Setup()
@@ -55,6 +58,7 @@ public abstract class VmrTestsBase
         await CopyVmrForCurrentTest();
         await CopyReposForCurrentTest();
         _serviceProvider = new(CreateServiceProvider);
+        vmrInfo = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
     }
 
     [TearDown]
@@ -83,8 +87,8 @@ public abstract class VmrTestsBase
         .AddVmrManagers(
         sp => sp.GetRequiredService<GitFileManagerFactory>(),
         "git",
-        Path.GetFullPath(_vmrPath),
-        Path.GetFullPath(_tmpPath),
+        _vmrPath,
+        _tmpPath,
         null,
         null)
         .BuildServiceProvider();
@@ -96,15 +100,15 @@ public abstract class VmrTestsBase
     {
         var expectedFiles = new List<LocalPath>
         {
-            vmrPath / "git-info" / "AllRepoVersions.props",
-            vmrPath / "src" / "source-manifest.json",
-            vmrPath / "src" / "source-mappings.json",
+            vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
+            vmrInfo.GetSourceManifestPath(),
+            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName
         };
 
         foreach (var repo in syncedRepos)
         {
-            expectedFiles.Add(vmrPath / "src" / repo / "eng" / Constants.VersionDetailsName);
-            expectedFiles.Add(vmrPath / "git-info" / $"{repo}.props");
+            expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionDetailsXml);
+            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
         expectedFiles.AddRange(reposFiles);
@@ -191,7 +195,7 @@ public abstract class VmrTestsBase
             return files;
         }
 
-        files.AddRange(directory.GetFiles().Select(f => new NativePath(f.FullName)));
+        files.AddRange(directory.GetFiles().Where(f => f.Name != ".gitmodules").Select(f => new NativePath(f.FullName)));
 
         foreach (var subDir in directory.GetDirectories())
         {
@@ -257,7 +261,7 @@ public abstract class VmrTestsBase
         }
 
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
-        File.WriteAllText(repoPath / "eng" / Constants.VersionDetailsName, versionDetails);
+        File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
         await GitOperations.CommitAll(repoPath, "update version details");
         return await GitOperations.GetRepoLastCommit(repoPath);
     }

@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -23,15 +24,20 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
     [Test]
     public async Task PatchesAreAppliedTest()
     {
-        var patchPathInRepo = _installerRepoPath / "patches" / "test-repo" / "example.patch";
-        var patchPathInVmr = _vmrPath / "src" / "installer" / "patches" / "test-repo" / "example.patch";
+        var patchPathInVmr = vmrPatchesDir / patchFileName;
+        var fileAfterPatch = "test-file-after-patch.txt";
+        var fileAfterChangedPatch = "test-file-after-changed-patch.txt";
+        var newPatchFileName = "new-patch.patch";
+        var fileAfterNewPatchName = "test-file-after-new-patch.txt";
+        var changedFileName = "changed-test-repo-file.txt";
+
 
         // initialize repo with a vmr patch
 
-        await InitializeRepoAtLastCommit("installer", _installerRepoPath);
-        await InitializeRepoAtLastCommit("test-repo", _privateRepoPath);
+        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
 
-        var testRepoFilePath = _vmrPath / "src" / "test-repo" / "test-repo-file.txt";
+        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.ProductRepoFileName;
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -41,52 +47,49 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             _vmrPath,
-            new[] { "test-repo", "installer" },
+            new[] { Constants.ProductRepoName, Constants.InstallerRepoName },
             expectedFilesFromRepos
         );
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, "test-file-after-patch.txt");
+        CompareFileContents(testRepoFilePath, fileAfterPatch);
         await GitOperations.CheckAllIsCommited(_vmrPath);
 
         // a change in the patch
 
         //File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / "changed-patch.patch", _installerRepoPath / "patches" / "test-repo" / "example.patch", true);
-        File.WriteAllText(patchPathInRepo, File.ReadAllText(patchPathInRepo).Replace("CCC", "DDD"));
+        File.WriteAllText(installerPatchesDir / patchFileName, File.ReadAllText(installerPatchesDir / patchFileName).Replace("CCC", "DDD"));
         await GitOperations.CommitAll(_installerRepoPath, "Change the patch file");
-        await UpdateRepoToLastCommit("installer", _installerRepoPath);
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
 
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, "test-file-after-changed-patch.txt");
+        CompareFileContents(testRepoFilePath, fileAfterChangedPatch);
 
         // remove the patch from installer
 
-        File.Delete(patchPathInRepo);
+        File.Delete(installerPatchesDir / patchFileName);
         await GitOperations.CommitAll(_installerRepoPath, "Remove the patch file");
-        await UpdateRepoToLastCommit("installer", _installerRepoPath);
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
 
         expectedFiles.Remove(patchPathInVmr);
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, "test-repo-file.txt");
+        CompareFileContents(testRepoFilePath, Constants.ProductRepoFileName);
 
         // add a new patch in installer
 
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / "new-patch.patch", _installerRepoPath / "patches" / "test-repo" / "new-patch.patch");
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / newPatchFileName, installerPatchesDir / newPatchFileName);
         await GitOperations.CommitAll(_installerRepoPath, "Add a new patch file");
-        await UpdateRepoToLastCommit("installer", _installerRepoPath);
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
 
-        expectedFiles.Add(_vmrPath / "src" / "installer" / "patches" / "test-repo" / "new-patch.patch");
+        expectedFiles.Add(vmrPatchesDir / newPatchFileName);
         CheckDirectoryContents(_vmrPath, expectedFiles);
-        CompareFileContents(testRepoFilePath, "test-file-after-new-patch.txt");
+        CompareFileContents(testRepoFilePath, fileAfterNewPatchName);
      
         // change the file so the vmr patch cannot be applied
 
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / "changed-test-repo-file.txt", _privateRepoPath / "test-repo-file.txt", true);
-        await GitOperations.CommitAll(_privateRepoPath, "change file in private repo");
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / changedFileName, _privateRepoPath / Constants.ProductRepoFileName, true);
+        await GitOperations.CommitAll(_privateRepoPath, "Change file in product repo");
         var commit = await GitOperations.GetRepoLastCommit(_privateRepoPath);
-        this.Invoking(x => x.CallDarcUpdate("test-repo", commit)).Should().Throw<Exception>();
-
-        // res = await CallDarcUpdate("test-repo", commit);
-        //res.ExitCode.Should().NotBe(0, res.StandardOutput);
+        this.Invoking(x => x.CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }

@@ -72,8 +72,12 @@ public class Constants
     ""destination"": ""{1}""
 }}";
 
-    public static readonly string VersionDetailsName = "Version.Details.xml";
-    public static readonly string TestRepoName = "test-repo";
+    public static readonly string ProductRepoName = "test-repo";
     public static readonly string DependencyRepoName = "dependency";
     public static readonly string SubmoduleRepoName = "external-repo";
+    public static readonly string InstallerRepoName = "installer";
+    public static readonly string VmrName = "vmr";
+    public static readonly string TmpFolderName = "tmp";
+    public static readonly string PatchesFolderName = "patches";
+    public static readonly string ProductRepoFileName = "test-repo-file.txt";
 }

@@ -5,6 +5,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
@@ -12,7 +14,8 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 public class VmrPatchesTestsBase : VmrTestsBase
 {
     protected string patchFileName = null!;
-    protected readonly string installerRepoName = "installer";
+    protected LocalPath installerPatchesDir = null!;
+    protected LocalPath vmrPatchesDir = null!;
 
     protected VmrPatchesTestsBase(string patchFileName)
     {
@@ -21,9 +24,11 @@ public class VmrPatchesTestsBase : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.TestRepoName);
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, installerRepoName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / "patches" / Constants.TestRepoName / patchFileName);
+        installerPatchesDir = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
+        vmrPatchesDir = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
+        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.InstallerRepoName);
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / "patches" / Constants.ProductRepoName / patchFileName);
         await GitOperations.CommitAll(_installerRepoPath, "Add patch");
     }
 
@@ -33,13 +38,13 @@ public class VmrPatchesTestsBase : VmrTestsBase
 
         var mappings = new List<SourceMapping>
         {
-            new SourceMapping(installerRepoName, _installerRepoPath.Path.Replace("\\", "\\\\")),
-            new SourceMapping(Constants.TestRepoName, _privateRepoPath.Path.Replace("\\", "\\\\"))
+            new SourceMapping(Constants.InstallerRepoName, _installerRepoPath.Path.Replace("\\", "\\\\")),
+            new SourceMapping(Constants.ProductRepoName, _privateRepoPath.Path.Replace("\\", "\\\\"))
         };
         var sm = GenerateSourceMappings(mappings, "src/installer/patches/");
 
         File.WriteAllText(
-            _vmrPath / "src" / "source-mappings.json", sm);
+            _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName, sm);
 
         await GitOperations.CommitAll(_vmrPath, "Add source mappings");
     }

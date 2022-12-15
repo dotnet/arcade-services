@@ -8,7 +8,9 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 #nullable enable
@@ -20,11 +22,9 @@ public class VmrTestsOneTimeSetUp
     public static readonly LocalPath TestsDirectory;
     public static readonly LocalPath CommonVmrPath;
     public static readonly LocalPath CommonPrivateRepoPath;
-    public static readonly LocalPath CommonSubmodulePath;
     public static readonly LocalPath CommonDependencyPath;
     public static readonly LocalPath CommonInstallerPath;
     public static readonly LocalPath CommonExternalRepoPath;
-    public static readonly LocalPath RepoWithSubmodulePath;
     public static readonly LocalPath ResourcesPath;
     private GitOperationsHelper _gitOperations { get; } = new();
 
@@ -34,13 +34,11 @@ public class VmrTestsOneTimeSetUp
         var assembly = Assembly.GetAssembly(typeof(VmrTestsBase)) ?? throw new Exception("Assembly not found");
         ResourcesPath = new NativePath(Path.Join(Path.GetDirectoryName(assembly.Location), "Resources"));
         TestsDirectory = new NativePath(Path.GetTempPath()) / "_vmrTests" / Path.GetRandomFileName();
-        CommonVmrPath = TestsDirectory / "vmr";
-        CommonPrivateRepoPath = TestsDirectory / "test-repo";
-        CommonSubmodulePath = TestsDirectory / "external-repo";
-        CommonDependencyPath = TestsDirectory / "dependency";
-        CommonInstallerPath = TestsDirectory / "installer";
-        CommonExternalRepoPath = TestsDirectory / "external-repo";
-        RepoWithSubmodulePath = TestsDirectory / "repo-with-submodule";
+        CommonVmrPath = TestsDirectory / Constants.VmrName;
+        CommonPrivateRepoPath = TestsDirectory / Constants.ProductRepoName;
+        CommonExternalRepoPath = TestsDirectory / Constants.SubmoduleRepoName;
+        CommonDependencyPath = TestsDirectory / Constants.DependencyRepoName;
+        CommonInstallerPath = TestsDirectory / Constants.InstallerRepoName;
     }
 
     [OneTimeSetUp]
@@ -48,27 +46,27 @@ public class VmrTestsOneTimeSetUp
     {
         Directory.CreateDirectory(TestsDirectory);
         
-        Directory.CreateDirectory(TestsDirectory / "vmr");
-        Directory.CreateDirectory(TestsDirectory / "vmr" / "src");
-        await _gitOperations.InitialCommit(TestsDirectory / "vmr");
+        Directory.CreateDirectory(TestsDirectory / Constants.VmrName);
+        Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.SourcesDir);
+        await _gitOperations.InitialCommit(TestsDirectory / Constants.VmrName);
 
         Directory.CreateDirectory(CommonInstallerPath);
         Directory.CreateDirectory(CommonInstallerPath / "eng");
-        Directory.CreateDirectory(CommonInstallerPath / "patches" / "test-repo");
+        Directory.CreateDirectory(CommonInstallerPath / Constants.PatchesFolderName / Constants.ProductRepoName);
 
-        File.WriteAllText(CommonInstallerPath / "eng" / "Version.Details.xml", Constants.EmptyVersionDetails);
+        File.WriteAllText(CommonInstallerPath / VersionFiles.VersionDetailsXml, Constants.EmptyVersionDetails);
         await _gitOperations.InitialCommit(CommonInstallerPath);
 
         var dependenciesMap = new Dictionary<string, List<Dependency>>
         {
-            {"test-repo",  new List<Dependency> {new Dependency("dependency", CommonDependencyPath) } }
+            {Constants.ProductRepoName,  new List<Dependency> {new Dependency(Constants.DependencyRepoName, CommonDependencyPath) } }
         };
 
-        await CreateRepositoryRecursive(CommonPrivateRepoPath, "test-repo", dependenciesMap);
-        File.Copy(ResourcesPath / "test-repo-file.txt", CommonPrivateRepoPath / "test-repo-file.txt", true);
+        await CreateRepositoryRecursive(CommonPrivateRepoPath, Constants.ProductRepoName, dependenciesMap);
+        File.Copy(ResourcesPath / Constants.ProductRepoFileName, CommonPrivateRepoPath / Constants.ProductRepoFileName, true);
         await _gitOperations.CommitAll(CommonPrivateRepoPath, "change file content");
 
-        await CreateRepositoryRecursive(CommonExternalRepoPath, "external-repo");
+        await CreateRepositoryRecursive(CommonExternalRepoPath, Constants.SubmoduleRepoName);
     }
 
     [OneTimeTearDown]
@@ -141,7 +139,7 @@ public class VmrTestsOneTimeSetUp
         if (createVersionDetails)
         {
             var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
-            File.WriteAllText(repoPath / "eng" / "Version.Details.xml", versionDetails);
+            File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
         }
 
         await _gitOperations.InitialCommit(repoPath);
