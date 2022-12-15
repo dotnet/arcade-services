@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using FluentAssertions.Collections;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
@@ -414,7 +415,7 @@ public class VmrSyncToolingE2ETest
     {
         var expectedFiles = new List<LocalPath>
         {
-            vmrPath / "git-info" / "AllRepoVersions.props",
+            vmrPath / VmrInfo.GitInfoSourcesDir / "AllRepoVersions.props",
             vmrPath / "src" / "source-manifest.json",
             vmrPath / "src" / "source-mappings.json",
         };
@@ -422,7 +423,7 @@ public class VmrSyncToolingE2ETest
         foreach(var repo in syncedRepos)
         {
             expectedFiles.Add(vmrPath / "src" / repo / "eng" / _versionDetailsName);
-            expectedFiles.Add(vmrPath / "git-info" / $"{repo}.props");
+            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
         
         expectedFiles.AddRange(reposFiles);
