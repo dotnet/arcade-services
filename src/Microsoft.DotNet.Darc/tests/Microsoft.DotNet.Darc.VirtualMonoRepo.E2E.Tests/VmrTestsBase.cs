@@ -10,7 +10,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -21,7 +20,6 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using static Microsoft.DotNet.Darc.Tests.VirtualMonoRepo.VmrTestsBase;
 
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
@@ -44,7 +42,8 @@ public abstract class VmrTestsBase
     [SetUp]
     public async Task Setup()
     {
-        _currentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / Path.GetRandomFileName();
+        var testsDirName = "_tests";
+        _currentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
         Directory.CreateDirectory(_currentTestDirectory);
 
         _tmpPath = _currentTestDirectory / "tmp";
