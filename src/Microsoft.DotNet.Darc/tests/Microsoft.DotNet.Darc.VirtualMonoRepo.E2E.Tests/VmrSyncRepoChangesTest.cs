@@ -4,8 +4,10 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
@@ -173,17 +175,32 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
 
-        var mappings = new List<SourceMapping>
+        var sourceMappings = new SourceMappingFile()
         {
-            new SourceMapping(Constants.DependencyRepoName, _dependencyRepoPath.Path.Replace("\\", "\\\\")),
-            new SourceMapping(Constants.ProductRepoName, _privateRepoPath.Path.Replace("\\", "\\\\"),
-            new List<string> { "externals/external-repo/**/*.exe", "excluded/*" })
+            Mappings = new List<SourceMappingSetting>
+            {
+                new SourceMappingSetting
+                {
+                    Name = Constants.DependencyRepoName,
+                    DefaultRemote = _dependencyRepoPath
+                },
+                new SourceMappingSetting
+                {
+                    Name = Constants.ProductRepoName,
+                    DefaultRemote = _privateRepoPath
+                }
+            }
         };
 
-        var sm = GenerateSourceMappings(mappings);
+        sourceMappings.Defaults.Exclude = new[] 
+        {
+            "externals/external-repo/**/*.exe", 
+            "excluded/*",
+            "**/*.dll",
+            "**/*.Dll",
+        };
 
-        File.WriteAllText(_vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName, sm);
-        await GitOperations.CommitAll(_vmrPath, "Add source mappings");
+        await WriteSourceMappingsInVmr(sourceMappings);
     }
 
     private async Task EnsureTestRepoIsInitialized()

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 
@@ -36,16 +37,24 @@ public class VmrPatchesTestsBase : VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
 
-        var mappings = new List<SourceMapping>
+        var sourceMappings = new SourceMappingFile
         {
-            new SourceMapping(Constants.InstallerRepoName, _installerRepoPath.Path.Replace("\\", "\\\\")),
-            new SourceMapping(Constants.ProductRepoName, _privateRepoPath.Path.Replace("\\", "\\\\"))
+            Mappings = new List<SourceMappingSetting>
+            {
+                new SourceMappingSetting
+                {
+                    Name = Constants.InstallerRepoName,
+                    DefaultRemote = _installerRepoPath
+                },
+                new SourceMappingSetting
+                {
+                    Name = Constants.ProductRepoName,
+                    DefaultRemote = _privateRepoPath
+                }
+            },
+            PatchesPath = "src/installer/patches/"
         };
-        var sm = GenerateSourceMappings(mappings, "src/installer/patches/");
 
-        File.WriteAllText(
-            _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName, sm);
-
-        await GitOperations.CommitAll(_vmrPath, "Add source mappings");
+        await WriteSourceMappingsInVmr(sourceMappings);
     }
 }

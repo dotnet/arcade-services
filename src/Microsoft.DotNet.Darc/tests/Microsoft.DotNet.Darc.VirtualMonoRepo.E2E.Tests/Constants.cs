@@ -32,46 +32,6 @@ public class Constants
     <SourceBuild RepoName=""{0}"" ManagedOnly=""true"" />
 </Dependency>";
 
-    public static readonly string SourceMappingsTemplate =
-        @"{{
-  ""patchesPath"": ""{0}"",
-  ""additionalMappings"": [
-    {1}
-  ],
-
-  ""defaults"": {{
-      ""defaultRef"": ""main"",
-      ""exclude"": [
-        ""**/*.dll"",
-        ""**/*.Dll"",
-        ""**/*.exe"",
-        ""**/*.pdb"",
-        ""**/*.mdb"",
-        ""**/*.zip"",
-        ""**/*.nupkg""
-      ]
-    }},
-
-  ""mappings"": [
-    {2}
-  ]
-}}";
-
-    public static readonly string MappingTemplate =
-        @"{{
-    ""name"": ""{0}"",
-    ""defaultRemote"": ""{1}"",
-    ""exclude"": [
-      {2}
-    ]
-}}";
-
-    public static readonly string AdditionalMappingTemplate =
-        @"{{
-    ""source"": ""{0}"",
-    ""destination"": ""{1}""
-}}";
-
     public static readonly string ProductRepoName = "test-repo";
     public static readonly string DependencyRepoName = "dependency";
     public static readonly string SubmoduleRepoName = "external-repo";

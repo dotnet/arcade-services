@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
@@ -72,25 +73,39 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
 
-        var mappings = new List<SourceMapping>
+        var sourceMappings = new SourceMappingFile()
         {
-            new SourceMapping("special-repo", _specialRepoPath.Path.Replace("\\", "\\\\")),
-            new SourceMapping(
-                "test-repo",
-                _privateRepoPath.Path.Replace("\\", "\\\\"),
-                new List<string> { "externals/external-repo/**/*.exe", "excluded/*" })
+            Mappings = new List<SourceMappingSetting>
+            {
+                new SourceMappingSetting
+                {
+                    Name = "special-repo",
+                    DefaultRemote = _specialRepoPath
+                },
+                new SourceMappingSetting
+                {
+                    Name = Constants.ProductRepoName,
+                    DefaultRemote = _privateRepoPath
+                }
+            },
+            AdditionalMappings = new List<AdditionalMappingSetting>
+            {
+                new AdditionalMappingSetting
+                {
+                    Source = "src/special-repo/content",
+                    Destination = ""
+                }
+            }
         };
 
-        var additionalMappings = new List<AdditionalMapping>
+        sourceMappings.Defaults.Exclude = new[]
         {
-            new AdditionalMapping("src/special-repo/content", "")
+            "externals/external-repo/**/*.exe",
+            "excluded/*",
+            "**/*.dll",
+            "**/*.Dll",
         };
 
-        var sourceMappingsPath = _vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
-
-        var sm = GenerateSourceMappings(mappings, "", additionalMappings);
-
-        File.WriteAllText(sourceMappingsPath, sm);
-        await GitOperations.CommitAll(_vmrPath, "Replace source mappings");
+        await WriteSourceMappingsInVmr(sourceMappings);
     }
 }

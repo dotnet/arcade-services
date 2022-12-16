@@ -129,7 +129,7 @@ public class VmrTestsOneTimeSetUp
                         dependenciesString.AppendLine(
                             string.Format(
                                 Constants.DependencyTemplate,
-                                new[] { dep.Name, VmrTestsBase.EscapePath(dep.Uri), sha }));
+                                new[] { dep.Name, dep.Uri, sha }));
                     }
                 }
             }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -15,10 +16,12 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
+using static Microsoft.DotNet.Darc.Tests.VirtualMonoRepo.VmrTestsBase;
 
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
@@ -37,7 +40,7 @@ public abstract class VmrTestsBase
     protected LocalPath _installerRepoPath = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected VmrInfo vmrInfo = null!;
-
+   
     [SetUp]
     public async Task Setup()
     {
@@ -205,39 +208,6 @@ public abstract class VmrTestsBase
         return files;
     }
 
-    protected string GenerateSourceMappings(
-        ICollection<SourceMapping> mappings,
-        string patchesPath = "",
-        ICollection<AdditionalMapping>? additionalMappings = null,
-        ICollection<string>? exclude = null)
-    {
-        var additionalMappingsString = string.Empty;
-        var mappingsString = string.Empty;
-
-        if(additionalMappings != null)
-        {
-            additionalMappingsString = string.Join(
-                "," + Environment.NewLine, 
-                additionalMappings.Select(m => 
-                string.Format(Constants.AdditionalMappingTemplate, new[] { m.Source, m.Destination })));
-        }
-
-        mappingsString = string.Join("," + Environment.NewLine, mappings.Select(m => GenerateMappingString(m)));
-        return string.Format(Constants.SourceMappingsTemplate, new[] { patchesPath, additionalMappingsString, mappingsString });
-    }
-
-    private string GenerateMappingString(SourceMapping mapping)
-    {
-        var excluded = string.Empty;
-
-        if (mapping.Exclude != null)
-        {
-            excluded = string.Join(", ", mapping.Exclude.Select(e => $"\"{e}\""));
-        }
-
-        return string.Format(Constants.MappingTemplate, new[] { mapping.Name, mapping.DefaultRemote, excluded });
-    }
-
     protected async Task<string> CopyRepoAndCreateVersionDetails(
         LocalPath currentTestDir,
         string repoName,
@@ -256,7 +226,7 @@ public abstract class VmrTestsBase
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
-                        new[] { dep.Name, EscapePath(dep.Uri), sha }));
+                        new[] { dep.Name, dep.Uri, sha }));
             }
         }
 
@@ -266,9 +236,19 @@ public abstract class VmrTestsBase
         return await GitOperations.GetRepoLastCommit(repoPath);
     }
 
-    public static string EscapePath(string path)
+    protected async Task WriteSourceMappingsInVmr(SourceMappingFile sourceMappings)
     {
-        return path.Replace("\\", "\\\\");
+        var settings = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+        };
+
+        File.WriteAllText(_vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
+            JsonSerializer.Serialize(sourceMappings, settings));
+        
+        await GitOperations.CommitAll(_vmrPath, "Add source mappings");
     }
 
     public record SourceMapping(string Name, string DefaultRemote, List<string>? Exclude = null);

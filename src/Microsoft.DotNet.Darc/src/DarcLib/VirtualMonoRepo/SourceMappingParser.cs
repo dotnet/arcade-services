@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -134,38 +135,5 @@ public class SourceMappingParser : ISourceMappingParser
         }
 
         return relativePath;
-    }
-
-    private class SourceMappingFile
-    {
-        public SourceMappingSetting Defaults { get; set; } = new()
-        {
-            DefaultRef = "main",
-            Include = Array.Empty<string>(),
-            Exclude = Array.Empty<string>(),
-        };
-
-        public string? PatchesPath { get; set; }
-
-        public List<SourceMappingSetting> Mappings { get; set; } = new();
-
-        public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
-    }
-
-    private class SourceMappingSetting
-    {
-        public string? Name { get; set; }
-        public string? Version { get; set; }
-        public string? DefaultRemote { get; set; }
-        public string? DefaultRef { get; set; }
-        public string[]? Include { get; set; }
-        public string[]? Exclude { get; set; }
-        public bool IgnoreDefaults { get; set; }
-    }
-
-    private class AdditionalMappingSetting
-    {
-        public string? Source { get; set; }
-        public string? Destination { get; set; }
     }
 }
