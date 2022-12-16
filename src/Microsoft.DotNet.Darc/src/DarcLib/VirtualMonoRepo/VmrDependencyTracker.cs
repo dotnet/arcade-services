@@ -15,7 +15,7 @@ public interface IVmrDependencyTracker
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
+    void UpdateDependencyVersion(VmrDependencyUpdate update);
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
@@ -56,32 +56,32 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
 
-    public void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)
+    public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
         // TODO: https://github.com/dotnet/source-build/issues/2250
-        if (version.PackageVersion is null)
+        if (update.TargetVersion is null)
         {
-            version = version with { PackageVersion = DefaultVersion };
+            update = update with { TargetVersion = DefaultVersion };
         }
 
-        _repoVersions.UpdateVersion(mapping.Name, version.Sha, version.PackageVersion);
+        _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
         _repoVersions.SerializeToXml(_allVersionsFilePath);
 
-        _sourceManifest.UpdateVersion(mapping.Name, mapping.DefaultRemote, version.Sha, version.PackageVersion);
+        _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
 
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version.PackageVersion);
+        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, update.TargetVersion);
         
         var gitInfo = new GitInfoFile
         {
-            GitCommitHash = version.Sha,
+            GitCommitHash = update.TargetRevision,
             OfficialBuildId = buildId,
             PreReleaseVersionLabel = releaseLabel,
             IsStable = string.IsNullOrWhiteSpace(releaseLabel),
-            OutputPackageVersion = version.PackageVersion,
+            OutputPackageVersion = update.TargetVersion,
         };
 
-        gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));
+        gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
     }
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)

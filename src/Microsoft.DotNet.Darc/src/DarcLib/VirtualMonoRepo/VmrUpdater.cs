@@ -105,31 +105,39 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool updateDependencies,
         CancellationToken cancellationToken)
     {
+        var dependencyUpdate = new VmrDependencyUpdate(
+            mapping,
+            mapping.DefaultRef,
+            targetRevision ?? mapping.DefaultRef,
+            targetVersion,
+            null);
+
         return updateDependencies
-            ? UpdateRepositoryRecursively(mapping, targetRevision, targetVersion, noSquash, cancellationToken)
-            : UpdateRepositoryInternal(mapping, targetRevision, targetVersion, noSquash, reapplyVmrPatches: true, cancellationToken);
+            ? UpdateRepositoryRecursively(dependencyUpdate, noSquash, cancellationToken)
+            : UpdateRepositoryInternal(dependencyUpdate, noSquash, reapplyVmrPatches: true, cancellationToken);
     }
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
-        SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
+        VmrDependencyUpdate update,
         bool noSquash,
         bool reapplyVmrPatches,
         CancellationToken cancellationToken)
     {
-        var currentSha = GetCurrentVersion(mapping);
+        var currentSha = GetCurrentVersion(update.Mapping);
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
-            mapping.Name, currentSha, mapping.DefaultRemote, targetRevision ?? HEAD, noSquash ? " one commit at a time" : string.Empty);
+            update.Mapping.Name, currentSha, update.Mapping.DefaultRemote, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
 
-        LocalPath clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        LocalPath clonePath = await _cloneManager.PrepareClone(update.Mapping.DefaultRemote, update.TargetRevision, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        targetRevision = GetShaForRef(clonePath, targetRevision);
+        update = update with
+        {
+            TargetRevision = GetShaForRef(clonePath, update.TargetRevision)
+        };
 
-        if (currentSha == targetRevision)
+        if (currentSha == update.TargetRevision)
         {
             _logger.LogInformation("No new commits found to synchronize");
             return Array.Empty<VmrIngestionPatch>();
@@ -139,7 +147,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
         {
             FirstParentOnly = true,
-            IncludeReachableFrom = targetRevision,
+            IncludeReachableFrom = update.TargetRevision,
         });
 
         // Will contain SHAs in the order as we want to apply them
@@ -148,7 +156,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         foreach (var commit in commits)
         {
             // Target revision goes first
-            if (commit.Sha.StartsWith(targetRevision))
+            if (commit.Sha.StartsWith(update.TargetRevision))
             {
                 commitsToCopy.Push(commit);
                 continue;
@@ -173,7 +181,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool arbitraryCommits = commitsToCopy.Count == 0;
         if (arbitraryCommits)
         {
-            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(targetRevision));
+            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(update.TargetRevision));
         }
 
         // When we don't need to copy the commits one by one and we have more than 1 to mirror,
@@ -196,21 +204,19 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 commitCount++;
                 commitMessages
                     .AppendLine($"  - {commit.MessageShort}")
-                    .AppendLine($"    {mapping.DefaultRemote}/commit/{commit.Id.Sha}");
+                    .AppendLine($"    {update.Mapping.DefaultRemote}/commit/{commit.Id.Sha}");
             }
 
             var message = PrepareCommitMessage(
                 SquashCommitMessage,
-                mapping,
+                update.Mapping,
                 currentSha,
-                targetRevision,
+                update.TargetRevision,
                 commitMessages.ToString());
 
             return await UpdateRepoToRevision(
-                mapping,
+                update,
                 currentSha,
-                targetRevision,
-                targetVersion,
                 clonePath,
                 message,
                 DotnetBotCommitSignature,
@@ -224,20 +230,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
+                update.Mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
 
             var message = PrepareCommitMessage(
                 SingleCommitMessage,
-                mapping,
+                update.Mapping,
                 currentSha,
                 commitToCopy.Id.Sha,
                 commitToCopy.Message);
 
             var patches = await UpdateRepoToRevision(
-                mapping,
+                update,
                 currentSha,
-                commitToCopy.Sha,
-                commitToCopy.Sha == targetRevision ? targetVersion : null,
                 clonePath,
                 message,
                 commitToCopy.Author,
@@ -257,22 +261,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// Always updates to the first version found per repository in the dependency tree.
     /// </summary>
     private async Task UpdateRepositoryRecursively(
-        SourceMapping rootMapping,
-        string? targetRevision,
-        string? targetVersion,
+        VmrDependencyUpdate rootUpdate,
         bool noSquash,
         CancellationToken cancellationToken)
     {
-        targetRevision ??= HEAD;
-
-        string originalRootSha = GetCurrentVersion(rootMapping);
+        string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
-            rootMapping.Name,
+            rootUpdate.Mapping.Name,
             DarcLib.Commit.GetShortSha(originalRootSha),
             Arrow,
-            targetRevision);
+            rootUpdate.TargetRevision);
 
-        var rootUpdate = new DependencyUpdate(rootMapping, rootMapping.DefaultRemote, targetRevision, targetVersion, null);
         var updates = (await GetAllDependencies(rootUpdate, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
@@ -287,15 +286,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        var workBranch = CreateWorkBranch($"sync/{rootMapping.Name}/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootMapping))}-{targetRevision}");
+        var workBranch = CreateWorkBranch("sync" +
+            $"/{rootUpdate.Mapping.Name}" +
+            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}");
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<VmrIngestionPatch>();
 
         // Dependencies that were already updated during this run
-        var updatedDependencies = new HashSet<DependencyUpdate>();
+        var updatedDependencies = new HashSet<VmrDependencyUpdate>();
 
-        foreach (DependencyUpdate update in updates)
+        foreach (VmrDependencyUpdate update in updates)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -310,7 +311,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping.Name);
 
                 currentSha = Constants.EmptyGitObject;
-                _dependencyTracker.UpdateDependencyVersion(update.Mapping, new VmrDependencyVersion(currentSha, null));
+                _dependencyTracker.UpdateDependencyVersion(update);
             }
 
             if (currentSha == update.TargetRevision)
@@ -329,13 +330,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.TargetRevision);
             }
 
-            var patchesToReapply = await UpdateRepositoryInternal(
-                update.Mapping,
-                update.TargetRevision,
-                update.TargetVersion,
-                noSquash,
-                false,
-                cancellationToken);
+            var patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
 
             vmrPatchesToReapply.AddRange(patchesToReapply);
 
@@ -349,7 +344,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             });
         }
 
-        string finalRootSha = GetCurrentVersion(rootMapping);
+        string finalRootSha = GetCurrentVersion(rootUpdate.Mapping);
         var summaryMessage = new StringBuilder();
 
         foreach (var update in updatedDependencies)
@@ -369,7 +364,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
-            rootMapping,
+            rootUpdate.Mapping,
             originalRootSha,
             finalRootSha,
             summaryMessage.ToString());
@@ -377,7 +372,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         workBranch.MergeBack(commitMessage);
 
         _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
-            rootMapping.Name,
+            rootUpdate.Mapping.Name,
             Environment.NewLine,
             summaryMessage);
     }
@@ -386,10 +381,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// Synchronizes given repo in VMR onto given revision.
     /// </summary>
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevision(
-        SourceMapping mapping,
+        VmrDependencyUpdate update,
         string fromRevision,
-        string toRevision,
-        string? targetVersion,
         LocalPath clonePath,
         string commitMessage,
         Signature author,
@@ -397,10 +390,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
-            mapping,
+            update.Mapping,
             clonePath,
             fromRevision,
-            toRevision,
+            update.TargetRevision,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
             cancellationToken);
@@ -409,7 +402,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Get a list of patches that need to be reverted for this update so that repo changes can be applied
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
-        var vmrPatchesToRestore = await RestoreVmrPatchedFiles(mapping, patches, cancellationToken);
+        var vmrPatchesToRestore = await RestoreVmrPatchedFiles(update.Mapping, patches, cancellationToken);
 
         foreach (var patch in patches)
         {
@@ -417,7 +410,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, new VmrDependencyVersion(toRevision, targetVersion));
+        _dependencyTracker.UpdateDependencyVersion(update);
         await _readmeComponentListGenerator.UpdateReadme();
         
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]

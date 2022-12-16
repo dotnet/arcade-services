@@ -88,21 +88,21 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
 
-        var rootUpdate = new DependencyUpdate(mapping, mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, null, null);
+        var rootUpdate = new VmrDependencyUpdate(mapping, mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, null, null);
 
-        IEnumerable<DependencyUpdate> repositories = initializeDependencies
+        IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
             ? await GetAllDependencies(rootUpdate, cancellationToken)
             : new[] { rootUpdate };
 
-        foreach (var repo in repositories)
+        foreach (var update in updates)
         {
-            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(repo.Mapping)))
+            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(update.Mapping)))
             {
                 // Repository has already been initialized
                 continue;
             }
 
-            await InitializeRepository(repo.Mapping, repo.TargetRevision, repo.TargetVersion, cancellationToken);
+            await InitializeRepository(update, cancellationToken);
         }
 
         string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
@@ -113,21 +113,17 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
 
-    private async Task InitializeRepository(
-        SourceMapping mapping,
-        string? targetRevision,
-        string? targetVersion,
-        CancellationToken cancellationToken)
+    private async Task InitializeRepository(VmrDependencyUpdate update, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Initializing {name} at {revision}..", mapping.Name, targetRevision ?? mapping.DefaultRef);
+        _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
 
-        var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+        var clonePath = await _cloneManager.PrepareClone(update.Mapping.DefaultRemote, update.TargetRevision, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        string commitSha = GetShaForRef(clonePath, (targetRevision is null || targetRevision == HEAD) ? null : targetRevision);
+        string commitSha = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision);
 
         var patches = await _patchHandler.CreatePatches(
-            mapping,
+            update.Mapping,
             clonePath,
             Constants.EmptyGitObject,
             commitSha,
@@ -142,7 +138,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        _dependencyTracker.UpdateDependencyVersion(mapping, new(commitSha, targetVersion));
+        _dependencyTracker.UpdateDependencyVersion(update);
         await _readmeComponentListGenerator.UpdateReadme();
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
         { 
@@ -153,16 +149,16 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await ApplyVmrPatches(mapping, cancellationToken);
+        await ApplyVmrPatches(update.Mapping, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         
         await UpdateThirdPartyNotices(cancellationToken);
 
         // Commit but do not add files (they were added to index directly)
-        var message = PrepareCommitMessage(InitializationCommitMessage, mapping, newSha: commitSha);
+        var message = PrepareCommitMessage(InitializationCommitMessage, update.Mapping, newSha: commitSha);
         Commit(message, DotnetBotCommitSignature);
 
-        _logger.LogInformation("Initialization of {name} finished", mapping.Name);
+        _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 
     /// <summary>
