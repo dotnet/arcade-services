@@ -1,0 +1,5 @@
+File in the test repo
+patches will change the next lines
+CCC
+BBB
+end of changes

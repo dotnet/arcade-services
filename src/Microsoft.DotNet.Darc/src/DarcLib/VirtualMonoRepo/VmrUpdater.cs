@@ -244,7 +244,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reapplyVmrPatches,
                 cancellationToken);
 
-            vmrPatchesToRestore.AddRange(vmrPatchesToRestore);
+            vmrPatchesToRestore.AddRange(patches);
 
             currentSha = commitToCopy.Id.Sha;
         }
