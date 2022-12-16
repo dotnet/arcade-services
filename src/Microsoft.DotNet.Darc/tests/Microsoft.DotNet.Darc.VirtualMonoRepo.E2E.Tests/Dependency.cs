@@ -6,4 +6,4 @@ using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
-public record Dependency(string Name, LocalPath Uri);
+internal record Dependency(string Name, LocalPath Uri);

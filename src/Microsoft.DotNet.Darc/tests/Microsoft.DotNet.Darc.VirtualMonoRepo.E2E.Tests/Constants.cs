@@ -16,14 +16,7 @@ public class Constants
     </ToolsetDependencies>
 </Dependencies>";
 
-    public static readonly string EmptyVersionDetails = 
-@"<?xml version=""1.0"" encoding=""utf-8""?>
-<Dependencies>
-    <ProductDependencies>
-    </ProductDependencies>
-    <ToolsetDependencies>
-    </ToolsetDependencies>
-</Dependencies>";
+    public static readonly string EmptyVersionDetails = string.Format(VersionDetailsTemplate, string.Empty);
     
     public static readonly string DependencyTemplate = 
 @"<Dependency Name=""{0}"" Version=""8.0.0"">

@@ -208,7 +208,7 @@ public abstract class VmrTestsBase
         return files;
     }
 
-    protected async Task<string> CopyRepoAndCreateVersionDetails(
+    internal async Task<string> CopyRepoAndCreateVersionDetails(
         LocalPath currentTestDir,
         string repoName,
         IDictionary<string, List<Dependency>>? dependencies = null)
@@ -250,7 +250,4 @@ public abstract class VmrTestsBase
         
         await GitOperations.CommitAll(_vmrPath, "Add source mappings");
     }
-
-    public record SourceMapping(string Name, string DefaultRemote, List<string>? Exclude = null);
-    public record AdditionalMapping(string Source, string Destination);
 }

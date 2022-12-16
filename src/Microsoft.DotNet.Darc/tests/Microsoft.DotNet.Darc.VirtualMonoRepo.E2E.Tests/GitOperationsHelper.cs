@@ -76,19 +76,19 @@ public class GitOperationsHelper
             pathInRepo);
     }
 
-    public async Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath)
+    public Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath)
     {
-        await ProcessManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
+        return ProcessManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
     }
 
-    public async Task PullMain(LocalPath repo)
+    public Task PullMain(LocalPath repo)
     {
-        await ProcessManager.ExecuteGit(repo, "pull", "origin", "main");
+        return ProcessManager.ExecuteGit(repo, "pull", "origin", "main");
     }
 
-    public async Task ChangeSubmoduleUrl(LocalPath repo, LocalPath submodulePath, LocalPath newUrl)
+    public Task ChangeSubmoduleUrl(LocalPath repo, LocalPath submodulePath, LocalPath newUrl)
     {
-        await ProcessManager.ExecuteGit(repo, "submodule", "set-url", submodulePath, newUrl);
+        return ProcessManager.ExecuteGit(repo, "submodule", "set-url", submodulePath, newUrl);
     }
 
     private async Task ConfigureGit(LocalPath repo)

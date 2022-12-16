@@ -106,7 +106,7 @@ public class VmrTestsOneTimeSetUp
         Directory.Delete(targetDir, false);
     }
 
-    protected async Task<string> CreateRepositoryRecursive(
+    private async Task<string> CreateRepositoryRecursive(
         LocalPath repoPath,
         string repoName,
         IDictionary<string, List<Dependency>>? dependencies = null,
