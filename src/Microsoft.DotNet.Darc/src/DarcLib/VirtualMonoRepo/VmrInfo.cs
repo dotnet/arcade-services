@@ -51,7 +51,7 @@ public class VmrInfo : IVmrInfo
 {
     public const string SourcesDir = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
-    public const string GitInfoSourcesDir = "git-info";
+    public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
     
     public const string ReadmeFileName = "README.md";
