@@ -57,8 +57,7 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
 
         // a change in the patch
 
-        //File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / "changed-patch.patch", _installerRepoPath / "patches" / "test-repo" / "example.patch", true);
-        File.WriteAllText(installerPatchesDir / patchFileName, File.ReadAllText(installerPatchesDir / patchFileName).Replace("CCC", "DDD"));
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / "changed-patch.patch", installerPatchesDir / patchFileName, true);
         await GitOperations.CommitAll(_installerRepoPath, "Change the patch file");
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
 
