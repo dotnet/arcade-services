@@ -107,7 +107,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var dependencyUpdate = new VmrDependencyUpdate(
             mapping,
-            mapping.DefaultRef,
+            mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
             null);
