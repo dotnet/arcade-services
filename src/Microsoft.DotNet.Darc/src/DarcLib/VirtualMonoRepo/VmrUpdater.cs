@@ -323,7 +323,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             if (update.Parent is not null)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
-                    update.Parent,
+                    update.Parent.Name,
                     update.Mapping.Name,
                     currentSha,
                     Arrow,
