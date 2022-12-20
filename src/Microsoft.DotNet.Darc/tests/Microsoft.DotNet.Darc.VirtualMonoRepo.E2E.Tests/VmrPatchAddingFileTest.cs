@@ -37,6 +37,7 @@ public class VmrPatchAddingFileTest : VmrPatchesTestsBase
         var expectedFilesFromRepos = new List<LocalPath>
         {
             testRepoFilePath,
+            installerFilePath,
             newFilePath,
             patchPath
         };

@@ -16,6 +16,7 @@ public class VmrPatchesTestsBase : VmrTestsBase
 {
     protected string patchFileName = null!;
     protected LocalPath installerPatchesDir = null!;
+    protected LocalPath installerFilePath = null!;
     protected LocalPath vmrPatchesDir = null!;
 
     protected VmrPatchesTestsBase(string patchFileName)
@@ -27,6 +28,7 @@ public class VmrPatchesTestsBase : VmrTestsBase
     {
         installerPatchesDir = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
         vmrPatchesDir = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
+        installerFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.InstallerRepoFileName;
         await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.ProductRepoName);
         await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.InstallerRepoName);
         File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);

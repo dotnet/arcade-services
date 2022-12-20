@@ -55,9 +55,10 @@ public abstract class VmrTestsBase
         _installerRepoPath = _currentTestDirectory / "installer";
 
         Directory.CreateDirectory(_tmpPath);
-
-        await CopyVmrForCurrentTest();
+        
         await CopyReposForCurrentTest();
+        await CopyVmrForCurrentTest();
+        
         _serviceProvider = new(CreateServiceProvider);
         vmrInfo = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
     }
@@ -212,7 +213,6 @@ public abstract class VmrTestsBase
         IDictionary<string, List<Dependency>>? dependencies = null)
     {
         var repoPath = currentTestDir / repoName;
-        CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
         
         var dependenciesString = new StringBuilder();
         if (dependencies != null && dependencies.ContainsKey(repoName))
@@ -224,13 +224,18 @@ public abstract class VmrTestsBase
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
-                        new[] { dep.Name, dep.Uri, sha }));
+                        new[] { dep.Name, currentTestDir/dep.Name, sha }));
             }
         }
 
-        var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
-        File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
-        await GitOperations.CommitAll(repoPath, "update version details");
+        if (!Directory.Exists(repoPath))
+        {
+            CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
+            var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
+            File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
+            await GitOperations.CommitAll(repoPath, "update version details");
+        }
+
         return await GitOperations.GetRepoLastCommit(repoPath);
     }
 

@@ -32,6 +32,7 @@ public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
         var expectedFilesFromRepos = new List<LocalPath>
         {
             vmrPatchesDir / patchFileName,
+            installerFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
