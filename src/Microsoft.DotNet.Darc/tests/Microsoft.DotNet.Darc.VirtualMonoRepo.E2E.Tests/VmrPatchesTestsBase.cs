@@ -29,7 +29,7 @@ public class VmrPatchesTestsBase : VmrTestsBase
         vmrPatchesDir = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
         await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.ProductRepoName);
         await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.InstallerRepoName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / "patches" / Constants.ProductRepoName / patchFileName);
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);
         await GitOperations.CommitAll(_installerRepoPath, "Add patch");
     }
 
