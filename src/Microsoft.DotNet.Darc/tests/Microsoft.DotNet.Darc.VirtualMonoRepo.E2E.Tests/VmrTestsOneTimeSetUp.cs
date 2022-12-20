@@ -41,8 +41,6 @@ public class VmrTestsOneTimeSetUp
         CommonExternalRepoPath = TestsDirectory / Constants.SubmoduleRepoName;
         CommonDependencyPath = TestsDirectory / Constants.DependencyRepoName;
         CommonInstallerPath = TestsDirectory / Constants.InstallerRepoName;
-        FirstInstallerDependencyPath = TestsDirectory / Constants.FirstInstallerDependencyName;
-        SecondInstallerDependencyPath = TestsDirectory / Constants.SecondInstallerDependencyName;
     }
 
     [OneTimeSetUp]
@@ -54,32 +52,10 @@ public class VmrTestsOneTimeSetUp
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.SourcesDir);
         await _gitOperations.InitialCommit(TestsDirectory / Constants.VmrName);
 
-        var repoDependencies = new Dictionary<string, List<Dependency>>
-        {
-            {Constants.ProductRepoName,  new List<Dependency> {new Dependency(Constants.DependencyRepoName, CommonDependencyPath) } }
-        };
-
-        await CreateRepositoryRecursive(CommonProductRepoPath, Constants.ProductRepoName, repoDependencies);
-        File.Copy(ResourcesPath / Constants.ProductRepoFileName, CommonProductRepoPath / Constants.ProductRepoFileName, true);
-        await _gitOperations.CommitAll(CommonProductRepoPath, "change file content");
-
-        await CreateRepositoryRecursive(CommonExternalRepoPath, Constants.SubmoduleRepoName);
-
-        var dependenciesMap = new Dictionary<string, List<Dependency>>
-        {
-            {
-                Constants.InstallerRepoName,  
-                new List<Dependency> 
-                {
-                    new Dependency(Constants.FirstInstallerDependencyName, FirstInstallerDependencyPath),
-                    new Dependency(Constants.SecondInstallerDependencyName, SecondInstallerDependencyPath)
-                } 
-            },
-            {Constants.FirstInstallerDependencyName, new List<Dependency> {new Dependency(Constants.DependencyRepoName, CommonDependencyPath) }},
-            {Constants.SecondInstallerDependencyName, new List<Dependency> {new Dependency(Constants.DependencyRepoName, CommonDependencyPath) }},
-        };
-
-        await CreateRepositoryRecursive(CommonInstallerPath, Constants.InstallerRepoName, dependenciesMap);
+        await CreateRepository(CommonProductRepoPath, Constants.ProductRepoName, Constants.ProductRepoFileName);
+        await CreateRepository(CommonDependencyPath, Constants.DependencyRepoName);
+        await CreateRepository(CommonExternalRepoPath, Constants.SubmoduleRepoName);
+        await CreateRepository(CommonInstallerPath, Constants.InstallerRepoName);
         Directory.CreateDirectory(CommonInstallerPath / Constants.PatchesFolderName / Constants.ProductRepoName);
     }
 
@@ -120,6 +96,23 @@ public class VmrTestsOneTimeSetUp
         Directory.Delete(targetDir, false);
     }
 
+    public async Task CreateRepository(LocalPath repoPath, string repoName, string? resourceFileName = null)
+    {
+        Directory.CreateDirectory(repoPath);
+        Directory.CreateDirectory(repoPath / "eng");
+
+        if (resourceFileName != null)
+        {
+            File.Copy(ResourcesPath / resourceFileName, repoPath / Constants.GetRepoFileName(repoName));
+        }
+        else
+        {
+            File.WriteAllText(repoPath / Constants.GetRepoFileName(repoName), $"File in {repoName}");
+        }
+
+        await _gitOperations.InitialCommit(repoPath);
+    }
+
     private async Task<string> CreateRepositoryRecursive(
         LocalPath repoPath,
         string repoName,
@@ -139,12 +132,7 @@ public class VmrTestsOneTimeSetUp
 
         if (!Directory.Exists(repoPath))
         {
-            Directory.CreateDirectory(repoPath);
-            Directory.CreateDirectory(repoPath / "eng");
-
-            File.WriteAllText(repoPath / $"{repoName}-file.txt", $"File in {repoName}");
-            
-            await _gitOperations.InitialCommit(repoPath);
+            await CreateRepository(repoPath, repoName);
         }
         
         return await _gitOperations.GetRepoLastCommit(repoPath);

@@ -34,6 +34,6 @@ public class Constants
     public static readonly string PatchesFolderName = "patches";
     public static readonly string ProductRepoFileName = "test-repo-file.txt";
     public static readonly string InstallerRepoFileName = "installer-file.txt";
-    public static readonly string FirstInstallerDependencyName = "aspnetcore";
-    public static readonly string SecondInstallerDependencyName = "runtime";
+    public static readonly string DependencyRepoFileName = "dependency-file.txt";
+    public static string GetRepoFileName(string repoName) => repoName + "-file.txt";
 }

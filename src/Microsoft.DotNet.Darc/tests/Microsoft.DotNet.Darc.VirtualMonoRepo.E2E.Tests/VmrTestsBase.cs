@@ -19,6 +19,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation;
 using NUnit.Framework;
 
 
@@ -66,17 +67,17 @@ public abstract class VmrTestsBase
     [TearDown]
     public void DeleteCurrentTestDirectory()
     {
-        try
-        {
-            if (_currentTestDirectory is not null)
-            {
-                VmrTestsOneTimeSetUp.DeleteDirectory(_currentTestDirectory.ToString());
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
+        //try
+        //{
+        //    if (_currentTestDirectory is not null)
+        //    {
+        //        VmrTestsOneTimeSetUp.DeleteDirectory(_currentTestDirectory.ToString());
+        //    }
+        //}
+        //catch
+        //{
+        //    // Ignore
+        //}
     }
 
     protected abstract Task CopyReposForCurrentTest();
