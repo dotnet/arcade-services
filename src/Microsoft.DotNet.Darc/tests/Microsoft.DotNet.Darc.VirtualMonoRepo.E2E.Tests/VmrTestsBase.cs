@@ -67,17 +67,17 @@ public abstract class VmrTestsBase
     [TearDown]
     public void DeleteCurrentTestDirectory()
     {
-        //try
-        //{
-        //    if (_currentTestDirectory is not null)
-        //    {
-        //        VmrTestsOneTimeSetUp.DeleteDirectory(_currentTestDirectory.ToString());
-        //    }
-        //}
-        //catch
-        //{
-        //    // Ignore
-        //}
+        try
+        {
+            if (_currentTestDirectory is not null)
+            {
+                VmrTestsOneTimeSetUp.DeleteDirectory(_currentTestDirectory.ToString());
+            }
+        }
+        catch
+        {
+            // Ignore
+        }
     }
 
     protected abstract Task CopyReposForCurrentTest();
@@ -211,7 +211,7 @@ public abstract class VmrTestsBase
     internal async Task<string> CopyRepoAndCreateVersionDetails(
         LocalPath currentTestDir,
         string repoName,
-        IDictionary<string, List<Dependency>>? dependencies = null)
+        IDictionary<string, List<string>>? dependencies = null)
     {
         var repoPath = currentTestDir / repoName;
         
@@ -219,13 +219,13 @@ public abstract class VmrTestsBase
         if (dependencies != null && dependencies.ContainsKey(repoName))
         {
             var repoDependencies = dependencies[repoName];
-            foreach (var dep in repoDependencies)
+            foreach (var dependencyName in repoDependencies)
             {
-                string sha = await CopyRepoAndCreateVersionDetails(currentTestDir, dep.Name, dependencies);
+                string sha = await CopyRepoAndCreateVersionDetails(currentTestDir, dependencyName, dependencies);
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
-                        new[] { dep.Name, currentTestDir/dep.Name, sha }));
+                        new[] { dependencyName, currentTestDir/ dependencyName, sha }));
             }
         }
 

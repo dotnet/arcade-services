@@ -158,9 +158,9 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        var dependenciesMap = new Dictionary<string, List<Dependency>>
+        var dependenciesMap = new Dictionary<string, List<string>>
         {
-            {Constants.ProductRepoName,  new List<Dependency> {new Dependency(Constants.DependencyRepoName, _dependencyRepoPath) } }
+            {Constants.ProductRepoName,  new List<string> {Constants.DependencyRepoName} }
         };
 
         await CopyRepoAndCreateVersionDetails(
