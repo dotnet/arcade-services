@@ -108,29 +108,4 @@ public class VmrTestsOneTimeSetUp
 
         await _gitOperations.InitialCommit(repoPath);
     }
-
-    private async Task<string> CreateRepositoryRecursive(
-        LocalPath repoPath,
-        string repoName,
-        IDictionary<string, List<Dependency>>? dependencies = null)
-    {
-        if (dependencies != null && dependencies.ContainsKey(repoName))
-        {
-            var repoDependencies = dependencies[repoName];
-            foreach (var dep in repoDependencies)
-            {
-                if (!Directory.Exists(dep.Uri))
-                {
-                    await CreateRepositoryRecursive(dep.Uri, dep.Name, dependencies);
-                }
-            }
-        }
-
-        if (!Directory.Exists(repoPath))
-        {
-            await CreateRepository(repoPath, repoName);
-        }
-        
-        return await _gitOperations.GetRepoLastCommit(repoPath);
-    }
 }
