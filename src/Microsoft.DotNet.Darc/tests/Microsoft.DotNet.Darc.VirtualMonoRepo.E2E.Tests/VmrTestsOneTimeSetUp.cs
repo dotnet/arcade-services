@@ -6,9 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
@@ -22,8 +20,6 @@ public class VmrTestsOneTimeSetUp
     public static readonly LocalPath TestsDirectory;
     public static readonly LocalPath CommonVmrPath;
     public static readonly LocalPath CommonProductRepoPath;
-    public static readonly LocalPath FirstInstallerDependencyPath;
-    public static readonly LocalPath SecondInstallerDependencyPath;
     public static readonly LocalPath CommonDependencyPath;
     public static readonly LocalPath CommonInstallerPath;
     public static readonly LocalPath CommonExternalRepoPath;

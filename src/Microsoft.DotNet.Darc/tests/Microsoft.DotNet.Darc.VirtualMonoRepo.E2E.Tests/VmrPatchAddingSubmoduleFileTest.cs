@@ -35,6 +35,7 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         var testRepoPathInVmr = vmrSourcesPath / Constants.ProductRepoName;
         var patchPathInRepo = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
         var patchPathInVmr = vmrSourcesPath / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
+        var installerFilePathInVmr = vmrSourcesPath / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
         var submoduleRelativePath = new NativePath("submodules") / "submodule1";
         var submodulePathInVmr = testRepoPathInVmr / "submodules" / "submodule1";
         var submodulePathInRepo = "foo";
@@ -53,6 +54,7 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
             testRepoPathInVmr / Constants.ProductRepoFileName,
             submodulePathInVmr / "external-repo-file.txt",
             submodulePathInVmr / VersionFiles.VersionDetailsXml,
+            installerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,
         };
