@@ -260,7 +260,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    public async Task ApplyPatch(SourceMapping mapping, VmrIngestionPatch patch, CancellationToken cancellationToken)
+    public async Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -271,7 +271,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (info.Length == 0)
         {
-            _logger.LogDebug("No changes in {patch} (maybe only excluded files or submodules changed?)", patch.Path);
+            _logger.LogDebug("No changes in {patch}", patch.Path);
             return;
         }
 
@@ -317,58 +317,22 @@ public class VmrPatchHandler : IVmrPatchHandler
         await ResetWorkingTreeDirectory(patch.ApplicationPath ?? ".");
     }
 
-    public async Task RestoreFilesFromPatch(
-        SourceMapping mapping,
-        LocalPath clonePath,
-        string patch,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogDebug("Restoring patched files from a VMR patch `{patch}`..", patch);
-        
-        var repoSourcesPath = _vmrInfo.GetRepoSourcesPath(mapping);
-
-        foreach (var patchedFile in await GetPatchedFiles(clonePath, patch, cancellationToken))
-        {
-            var originalFile = clonePath / patchedFile;
-            var destination = repoSourcesPath / patchedFile;
-
-            if (_fileSystem.FileExists(originalFile))
-            {
-                // Copy old revision to VMR
-                _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
-                _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-            }
-            else
-            {
-                // File is being added by the patch - we need to remove it
-                _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
-                _fileSystem.DeleteFile(destination);
-            }
-        }
-
-        // Stage the restored files (all future patches are applied to index directly)
-        _localGitRepo.Stage(_vmrInfo.VmrPath, VmrInfo.GetRelativeRepoSourcesPath(mapping));
-    }
-
     /// <summary>
     /// Resolves a list of all files that are part of a given patch diff.
     /// </summary>
     /// <param name="repoPath">Path (to the repo) the patch applies onto</param>
     /// <param name="patchPath">Path to the patch file</param>
     /// <returns>List of all files (paths relative to repo's root) that are part of a given patch diff</returns>
-    public async Task<IReadOnlyCollection<string>> GetPatchedFiles(
-        string repoPath,
-        string patchPath,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken)
     {
-        var files = new List<string>();
+        var files = new List<UnixPath>();
         if (_fileSystem.GetFileInfo(patchPath).Length == 0)
         {
             _logger.LogDebug("Patch {patch} is empty. Skipping file enumeration..", patchPath);
             return files;
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken);
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))
@@ -376,7 +340,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             var match = GitPatchSummaryLine.Match(line);
             if (match.Success)
             {
-                files.Add(match.Groups["file"].Value);
+                files.Add(new UnixPath(match.Groups["file"].Value));
             }
         }
 

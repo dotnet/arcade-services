@@ -53,7 +53,6 @@ public abstract class VmrTestsBase
         _dependencyRepoPath = _currentTestDirectory / "dependency";
         _specialRepoPath = _currentTestDirectory / "special-repo";
         _installerRepoPath = _currentTestDirectory / "installer";
-        _externalRepoPath = _currentTestDirectory / "external-repo";
 
         Directory.CreateDirectory(_tmpPath);
 

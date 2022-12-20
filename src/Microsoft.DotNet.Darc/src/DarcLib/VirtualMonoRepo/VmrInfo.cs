@@ -82,7 +82,7 @@ public class VmrInfo : IVmrInfo
 
     public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
 
-    public static LocalPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+    public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
     public LocalPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

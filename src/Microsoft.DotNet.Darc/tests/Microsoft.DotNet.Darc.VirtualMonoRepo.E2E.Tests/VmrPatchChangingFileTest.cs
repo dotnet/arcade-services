@@ -91,6 +91,6 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / changedFileName, _privateRepoPath / Constants.ProductRepoFileName, true);
         await GitOperations.CommitAll(_privateRepoPath, "Change file in product repo");
         var commit = await GitOperations.GetRepoLastCommit(_privateRepoPath);
-        this.Invoking(x => x.CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
+        this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }

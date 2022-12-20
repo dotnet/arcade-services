@@ -76,6 +76,12 @@ public class GitOperationsHelper
             pathInRepo);
     }
 
+    public async Task UpdateSubmodule(LocalPath repo, string pathToSubmodule)
+    {
+        await PullMain(repo / pathToSubmodule);
+        await CommitAll(repo, "Update submodule");
+    }
+
     public Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath)
     {
         return ProcessManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);

@@ -138,7 +138,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(mapping, patch, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
