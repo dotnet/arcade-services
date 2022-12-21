@@ -71,14 +71,14 @@ public abstract class VmrManagerBase : IVmrManager
     /// <summary>
     /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IEnumerable<DependencyUpdate>> GetAllDependencies(DependencyUpdate root, CancellationToken cancellationToken)
+    protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependencies(VmrDependencyUpdate root, CancellationToken cancellationToken)
     {
-        var transitiveDependencies = new Dictionary<SourceMapping, DependencyUpdate>
+        var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
         {
             { root.Mapping, root },
         };
 
-        var reposToScan = new Queue<DependencyUpdate>();
+        var reposToScan = new Queue<VmrDependencyUpdate>();
         reposToScan.Enqueue(transitiveDependencies.Values.Single());
 
         _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
@@ -97,7 +97,7 @@ public abstract class VmrManagerBase : IVmrManager
                         $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
                         $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
 
-                var update = new DependencyUpdate(
+                var update = new VmrDependencyUpdate(
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
@@ -265,11 +265,4 @@ public abstract class VmrManagerBase : IVmrManager
             repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
         }
     }
-
-    protected record DependencyUpdate(
-        SourceMapping Mapping,
-        string RemoteUri,
-        string TargetRevision,
-        string? TargetVersion,
-        SourceMapping? Parent);
 }
