@@ -65,7 +65,6 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         var excludedFileName = "excluded.txt";
         var excludedFile = excludedDir / excludedFileName;
 
-
         Directory.CreateDirectory(excludedDir);
         File.WriteAllText(excludedFile, "File to be excluded");
         await GitOperations.CommitAll(ProductRepoPath, "Create an excluded file");
