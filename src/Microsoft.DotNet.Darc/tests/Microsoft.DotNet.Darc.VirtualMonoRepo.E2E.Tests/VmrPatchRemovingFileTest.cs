@@ -22,18 +22,15 @@ public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
     [Test]
     public async Task VmrPatchAddsFileTest()
     {
-        var productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
-        var patchPathInRepo = installerPatchesDir / patchFileName;
+        var patchPathInRepo = InstallerPatchesDir / PatchFileName;
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var testRepoFilePath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / productRepoFileName;
-
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            vmrPatchesDir / patchFileName,
-            installerFilePath
+            VmrPatchesDir / PatchFileName,
+            InstallerFilePathInVmr
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
@@ -47,8 +44,8 @@ public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
         await GitOperations.CommitAll(InstallerRepoPath, "Remove the patch file");
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        expectedFiles.Add(testRepoFilePath);
-        expectedFiles.Remove(vmrPatchesDir / patchFileName);
+        expectedFiles.Add(ProductRepoFilePathInVmr);
+        expectedFiles.Remove(VmrPatchesDir / PatchFileName);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
     }

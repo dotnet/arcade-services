@@ -161,7 +161,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
     {
         var dependenciesMap = new Dictionary<string, List<string>>
         {
-            {Constants.ProductRepoName,  new List<string> {Constants.DependencyRepoName} }
+            { Constants.ProductRepoName,  new List<string> {Constants.DependencyRepoName} }
         };
 
         await CopyRepoAndCreateVersionDetails(

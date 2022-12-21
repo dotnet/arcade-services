@@ -26,19 +26,19 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public abstract class VmrTestsBase
 {
-    private Lazy<IServiceProvider> _serviceProvider = null!;
-    private readonly CancellationTokenSource _cancellationToken = new();
     protected LocalPath CurrentTestDirectory { get; private set; } = null!;
     protected LocalPath ProductRepoPath { get; private set; } = null!;
     protected LocalPath VmrPath { get; private set; } = null!;
     protected LocalPath TmpPath { get; private set; } = null!;
     protected LocalPath SecondRepoPath { get; private set; } = null!;
     protected LocalPath DependencyRepoPath { get; private set; } = null!;
-    protected LocalPath SpecialRepoPath { get; private set; } = null!;
     protected LocalPath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected VmrInfo VmrInfo { get; private set; } = null!;
-   
+    
+    private Lazy<IServiceProvider> _serviceProvider = null!;
+    private readonly CancellationTokenSource _cancellationToken = new();
+
     [SetUp]
     public async Task Setup()
     {

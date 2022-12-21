@@ -25,19 +25,18 @@ public class VmrPatchAddingFileTest : VmrPatchesTestsBase
     public async Task VmrPatchAddsFileTest()
     {
         var vmrSourcesPath = VmrPath / VmrInfo.SourcesDir;
-        var patchPathInRepo = installerPatchesDir / patchFileName;
+        var patchPathInRepo = InstallerPatchesDir / PatchFileName;
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var testRepoFilePath = vmrSourcesPath / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
         var newFilePath = vmrSourcesPath / Constants.ProductRepoName / _productRepoNewFile;
-        var patchPath = vmrSourcesPath / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
+        var patchPath = VmrPatchesDir / PatchFileName;
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoFilePath,
-            installerFilePath,
+            ProductRepoFilePathInVmr,
+            InstallerFilePathInVmr,
             newFilePath,
             patchPath
         };

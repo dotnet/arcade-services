@@ -14,24 +14,31 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrPatchesTestsBase : VmrTestsBase
 {
-    protected string patchFileName = null!;
-    protected LocalPath installerPatchesDir = null!;
-    protected LocalPath installerFilePath = null!;
-    protected LocalPath vmrPatchesDir = null!;
+    protected string PatchFileName { get; private set; } = null!;
+    protected LocalPath InstallerPatchesDir { get; private set; } = null!;
+    protected LocalPath InstallerFilePathInVmr { get; private set; } = null!;
 
-    protected VmrPatchesTestsBase(string patchFileName)
+    protected LocalPath ProductRepoFilePathInVmr { get; private set; } = null!;
+    protected LocalPath VmrPatchesDir { get; private set; } = null!;
+
+    protected VmrPatchesTestsBase(string PatchFileName)
     {
-        this.patchFileName = patchFileName;
+        this.PatchFileName = PatchFileName;
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
-        installerPatchesDir = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
-        vmrPatchesDir = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
-        installerFilePath = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
+        InstallerPatchesDir = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
+        var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
+        VmrPatchesDir = vmrSourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
+        InstallerFilePathInVmr = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
+        ProductRepoFilePathInVmr = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
+        
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);
+        File.Copy(
+            VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, 
+            InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName);
         await GitOperations.CommitAll(InstallerRepoPath, "Add patch");
     }
 

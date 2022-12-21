@@ -20,10 +20,11 @@ public class VmrRecursiveSyncTests : VmrTestsBase
     [Test]
     public async Task RecursiveUpdatePreservesDependencyVersionTest()
     {
-        var installerFilePath = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
-        var firstRepoFilePath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
-        var secondRepoFilePath = VmrPath / VmrInfo.SourcesDir / Constants.SecondRepoName / Constants.GetRepoFileName(Constants.SecondRepoName);
-        var dependencyFilePath = VmrPath / VmrInfo.SourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
+        var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
+        var installerFilePath = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
+        var firstRepoFilePath = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
+        var secondRepoFilePath = vmrSourcesDir / Constants.SecondRepoName / Constants.GetRepoFileName(Constants.SecondRepoName);
+        var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
 
         /* 
          *  the dependency tree looks like:
@@ -49,34 +50,58 @@ public class VmrRecursiveSyncTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName, Constants.ProductRepoName, Constants.SecondRepoName, Constants.DependencyRepoName },
+            new[] 
+            { 
+                Constants.InstallerRepoName, 
+                Constants.ProductRepoName, 
+                Constants.SecondRepoName, 
+                Constants.DependencyRepoName 
+            },
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         // create new version of dependency repo
 
-        File.WriteAllText(DependencyRepoPath / Constants.GetRepoFileName(Constants.DependencyRepoName), "New version of the file");
+        File.WriteAllText(
+            DependencyRepoPath / Constants.GetRepoFileName(Constants.DependencyRepoName), 
+            "New version of the file");
         await GitOperations.CommitAll(DependencyRepoPath, "change the file in dependency repo");
 
         // the second repo depends on the new version, first repo depends on the old one
 
         var sha = await GitOperations.GetRepoLastCommit(DependencyRepoPath);
-        var dependencyString = string.Format(Constants.DependencyTemplate, new[] { Constants.DependencyRepoName, DependencyRepoPath, sha });
+        var dependencyString = string.Format(
+            Constants.DependencyTemplate, 
+            new[] { Constants.DependencyRepoName, DependencyRepoPath, sha });
+
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependencyString);
         File.WriteAllText(SecondRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
-        File.WriteAllText(SecondRepoPath / Constants.GetRepoFileName(Constants.SecondRepoName), "New version of product-repo2 file");
+        File.WriteAllText(
+            SecondRepoPath / Constants.GetRepoFileName(Constants.SecondRepoName), 
+            "New version of product-repo2 file");
         await GitOperations.CommitAll(SecondRepoPath, "update version details");
 
         // update installers Version.Details
 
         var newSecondRepoSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
         var productRepoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        var productRepoDependency = string.Format(Constants.DependencyTemplate, new[] { Constants.ProductRepoName, ProductRepoPath, productRepoSha });
-        var secondRepoDependency = string.Format(Constants.DependencyTemplate, new[] { Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha });
-        versionDetails = string.Format(Constants.VersionDetailsTemplate, productRepoDependency + Environment.NewLine + secondRepoDependency);
+        var productRepoDependency = string.Format(
+            Constants.DependencyTemplate, 
+            new[] { Constants.ProductRepoName, ProductRepoPath, productRepoSha });
+
+        var secondRepoDependency = string.Format(
+            Constants.DependencyTemplate, 
+            new[] { Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha });
+
+        versionDetails = string.Format(
+            Constants.VersionDetailsTemplate, 
+            productRepoDependency + Environment.NewLine + secondRepoDependency);
+
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
-        File.WriteAllText(InstallerRepoPath / Constants.GetRepoFileName(Constants.InstallerRepoName), "New version of installer file");
+        File.WriteAllText(
+            InstallerRepoPath / Constants.GetRepoFileName(Constants.InstallerRepoName), 
+            "New version of installer file");
         await GitOperations.CommitAll(InstallerRepoPath, "update version details");
 
         /* 
@@ -113,8 +138,8 @@ public class VmrRecursiveSyncTests : VmrTestsBase
                     Constants.SecondRepoName
                 }
             },
-            {Constants.ProductRepoName, new List<string> {Constants.DependencyRepoName} },
-            {Constants.SecondRepoName, new List<string> {Constants.DependencyRepoName }},
+            { Constants.ProductRepoName, new List<string> {Constants.DependencyRepoName} },
+            { Constants.SecondRepoName, new List<string> {Constants.DependencyRepoName }},
         };
 
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);

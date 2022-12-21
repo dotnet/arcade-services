@@ -33,10 +33,8 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         const string FileCreatedByPatch = "patched-submodule-file.txt";
 
         var testRepoPathInVmr = vmrSourcesPath / Constants.ProductRepoName;
-        var patchPathInRepo = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
-        var patchPathInVmr = vmrSourcesPath / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
-        var installerFilePathInVmr = vmrSourcesPath / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
-        var testRepoFilePathInVmr = vmrSourcesPath / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
+        var patchPathInRepo = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName;
+        var patchPathInVmr = VmrPatchesDir / PatchFileName;
         var submoduleRelativePath = new NativePath("submodules") / "submodule1";
         var submodulePathInVmr = testRepoPathInVmr / "submodules" / "submodule1";
         var submodulePathInRepo = "foo";
@@ -53,10 +51,10 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoFilePathInVmr,
+            ProductRepoFilePathInVmr,
             submoduleFileInVmr,
             submodulePathInVmr / VersionFiles.VersionDetailsXml,
-            installerFilePathInVmr,
+            InstallerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,
         };
@@ -83,7 +81,7 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 
         // Add the patch back in installer
 
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, patchPathInRepo);
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, patchPathInRepo);
         await GitOperations.CommitAll(InstallerRepoPath, "Add the patch back");
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
