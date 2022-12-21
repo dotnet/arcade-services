@@ -24,13 +24,13 @@ public class VmrPatchAddingFileTest : VmrPatchesTestsBase
     [Test]
     public async Task VmrPatchAddsFileTest()
     {
-        var vmrSourcesPath = _vmrPath / VmrInfo.SourcesDir;
+        var vmrSourcesPath = VmrPath / VmrInfo.SourcesDir;
         var patchPathInRepo = installerPatchesDir / patchFileName;
 
-        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, _installerRepoPath);
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
+        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var testRepoFilePath = vmrSourcesPath / Constants.ProductRepoName / Constants.ProductRepoFileName;
+        var testRepoFilePath = vmrSourcesPath / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
         var newFilePath = vmrSourcesPath / Constants.ProductRepoName / _productRepoNewFile;
         var patchPath = vmrSourcesPath / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
 
@@ -43,19 +43,19 @@ public class VmrPatchAddingFileTest : VmrPatchesTestsBase
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
+            VmrPath,
             new[] { Constants.ProductRepoName, Constants.InstallerRepoName },
             expectedFilesFromRepos);
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
 
         File.Delete(patchPathInRepo);
-        await GitOperations.CommitAll(_installerRepoPath, "Remove the patch file");
-        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        await GitOperations.CommitAll(InstallerRepoPath, "Remove the patch file");
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         expectedFiles.Remove(newFilePath);
         expectedFiles.Remove(patchPath);
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
     }
 }

@@ -17,6 +17,7 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 [TestFixture]
 public class VmrSyncAdditionalMappingsTest : VmrTestsBase
 {
+    private LocalPath _specialRepoPath = null!;
     private readonly string _repoName = "special-repo";
     private readonly string _fileName = "special-file.txt";
     private readonly string _fileRelativePath = new NativePath("content") / "special-file.txt";
@@ -31,18 +32,18 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / VmrInfo.SourcesDir / _repoName / _fileRelativePath,
-            _vmrPath / _fileName
+            VmrPath / VmrInfo.SourcesDir / _repoName / _fileRelativePath,
+            VmrPath / _fileName
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
+            VmrPath,
             new[] { _repoName },
             expectedFilesFromRepos
         );
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
-        await GitOperations.CheckAllIsCommited(_vmrPath);
+        CheckDirectoryContents(VmrPath, expectedFiles);
+        await GitOperations.CheckAllIsCommited(VmrPath);
 
         // Change a file in the mapped folder
 
@@ -50,12 +51,13 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
         await GitOperations.CommitAll(_specialRepoPath, "Change file");
         await UpdateRepoToLastCommit(_repoName, _specialRepoPath);
 
-        CheckFileContents(_vmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
-        await GitOperations.CheckAllIsCommited(_vmrPath);
+        CheckFileContents(VmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
+        await GitOperations.CheckAllIsCommited(VmrPath);
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
+        _specialRepoPath = CurrentTestDirectory / "special-repo";
         _filePath = _specialRepoPath / _fileRelativePath;
 
         Directory.CreateDirectory(_specialRepoPath);
@@ -71,7 +73,7 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
+        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile()
         {
@@ -85,7 +87,7 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
                 new SourceMappingSetting
                 {
                     Name = Constants.ProductRepoName,
-                    DefaultRemote = _privateRepoPath
+                    DefaultRemote = ProductRepoPath
                 }
             },
             AdditionalMappings = new List<AdditionalMappingSetting>

@@ -28,39 +28,38 @@ public abstract class VmrTestsBase
 {
     private Lazy<IServiceProvider> _serviceProvider = null!;
     private readonly CancellationTokenSource _cancellationToken = new();
-    protected LocalPath _currentTestDirectory = null!;
-    protected LocalPath _privateRepoPath = null!;
-    protected LocalPath _vmrPath = null!;
-    protected LocalPath _tmpPath = null!;
-    protected LocalPath _externalRepoPath = null!;
-    protected LocalPath _dependencyRepoPath = null!;
-    protected LocalPath _specialRepoPath = null!;
-    protected LocalPath _installerRepoPath = null!;
+    protected LocalPath CurrentTestDirectory { get; private set; } = null!;
+    protected LocalPath ProductRepoPath { get; private set; } = null!;
+    protected LocalPath VmrPath { get; private set; } = null!;
+    protected LocalPath TmpPath { get; private set; } = null!;
+    protected LocalPath SecondRepoPath { get; private set; } = null!;
+    protected LocalPath DependencyRepoPath { get; private set; } = null!;
+    protected LocalPath SpecialRepoPath { get; private set; } = null!;
+    protected LocalPath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
-    protected VmrInfo vmrInfo = null!;
+    protected VmrInfo VmrInfo { get; private set; } = null!;
    
     [SetUp]
     public async Task Setup()
     {
         var testsDirName = "_tests";
-        _currentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
-        Directory.CreateDirectory(_currentTestDirectory);
+        CurrentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
+        Directory.CreateDirectory(CurrentTestDirectory);
 
-        _tmpPath = _currentTestDirectory / "tmp";
-        _privateRepoPath = _currentTestDirectory / "test-repo";
-        _vmrPath = _currentTestDirectory / "vmr";
-        _externalRepoPath = _currentTestDirectory / "external-repo";
-        _dependencyRepoPath = _currentTestDirectory / "dependency";
-        _specialRepoPath = _currentTestDirectory / "special-repo";
-        _installerRepoPath = _currentTestDirectory / "installer";
+        TmpPath = CurrentTestDirectory / "tmp";
+        ProductRepoPath = CurrentTestDirectory / Constants.ProductRepoName;
+        VmrPath = CurrentTestDirectory / "vmr";
+        SecondRepoPath = CurrentTestDirectory / Constants.SecondRepoName;
+        DependencyRepoPath = CurrentTestDirectory / Constants.DependencyRepoName;
+        InstallerRepoPath = CurrentTestDirectory / Constants.InstallerRepoName;
 
-        Directory.CreateDirectory(_tmpPath);
+        Directory.CreateDirectory(TmpPath);
         
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
         
         _serviceProvider = new(CreateServiceProvider);
-        vmrInfo = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
+        VmrInfo = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
     }
 
     [TearDown]
@@ -68,9 +67,9 @@ public abstract class VmrTestsBase
     {
         try
         {
-            if (_currentTestDirectory is not null)
+            if (CurrentTestDirectory is not null)
             {
-                VmrTestsOneTimeSetUp.DeleteDirectory(_currentTestDirectory.ToString());
+                VmrTestsOneTimeSetUp.DeleteDirectory(CurrentTestDirectory.ToString());
             }
         }
         catch
@@ -89,8 +88,8 @@ public abstract class VmrTestsBase
         .AddVmrManagers(
         sp => sp.GetRequiredService<GitFileManagerFactory>(),
         "git",
-        _vmrPath,
-        _tmpPath,
+        VmrPath,
+        TmpPath,
         null,
         null)
         .BuildServiceProvider();
@@ -103,7 +102,7 @@ public abstract class VmrTestsBase
         var expectedFiles = new List<LocalPath>
         {
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
-            vmrInfo.GetSourceManifestPath(),
+            VmrInfo.GetSourceManifestPath(),
             vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName
         };
 
@@ -248,9 +247,9 @@ public abstract class VmrTestsBase
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
         };
 
-        File.WriteAllText(_vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
+        File.WriteAllText(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
             JsonSerializer.Serialize(sourceMappings, settings));
         
-        await GitOperations.CommitAll(_vmrPath, "Add source mappings");
+        await GitOperations.CommitAll(VmrPath, "Add source mappings");
     }
 }

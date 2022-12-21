@@ -42,7 +42,7 @@
     <None Update="Resources\test-file-after-patch.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Resources\test-repo-file.txt">
+    <None Update="Resources\product-repo1-file.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

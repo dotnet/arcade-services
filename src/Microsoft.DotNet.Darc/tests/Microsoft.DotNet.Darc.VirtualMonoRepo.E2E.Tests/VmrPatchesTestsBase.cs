@@ -26,18 +26,18 @@ public class VmrPatchesTestsBase : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        installerPatchesDir = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
-        vmrPatchesDir = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
-        installerFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.InstallerRepoFileName;
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.ProductRepoName);
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.InstallerRepoName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);
-        await GitOperations.CommitAll(_installerRepoPath, "Add patch");
+        installerPatchesDir = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
+        vmrPatchesDir = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
+        installerFilePath = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);
+        await GitOperations.CommitAll(InstallerRepoPath, "Add patch");
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
+        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile
         {
@@ -46,12 +46,12 @@ public class VmrPatchesTestsBase : VmrTestsBase
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
-                    DefaultRemote = _installerRepoPath
+                    DefaultRemote = InstallerRepoPath
                 },
                 new SourceMappingSetting
                 {
                     Name = Constants.ProductRepoName,
-                    DefaultRemote = _privateRepoPath
+                    DefaultRemote = ProductRepoPath
                 }
             },
             PatchesPath = "src/installer/patches/"

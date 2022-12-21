@@ -34,7 +34,7 @@ public class VmrTestsOneTimeSetUp
         TestsDirectory = new NativePath(Path.GetTempPath()) / "_vmrTests" / Path.GetRandomFileName();
         CommonVmrPath = TestsDirectory / Constants.VmrName;
         CommonProductRepoPath = TestsDirectory / Constants.ProductRepoName;
-        CommonExternalRepoPath = TestsDirectory / Constants.SubmoduleRepoName;
+        CommonExternalRepoPath = TestsDirectory / Constants.SecondRepoName;
         CommonDependencyPath = TestsDirectory / Constants.DependencyRepoName;
         CommonInstallerPath = TestsDirectory / Constants.InstallerRepoName;
     }
@@ -48,9 +48,9 @@ public class VmrTestsOneTimeSetUp
         Directory.CreateDirectory(TestsDirectory / Constants.VmrName / VmrInfo.SourcesDir);
         await _gitOperations.InitialCommit(TestsDirectory / Constants.VmrName);
 
-        await CreateRepository(CommonProductRepoPath, Constants.ProductRepoName, Constants.ProductRepoFileName);
+        await CreateRepository(CommonProductRepoPath, Constants.ProductRepoName, Constants.GetRepoFileName(Constants.ProductRepoName));
         await CreateRepository(CommonDependencyPath, Constants.DependencyRepoName);
-        await CreateRepository(CommonExternalRepoPath, Constants.SubmoduleRepoName);
+        await CreateRepository(CommonExternalRepoPath, Constants.SecondRepoName);
         await CreateRepository(CommonInstallerPath, Constants.InstallerRepoName);
         Directory.CreateDirectory(CommonInstallerPath / Constants.PatchesFolderName / Constants.ProductRepoName);
     }
@@ -92,7 +92,7 @@ public class VmrTestsOneTimeSetUp
         Directory.Delete(targetDir, false);
     }
 
-    public async Task CreateRepository(LocalPath repoPath, string repoName, string? resourceFileName = null)
+    private async Task CreateRepository(LocalPath repoPath, string repoName, string? resourceFileName = null)
     {
         Directory.CreateDirectory(repoPath);
         Directory.CreateDirectory(repoPath / "eng");
