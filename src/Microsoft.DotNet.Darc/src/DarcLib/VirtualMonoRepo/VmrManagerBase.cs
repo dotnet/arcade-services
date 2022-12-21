@@ -241,9 +241,19 @@ public abstract class VmrManagerBase : IVmrManager
 
             using (var repo = new Repository(repoPath))
             {
-                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
-
                 originalBranch = repo.Head.FriendlyName;
+
+                if (originalBranch == branchName)
+                {
+                    var message = $"You are already on branch {branchName}. " +
+                                    "Previous sync probably failed and left the branch not merged. " +
+                                    "To complete the sync checkout the original branch and try again.";
+
+                    throw new WorkBranchException(message);
+                }
+
+                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
+                
                 Branch branch = repo.Branches.Add(branchName, HEAD, allowOverwrite: true);
                 Commands.Checkout(repo, branch);
             }
