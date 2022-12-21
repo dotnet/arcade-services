@@ -126,9 +126,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var currentSha = GetCurrentVersion(update.Mapping);
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
-            update.Mapping.Name, currentSha, update.Mapping.DefaultRemote, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
+            update.Mapping.Name, currentSha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
 
-        LocalPath clonePath = await _cloneManager.PrepareClone(update.Mapping.DefaultRemote, update.TargetRevision, cancellationToken);
+        LocalPath clonePath = await _cloneManager.PrepareClone(update.RemoteUri, update.TargetRevision, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -204,7 +204,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 commitCount++;
                 commitMessages
                     .AppendLine($"  - {commit.MessageShort}")
-                    .AppendLine($"    {update.Mapping.DefaultRemote}/commit/{commit.Id.Sha}");
+                    .AppendLine($"    {update.RemoteUri}/commit/{commit.Id.Sha}");
             }
 
             var message = PrepareCommitMessage(
@@ -353,7 +353,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             var toShort = DarcLib.Commit.GetShortSha(update.TargetRevision);
             summaryMessage
                 .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Arrow}{toShort}")
-                .AppendLine($"    {update.Mapping.DefaultRemote}/compare/{update.TargetVersion}..{update.TargetRevision}");
+                .AppendLine($"    {update.RemoteUri}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 
         if (vmrPatchesToReapply.Any())
