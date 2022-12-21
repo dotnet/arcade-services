@@ -17,17 +17,12 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrRecursiveSyncTests : VmrTestsBase
 {
-    private LocalPath _firstInstallerDependencyPath = null!;
-    private LocalPath _secondInstallerDependencyPath = null!;
-    private string _firstInstallerDependencyName = null!;
-    private string _secondInstallerDependencyName = null!;
-
     [Test]
     public async Task RecursiveUpdatePreservesDependencyVersionTest()
     {
         var installerFilePath = VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
-        var firstRepoFilePath = VmrPath / VmrInfo.SourcesDir / _firstInstallerDependencyName / Constants.GetRepoFileName(_firstInstallerDependencyName);
-        var secondRepoFilePath = VmrPath / VmrInfo.SourcesDir / _secondInstallerDependencyName / Constants.GetRepoFileName(_secondInstallerDependencyName);
+        var firstRepoFilePath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
+        var secondRepoFilePath = VmrPath / VmrInfo.SourcesDir / Constants.SecondRepoName / Constants.GetRepoFileName(Constants.SecondRepoName);
         var dependencyFilePath = VmrPath / VmrInfo.SourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
 
         /* 
@@ -54,7 +49,7 @@ public class VmrRecursiveSyncTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName, _firstInstallerDependencyName, _secondInstallerDependencyName, Constants.DependencyRepoName },
+            new[] { Constants.InstallerRepoName, Constants.ProductRepoName, Constants.SecondRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -69,17 +64,19 @@ public class VmrRecursiveSyncTests : VmrTestsBase
         var sha = await GitOperations.GetRepoLastCommit(DependencyRepoPath);
         var dependencyString = string.Format(Constants.DependencyTemplate, new[] { Constants.DependencyRepoName, DependencyRepoPath, sha });
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependencyString);
-        File.WriteAllText(_secondInstallerDependencyPath / VersionFiles.VersionDetailsXml, versionDetails);
-        await GitOperations.CommitAll(_secondInstallerDependencyPath, "update version details");
+        File.WriteAllText(SecondRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
+        File.WriteAllText(SecondRepoPath / Constants.GetRepoFileName(Constants.SecondRepoName), "New version of product-repo2 file");
+        await GitOperations.CommitAll(SecondRepoPath, "update version details");
 
         // update installers Version.Details
 
-        var newRuntimeSha = await GitOperations.GetRepoLastCommit(_secondInstallerDependencyPath);
-        var aspnetSha = await GitOperations.GetRepoLastCommit(_firstInstallerDependencyPath);
-        var aspnetDependency = string.Format(Constants.DependencyTemplate, new[] { _firstInstallerDependencyName, _firstInstallerDependencyPath, aspnetSha });
-        var runtimeDependency = string.Format(Constants.DependencyTemplate, new[] { _secondInstallerDependencyName, _secondInstallerDependencyPath, newRuntimeSha });
-        versionDetails = string.Format(Constants.VersionDetailsTemplate, aspnetDependency + Environment.NewLine + runtimeDependency);
+        var newSecondRepoSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
+        var productRepoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        var productRepoDependency = string.Format(Constants.DependencyTemplate, new[] { Constants.ProductRepoName, ProductRepoPath, productRepoSha });
+        var secondRepoDependency = string.Format(Constants.DependencyTemplate, new[] { Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha });
+        versionDetails = string.Format(Constants.VersionDetailsTemplate, productRepoDependency + Environment.NewLine + secondRepoDependency);
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
+        File.WriteAllText(InstallerRepoPath / Constants.GetRepoFileName(Constants.InstallerRepoName), "New version of installer file");
         await GitOperations.CommitAll(InstallerRepoPath, "update version details");
 
         /* 
@@ -95,21 +92,17 @@ public class VmrRecursiveSyncTests : VmrTestsBase
 
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
+        CheckFileContents(installerFilePath, "New version of installer file");
+        CheckFileContents(secondRepoFilePath, "New version of product-repo2 file");
+        CompareFileContents(firstRepoFilePath, Constants.GetRepoFileName(Constants.ProductRepoName));
+
         // the new version of dependency shouldn't be pulled in the vmr
-
-
-
 
         CheckFileContents(dependencyFilePath, "File in dependency");
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
-        _firstInstallerDependencyPath = ProductRepoPath;
-        _secondInstallerDependencyPath = SecondRepoPath;
-        _firstInstallerDependencyName = Constants.ProductRepoName;
-        _secondInstallerDependencyName = Constants.SecondRepoName;
-
         var dependenciesMap = new Dictionary<string, List<string>>
         {
             {
@@ -142,13 +135,13 @@ public class VmrRecursiveSyncTests : VmrTestsBase
                 },
                 new SourceMappingSetting
                 {
-                    Name = _firstInstallerDependencyName,
-                    DefaultRemote = _firstInstallerDependencyPath
+                    Name = Constants.ProductRepoName,
+                    DefaultRemote = ProductRepoPath
                 },
                 new SourceMappingSetting
                 {
-                    Name = _secondInstallerDependencyName,
-                    DefaultRemote = _secondInstallerDependencyPath
+                    Name = Constants.SecondRepoName,
+                    DefaultRemote = SecondRepoPath
                 },
                 new SourceMappingSetting
                 {
