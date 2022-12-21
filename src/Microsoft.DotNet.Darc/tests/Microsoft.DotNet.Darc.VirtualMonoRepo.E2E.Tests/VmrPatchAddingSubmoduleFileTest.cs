@@ -23,81 +23,83 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
     protected override async Task CopyReposForCurrentTest()
     {
         await base.CopyReposForCurrentTest();
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.SubmoduleRepoName);
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.SecondRepoName);
     }
 
     [Test]
     public async Task PatchesAreAppliedTest()
     {
-        var vmrSourcesPath = _vmrPath / VmrInfo.SourcesDir;
+        var vmrSourcesPath = VmrPath / VmrInfo.SourcesDir;
         const string FileCreatedByPatch = "patched-submodule-file.txt";
 
         var testRepoPathInVmr = vmrSourcesPath / Constants.ProductRepoName;
-        var patchPathInRepo = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
-        var patchPathInVmr = vmrSourcesPath / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName;
+        var patchPathInRepo = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName;
+        var patchPathInVmr = VmrPatchesDir / PatchFileName;
         var submoduleRelativePath = new NativePath("submodules") / "submodule1";
         var submodulePathInVmr = testRepoPathInVmr / "submodules" / "submodule1";
         var submodulePathInRepo = "foo";
         var patchedSubmoduleFileInVmr = submodulePathInVmr / submodulePathInRepo / FileCreatedByPatch;
+        var submoduleFileInVmr = submodulePathInVmr / Constants.GetRepoFileName(Constants.SecondRepoName);
 
-        await GitOperations.InitializeSubmodule(_privateRepoPath, "submodule1", _externalRepoPath, submoduleRelativePath);
-        await GitOperations.CommitAll(_privateRepoPath, "Added a submodule");
+        await GitOperations.InitializeSubmodule(ProductRepoPath, "submodule1", SecondRepoPath, submoduleRelativePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Added a submodule");
 
         // initialize repo with a vmr patch
 
-        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, _installerRepoPath);
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
+        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            testRepoPathInVmr / Constants.ProductRepoFileName,
-            submodulePathInVmr / "external-repo-file.txt",
+            ProductRepoFilePathInVmr,
+            submoduleFileInVmr,
             submodulePathInVmr / VersionFiles.VersionDetailsXml,
+            InstallerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
+            VmrPath,
             new[] { Constants.ProductRepoName, Constants.InstallerRepoName },
             expectedFilesFromRepos
         );
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(patchedSubmoduleFileInVmr, "new file");
 
         // Remove a patch that added a submodule file
 
         File.Delete(patchPathInRepo);
-        await GitOperations.CommitAll(_installerRepoPath, "Remove the patch file");
-        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        await GitOperations.CommitAll(InstallerRepoPath, "Remove the patch file");
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         expectedFiles.Remove(patchPathInVmr);
         expectedFiles.Remove(patchedSubmoduleFileInVmr);
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
         File.Exists(patchedSubmoduleFileInVmr).Should().BeFalse();
 
         // Add the patch back in installer
 
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, patchPathInRepo);
-        await GitOperations.CommitAll(_installerRepoPath, "Add the patch back");
-        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, patchPathInRepo);
+        await GitOperations.CommitAll(InstallerRepoPath, "Add the patch back");
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         expectedFiles.Add(patchPathInVmr);
         expectedFiles.Add(patchedSubmoduleFileInVmr);
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(patchedSubmoduleFileInVmr, "new file");
 
         // Add the file to the submodule so the vmr patch cannot be applied
 
-        Directory.CreateDirectory(_externalRepoPath / submodulePathInRepo);
-        File.WriteAllText(_externalRepoPath / submodulePathInRepo / FileCreatedByPatch, "New content");
-        await GitOperations.CommitAll(_externalRepoPath, "Added a new file into the repo");
+        Directory.CreateDirectory(SecondRepoPath / submodulePathInRepo);
+        File.WriteAllText(SecondRepoPath / submodulePathInRepo / FileCreatedByPatch, "New content");
+        await GitOperations.CommitAll(SecondRepoPath, "Added a new file into the repo");
 
         // Move submodule to a new commit and verify it breaks the patch
 
-        await GitOperations.UpdateSubmodule(_privateRepoPath, submodulePathInRepo);
-        var commit = await GitOperations.GetRepoLastCommit(_privateRepoPath);
+        await GitOperations.UpdateSubmodule(ProductRepoPath, submodulePathInRepo);
+        var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }

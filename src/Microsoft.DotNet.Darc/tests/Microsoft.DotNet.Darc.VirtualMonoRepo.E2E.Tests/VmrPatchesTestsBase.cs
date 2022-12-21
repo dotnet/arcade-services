@@ -14,28 +14,37 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrPatchesTestsBase : VmrTestsBase
 {
-    protected string patchFileName = null!;
-    protected LocalPath installerPatchesDir = null!;
-    protected LocalPath vmrPatchesDir = null!;
+    protected string PatchFileName { get; private set; } = null!;
+    protected LocalPath InstallerPatchesDir { get; private set; } = null!;
+    protected LocalPath InstallerFilePathInVmr { get; private set; } = null!;
 
-    protected VmrPatchesTestsBase(string patchFileName)
+    protected LocalPath ProductRepoFilePathInVmr { get; private set; } = null!;
+    protected LocalPath VmrPatchesDir { get; private set; } = null!;
+
+    protected VmrPatchesTestsBase(string PatchFileName)
     {
-        this.patchFileName = patchFileName;
+        this.PatchFileName = PatchFileName;
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
-        installerPatchesDir = _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
-        vmrPatchesDir = _vmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.ProductRepoName);
-        await CopyRepoAndCreateVersionDetails(_currentTestDirectory, Constants.InstallerRepoName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / patchFileName, _installerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / patchFileName);
-        await GitOperations.CommitAll(_installerRepoPath, "Add patch");
+        InstallerPatchesDir = InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName;
+        var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
+        VmrPatchesDir = vmrSourcesDir / Constants.InstallerRepoName / Constants.PatchesFolderName / Constants.ProductRepoName;
+        InstallerFilePathInVmr = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
+        ProductRepoFilePathInVmr = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
+        
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
+        File.Copy(
+            VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, 
+            InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName);
+        await GitOperations.CommitAll(InstallerRepoPath, "Add patch");
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
+        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile
         {
@@ -44,12 +53,12 @@ public class VmrPatchesTestsBase : VmrTestsBase
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
-                    DefaultRemote = _installerRepoPath
+                    DefaultRemote = InstallerRepoPath
                 },
                 new SourceMappingSetting
                 {
                     Name = Constants.ProductRepoName,
-                    DefaultRemote = _privateRepoPath
+                    DefaultRemote = ProductRepoPath
                 }
             },
             PatchesPath = "src/installer/patches/"

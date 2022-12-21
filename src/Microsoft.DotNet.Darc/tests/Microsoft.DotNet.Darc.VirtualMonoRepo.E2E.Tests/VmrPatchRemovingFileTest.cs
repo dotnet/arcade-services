@@ -22,33 +22,32 @@ public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
     [Test]
     public async Task VmrPatchAddsFileTest()
     {
-        var patchPathInRepo = installerPatchesDir / patchFileName;
+        var patchPathInRepo = InstallerPatchesDir / PatchFileName;
 
-        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, _installerRepoPath);
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, _privateRepoPath);
-
-        var testRepoFilePath = _vmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.ProductRepoFileName;
+        await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            vmrPatchesDir / patchFileName,
+            VmrPatchesDir / PatchFileName,
+            InstallerFilePathInVmr
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
+            VmrPath,
             new[] { Constants.ProductRepoName, Constants.InstallerRepoName },
             expectedFilesFromRepos);
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
 
         File.Delete(patchPathInRepo);
-        await GitOperations.CommitAll(_installerRepoPath, "Remove the patch file");
-        await UpdateRepoToLastCommit(Constants.InstallerRepoName, _installerRepoPath);
+        await GitOperations.CommitAll(InstallerRepoPath, "Remove the patch file");
+        await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        expectedFiles.Add(testRepoFilePath);
-        expectedFiles.Remove(vmrPatchesDir / patchFileName);
+        expectedFiles.Add(ProductRepoFilePathInVmr);
+        expectedFiles.Remove(VmrPatchesDir / PatchFileName);
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
+        CheckDirectoryContents(VmrPath, expectedFiles);
     }
 }
 

@@ -17,61 +17,59 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 [TestFixture]
 public class VmrSyncAdditionalMappingsTest : VmrTestsBase
 {
-    private readonly string _repoName = "special-repo";
     private readonly string _fileName = "special-file.txt";
     private readonly string _fileRelativePath = new NativePath("content") / "special-file.txt";
-    private string _filePath = null!;
 
     [Test]
     public async Task NonSrcContentIsSyncedTest()
     {
         // Initialize the repo
 
-        await InitializeRepoAtLastCommit(_repoName, _specialRepoPath);
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _vmrPath / VmrInfo.SourcesDir / _repoName / _fileRelativePath,
-            _vmrPath / _fileName
+            VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName),
+            VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / _fileRelativePath,
+            VmrPath / _fileName
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
-            _vmrPath,
-            new[] { _repoName },
+            VmrPath,
+            new[] { Constants.ProductRepoName },
             expectedFilesFromRepos
         );
 
-        CheckDirectoryContents(_vmrPath, expectedFiles);
-        await GitOperations.CheckAllIsCommited(_vmrPath);
+        CheckDirectoryContents(VmrPath, expectedFiles);
+        await GitOperations.CheckAllIsCommited(VmrPath);
 
         // Change a file in the mapped folder
 
-        File.WriteAllText(_filePath, "A file with a change that needs to be copied outside of the src folder");
-        await GitOperations.CommitAll(_specialRepoPath, "Change file");
-        await UpdateRepoToLastCommit(_repoName, _specialRepoPath);
+        File.WriteAllText(
+            ProductRepoPath / _fileRelativePath, 
+            "A file with a change that needs to be copied outside of the src folder");
+        await GitOperations.CommitAll(ProductRepoPath, "Change file");
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        CheckFileContents(_vmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
-        await GitOperations.CheckAllIsCommited(_vmrPath);
+        CheckFileContents(VmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
+        await GitOperations.CheckAllIsCommited(VmrPath);
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
-        _filePath = _specialRepoPath / _fileRelativePath;
-
-        Directory.CreateDirectory(_specialRepoPath);
-        Directory.CreateDirectory(_specialRepoPath / "content");
-        Directory.CreateDirectory(_specialRepoPath / "eng");
+        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        
+        Directory.CreateDirectory(ProductRepoPath / "content");
         File.WriteAllText(
-            _filePath,
+            ProductRepoPath / "content" / "special-file.txt",
             "A file that needs to be copied outside of the src folder");
-        File.WriteAllText(_specialRepoPath / VersionFiles.VersionDetailsXml, Constants.EmptyVersionDetails);
 
-        await GitOperations.InitialCommit(_specialRepoPath);
+        await GitOperations.CommitAll(ProductRepoPath, "Add a file in additional mappings folder");
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, _vmrPath);
+        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile()
         {
@@ -79,20 +77,15 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
             {
                 new SourceMappingSetting
                 {
-                    Name = "special-repo",
-                    DefaultRemote = _specialRepoPath
-                },
-                new SourceMappingSetting
-                {
                     Name = Constants.ProductRepoName,
-                    DefaultRemote = _privateRepoPath
+                    DefaultRemote = ProductRepoPath
                 }
             },
             AdditionalMappings = new List<AdditionalMappingSetting>
             {
                 new AdditionalMappingSetting
                 {
-                    Source = "src/special-repo/content",
+                    Source = new UnixPath(VmrInfo.SourcesDir) / Constants.ProductRepoName / "content",
                     Destination = ""
                 }
             }
