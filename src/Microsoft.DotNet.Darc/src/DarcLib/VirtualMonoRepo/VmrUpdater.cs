@@ -296,9 +296,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Dependencies that were already updated during this run
         var updatedDependencies = new HashSet<VmrDependencyUpdate>();
 
-        var interruptedSyncExceptionMessage = "A new branch was created for the sync and didn't get merged as the sync " +
-            "was interrupted. A new sync should start from branch {original}.";
-
         foreach (VmrDependencyUpdate update in updates)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -340,7 +337,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             catch(Exception)
             {
-                _logger.LogError(interruptedSyncExceptionMessage, workBranch.OriginalBranch);
+                _logger.LogWarning(
+                InterruptedSyncExceptionMessage,
+                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init") ?
+                "the original" : workBranch.OriginalBranch);
                 throw;
             }
 
@@ -376,7 +376,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             catch (Exception)
             {
-                _logger.LogError(interruptedSyncExceptionMessage, workBranch.OriginalBranch);
+                _logger.LogWarning(
+                InterruptedSyncExceptionMessage,
+                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init") ?
+                "the original" : workBranch.OriginalBranch);
                 throw;
             }
 

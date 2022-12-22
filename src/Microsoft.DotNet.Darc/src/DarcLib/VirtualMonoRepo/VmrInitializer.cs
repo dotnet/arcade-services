@@ -110,9 +110,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         }
         catch (Exception)
         {
-            _logger.LogError("A new branch was created for the sync and didn't get merged as the sync " +
-            "was interrupted. A new sync should start from branch {original}.", 
-            workBranch.OriginalBranch);
+            _logger.LogWarning(
+                InterruptedSyncExceptionMessage,
+                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init") ?
+                "the original" : workBranch.OriginalBranch);
             throw;
         }
 

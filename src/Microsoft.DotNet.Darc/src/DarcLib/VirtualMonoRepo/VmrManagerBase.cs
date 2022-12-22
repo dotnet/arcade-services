@@ -22,6 +22,9 @@ public abstract class VmrManagerBase : IVmrManager
     // String used to mark the commit as automated
     protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
     protected const string HEAD = "HEAD";
+    protected const string InterruptedSyncExceptionMessage = 
+        "A new branch was created for the sync and didn't get merged as the sync " +
+            "was interrupted. A new sync should start from {original} branch.";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
