@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -90,19 +91,29 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         var rootUpdate = new VmrDependencyUpdate(mapping, mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, null, null);
 
-        IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
+        try
+        {
+            IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
             ? await GetAllDependencies(rootUpdate, cancellationToken)
             : new[] { rootUpdate };
 
-        foreach (var update in updates)
-        {
-            if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(update.Mapping)))
+            foreach (var update in updates)
             {
-                // Repository has already been initialized
-                continue;
-            }
+                if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(update.Mapping)))
+                {
+                    // Repository has already been initialized
+                    continue;
+                }
 
-            await InitializeRepository(update, cancellationToken);
+                await InitializeRepository(update, cancellationToken);
+            }
+        }
+        catch (Exception)
+        {
+            _logger.LogError("A new branch was created for the sync and didn't get merged as the sync " +
+            "was interrupted. A new sync should start from branch {original}.", 
+            workBranch.OriginalBranch);
+            throw;
         }
 
         string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;

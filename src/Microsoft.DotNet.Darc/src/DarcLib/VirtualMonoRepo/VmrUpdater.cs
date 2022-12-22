@@ -296,6 +296,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Dependencies that were already updated during this run
         var updatedDependencies = new HashSet<VmrDependencyUpdate>();
 
+        var interruptedSyncExceptionMessage = "A new branch was created for the sync and didn't get merged as the sync " +
+            "was interrupted. A new sync should start from branch {original}.";
+
         foreach (VmrDependencyUpdate update in updates)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -330,7 +333,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.TargetRevision);
             }
 
-            var patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
+            IReadOnlyCollection<VmrIngestionPatch> patchesToReapply;
+            try
+            {
+                patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
+            }
+            catch(Exception)
+            {
+                _logger.LogError(interruptedSyncExceptionMessage, workBranch.OriginalBranch);
+                throw;
+            }
 
             vmrPatchesToReapply.AddRange(patchesToReapply);
 
@@ -358,7 +370,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (vmrPatchesToReapply.Any())
         {
-            await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            try
+            {
+                await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            }
+            catch (Exception)
+            {
+                _logger.LogError(interruptedSyncExceptionMessage, workBranch.OriginalBranch);
+                throw;
+            }
+
             Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
         }
 

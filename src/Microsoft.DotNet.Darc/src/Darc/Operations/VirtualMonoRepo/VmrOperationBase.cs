@@ -125,9 +125,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             catch (Exception e)
             {
                 Logger.LogError(
-                    "Failed to synchronize repo {name}{exception}." +
-                    Environment.NewLine +
-                    "A new branch was created for the sync and didn't get merged as the sync was interrupted. A new sync should start from the original branch.", 
+                    "Failed to synchronize repo {name}{exception}.", 
                     mapping.Name, 
                     Environment.NewLine + e.Message);
 

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -215,6 +216,7 @@ public abstract class VmrManagerBase : IVmrManager
     protected interface IWorkBranch
     {
         void MergeBack(string commitMessage);
+        string OriginalBranch { get; }
     }
     
     /// <summary>
@@ -226,6 +228,8 @@ public abstract class VmrManagerBase : IVmrManager
         private readonly string _currentBranch;
         private readonly string _workBranch;
         private readonly ILogger _logger;
+
+        public string OriginalBranch => _currentBranch;
 
         private WorkBranch(string repoPath, string currentBranch, string workBranch, ILogger logger)
         {
@@ -246,7 +250,7 @@ public abstract class VmrManagerBase : IVmrManager
                 if (originalBranch == branchName)
                 {
                     var message = $"You are already on branch {branchName}. " +
-                                    "Previous sync probably failed and left the branch not merged. " +
+                                    "Previous sync probably failed and left the branch unmerged. " +
                                     "To complete the sync checkout the original branch and try again.";
 
                     throw new WorkBranchException(message);
