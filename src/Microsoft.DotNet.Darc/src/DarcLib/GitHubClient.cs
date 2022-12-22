@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
 using Maestro.Contracts;
 using System.Collections.Immutable;
+using Maestro.MergePolicyEvaluation;
 
 namespace Microsoft.DotNet.DarcLib;
 

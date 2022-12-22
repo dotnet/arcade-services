@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;

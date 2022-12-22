@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NuGet.Versioning;
 using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
