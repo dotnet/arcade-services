@@ -378,9 +378,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             catch (Exception)
             {
                 _logger.LogWarning(
-                InterruptedSyncExceptionMessage,
-                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init") ?
-                "the original" : workBranch.OriginalBranch);
+                    InterruptedSyncExceptionMessage,
+                    workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
+                        ? "the original"
+                        : workBranch.OriginalBranch);
                 throw;
             }
 
