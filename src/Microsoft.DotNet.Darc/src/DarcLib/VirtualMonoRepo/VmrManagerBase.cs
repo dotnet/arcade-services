@@ -165,15 +165,16 @@ public abstract class VmrManagerBase : IVmrManager
     /// <param name="additionalMessage">Additional message inserted in the commit body</param>
     protected static string PrepareCommitMessage(
         string template,
-        SourceMapping mapping,
+        string name,
+        string remote,
         string? oldSha = null,
         string? newSha = null,
         string? additionalMessage = null)
     {
         var replaces = new Dictionary<string, string?>
         {
-            { "name", mapping.Name },
-            { "remote", mapping.DefaultRemote },
+            { "name", name },
+            { "remote", remote },
             { "oldSha", oldSha },
             { "newSha", newSha },
             { "oldShaShort", oldSha is null ? string.Empty : DarcLib.Commit.GetShortSha(oldSha) },

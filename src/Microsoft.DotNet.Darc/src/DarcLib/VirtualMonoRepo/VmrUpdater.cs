@@ -209,7 +209,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             var message = PrepareCommitMessage(
                 SquashCommitMessage,
-                update.Mapping,
+                update.Mapping.Name,
+                update.RemoteUri,
                 currentSha,
                 update.TargetRevision,
                 commitMessages.ToString());
@@ -234,7 +235,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             var message = PrepareCommitMessage(
                 SingleCommitMessage,
-                update.Mapping,
+                update.Mapping.Name, 
+                update.RemoteUri,
                 currentSha,
                 commitToCopy.Id.Sha,
                 commitToCopy.Message);
@@ -364,7 +366,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
-            rootUpdate.Mapping,
+            rootUpdate.Mapping.Name,
+            rootUpdate.Mapping.DefaultRemote,
             originalRootSha,
             finalRootSha,
             summaryMessage.ToString());
