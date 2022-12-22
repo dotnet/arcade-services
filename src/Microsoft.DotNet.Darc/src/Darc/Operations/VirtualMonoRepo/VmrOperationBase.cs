@@ -117,11 +117,6 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
                 Logger.LogInformation("{message}", e.Message);
                 return true;
             }
-            catch (WorkBranchException e)
-            {
-                Logger.LogError("{message}", e.Message);
-                return false;
-            }
             catch (Exception e)
             {
                 Logger.LogError(

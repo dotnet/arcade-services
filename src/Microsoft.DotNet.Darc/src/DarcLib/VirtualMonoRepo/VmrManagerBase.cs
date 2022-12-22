@@ -256,7 +256,7 @@ public abstract class VmrManagerBase : IVmrManager
                                     "Previous sync probably failed and left the branch unmerged. " +
                                     "To complete the sync checkout the original branch and try again.";
 
-                    throw new WorkBranchException(message);
+                    throw new Exception(message);
                 }
 
                 logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
