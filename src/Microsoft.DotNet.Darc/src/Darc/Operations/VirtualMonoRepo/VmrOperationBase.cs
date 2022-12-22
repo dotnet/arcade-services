@@ -119,7 +119,11 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             }
             catch (Exception e)
             {
-                Logger.LogError("Failed to synchronize repo {name}{exception}", mapping.Name, Environment.NewLine + e.Message);
+                Logger.LogError(
+                    "Failed to synchronize repo {name}{exception}.", 
+                    mapping.Name, 
+                    Environment.NewLine + e.Message);
+
                 Logger.LogDebug("{exception}", e);
                 return false;
             }

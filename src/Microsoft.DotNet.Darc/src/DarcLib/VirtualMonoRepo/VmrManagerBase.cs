@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -21,6 +22,9 @@ public abstract class VmrManagerBase : IVmrManager
     // String used to mark the commit as automated
     protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
     protected const string HEAD = "HEAD";
+    protected const string InterruptedSyncExceptionMessage = 
+        "A new branch was created for the sync and didn't get merged as the sync " +
+            "was interrupted. A new sync should start from {original} branch.";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -215,6 +219,7 @@ public abstract class VmrManagerBase : IVmrManager
     protected interface IWorkBranch
     {
         void MergeBack(string commitMessage);
+        string OriginalBranch { get; }
     }
     
     /// <summary>
@@ -226,6 +231,8 @@ public abstract class VmrManagerBase : IVmrManager
         private readonly string _currentBranch;
         private readonly string _workBranch;
         private readonly ILogger _logger;
+
+        public string OriginalBranch => _currentBranch;
 
         private WorkBranch(string repoPath, string currentBranch, string workBranch, ILogger logger)
         {
@@ -241,9 +248,19 @@ public abstract class VmrManagerBase : IVmrManager
 
             using (var repo = new Repository(repoPath))
             {
-                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
-
                 originalBranch = repo.Head.FriendlyName;
+
+                if (originalBranch == branchName)
+                {
+                    var message = $"You are already on branch {branchName}. " +
+                                    "Previous sync probably failed and left the branch unmerged. " +
+                                    "To complete the sync checkout the original branch and try again.";
+
+                    throw new Exception(message);
+                }
+
+                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
+                
                 Branch branch = repo.Branches.Add(branchName, HEAD, allowOverwrite: true);
                 Commands.Checkout(repo, branch);
             }

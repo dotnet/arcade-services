@@ -330,7 +330,20 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.TargetRevision);
             }
 
-            var patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
+            IReadOnlyCollection<VmrIngestionPatch> patchesToReapply;
+            try
+            {
+                patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
+            }
+            catch(Exception)
+            {
+                _logger.LogWarning(
+                    InterruptedSyncExceptionMessage,
+                    workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
+                        ? "the original"
+                        : workBranch.OriginalBranch);
+                throw;
+            }
 
             vmrPatchesToReapply.AddRange(patchesToReapply);
 
@@ -358,7 +371,20 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (vmrPatchesToReapply.Any())
         {
-            await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            try
+            {
+                await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            }
+            catch (Exception)
+            {
+                _logger.LogWarning(
+                    InterruptedSyncExceptionMessage,
+                    workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
+                        ? "the original"
+                        : workBranch.OriginalBranch);
+                throw;
+            }
+
             Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
         }
 
