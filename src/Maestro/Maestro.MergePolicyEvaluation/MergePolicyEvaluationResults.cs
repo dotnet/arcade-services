@@ -4,7 +4,6 @@
 
 using System.Collections.Immutable;
 
-#nullable enable
 namespace Maestro.MergePolicyEvaluation;
 
 public class MergePolicyEvaluationResults

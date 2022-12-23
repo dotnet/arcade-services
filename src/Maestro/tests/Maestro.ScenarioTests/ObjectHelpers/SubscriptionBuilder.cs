@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Maestro.Contracts;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;

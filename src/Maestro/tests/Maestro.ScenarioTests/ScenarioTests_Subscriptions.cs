@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Maestro.Contracts;
 using Maestro.MergePolicyEvaluation;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Darc;
