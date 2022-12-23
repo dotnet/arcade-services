@@ -119,7 +119,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
 
-        var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping, oldSha: null, newSha);
+        var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping.Name, mapping.DefaultRemote, oldSha: null, newSha);
         workBranch.MergeBack(commitMessage);
 
         _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
@@ -129,7 +129,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
 
-        var clonePath = await _cloneManager.PrepareClone(update.Mapping.DefaultRemote, update.TargetRevision, cancellationToken);
+        var clonePath = await _cloneManager.PrepareClone(update.RemoteUri, update.TargetRevision, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         string commitSha = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision);
@@ -167,7 +167,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await UpdateThirdPartyNotices(cancellationToken);
 
         // Commit but do not add files (they were added to index directly)
-        var message = PrepareCommitMessage(InitializationCommitMessage, update.Mapping, newSha: commitSha);
+        var message = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: commitSha);
         Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
