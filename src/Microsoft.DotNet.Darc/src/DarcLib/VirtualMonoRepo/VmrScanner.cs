@@ -80,6 +80,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo
 
         private async Task CreateZeroCommitTag()
         {
+            await DeleteZeroCommitTag();
+
             var args = new[]
             {
                 "hash-object",
@@ -98,11 +100,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo
             };
             var res = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args);
 
-            if(res.ExitCode == 128)
-            {
-                await DeleteZeroCommitTag();
-                await CreateZeroCommitTag();
-            }
+            res.ThrowIfFailed($"Error creating {_zeroCommitTag} git tag: {res.StandardError}");
         }
 
         private async Task DeleteZeroCommitTag()
