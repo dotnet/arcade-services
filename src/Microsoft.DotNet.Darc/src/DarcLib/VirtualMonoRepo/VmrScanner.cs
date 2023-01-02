@@ -75,7 +75,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo
                 }
                 _logger.LogWarning("Found file {file} that should be exluded from the {repository} repository", file.ToString(), sourceMapping.Name);
             }
-            
+
+            await DeleteZeroCommitTag();
         }
 
         private async Task CreateZeroCommitTag()
