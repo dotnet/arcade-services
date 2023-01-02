@@ -4,10 +4,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -44,11 +44,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
-
-    private readonly LocalPath _tmpPath;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
@@ -63,16 +60,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, versionDetailsParser, thirdPartyNoticesGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
-        _readmeComponentListGenerator = readmeComponentListGenerator;
         _fileSystem = fileSystem;
         _logger = logger;
-        _tmpPath = vmrInfo.TmpPath;
     }
 
     public async Task InitializeRepository(
@@ -132,67 +127,35 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         var clonePath = await _cloneManager.PrepareClone(update.RemoteUri, update.TargetRevision, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        string commitSha = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision);
+        update = update with
+        {
+            TargetRevision = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision)
+        };
 
-        var patches = await _patchHandler.CreatePatches(
-            update.Mapping,
+        string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
+
+        await UpdateRepoToRevision(
+            update,
             clonePath,
             Constants.EmptyGitObject,
-            commitSha,
-            _tmpPath,
-            _tmpPath,
+            DotnetBotCommitSignature,
+            commitMessage,
+            reapplyVmrPatches: true,
             cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        foreach (var patch in patches)
-        {
-            await _patchHandler.ApplyPatch(patch, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
-        _dependencyTracker.UpdateDependencyVersion(update);
-        await _readmeComponentListGenerator.UpdateReadme();
-        Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
-        { 
-            VmrInfo.ReadmeFileName,
-            VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath() 
-        });
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        await ApplyVmrPatches(update.Mapping, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        
-        await UpdateThirdPartyNotices(cancellationToken);
-
-        // Commit but do not add files (they were added to index directly)
-        var message = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: commitSha);
-        Commit(message, DotnetBotCommitSignature);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 
-    /// <summary>
-    /// Applies VMR patches onto files of given mapping's subrepository.
-    /// These files are stored in the VMR and applied on top of the individual repos.
-    /// </summary>
-    private async Task ApplyVmrPatches(SourceMapping mapping, CancellationToken cancellationToken)
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFiles(
+        SourceMapping mapping,
+        IReadOnlyCollection<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken)
     {
-        var vmrPatches = _patchHandler.GetVmrPatches(mapping);
-        if (!vmrPatches.Any())
-        {
-            return;
-        }
+        // We only need to apply VMR patches that belong to the mapping, nothing to restore from before
+        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesForMapping = _patchHandler.GetVmrPatches(mapping)
+            .Select(patch => new VmrIngestionPatch(patch, VmrInfo.GetRelativeRepoSourcesPath(mapping)))
+            .ToImmutableArray();
 
-        _logger.LogInformation("Applying VMR patches for {mappingName}..", mapping.Name);
-
-        foreach (var patchFile in vmrPatches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogDebug("Applying {patch}..", patchFile);
-            await _patchHandler.ApplyPatch(mapping, patchFile, cancellationToken);
-        }
+        return Task.FromResult(vmrPatchesForMapping);
     }
 }

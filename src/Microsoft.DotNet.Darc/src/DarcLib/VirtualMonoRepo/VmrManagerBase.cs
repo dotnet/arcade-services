@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -24,13 +23,15 @@ public abstract class VmrManagerBase : IVmrManager
     protected const string HEAD = "HEAD";
     protected const string InterruptedSyncExceptionMessage = 
         "A new branch was created for the sync and didn't get merged as the sync " +
-            "was interrupted. A new sync should start from {original} branch.";
+        "was interrupted. A new sync should start from {original} branch.";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyInfo;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
+    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitRepo _localGitClient;
     private readonly IGitFileManagerFactory _gitFileManagerFactory;
     private readonly IFileSystem _fileSystem;
@@ -42,8 +43,10 @@ public abstract class VmrManagerBase : IVmrManager
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyInfo,
+        IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+        IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IFileSystem fileSystem,
@@ -53,11 +56,98 @@ public abstract class VmrManagerBase : IVmrManager
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyInfo = dependencyInfo;
+        _patchHandler = vmrPatchHandler;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
+        _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
         _gitFileManagerFactory = gitFileManagerFactory;
         _fileSystem = fileSystem;
+    }
+
+    protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevision(
+        VmrDependencyUpdate update,
+        LocalPath clonePath,
+        string fromRevision,
+        Signature author,
+        string commitMessage,
+        bool reapplyVmrPatches,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+            update.Mapping,
+            clonePath,
+            fromRevision,
+            update.TargetRevision,
+            _vmrInfo.TmpPath,
+            _vmrInfo.TmpPath,
+            cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Get a list of patches that need to be reverted for this update so that repo changes can be applied
+        // This includes all patches that are also modified by the current change
+        // (happens when we update repo from which the VMR patches come)
+        var vmrPatchesToRestore = await RestoreVmrPatchedFiles(update.Mapping, patches, cancellationToken);
+
+        foreach (var patch in patches)
+        {
+            await _patchHandler.ApplyPatch(patch, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        _dependencyInfo.UpdateDependencyVersion(update);
+        await _readmeComponentListGenerator.UpdateReadme();
+
+        Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
+        {
+            VmrInfo.ReadmeFileName,
+            VmrInfo.GitInfoSourcesDir,
+            _vmrInfo.GetSourceManifestPath()
+        });
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (reapplyVmrPatches)
+        {
+            await ReapplyVmrPatches(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        await UpdateThirdPartyNotices(cancellationToken);
+
+        // Commit without adding files as they were added to index directly
+        Commit(commitMessage, author);
+
+        return vmrPatchesToRestore;
+    }
+
+    protected async Task ReapplyVmrPatches(
+        IReadOnlyCollection<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken)
+    {
+        if (patches.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("Re-applying {count} VMR patch{s}...",
+            patches.Count,
+            patches.Count > 1 ? "es" : string.Empty);
+
+        foreach (var patch in patches)
+        {
+            if (!_fileSystem.FileExists(patch.Path))
+            {
+                // Patch was removed, so it doesn't exist anymore
+                _logger.LogDebug("Not re-applying {patch} as it was removed", patch.Path);
+                continue;
+            }
+
+            await _patchHandler.ApplyPatch(patch, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
     protected void Commit(string commitMessage, Signature author)
@@ -158,6 +248,11 @@ public abstract class VmrManagerBase : IVmrManager
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
+
+    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFiles(
+        SourceMapping mapping,
+        IReadOnlyCollection<VmrIngestionPatch> patches,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

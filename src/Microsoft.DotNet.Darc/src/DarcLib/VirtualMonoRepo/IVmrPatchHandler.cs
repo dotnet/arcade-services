@@ -15,12 +15,6 @@ public interface IVmrPatchHandler
 {
     Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken);
 
-    Task ApplyPatch(
-        SourceMapping mapping,
-        string patchPath,
-        CancellationToken cancellationToken)
-        => ApplyPatch(new VmrIngestionPatch(patchPath, VmrInfo.RelativeSourcesDir / mapping.Name), cancellationToken);
-
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
         LocalPath repoPath,
