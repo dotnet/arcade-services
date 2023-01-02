@@ -18,6 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public class VmrScanner : IVmrScanner
 {
     private const string _zeroCommitTag = "zeroCommit";
+    private const string _vmrPreserveAttribute = "vmr-preserve";
 
     private readonly IReadOnlyCollection<SourceMapping> _sourceMappings;
     private readonly IProcessManager _processManager;
@@ -55,11 +56,10 @@ public class VmrScanner : IVmrScanner
         };
 
         var baseExcludePath = _vmrInfo.GetRepoSourcesPath(sourceMapping);
-        var preservedFiles = GetVmrPreservedFiles(sourceMapping);
 
         foreach (var exclude in sourceMapping.Exclude)
         {
-            args.Add(baseExcludePath / exclude);
+            args.Add(ExcludeFile(baseExcludePath / exclude));
         }
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray());
@@ -71,27 +71,13 @@ public class VmrScanner : IVmrScanner
 
         foreach (var file in files)
         {
-            if (preservedFiles.Contains(file))
-            {
-                continue;
-            }
             _logger.LogWarning($"File {file} is cloaked but present in the VMR\", file", file.ToString());
         }
     }
 
-    private HashSet<NativePath> GetVmrPreservedFiles(SourceMapping sourceMapping)
+    private string ExcludeFile(string file)
     {
-        var files = Directory.GetFiles(_vmrInfo.GetRepoSourcesPath(sourceMapping), ".gitattributes", SearchOption.AllDirectories);
-
-        return files.Select(file =>
-            (fileName: file, Attributes: File.ReadAllLines(file)
-                        .Where(line => line.Contains("vmr-preserve"))
-                        .Select(line => line.Split(" ").First())
-                        .ToList()))
-                .Where(entry => entry.Attributes.Count > 0)
-                .SelectMany(entry => entry.Attributes
-                    .Select(attribute => new NativePath(Path.Join(Path.GetDirectoryName(entry.fileName), attribute))))
-                .ToHashSet();
+        return $":(attr:!{_vmrPreserveAttribute}){file}";
     }
 }
 
