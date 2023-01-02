@@ -14,10 +14,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-// This class is able to scan the VMR for cloacked files that shouldn't be inside of it
+/// <summary>
+/// This class is able to scan the VMR for cloacked files that shouldn't be inside of it
+/// </summary>
 public class VmrScanner : IVmrScanner
 {
-    private const string _zeroCommitTag = "zeroCommit";
     private const string _vmrPreserveAttribute = "vmr-preserve";
 
     private readonly IReadOnlyCollection<SourceMapping> _sourceMappings;
@@ -66,18 +67,14 @@ public class VmrScanner : IVmrScanner
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
         var files = ret.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(file => _vmrInfo.VmrPath / file);
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var file in files)
         {
-            _logger.LogWarning($"File {file} is cloaked but present in the VMR\", file", file.ToString());
+            _logger.LogWarning($"File {file} is cloaked but present in the VMR", file);
         }
     }
 
-    private string ExcludeFile(string file)
-    {
-        return $":(attr:!{_vmrPreserveAttribute}){file}";
-    }
+    private string ExcludeFile(string file) => $":(attr:!{_vmrPreserveAttribute}){file}";
 }
 
