@@ -110,6 +110,7 @@
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.17.0" />
     <PackageVersion Include="Microsoft.Net.Http" Version="2.2.29" />
     <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
+    <PackageVersion Include="Microsoft.Rest.ClientRuntime.Azure" Version="3.3.19" />
     <PackageVersion Include="Microsoft.ServiceFabric" Version="8.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />

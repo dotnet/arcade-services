@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IsShipping>false</IsShipping>
@@ -14,8 +14,8 @@
     <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" />
     <PackageReference Include="Microsoft.ApplicationInsights.ServiceFabric" />
-    <PackageReference Include="Microsoft.Azure.KeyVault" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
+    <PackageReference Include="Microsoft.Rest.ClientRuntime.Azure" />
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" />
     <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" />
