@@ -50,6 +50,9 @@ public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
+        //Update the mapping to exclude .exe files and add a new .exe file into the repo at the same time
+        //the file shouldn't be ingested into the VMR
+
         _sourceMappings.Mappings = new List<SourceMappingSetting>
         {
             new SourceMappingSetting

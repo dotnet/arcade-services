@@ -8,8 +8,18 @@ using System.Collections.Generic;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
+/// <summary>
+/// A model for the source-mappings.json file that configures where the VMR synchronizes the sources from.
+/// Each development repository has a mapping record which says where the remote repo is,
+/// what files are in/excluded from the sync, etc.
 public class SourceMappingFile
 {
+    /// <summary>
+    /// The Defaults are added to all mappings unless `ignoreDefaults: true` is specified
+    /// When no "include" filter is specified, "**/*" is used
+    /// The default filters do not apply to submodules
+    /// Only filters which start with submodule's path are applied when syncing submodules
+    /// </summary>
     public SourceMappingSetting Defaults { get; set; } = new()
     {
         DefaultRef = "main",
@@ -17,12 +27,26 @@ public class SourceMappingFile
         Exclude = Array.Empty<string>(),
     };
 
+    /// <summary>
+    /// Location within the VMR where the source-build patches are stored
+    /// These patches are applied on top of the code synchronized into the VMR
+    /// </summary>
     public string? PatchesPath { get; set; }
 
+    /// <summary>
+    /// Location within the VMR where the source-mappings.json file is stored
+    /// </summary>
     public string? SourceMappingsPath { get; set; }
 
+    /// <summary>
+    /// Each of these mappings has a corresponding folder in the src/ directory
+    /// </summary>
     public List<SourceMappingSetting> Mappings { get; set; } = new();
 
+    /// <summary>
+    /// Some files are copied outside of the src/ directory into other locations
+    /// When files in the source paths are changed, they are automatically synchronized too
+    /// </summary>
     public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
 }
 

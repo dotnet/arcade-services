@@ -104,7 +104,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool updateDependencies,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+        await _dependencyTracker
+            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
 
         var mapping = _dependencyTracker.Mappings
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
@@ -114,7 +115,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
             var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-            var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
+            var clonePath = await _cloneManager.PrepareClone(
+                mapping.DefaultRemote, 
+                targetRevision ?? mapping.DefaultRef, 
+                cancellationToken);
+            
+            _logger.LogDebug($"Loading a new version of source mappings from {clonePath / fileRelativePath}");
             await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
             
             mapping = _dependencyTracker.Mappings
