@@ -37,8 +37,6 @@
     <PackageVersion Include="Microsoft.ApplicationInsights.ServiceFabric" Version="2.3.1" />
     <PackageVersion Include="Microsoft.AspNet.WebApi.Client" Version="5.2.6" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(AspNetAzureVersion)" />
-    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="$(AspNetAzureVersion)" />
     <!-- Force version 2.1.22 to avoid unsafe versions -->
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(AspNetCoreVersion)" />
@@ -49,7 +47,6 @@
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
-    <PackageVersion Include="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
     <PackageVersion Include="Microsoft.Azure.Management.EventHub" Version="2.7.2" />
     <PackageVersion Include="Microsoft.Azure.Management.Fluent" Version="1.31.0" />
