@@ -68,14 +68,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public async Task InitializeSourceMappings(string sourceMappingsPath)
     {
-        if(sourceMappingsPath.StartsWith(VmrInfo.RelativeSourcesDir))
-        {
-            _mappings = await _sourceMappingParser.ParseMappings(_vmrInfo.VmrPath / sourceMappingsPath);
-        }
-        else
-        {
-            _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
-        }
+        _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
