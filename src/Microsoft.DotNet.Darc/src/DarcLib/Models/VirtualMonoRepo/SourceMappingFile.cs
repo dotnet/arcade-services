@@ -19,6 +19,8 @@ public class SourceMappingFile
 
     public string? PatchesPath { get; set; }
 
+    public string? SourceMappings { get; set; }
+
     public List<SourceMappingSetting> Mappings { get; set; } = new();
 
     public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }

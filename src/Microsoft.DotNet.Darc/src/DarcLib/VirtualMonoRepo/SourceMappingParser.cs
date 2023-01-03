@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
@@ -17,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface ISourceMappingParser
 {
-    Task<IReadOnlyCollection<SourceMapping>> ParseMappings();
+    Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath);
 }
 
 /// <summary>
@@ -34,15 +35,14 @@ public class SourceMappingParser : ISourceMappingParser
         _vmrInfo = vmrInfo;
     }
 
-    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings()
+    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath)
     {
-        var mappingFilePath = _vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {VmrInfo.SourceMappingsFileName} file in the VMR directory",
+                $"Failed to find {VmrInfo.SourceMappingsFileName} file.",
                 mappingFilePath);
         }
 
@@ -58,6 +58,7 @@ public class SourceMappingParser : ISourceMappingParser
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
         _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
+        _vmrInfo.SourceMappingsPath = settings.SourceMappings;
 
         if (settings.AdditionalMappings is not null)
         {

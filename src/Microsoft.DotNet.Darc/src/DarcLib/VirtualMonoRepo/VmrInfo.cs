@@ -30,6 +30,11 @@ public interface IVmrInfo
     string? PatchesPath { get; set; }
 
     /// <summary>
+    /// Path to the source-manifest.json file 
+    /// </summary>
+    string? SourceMappingsPath { get; set; }
+
+    /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
     /// Paths are UNIX style and relative.
     /// Example: ("src/installer/eng/common", "eng/common")
@@ -67,6 +72,8 @@ public class VmrInfo : IVmrInfo
     public LocalPath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
+
+    public string? SourceMappingsPath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
