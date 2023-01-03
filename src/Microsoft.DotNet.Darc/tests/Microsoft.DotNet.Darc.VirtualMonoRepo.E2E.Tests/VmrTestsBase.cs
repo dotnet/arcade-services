@@ -65,17 +65,17 @@ public abstract class VmrTestsBase
     [TearDown]
     public void DeleteCurrentTestDirectory()
     {
-        //try
-        //{
-        //    if (CurrentTestDirectory is not null)
-        //    {
-        //        VmrTestsOneTimeSetUp.DeleteDirectory(CurrentTestDirectory.ToString());
-        //    }
-        //}
-        //catch
-        //{
-        //    // Ignore
-        //}
+        try
+        {
+            if (CurrentTestDirectory is not null)
+            {
+                VmrTestsOneTimeSetUp.DeleteDirectory(CurrentTestDirectory.ToString());
+            }
+        }
+        catch
+        {
+            // Ignore
+        }
     }
 
     protected abstract Task CopyReposForCurrentTest();

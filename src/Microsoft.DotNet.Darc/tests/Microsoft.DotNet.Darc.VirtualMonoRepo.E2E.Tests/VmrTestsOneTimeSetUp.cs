@@ -58,17 +58,17 @@ public class VmrTestsOneTimeSetUp
     [OneTimeTearDown]
     public void DeleteTestsDirectory()
     {
-        //try
-        //{
-        //    if (TestsDirectory is not null)
-        //    {
-        //        DeleteDirectory(TestsDirectory);
-        //    }
-        //}
-        //catch
-        //{
-        //    // Ignore
-        //}
+        try
+        {
+            if (TestsDirectory is not null)
+            {
+                DeleteDirectory(TestsDirectory);
+            }
+        }
+        catch
+        {
+            // Ignore
+        }
     }
 
     public static void DeleteDirectory(string targetDir)
