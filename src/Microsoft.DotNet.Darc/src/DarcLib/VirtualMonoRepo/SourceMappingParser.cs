@@ -58,7 +58,7 @@ public class SourceMappingParser : ISourceMappingParser
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
         _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
-        _vmrInfo.SourceMappingsPath = settings.SourceMappings;
+        _vmrInfo.SourceMappingsPath = settings.SourceMappingsPath;
 
         if (settings.AdditionalMappings is not null)
         {

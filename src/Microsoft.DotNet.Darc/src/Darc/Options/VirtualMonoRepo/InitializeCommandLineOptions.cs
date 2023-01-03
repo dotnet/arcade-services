@@ -6,6 +6,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -15,7 +16,7 @@ internal class InitializeCommandLineOptions : VmrSyncCommandLineOptions
     [Option('r', "recursive", Required = false, HelpText = $"Process also dependencies (from {VersionFiles.VersionDetailsXml}) recursively.")]
     public bool Recursive { get; set; } = false;
 
-    [Option("source-mappings", Required = true, HelpText = $"A path to the source-mappings.json file to be used for syncing.")]
+    [Option("source-mappings", Required = true, HelpText = $"A path to the {VmrInfo.SourceMappingsFileName} file to be used for syncing.")]
     public string SourceMappings { get; set; }
 
     public override Operation GetOperation() => new InitializeOperation(this);

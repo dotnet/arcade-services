@@ -117,7 +117,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             var clonePath = await _cloneManager.PrepareClone(mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, cancellationToken);
             await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
             
-            mapping = _dependencyTracker.Mappings.FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
+            mapping = _dependencyTracker.Mappings
+                .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
                 ?? throw new Exception($"No mapping named '{mappingName}' found");
         }
 

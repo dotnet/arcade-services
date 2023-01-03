@@ -19,7 +19,7 @@ public class SourceMappingFile
 
     public string? PatchesPath { get; set; }
 
-    public string? SourceMappings { get; set; }
+    public string? SourceMappingsPath { get; set; }
 
     public List<SourceMappingSetting> Mappings { get; set; } = new();
 

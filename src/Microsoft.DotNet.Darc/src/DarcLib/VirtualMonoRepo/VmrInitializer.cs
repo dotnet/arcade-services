@@ -75,10 +75,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? targetRevision,
         string? targetVersion,
         bool initializeDependencies,
-        LocalPath sourceMappings,
+        LocalPath sourceMappingsPath,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.InitializeSourceMappings(sourceMappings);
+        await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
 
         var mapping = _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == mappingName)
             ?? throw new Exception($"No repository mapping named `{mappingName}` found!");

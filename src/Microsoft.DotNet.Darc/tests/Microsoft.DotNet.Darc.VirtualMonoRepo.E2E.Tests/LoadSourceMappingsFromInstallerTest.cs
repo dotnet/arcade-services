@@ -78,7 +78,7 @@ public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         _sourceMappings = new SourceMappingFile
         {
             PatchesPath = "src/installer/patches/",
-            SourceMappings = "src/installer/src/SourceBuild/content/source-mappings.json",
+            SourceMappingsPath = "src/installer/src/SourceBuild/content/source-mappings.json",
             AdditionalMappings = new List<AdditionalMappingSetting>
             {
                 new AdditionalMappingSetting
