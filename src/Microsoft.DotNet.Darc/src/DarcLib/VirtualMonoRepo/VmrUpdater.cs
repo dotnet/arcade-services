@@ -155,7 +155,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         if (_vmrInfo.SourceMappingsPath != null 
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(update.Mapping)))
         {
-            await _dependencyTracker.InitializeSourceMappings(_vmrInfo.SourceMappingsPath);
+            var fileRelativePath = _vmrInfo.SourceMappingsPath.Remove(0, VmrInfo.GetRelativeRepoSourcesPath(update.Mapping).Length);
+            await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
+            
+            update = update with
+            {
+                Mapping = _dependencyTracker.Mappings.First(m => m.Name == update.Mapping.Name)
+            };
         }
 
         using var repo = new Repository(clonePath);
