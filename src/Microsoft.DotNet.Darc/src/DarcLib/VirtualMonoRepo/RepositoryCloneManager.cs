@@ -5,11 +5,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Hashing;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -81,12 +79,19 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path ?? throw new ArgumentException("No remote URIs provided to clone");
     }
 
-    public async Task<LocalPath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken)
+    public async Task<LocalPath> PrepareClone(
+        string repoUri,
+        string checkoutRef,
+        CancellationToken cancellationToken)
     {
         return await PrepareClone(repoUri, checkoutRef, GetHash(repoUri), cancellationToken);
     }
 
-    private async Task<LocalPath> PrepareClone(string remoteUri, string checkoutRef, string dirName, CancellationToken cancellationToken)
+    private async Task<LocalPath> PrepareClone(
+        string remoteUri,
+        string checkoutRef,
+        string dirName,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -121,21 +126,8 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             }
             else
             {
-                _logger.LogDebug("Clone of {repo} found, verifying remotes...", remoteUri);
-
-                using var repository = new Repository(clonePath);
-                var remotes = repository.Network.Remotes;
-                if (remotes.Any(r => r.Url == remoteUri))
-                {
-                    _logger.LogDebug("Adding a new remote {uri} into {path}...", remoteUri, clonePath);
-                    remotes.Add(GetHash(remoteUri), remoteUri);
-                }
-
-                _logger.LogDebug("Fetching new changes from {uri} into {path}...", remoteUri, clonePath);
-                var result = await _processManager.ExecuteGit(clonePath, "fetch", "--all");
-                result.ThrowIfFailed($"Failed to pull new changes from {remoteUri} into {clonePath}");
-                cancellationToken.ThrowIfCancellationRequested();
-
+                _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
+                _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, forceFetch: true);
                 _localGitRepo.Checkout(clonePath, checkoutRef);
             }
         }
