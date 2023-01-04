@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 
@@ -14,6 +16,8 @@ public record VmrDependencyVersion(string Sha, string? PackageVersion);
 public interface IVmrDependencyTracker
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
+
+    Task InitializeSourceMappings(string sourceMappingsPath);
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
@@ -36,13 +40,18 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
+    private readonly ISourceMappingParser _sourceMappingParser;
+    private IReadOnlyCollection<SourceMapping>? _mappings;
 
-    public IReadOnlyCollection<SourceMapping> Mappings { get; }
-
+    public IReadOnlyCollection<SourceMapping> Mappings
+    {
+        get => _mappings ?? throw new System.Exception("Source mappings have not been initialized.");
+    }
+            
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
-        IReadOnlyCollection<SourceMapping> mappings,
+        ISourceMappingParser sourceMappingParser,
         ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
@@ -50,11 +59,17 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _sourceManifest = sourceManifest;
         _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
-        Mappings = mappings;
+        _sourceMappingParser = sourceMappingParser;
+        _mappings = null;
     }
 
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
+
+    public async Task InitializeSourceMappings(string sourceMappingsPath)
+    {
+        _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
+    }
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {

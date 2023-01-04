@@ -71,12 +71,18 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     }
 
     public async Task InitializeRepository(
-        SourceMapping mapping,
+        string mappingName,
         string? targetRevision,
         string? targetVersion,
         bool initializeDependencies,
+        LocalPath sourceMappingsPath,
         CancellationToken cancellationToken)
     {
+        await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
+
+        var mapping = _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == mappingName)
+            ?? throw new Exception($"No repository mapping named `{mappingName}` found!");
+
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
             throw new EmptySyncException($"Repository {mapping.Name} already exists");

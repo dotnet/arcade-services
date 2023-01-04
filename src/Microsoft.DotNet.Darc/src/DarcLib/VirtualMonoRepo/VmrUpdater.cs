@@ -13,6 +13,7 @@ using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -95,14 +96,38 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _fileSystem = fileSystem;
     }
 
-    public Task UpdateRepository(
-        SourceMapping mapping,
+    public async Task UpdateRepository(
+        string mappingName,
         string? targetRevision,
         string? targetVersion,
         bool noSquash,
         bool updateDependencies,
         CancellationToken cancellationToken)
     {
+        await _dependencyTracker
+            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+
+        var mapping = _dependencyTracker.Mappings
+            .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
+            ?? throw new Exception($"No mapping named '{mappingName}' found");
+
+        if (_vmrInfo.SourceMappingsPath != null
+            && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
+        {
+            var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
+            var clonePath = await _cloneManager.PrepareClone(
+                mapping.DefaultRemote, 
+                targetRevision ?? mapping.DefaultRef, 
+                cancellationToken);
+            
+            _logger.LogDebug($"Loading a new version of source mappings from {clonePath / fileRelativePath}");
+            await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
+            
+            mapping = _dependencyTracker.Mappings
+                .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
+                ?? throw new Exception($"No mapping named '{mappingName}' found");
+        }
+
         var dependencyUpdate = new VmrDependencyUpdate(
             mapping,
             mapping.DefaultRemote,
@@ -110,9 +135,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetVersion,
             null);
 
-        return updateDependencies
-            ? UpdateRepositoryRecursively(dependencyUpdate, noSquash, cancellationToken)
-            : UpdateRepositoryInternal(dependencyUpdate, noSquash, reapplyVmrPatches: true, cancellationToken);
+        if (updateDependencies)
+        {
+            await UpdateRepositoryRecursively(dependencyUpdate, noSquash, cancellationToken);
+        }
+        else
+        {
+            await UpdateRepositoryInternal(dependencyUpdate, noSquash, reapplyVmrPatches: true, cancellationToken);
+        }
     }
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(

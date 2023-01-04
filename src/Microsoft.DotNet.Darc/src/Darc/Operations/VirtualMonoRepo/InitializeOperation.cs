@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
@@ -23,9 +24,9 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
 
     protected override async Task ExecuteInternalAsync(
         IVmrInitializer vmrManager,
-        SourceMapping mapping,
+        string repoName,
         string? targetRevision,
         CancellationToken cancellationToken)
         =>
-        await vmrManager.InitializeRepository(mapping, targetRevision, null, _options.Recursive, cancellationToken);
+        await vmrManager.InitializeRepository(repoName, targetRevision, null, _options.Recursive, new NativePath(_options.SourceMappings), cancellationToken);
 }
