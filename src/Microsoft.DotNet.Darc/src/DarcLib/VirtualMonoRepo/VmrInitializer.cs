@@ -130,7 +130,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
 
-        var clonePath = await _cloneManager.PrepareClone(update.RemoteUri, update.TargetRevision, cancellationToken);
+        var clonePath = await _cloneManager.PrepareClone(
+            update.Mapping,
+            new[] { update.RemoteUri },
+            update.TargetRevision,
+            cancellationToken);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         update = update with
