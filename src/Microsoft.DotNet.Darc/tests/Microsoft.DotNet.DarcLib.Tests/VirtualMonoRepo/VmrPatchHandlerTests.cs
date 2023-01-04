@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -97,7 +96,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
+            .Returns((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
 
         _processManager.Reset();
         _processManager

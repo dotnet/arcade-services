@@ -114,7 +114,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
             var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-            var clonePath = await _cloneManager.PrepareClone(
+            var clonePath = _cloneManager.PrepareClone(
                 mapping,
                 new[] { mapping.DefaultRemote },
                 targetRevision ?? mapping.DefaultRef, 
@@ -163,7 +163,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             _sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri,
         };
 
-        LocalPath clonePath = await _cloneManager.PrepareClone(update.Mapping, remotes, update.TargetRevision, cancellationToken);
+        LocalPath clonePath = _cloneManager.PrepareClone(update.Mapping, remotes, update.TargetRevision, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -518,7 +518,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 source.RemoteUri,
                 source.CommitSha);
 
-            var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            var clonePath = _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
 
             foreach ((UnixPath relativePath, UnixPath pathInVmr) in group)
             {
