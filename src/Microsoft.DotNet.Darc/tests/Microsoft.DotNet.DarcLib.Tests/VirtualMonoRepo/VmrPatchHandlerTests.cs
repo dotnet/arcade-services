@@ -216,6 +216,13 @@ public class VmrPatchHandlerTests
                 ($"src/{_testRepoMapping.Name}/eng/common", "eng/common"),
             });
 
+        _fileSystem
+            .Setup(x => x.DirectoryExists($"{_clonePath}/SourceBuild/tarball/content"))
+            .Returns(true);
+        _fileSystem
+            .Setup(x => x.DirectoryExists($"{_clonePath}/eng/common"))
+            .Returns(true);
+
         // Act
         var patches = await _patchHandler.CreatePatches(
             _testRepoMapping,

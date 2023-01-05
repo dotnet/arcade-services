@@ -194,23 +194,25 @@ public class VmrPatchHandler : IVmrPatchHandler
             // We take the content path from the VMR config and map it onto the cloned repo
             var contentDir = repoPath / relativeClonePath;
             
-            if (File.Exists(contentDir)
-                || destination != null && File.Exists(_vmrInfo.VmrPath / destination))
+            if (_fileSystem.FileExists(contentDir)
+                || destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination))
             {
-                path = Path.GetFileName(source);
-                if (!path.Equals(Path.GetFileName(destination)))
+                path = _fileSystem.GetFileName(source)
+                    ?? throw new Exception($"Invalid source path {source} in mapping.");
+                
+                if (!path.Equals(_fileSystem.GetFileName(destination)))
                 {
                     throw new Exception(
                         $"Invalid mapping {source} to {destination}. A file can only be mapped to a file with the same filename.");
                 }
 
-                var relativeCloneDir = Path.GetDirectoryName(relativeClonePath)
+                var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
                 
                 contentDir = repoPath / relativeCloneDir;
-                destinationDir = Path.GetDirectoryName(destinationDir);
+                destinationDir = _fileSystem.GetDirectoryName(destinationDir);
             }
-            else if(!Directory.Exists(contentDir))
+            else if(!_fileSystem.DirectoryExists(contentDir))
             {
                 // the source can be a file that doesn't exist, then we skip it
                 continue;
