@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
+    <ProjectReference Include="..\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
   </ItemGroup>
 
 </Project>
