@@ -189,28 +189,21 @@ public class VmrPatchHandler : IVmrPatchHandler
             patchName = destDir / $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
             string path = ".";
-            string? destinationDir = destination;
 
             // We take the content path from the VMR config and map it onto the cloned repo
             var contentDir = repoPath / relativeClonePath;
-            
-            if (_fileSystem.FileExists(contentDir)
-                || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination)))
-            {
-                path = _fileSystem.GetFileName(source)
-                    ?? throw new Exception($"Invalid source path {source} in mapping.");
-                
-                if (path != _fileSystem.GetFileName(destination))
-                {
-                    throw new Exception(
-                        $"Invalid mapping {source} to {destination}. A file can only be mapped to a file with the same filename.");
-                }
 
+            string fileName = _fileSystem.GetFileName(source) ?? throw new ArgumentNullException(nameof(source));
+
+            if (_fileSystem.FileExists(contentDir)
+                || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
+            {
+                path = fileName;
+                
                 var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
-                
+           
                 contentDir = repoPath / relativeCloneDir;
-                destinationDir = _fileSystem.GetDirectoryName(destinationDir);
             }
             else if(!_fileSystem.DirectoryExists(contentDir))
             {
@@ -237,7 +230,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 workingDir: contentDir,
                 cancellationToken: cancellationToken);
 
-            patches.Add(new VmrIngestionPatch(patchName, destinationDir));
+            patches.Add(new VmrIngestionPatch(patchName, destination));
         }
 
         if (!submoduleChanges.Any())
