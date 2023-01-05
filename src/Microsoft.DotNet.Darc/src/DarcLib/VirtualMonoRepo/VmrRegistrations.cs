@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -66,11 +65,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrScanner, VmrScanner>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
-        services.TryAddSingleton<IReadOnlyCollection<SourceMapping>>(sp =>
-        {
-            var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
-            return mappingParser.ParseMappings().GetAwaiter().GetResult();
-        });
         services.TryAddSingleton<ISourceManifest>(sp =>
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();

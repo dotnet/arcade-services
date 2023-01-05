@@ -34,7 +34,7 @@ public abstract class VmrTestsBase
     protected LocalPath DependencyRepoPath { get; private set; } = null!;
     protected LocalPath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
-    protected VmrInfo VmrInfo { get; private set; } = null!;
+    protected VmrInfo Info { get; private set; } = null!;
     
     private Lazy<IServiceProvider> _serviceProvider = null!;
     private readonly CancellationTokenSource _cancellationToken = new();
@@ -59,7 +59,7 @@ public abstract class VmrTestsBase
         await CopyVmrForCurrentTest();
         
         _serviceProvider = new(CreateServiceProvider);
-        VmrInfo = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
+        Info = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
     }
 
     [TearDown]
@@ -102,7 +102,7 @@ public abstract class VmrTestsBase
         var expectedFiles = new List<LocalPath>
         {
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
-            VmrInfo.GetSourceManifestPath(),
+            Info.GetSourceManifestPath(),
             vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName
         };
 
@@ -141,10 +141,11 @@ public abstract class VmrTestsBase
         CheckFileContents(filePath, resourceContent);
     }
 
-    protected async Task InitializeRepoAtLastCommit(string repoName, LocalPath repoPath)
+    protected async Task InitializeRepoAtLastCommit(string repoName, LocalPath repoPath, LocalPath? sourceMappingsPath = null)
     {
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
-        await CallDarcInitialize(repoName, commit);
+        var sourceMappings = sourceMappingsPath ?? VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
+        await CallDarcInitialize(repoName, commit, sourceMappings);
     }
 
     protected async Task UpdateRepoToLastCommit(string repoName, LocalPath repoPath)
@@ -153,10 +154,10 @@ public abstract class VmrTestsBase
         await CallDarcUpdate(repoName, commit);
     }
 
-    private async Task CallDarcInitialize(string repository, string commit)
+    private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit)

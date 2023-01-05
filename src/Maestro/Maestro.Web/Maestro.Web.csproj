@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
@@ -19,9 +19,9 @@
     <PackageReference Include="EntityFrameworkCore.Triggers" />
     <PackageReference Include="FluentValidation.AspNetCore" />
     <PackageReference Include="Humanizer.Core" /> 
-    <PackageReference Include="JetBrains.Annotations" /> 
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Azurestorage" />
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />
     <PackageReference Include="Microsoft.AspNetCore.Server.HttpSys" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
