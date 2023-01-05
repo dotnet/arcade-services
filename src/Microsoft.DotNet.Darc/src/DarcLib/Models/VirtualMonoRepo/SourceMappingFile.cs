@@ -46,6 +46,7 @@ public class SourceMappingFile
     /// <summary>
     /// Some files are copied outside of the src/ directory into other locations
     /// When files in the source paths are changed, they are automatically synchronized too
+    /// Source can be a path to a folder or a file. Destination is a path to a folder where the file(s) will be synchronized.
     /// </summary>
     public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
 }

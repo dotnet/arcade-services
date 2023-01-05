@@ -86,7 +86,7 @@ public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
             {
                 new AdditionalMappingSetting
                 {
-                    Source = "src/installer/src/SourceBuild/content/",
+                    Source = "src/installer/src/SourceBuild/content/source-mappings.json",
                     Destination = "src"
                 }
             },

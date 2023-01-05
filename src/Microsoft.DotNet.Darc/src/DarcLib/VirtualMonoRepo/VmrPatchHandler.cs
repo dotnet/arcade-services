@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -187,6 +188,29 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             patchName = destDir / $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
+            string path = ".";
+
+            // We take the content path from the VMR config and map it onto the cloned repo
+            var contentDir = repoPath / relativeClonePath;
+
+            string fileName = _fileSystem.GetFileName(source) ?? throw new ArgumentNullException(nameof(source));
+
+            if (_fileSystem.FileExists(contentDir)
+                || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
+            {
+                path = fileName;
+                
+                var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
+                    ?? throw new Exception($"Invalid source path {source} in mapping.");
+           
+                contentDir = repoPath / relativeCloneDir;
+            }
+            else if(!_fileSystem.DirectoryExists(contentDir))
+            {
+                // the source can be a file that doesn't exist, then we skip it
+                continue;
+            }
+
             args = new List<string>
             {
                 "diff",
@@ -197,11 +221,8 @@ public class VmrPatchHandler : IVmrPatchHandler
                 patchName,
                 $"{sha1}..{sha2}",
                 "--",
-                ".", // Apply for a given directory (we will call this from the content dir)
+                path, // Apply for a given file or directory (we will call this from the content dir)
             };
-
-            // We take the content path from the VMR config and map it onto the cloned repo
-            var contentDir = repoPath / relativeClonePath;
 
             result = await _processManager.Execute(
                 _processManager.GitExecutable,
