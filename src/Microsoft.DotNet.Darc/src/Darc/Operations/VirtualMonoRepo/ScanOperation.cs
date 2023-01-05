@@ -8,6 +8,7 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class ScanOperation : Operation
@@ -21,8 +22,7 @@ internal class ScanOperation : Operation
         var vmrScanner = Provider.GetRequiredService<IVmrScanner>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        var r = await vmrScanner.ListCloakedFiles(listener.Token);
-        r = r.ToList();
+        await vmrScanner.ListCloakedFiles(listener.Token);
         return 0;
     }
 }

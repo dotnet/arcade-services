@@ -6,6 +6,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("scan", HelpText = "Scans the VMR, checking if it contains any cloacked files")]

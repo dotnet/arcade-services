@@ -12,7 +12,7 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
-
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
@@ -44,16 +44,16 @@ public class VmrScanner : IVmrScanner
         await _dependencyTracker
             .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
 
-        var cloakedFilesList = new List<string>();
+        var cloakedFiles = new List<string>();
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            cloakedFilesList.AddRange(await ScanRepository(sourceMapping, cancellationToken));
+            cloakedFiles.AddRange(await ScanRepository(sourceMapping, cancellationToken));
         }
 
-        return cloakedFilesList;
+        return cloakedFiles;
     }
 
     private async Task<string[]> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
