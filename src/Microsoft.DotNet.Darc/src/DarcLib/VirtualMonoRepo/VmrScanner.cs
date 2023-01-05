@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -15,7 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 /// <summary>
-/// This class is able to scan the VMR for cloacked files that shouldn't be inside of it
+/// Class that scans the VMR for cloaked files that shouldn't be inside.
 /// </summary>
 public class VmrScanner : IVmrScanner
 {
@@ -38,15 +39,19 @@ public class VmrScanner : IVmrScanner
         _logger = logger;
     }
 
-    public async Task ScanVmr()
+    public async Task<IEnumerable<string>> ListCloakedFiles(CancellationToken cancellationToken)
     {
+        var cloackedFilesList = new List<string>();
         foreach (var sourceMapping in _sourceMappings)
         {
-            await ScanRepository(sourceMapping);
+            cancellationToken.ThrowIfCancellationRequested();
+            cloackedFilesList = cloackedFilesList.Concat(await ScanRepository(sourceMapping, cancellationToken)).ToList();
         }
+
+        return cloackedFilesList;
     }
 
-    private async Task ScanRepository(SourceMapping sourceMapping)
+    private async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
         var args = new List<string>
@@ -63,7 +68,7 @@ public class VmrScanner : IVmrScanner
             args.Add(ExcludeFile(baseExcludePath / exclude));
         }
 
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray());
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
         var files = ret.StandardOutput
@@ -71,10 +76,12 @@ public class VmrScanner : IVmrScanner
 
         foreach (var file in files)
         {
-            _logger.LogWarning($"File {file} is cloaked but present in the VMR", file);
+            _logger.LogWarning("File {file} is cloaked but present in the VMR", file);
         }
+
+        return files;
     }
 
-    private string ExcludeFile(string file) => $":(attr:!{_vmrPreserveAttribute}){file}";
+    private static string ExcludeFile(string file) => $":(attr:!{_vmrPreserveAttribute}){file}";
 }
 
