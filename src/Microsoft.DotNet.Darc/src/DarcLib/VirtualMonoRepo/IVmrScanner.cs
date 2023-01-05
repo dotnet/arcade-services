@@ -10,5 +10,5 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrScanner
 {
-    Task<IEnumerable<string>> ListCloakedFiles(CancellationToken cancellationToken);
+    Task<List<string>> ListCloakedFiles(CancellationToken cancellationToken);
 }
