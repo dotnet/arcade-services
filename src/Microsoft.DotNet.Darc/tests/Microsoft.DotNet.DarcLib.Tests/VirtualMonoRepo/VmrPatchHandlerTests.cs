@@ -222,6 +222,12 @@ public class VmrPatchHandlerTests
         _fileSystem
             .Setup(x => x.DirectoryExists($"{_clonePath}/eng/common"))
             .Returns(true);
+        _fileSystem
+            .Setup(x => x.GetFileName($"src/{_testRepoMapping.Name}/SourceBuild/tarball/content"))
+            .Returns("content");
+        _fileSystem
+            .Setup(x => x.GetFileName($"src/{_testRepoMapping.Name}/eng/common"))
+            .Returns("common");
 
         // Act
         var patches = await _patchHandler.CreatePatches(
