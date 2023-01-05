@@ -238,9 +238,12 @@ public abstract class VmrManagerBase : IVmrManager
         }
         catch (DependencyFileNotFoundException e)
         {
-            _logger.LogInformation("Repository at {remoteUri} does not have {file} file, skipping dependency detection",
+            _logger.LogInformation(
+                $"Repository at {{remoteUri}} does not have {{file}} file, " +
+                $"skipping dependency detection.{Environment.NewLine}{{error}}",
                 remoteRepoUri,
-                VersionFiles.VersionDetailsXml);
+                VersionFiles.VersionDetailsXml,
+                e.Message);
             return Array.Empty<DependencyDetail>();
         }
     }
