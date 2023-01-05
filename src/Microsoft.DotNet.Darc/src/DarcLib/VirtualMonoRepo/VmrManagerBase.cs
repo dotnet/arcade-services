@@ -231,7 +231,18 @@ public abstract class VmrManagerBase : IVmrManager
         }
 
         var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
-        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+
+        try
+        {
+            return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        }
+        catch (DependencyFileNotFoundException e)
+        {
+            _logger.LogInformation("Repository at {remoteUri} does not have {file} file, skipping dependency detection",
+                remoteRepoUri,
+                VersionFiles.VersionDetailsXml);
+            return Array.Empty<DependencyDetail>();
+        }
     }
 
     protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)

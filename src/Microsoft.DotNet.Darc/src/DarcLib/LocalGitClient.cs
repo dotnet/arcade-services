@@ -42,7 +42,7 @@ public class LocalGitClient : ILocalGitRepo
             }
             else
             {
-                throw new InvalidOperationException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
+                throw new DependencyFileNotFoundException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
             }
         }
 

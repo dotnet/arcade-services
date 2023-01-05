@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrMultipleRemotesTests : VmrTestsBase
@@ -19,26 +18,22 @@ public class VmrMultipleRemotesTests : VmrTestsBase
     private LocalPath FirstDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "1");
     private LocalPath SecondDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "2");
 
+    /// <summary>
+    /// The dependency tree of repos in this test looks like:
+    /// 
+    /// installer
+    ///   └── dependency
+    ///         
+    /// We will have two copies of "dependency" in folders dependency1 and dependency2
+    /// We will synchronize to the first one and then to the second one
+    /// </summary>
+    /// <returns></returns>
     [Test]
     public async Task SynchronizationBetweenDifferentRemotesTest()
     {
         var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
         var installerFilePath = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
         var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
-
-        /* 
-         *  The dependency tree looks like:
-         *  
-         *  installer
-         *    └── dependency
-         *          
-         *  We will have two copies of "dependency" in folders dependency1 and dependency2
-         *  We will synchronize to the first one and then to the second one
-         */
-
-        // Prepare dependencies at paths 1 and 2
-        Directory.Move(DependencyRepoPath, FirstDependencyPath);
-        CopyDirectory(FirstDependencyPath, SecondDependencyPath);
 
         var versionDetailsPath = InstallerRepoPath / VersionFiles.VersionDetailsXml;
         var versionDetailsContent = await File.ReadAllTextAsync(versionDetailsPath);
@@ -84,28 +79,25 @@ public class VmrMultipleRemotesTests : VmrTestsBase
         versionDetailsContent = versionDetailsContent.Replace(oldSha, newSha);
         await File.WriteAllTextAsync(versionDetailsPath, versionDetailsContent);
         await GitOperations.CommitAll(InstallerRepoPath, "Point VersionDetails.xml to second location");
-
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
         CheckFileContents(dependencyFilePath, "New content only in the second folder now");
     }
 
+    /// <summary>
+    /// In this test:
+    ///   - We will have two copies of a repo in folders dependency1 and dependency2
+    ///   - We will create a commit only in the second folder
+    ///   - We will synchronize the VMR using --additional-remote to pull the commits from both folders
+    /// </summary>
+    /// <returns></returns>
     [Test]
     public async Task SynchronizationWithAdditionalRemoteTest()
     {
         var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
         var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
 
-        /*        
-         *  We will have two copies of a repo in folders dependency and dependency2
-         *  We will create a commit only in the -local folder
-         *  We will synchronize the VMR using --additional-remote to pull the commits from both folders
-         */
-
-        // Prepare dependencies at paths 1 and 2
-        CopyDirectory(DependencyRepoPath, SecondDependencyPath);
-
-        await InitializeRepoAtLastCommit(Constants.DependencyRepoName, DependencyRepoPath);
+        await InitializeRepoAtLastCommit(Constants.DependencyRepoName, FirstDependencyPath);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -122,7 +114,7 @@ public class VmrMultipleRemotesTests : VmrTestsBase
             "New content only in the second folder now");
         await GitOperations.CommitAll(SecondDependencyPath, "New commit in the second dependency repo");
 
-        // Point installer's VersionDetails.xml to this new repo
+        // Get SHA that is only in the second folder which is not in source-mapping.json
         var newSha = await GitOperations.GetRepoLastCommit(SecondDependencyPath);
 
         var additionalRemotes = new[]
@@ -143,6 +135,10 @@ public class VmrMultipleRemotesTests : VmrTestsBase
         };
 
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
+
+        // Prepare dependencies at paths 1 and 2
+        Directory.Move(DependencyRepoPath, FirstDependencyPath);
+        CopyDirectory(FirstDependencyPath, SecondDependencyPath);
     }
 
     protected override async Task CopyVmrForCurrentTest()
