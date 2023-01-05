@@ -22,36 +22,41 @@ public class VmrScanner : IVmrScanner
 {
     private const string _vmrPreserveAttribute = "vmr-preserve";
 
-    private readonly IReadOnlyCollection<SourceMapping> _sourceMappings;
+    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger<VmrScanner> _logger;
 
     public VmrScanner(
-        IReadOnlyCollection<SourceMapping> sourceMappings,
+        IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IVmrInfo vmrInfo,
         ILogger<VmrScanner> logger)
     {
-        _sourceMappings = sourceMappings;
+        _dependencyTracker = dependencyTracker;
         _processManager = processManager;
         _vmrInfo = vmrInfo;
         _logger = logger;
     }
 
-    public async Task<IEnumerable<string>> ListCloakedFiles(CancellationToken cancellationToken)
+    public async Task<List<string>> ListCloakedFiles(CancellationToken cancellationToken)
     {
-        var cloackedFilesList = new List<string>();
-        foreach (var sourceMapping in _sourceMappings)
+        await _dependencyTracker
+            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+
+        var cloakedFilesList = new List<string>();
+
+        foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            cloackedFilesList = cloackedFilesList.Concat(await ScanRepository(sourceMapping, cancellationToken)).ToList();
+
+            cloakedFilesList.AddRange(await ScanRepository(sourceMapping, cancellationToken));
         }
 
-        return cloackedFilesList;
+        return cloakedFilesList;
     }
 
-    private async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
+    private async Task<string[]> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
         var args = new List<string>
