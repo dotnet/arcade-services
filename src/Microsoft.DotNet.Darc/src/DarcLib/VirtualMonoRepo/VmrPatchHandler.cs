@@ -195,12 +195,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             var contentDir = repoPath / relativeClonePath;
             
             if (_fileSystem.FileExists(contentDir)
-                || destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination))
+                || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination)))
             {
                 path = _fileSystem.GetFileName(source)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
                 
-                if (!path.Equals(_fileSystem.GetFileName(destination)))
+                if (path != _fileSystem.GetFileName(destination))
                 {
                     throw new Exception(
                         $"Invalid mapping {source} to {destination}. A file can only be mapped to a file with the same filename.");
