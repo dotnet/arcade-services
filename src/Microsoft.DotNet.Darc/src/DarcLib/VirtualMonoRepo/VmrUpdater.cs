@@ -13,7 +13,6 @@ using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -115,8 +114,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
             var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-            var clonePath = await _cloneManager.PrepareClone(
-                mapping.DefaultRemote, 
+            var clonePath = _cloneManager.PrepareClone(
+                mapping,
+                new[] { mapping.DefaultRemote },
                 targetRevision ?? mapping.DefaultRef, 
                 cancellationToken);
             
@@ -156,7 +156,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
             update.Mapping.Name, currentSha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
 
-        LocalPath clonePath = await _cloneManager.PrepareClone(update.RemoteUri, update.TargetRevision, cancellationToken);
+        // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
+        var remotes = new[]
+        {
+            update.RemoteUri,
+            _sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri,
+        };
+
+        LocalPath clonePath = _cloneManager.PrepareClone(update.Mapping, remotes, update.TargetRevision, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -511,7 +518,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 source.RemoteUri,
                 source.CommitSha);
 
-            var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            var clonePath = _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
 
             foreach ((UnixPath relativePath, UnixPath pathInVmr) in group)
             {

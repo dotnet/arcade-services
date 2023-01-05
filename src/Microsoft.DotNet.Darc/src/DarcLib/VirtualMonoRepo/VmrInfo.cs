@@ -30,7 +30,7 @@ public interface IVmrInfo
     string? PatchesPath { get; set; }
 
     /// <summary>
-    /// Path to the source-manifest.json file 
+    /// Path to the source-mappings.json file 
     /// </summary>
     string? SourceMappingsPath { get; set; }
 
