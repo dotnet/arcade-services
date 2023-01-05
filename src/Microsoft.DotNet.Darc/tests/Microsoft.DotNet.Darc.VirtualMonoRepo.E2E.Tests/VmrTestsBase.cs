@@ -166,6 +166,12 @@ public abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, false, true, _cancellationToken.Token);
     }
 
+    protected async Task<List<string>> CallDarcScan()
+    {
+        var vmrScanner = _serviceProvider.Value.GetRequiredService<IVmrScanner>();
+        return await vmrScanner.ListCloakedFiles(_cancellationToken.Token);
+    }
+
     protected void CopyDirectory(string source, LocalPath destination)
     {
         if (!Directory.Exists(destination))

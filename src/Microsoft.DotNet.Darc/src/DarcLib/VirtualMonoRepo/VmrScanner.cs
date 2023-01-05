@@ -20,8 +20,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrScanner : IVmrScanner
 {
-    private const string _vmrPreserveAttribute = "vmr-preserve";
-
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IVmrInfo _vmrInfo;
@@ -87,6 +85,6 @@ public class VmrScanner : IVmrScanner
         return files;
     }
 
-    private static string ExcludeFile(string file) => $":(attr:!{_vmrPreserveAttribute}){file}";
+    private static string ExcludeFile(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
 }
 

@@ -58,7 +58,11 @@ public class VmrInfo : IVmrInfo
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
-    
+
+    // These git attributes can override cloaking of files when set it individual repositories
+    public const string KeepAttribute = "vmr-preserve";
+    public const string IgnoreAttribute = "vmr-ignore";
+
     public const string ReadmeFileName = "README.md";
     public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";
 
