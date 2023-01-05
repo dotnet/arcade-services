@@ -75,7 +75,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         {
             // Path should be returned the same for all invocations
             // We checkout a default ref
-            path = PrepareCloneInternal(remoteUri,mapping.Name, cancellationToken);
+            path = PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
         _localGitRepo.Checkout(path, checkoutRef);
@@ -112,7 +112,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
             var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
-            repoCloner.Clone(remoteUri, null, clonePath, CheckoutType.NoCheckout, null);
+            repoCloner.Clone(remoteUri, clonePath, null);
         }
         else
         {
