@@ -76,6 +76,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? targetVersion,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
@@ -90,7 +91,12 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
 
-        var rootUpdate = new VmrDependencyUpdate(mapping, mapping.DefaultRemote, targetRevision ?? mapping.DefaultRef, null, null);
+        var rootUpdate = new VmrDependencyUpdate(
+            mapping,
+            mapping.DefaultRemote,
+            targetRevision ?? mapping.DefaultRef,
+            targetVersion,
+            null);
 
         try
         {
@@ -106,7 +112,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     continue;
                 }
 
-                await InitializeRepository(update, cancellationToken);
+                await InitializeRepository(update, additionalRemotes, cancellationToken);
             }
         }
         catch (Exception)
@@ -126,13 +132,22 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
 
-    private async Task InitializeRepository(VmrDependencyUpdate update, CancellationToken cancellationToken)
+    private async Task InitializeRepository(
+        VmrDependencyUpdate update,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
 
+        var remotes = additionalRemotes
+            .Where(r => r.Mapping == update.Mapping.Name)
+            .Select(r => r.RemoteUri)
+            .Prepend(update.RemoteUri)
+            .ToArray();
+
         var clonePath = _cloneManager.PrepareClone(
             update.Mapping,
-            new[] { update.RemoteUri },
+            remotes,
             update.TargetRevision,
             cancellationToken);
 

@@ -42,7 +42,7 @@ public class LocalGitClient : ILocalGitRepo
             }
             else
             {
-                throw new InvalidOperationException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
+                throw new DependencyFileNotFoundException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
             }
         }
 
@@ -376,8 +376,8 @@ public class LocalGitClient : ILocalGitRepo
         {
             _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
 
-            // Remote names don't matter, make sure it's unique
-            remoteName = Guid.NewGuid().ToString();
+            // Remote names don't matter much but should be stable
+            remoteName = StringUtils.GetXxHash64(repoUrl);
             repo.Network.Remotes.Add(remoteName, repoUrl);
         }
 
