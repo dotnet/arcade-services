@@ -14,7 +14,6 @@ using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using Microsoft.Identity.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Task = System.Threading.Tasks.Task;
