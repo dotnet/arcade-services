@@ -157,13 +157,18 @@ public abstract class VmrTestsBase
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit)
     {
+        await CallDarcUpdate(repository, commit, Array.Empty<AdditionalRemote>());
+    }
+
+    protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes)
+    {
         var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, _cancellationToken.Token);
     }
 
     protected void CopyDirectory(string source, LocalPath destination)

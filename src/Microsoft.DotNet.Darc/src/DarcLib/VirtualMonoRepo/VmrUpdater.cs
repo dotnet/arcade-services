@@ -101,6 +101,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? targetVersion,
         bool noSquash,
         bool updateDependencies,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker
@@ -114,9 +115,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
             var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
+
+            var remotes = additionalRemotes
+                .Where(r => r.Mapping == mappingName)
+                .Select(r => r.RemoteUri)
+                .Prepend(mapping.DefaultRemote)
+                .ToArray();
+
             var clonePath = _cloneManager.PrepareClone(
                 mapping,
-                new[] { mapping.DefaultRemote },
+                remotes,
                 targetRevision ?? mapping.DefaultRef, 
                 cancellationToken);
             
@@ -137,11 +145,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (updateDependencies)
         {
-            await UpdateRepositoryRecursively(dependencyUpdate, noSquash, cancellationToken);
+            await UpdateRepositoryRecursively(dependencyUpdate, noSquash, additionalRemotes, cancellationToken);
         }
         else
         {
-            await UpdateRepositoryInternal(dependencyUpdate, noSquash, reapplyVmrPatches: true, cancellationToken);
+            await UpdateRepositoryInternal(dependencyUpdate, noSquash, reapplyVmrPatches: true, additionalRemotes, cancellationToken);
         }
     }
 
@@ -149,6 +157,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyUpdate update,
         bool noSquash,
         bool reapplyVmrPatches,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         var currentSha = GetCurrentVersion(update.Mapping);
@@ -156,12 +165,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
             update.Mapping.Name, currentSha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
 
-        // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
-        var remotes = new[]
-        {
-            update.RemoteUri,
-            _sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri,
-        };
+        var remotes = additionalRemotes
+            .Where(r => r.Mapping == update.Mapping.Name)
+            .Select(r => r.RemoteUri)
+            // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
+            .Prepend(_sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri)
+            .Prepend(update.RemoteUri)
+            .ToArray();
 
         LocalPath clonePath = _cloneManager.PrepareClone(update.Mapping, remotes, update.TargetRevision, cancellationToken);
 
@@ -300,6 +310,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         bool noSquash,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -370,7 +381,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             IReadOnlyCollection<VmrIngestionPatch> patchesToReapply;
             try
             {
-                patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, cancellationToken);
+                patchesToReapply = await UpdateRepositoryInternal(update, noSquash, false, additionalRemotes, cancellationToken);
             }
             catch(Exception)
             {

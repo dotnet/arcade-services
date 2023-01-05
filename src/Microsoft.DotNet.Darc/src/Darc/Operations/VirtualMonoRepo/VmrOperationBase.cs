@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,9 +42,14 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
         IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
-                .Select(a => a.Split(':') is string[] parts && parts.Length == 2
-                    ? (Name: parts[0], Revision: parts[1])
-                    : (a, null));
+            .Select(a => a.Split(':') is string[] parts && parts.Length == 2
+                ? (Name: parts[0], Revision: parts[1])
+                : (a, null));
+
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes = _options.AdditionalRemotes
+            .Select(a => a.Split(':', 2))
+            .Select(parts => new AdditionalRemote(parts[0], parts[1]))
+            .ToImmutableArray();
 
         var success = true;
 
@@ -56,7 +62,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             foreach (var (repoName, revision) in repoNamesWithRevisions)
             {
                 listener.Token.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, repoName, revision, listener.Token);
+                success &= await ExecuteAsync(vmrManager, repoName, revision, additionalRemotes, listener.Token);
             }
         }
         catch (OperationCanceledException)
@@ -76,19 +82,21 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         TVmrManager vmrManager,
         string repoName,
         string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         TVmrManager vmrManager,
         string repoName,
         string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         using (Logger.BeginScope(repoName))
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, repoName, targetRevision, cancellationToken);
+                await ExecuteInternalAsync(vmrManager, repoName, targetRevision, additionalRemotes, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -87,6 +86,51 @@ public class VmrMultipleRemotesTests : VmrTestsBase
         await GitOperations.CommitAll(InstallerRepoPath, "Point VersionDetails.xml to second location");
 
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
+
+        CheckFileContents(dependencyFilePath, "New content only in the second folder now");
+    }
+
+    [Test]
+    public async Task SynchronizationWithAdditionalRemoteTest()
+    {
+        var vmrSourcesDir = VmrPath / VmrInfo.SourcesDir;
+        var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
+
+        /*        
+         *  We will have two copies of a repo in folders dependency and dependency2
+         *  We will create a commit only in the -local folder
+         *  We will synchronize the VMR using --additional-remote to pull the commits from both folders
+         */
+
+        // Prepare dependencies at paths 1 and 2
+        CopyDirectory(DependencyRepoPath, SecondDependencyPath);
+
+        await InitializeRepoAtLastCommit(Constants.DependencyRepoName, DependencyRepoPath);
+
+        var expectedFilesFromRepos = new List<LocalPath>
+        {
+            dependencyFilePath,
+        };
+
+        var expectedFiles = GetExpectedFilesInVmr(VmrPath, new[] { Constants.DependencyRepoName }, expectedFilesFromRepos);
+
+        CheckDirectoryContents(VmrPath, expectedFiles);
+
+        // Prepare a new commit in the second dependency repo
+        await File.WriteAllTextAsync(
+            SecondDependencyPath / Constants.GetRepoFileName(Constants.DependencyRepoName),
+            "New content only in the second folder now");
+        await GitOperations.CommitAll(SecondDependencyPath, "New commit in the second dependency repo");
+
+        // Point installer's VersionDetails.xml to this new repo
+        var newSha = await GitOperations.GetRepoLastCommit(SecondDependencyPath);
+
+        var additionalRemotes = new[]
+        {
+            new AdditionalRemote(Constants.DependencyRepoName,  SecondDependencyPath)
+        };
+
+        await CallDarcUpdate(Constants.DependencyRepoName, newSha, additionalRemotes);
 
         CheckFileContents(dependencyFilePath, "New content only in the second folder now");
     }

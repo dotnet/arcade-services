@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CommandLine;
 using Microsoft.DotNet.Darc.Helpers;
@@ -19,6 +20,9 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
     [Option("tmp", Required = false, HelpText = "Temporary path where intermediate files are stored (e.g. cloned repos, patch files); defaults to usual TEMP.")]
     public string TmpPath { get; set; }
+
+    [Option("add-remote", Required = false, HelpText = "Additional remote URIs (can be repeated) to add to a given mapping in the format [mapping name]:[remote URI], e.g. installer:https://github.com/myfork/installer")]
+    public IEnumerable<string> AdditionalRemotes { get; set; }
 
     public IServiceCollection RegisterServices()
     {

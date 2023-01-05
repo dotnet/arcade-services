@@ -12,6 +12,13 @@ using LibGit2Sharp;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
+public enum CheckoutType
+{
+    CheckoutWithoutSubmodules,
+    CheckoutWithSubmodules,
+    NoCheckout,
+}
+
 public class GitRepoCloner : IGitRepoCloner
 {
     private readonly ILogger _logger;
@@ -29,10 +36,9 @@ public class GitRepoCloner : IGitRepoCloner
     /// <param name="repoUri">Repository uri to clone</param>
     /// <param name="commit">Branch, commit, or tag to checkout</param>
     /// <param name="targetDirectory">Target directory to clone to</param>
-    /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
+    /// <param name="checkoutType">Indicates whether working tree and submodules should be checked out</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    /// <returns></returns>
-    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
+    public void Clone(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory)
     {
         string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
         CloneOptions cloneOptions = new()
@@ -47,7 +53,9 @@ public class GitRepoCloner : IGitRepoCloner
                     Password = _personalAccessToken
                 },
         };
+        
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
+
         try
         {
             _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
@@ -55,6 +63,11 @@ public class GitRepoCloner : IGitRepoCloner
                 repoUri,
                 targetDirectory,
                 cloneOptions);
+
+            if (checkoutType == CheckoutType.NoCheckout)
+            {
+                return;
+            }
 
             CheckoutOptions checkoutOptions = new()
             {
@@ -67,7 +80,7 @@ public class GitRepoCloner : IGitRepoCloner
                 if (commit == null)
                 {
                     commit = localRepo.Head.Reference.TargetIdentifier;
-                    _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
+                    _logger.LogDebug($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                 }
                 _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
                 LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
@@ -83,7 +96,7 @@ public class GitRepoCloner : IGitRepoCloner
                 gitDirectory = repoPath;
             }
 
-            if (checkoutSubmodules)
+            if (checkoutType == CheckoutType.CheckoutWithSubmodules)
             {
                 using var localRepo = new Repository(targetDirectory);
                 CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);

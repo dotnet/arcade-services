@@ -4,8 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO.Hashing;
-using System.Text;
 using System.Threading;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -13,6 +11,8 @@ using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+
+public record AdditionalRemote(string Mapping, string RemoteUri);
 
 public interface IRepositoryCloneManager
 {
@@ -71,17 +71,14 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         }
 
         LocalPath path = null!;
-        bool needsCheckout = false;
         foreach (string remoteUri in remoteUris)
         {
             // Path should be returned the same for all invocations
-            (path, needsCheckout) = PrepareClone(remoteUri, checkoutRef, mapping.Name, cancellationToken);
+            // We checkout a default ref
+            path = PrepareCloneInternal(remoteUri,mapping.Name, cancellationToken);
         }
 
-        if (needsCheckout)
-        {
-            _localGitRepo.Checkout(path, checkoutRef); 
-        }
+        _localGitRepo.Checkout(path, checkoutRef);
 
         return path;
     }
@@ -91,62 +88,40 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         string checkoutRef,
         CancellationToken cancellationToken)
     {
-        var result = PrepareClone(repoUri, checkoutRef, GetHash(repoUri), cancellationToken);
-
-        if (result.NeedsCheckout)
-        {
-            _localGitRepo.Checkout(result.Path, checkoutRef);
-        }
-
-        return result.Path;
+        // We store clones in directories named as a hash of the repo URI
+        var cloneDir = StringUtils.GetXxHash64(repoUri);
+        var path = PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
+        _localGitRepo.Checkout(path, checkoutRef);
+        return path;
     }
 
-    private (LocalPath Path, bool NeedsCheckout) PrepareClone(
-        string remoteUri,
-        string cloneRef,
-        string dirName,
-        CancellationToken cancellationToken)
+    private LocalPath PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         if (_upToDateRepos.Contains(remoteUri))
         {
-            var path = _clones[remoteUri];
-            cancellationToken.ThrowIfCancellationRequested();
-            return (path, true);
+            return _clones[remoteUri];
         }
 
         var clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
             ? cachedPath
             : _vmrInfo.TmpPath / dirName;
 
-        bool needsCheckout;
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
             var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
-            repoCloner.Clone(remoteUri, cloneRef, clonePath, checkoutSubmodules: false, null);
-            needsCheckout = false;
+            repoCloner.Clone(remoteUri, null, clonePath, CheckoutType.NoCheckout, null);
         }
         else
         {
             _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
             _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, forceFetch: true);
-            needsCheckout = true;
         }
 
         _upToDateRepos.Add(remoteUri);
         _clones[remoteUri] = clonePath;
-        return (clonePath, needsCheckout);
-    }
-
-    // We store clones in directories named as a hash of the repo URI
-    private static string GetHash(string input)
-    {
-        var hasher = new XxHash64(0);
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        hasher.Append(inputBytes);
-        byte[] hashBytes = hasher.GetCurrentHash();
-        return Convert.ToHexString(hashBytes);
+        return clonePath;
     }
 }

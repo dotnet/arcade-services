@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -24,7 +25,15 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
         IVmrUpdater vmrManager,
         string repoName,
         string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
         =>
-        await vmrManager.UpdateRepository(repoName, targetRevision, null, _options.NoSquash, _options.Recursive, cancellationToken);
+        await vmrManager.UpdateRepository(
+            repoName,
+            targetRevision,
+            null,
+            _options.NoSquash,
+            _options.Recursive,
+            additionalRemotes,
+            cancellationToken);
 }
