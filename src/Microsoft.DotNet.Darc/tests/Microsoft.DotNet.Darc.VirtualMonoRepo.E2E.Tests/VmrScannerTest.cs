@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using FluentAssertions;
 using Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -20,48 +21,40 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 public class VmrScannerTest : VmrTestsBase
 {
     [Test]
-    public async Task VmrScannerFindsNothingTest()
+    public async Task VmrScannerTests()
     {
+        var testFileName = "test.dll";
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
+        // Test the scanner when there are no cloacked files to be found
         var list = await CallDarcScan();
-        Assert.AreEqual(0, list.Count);
-    }
 
-    [Test]
-    public async Task VmrScannerVmrPreservedTest()
-    {
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
+        list.Count().Should().Be(0);
 
         var newFilePath = VmrPath / "src" / Constants.ProductRepoName / "src";
         Directory.CreateDirectory(newFilePath);
-        File.WriteAllText(newFilePath / "test.dll", "this is a test file");
+        File.WriteAllText(newFilePath / testFileName, "this is a test file");
+        await GitOperations.CommitAll(VmrPath, "Commit dll file");
+
+        // Test the scanner when there is a cloacked file to be found
+        list = await CallDarcScan();
+
+        list.Count().Should().Be(1);
+        var path = new NativePath(list.First());
+        path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
+
         File.WriteAllText(newFilePath / ".gitattributes", $"*.dll {VmrInfo.KeepAttribute}");
-        await GitOperations.CommitAll(VmrPath, "Commit dll file");
+        await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
 
-        var list = await CallDarcScan();
-        Assert.AreEqual(0, list.Count);
-    }
+        // Test the scanner when the .gitattributes file is preserving the cloacked file
+        list = await CallDarcScan();
 
-    [Test]
-    public async Task VmrScannerFindsFileTest()
-    {
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        var newFilePath = VmrPath / "src" / Constants.ProductRepoName / "src";
-        Directory.CreateDirectory(newFilePath);
-        File.WriteAllText(newFilePath / "test.dll", "this is a test file");
-        await GitOperations.CommitAll(VmrPath, "Commit dll file");
-
-        var list = await CallDarcScan();
-        Assert.AreEqual(1, list.Count);
+        list.Count().Should().Be(0);
     }
 
     protected override async Task CopyReposForCurrentTest()
     {
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
-
-        await GitOperations.CommitAll(ProductRepoPath, "First commit");
     }
 
     protected async override Task CopyVmrForCurrentTest()
