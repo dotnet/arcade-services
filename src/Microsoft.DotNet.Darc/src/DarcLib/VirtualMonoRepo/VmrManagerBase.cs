@@ -165,7 +165,10 @@ public abstract class VmrManagerBase : IVmrManager
     /// <summary>
     /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependencies(VmrDependencyUpdate root, CancellationToken cancellationToken)
+    protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependencies(
+        VmrDependencyUpdate root,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
         {
@@ -181,8 +184,41 @@ public abstract class VmrManagerBase : IVmrManager
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var repoDependencies = (await GetRepoDependencies(repo.RemoteUri, repo.TargetRevision))
-                .Where(dep => dep.SourceBuild is not null);
+            var remotes = additionalRemotes
+                .Where(r => r.Mapping == repo.Mapping.Name)
+                .Select(r => r.RemoteUri)
+                .Prepend(repo.RemoteUri)
+                .ToArray();
+
+            IEnumerable<DependencyDetail>? repoDependencies = null;
+            foreach (var remoteUri in remotes)
+            {
+                try
+                {
+                    repoDependencies = (await GetRepoDependencies(remoteUri, repo.TargetRevision))
+                        .Where(dep => dep.SourceBuild is not null);
+                    break;
+                }
+                catch
+                {
+                    _logger.LogDebug("Could not find {file} for {mapping}:{revision} in {remote}",
+                        VersionFiles.VersionDetailsXml,
+                        repo.Mapping.Name,
+                        repo.TargetRevision,
+                        remoteUri);
+                }
+            }
+
+            if (repoDependencies is null)
+            {
+                var message = string.Format("Could not find {file} for {mapping}:{revision} in any of the remotes: {remotes}",
+                    VersionFiles.VersionDetailsXml,
+                    repo.Mapping.Name,
+                    repo.TargetRevision,
+                    string.Join(", ", remotes));
+                
+                throw new Exception(message);
+            }
 
             foreach (var dependency in repoDependencies)
             {
