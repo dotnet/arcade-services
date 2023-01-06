@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -9,6 +9,11 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
 {
+    [Option("additional-remotes", Required = false, Separator = ',', HelpText =
+        "Comma separated list of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
+        "Example: installer:https://github.com/myfork/installer,sdk:/local/path/to/sdk")]
+    public string AdditionalRemotes { get; set; }
+    
     [Value(0, Required = true, HelpText =
         "Repository names in the form of NAME or NAME:REVISION where REVISION is a commit SHA or other git reference (branch, tag). " +
         "Omitting REVISION will synchronize the repo to current HEAD. Pass 'all' to update all repositories.")]
