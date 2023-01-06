@@ -37,8 +37,6 @@ public abstract class VmrManagerBase : IVmrManager
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    public IReadOnlyCollection<SourceMapping> Mappings => _dependencyInfo.Mappings;
-
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
