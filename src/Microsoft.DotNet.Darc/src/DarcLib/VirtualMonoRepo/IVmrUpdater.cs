@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrUpdater : IVmrManager
+public interface IVmrUpdater
 {
     /// <summary>
     /// Updates repo in the VMR to given revision.

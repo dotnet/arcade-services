@@ -10,7 +10,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrInitializer : IVmrManager
+public interface IVmrInitializer
 {
     /// <summary>
     /// Initializes new repo that hasn't been synchronized into the VMR yet.

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public abstract class VmrManagerBase : IVmrManager
+public abstract class VmrManagerBase
 {
     // String used to mark the commit as automated
     protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
