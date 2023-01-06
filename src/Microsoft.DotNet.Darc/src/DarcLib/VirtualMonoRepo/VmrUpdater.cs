@@ -320,7 +320,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependencies(rootUpdate, cancellationToken)).ToList();
+        var updates = (await GetAllDependencies(rootUpdate, additionalRemotes, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping))

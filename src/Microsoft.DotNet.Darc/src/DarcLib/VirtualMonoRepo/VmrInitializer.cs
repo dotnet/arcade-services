@@ -101,7 +101,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-            ? await GetAllDependencies(rootUpdate, cancellationToken)
+            ? await GetAllDependencies(rootUpdate, additionalRemotes, cancellationToken)
             : new[] { rootUpdate };
 
             foreach (var update in updates)

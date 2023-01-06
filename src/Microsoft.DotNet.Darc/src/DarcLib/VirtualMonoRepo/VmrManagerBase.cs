@@ -163,7 +163,10 @@ public abstract class VmrManagerBase
     /// <summary>
     /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
     /// </summary>
-    protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependencies(VmrDependencyUpdate root, CancellationToken cancellationToken)
+    protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependencies(
+        VmrDependencyUpdate root,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
         {
@@ -179,8 +182,39 @@ public abstract class VmrManagerBase
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var repoDependencies = (await GetRepoDependencies(repo.RemoteUri, repo.TargetRevision))
-                .Where(dep => dep.SourceBuild is not null);
+            var remotes = additionalRemotes
+                .Where(r => r.Mapping == repo.Mapping.Name)
+                .Select(r => r.RemoteUri)
+                .Prepend(repo.RemoteUri)
+                .ToArray();
+
+            IEnumerable<DependencyDetail>? repoDependencies = null;
+            foreach (var remoteUri in remotes)
+            {
+                try
+                {
+                    repoDependencies = (await GetRepoDependencies(remoteUri, repo.TargetRevision))
+                        .Where(dep => dep.SourceBuild is not null);
+                    break;
+                }
+                catch
+                {
+                    _logger.LogDebug("Could not find {file} for {mapping}:{revision} in {remote}",
+                        VersionFiles.VersionDetailsXml,
+                        repo.Mapping.Name,
+                        repo.TargetRevision,
+                        remoteUri);
+                }
+            }
+
+            if (repoDependencies is null)
+            {
+                _logger.LogInformation(
+                    "Repository {repository} does not have {file} file, skipping dependency detection.",
+                    repo.Mapping.Name,
+                    VersionFiles.VersionDetailsXml);
+                continue;
+            }
 
             foreach (var dependency in repoDependencies)
             {
@@ -230,20 +264,7 @@ public abstract class VmrManagerBase
 
         var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
 
-        try
-        {
-            return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
-        }
-        catch (DependencyFileNotFoundException e)
-        {
-            _logger.LogInformation(
-                $"Repository at {{remoteUri}} does not have {{file}} file, " +
-                $"skipping dependency detection.{Environment.NewLine}{{error}}",
-                remoteRepoUri,
-                VersionFiles.VersionDetailsXml,
-                e.Message);
-            return Array.Empty<DependencyDetail>();
-        }
+        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
