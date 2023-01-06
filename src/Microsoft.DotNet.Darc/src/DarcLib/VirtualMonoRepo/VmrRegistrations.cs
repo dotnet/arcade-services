@@ -50,13 +50,13 @@ public static class VmrRegistrations
     {
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ILocalGitRepo>(sp => ActivatorUtilities.CreateInstance<LocalGitClient>(sp, gitLocation));
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<IVmrManager>>());
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
-        services.TryAddTransient<IVmrDependencyTracker, VmrDependencyTracker>();
+        services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
