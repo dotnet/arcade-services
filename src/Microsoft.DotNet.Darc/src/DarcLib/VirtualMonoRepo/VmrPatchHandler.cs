@@ -24,10 +24,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrPatchHandler : IVmrPatchHandler
 {
-    // These git attributes can override cloaking of files when set it individual repositories
-    private const string KeepAttribute = "vmr-preserve";
-    private const string IgnoreAttribute = "vmr-ignore";
-
     /// <summary>
     /// Matches output of `git apply --numstat` which lists files contained in a patch file.
     /// Example output:
@@ -140,8 +136,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--",
         };
 
-        args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{IgnoreAttribute}){p}"));
-        args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{KeepAttribute}){p}"));
+        args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){p}"));
+        args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}"));
 
         // Ignore submodules in the diff, they will be inlined via their own diffs
         if (submoduleChanges.Any())
