@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : IVmrManager
+internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : notnull
 {
     private readonly VmrSyncCommandLineOptions _options;
 
