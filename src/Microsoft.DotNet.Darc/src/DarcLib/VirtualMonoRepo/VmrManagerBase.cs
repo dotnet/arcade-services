@@ -211,13 +211,11 @@ public abstract class VmrManagerBase : IVmrManager
 
             if (repoDependencies is null)
             {
-                var message = string.Format("Could not find {file} for {mapping}:{revision} in any of the remotes: {remotes}",
-                    VersionFiles.VersionDetailsXml,
+                _logger.LogInformation(
+                    "Repository {repository} does not have {file} file, skipping dependency detection.",
                     repo.Mapping.Name,
-                    repo.TargetRevision,
-                    string.Join(", ", remotes));
-                
-                throw new Exception(message);
+                    VersionFiles.VersionDetailsXml);
+                continue;
             }
 
             foreach (var dependency in repoDependencies)
@@ -268,20 +266,7 @@ public abstract class VmrManagerBase : IVmrManager
 
         var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
 
-        try
-        {
-            return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
-        }
-        catch (DependencyFileNotFoundException e)
-        {
-            _logger.LogInformation(
-                $"Repository at {{remoteUri}} does not have {{file}} file, " +
-                $"skipping dependency detection.{Environment.NewLine}{{error}}",
-                remoteRepoUri,
-                VersionFiles.VersionDetailsXml,
-                e.Message);
-            return Array.Empty<DependencyDetail>();
-        }
+        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
