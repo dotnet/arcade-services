@@ -105,8 +105,7 @@ public class VmrScanner : IVmrScanner
 
         await Task.WhenAll(taskList);
 
-        binaryFiles = taskList.SelectMany(task => task.Result).ToList();
-        return binaryFiles;
+        return taskList.SelectMany(task => task.Result).ToList();
     }
 
     private async Task<IEnumerable<string>> ScanRepositoryForBinaryFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
@@ -128,6 +127,12 @@ public class VmrScanner : IVmrScanner
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(_binaryFileMarker))
             .Select(line => line.Split("\t").Last());
+
+
+        foreach (var file in files)
+        {
+            _logger.LogWarning("Found binary file {file} in {repo} repo", file, sourceMapping.Name);
+        }
 
         return files;
     }
