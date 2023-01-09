@@ -25,8 +25,8 @@ public class VmrScanner : IVmrScanner
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger<VmrScanner> _logger;
 
+    // Git output from the diff --numstat command, when it finds a binary file
     private const string _binaryFileMarker = "-\t-";
-    private const string _pngFileMarker = ".png";
 
     public VmrScanner(
         IVmrDependencyTracker dependencyTracker,
@@ -45,16 +45,16 @@ public class VmrScanner : IVmrScanner
         await _dependencyTracker
             .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
 
-        var cloakedFiles = new List<string>();
+        var taskList = new List<Task<string[]>>();
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            cloakedFiles.AddRange(await ScanRepositoryForCloackedFiles(sourceMapping, cancellationToken));
+            taskList.Add(ScanRepositoryForCloackedFiles(sourceMapping, cancellationToken));
         }
 
-        return cloakedFiles;
+        await Task.WhenAll(taskList);
+
+        return taskList.SelectMany(task => task.Result).ToList();
     }
 
     private async Task<string[]> ScanRepositoryForCloackedFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
@@ -71,7 +71,7 @@ public class VmrScanner : IVmrScanner
 
         foreach (var exclude in sourceMapping.Exclude)
         {
-            args.Add(ExcludeFile(baseExcludePath / exclude));
+            args.Add(ExcludeFile(baseExcludePath / exclude, VmrInfo.KeepAttribute));
         }
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
@@ -82,13 +82,13 @@ public class VmrScanner : IVmrScanner
 
         foreach (var file in files)
         {
-            _logger.LogWarning("File {file} is cloaked but present in the VMR", file);
+            _logger.LogWarning("File in {file} is cloaked but present in the VMR", file);
         }
 
         return files;
     }
 
-    private static string ExcludeFile(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+    private static string ExcludeFile(string file, string gitAttribute) => $":(attr:!{gitAttribute}){file}";
 
     public async Task<List<string>> ListBinaryFiles(CancellationToken cancellationToken)
     {
@@ -96,19 +96,28 @@ public class VmrScanner : IVmrScanner
             .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
 
         var binaryFiles = new List<string>();
+        var taskList = new List<Task<IEnumerable<string>>>();
 
-        await ScanRepositoryForBinaryFiles(_dependencyTracker.Mappings.First(), cancellationToken);
-        return new List<string>();
+        foreach (var mapping in _dependencyTracker.Mappings)
+        {
+            taskList.Add(ScanRepositoryForBinaryFiles(mapping, cancellationToken));
+        }
+
+        await Task.WhenAll(taskList);
+
+        binaryFiles = taskList.SelectMany(task => task.Result).ToList();
+        return binaryFiles;
     }
 
     private async Task<IEnumerable<string>> ScanRepositoryForBinaryFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
         var args = new string[]{
             "diff",
             Constants.EmptyGitObject,
             "--numstat",
-            _vmrInfo.GetRepoSourcesPath(sourceMapping)
+            ExcludeFile(_vmrInfo.GetRepoSourcesPath(sourceMapping), VmrInfo.VmrIgnoreBinaryAttribute)
         };
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
@@ -118,11 +127,9 @@ public class VmrScanner : IVmrScanner
         var files = ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(_binaryFileMarker))
-            .Select(line => line.Split("\t").Last())
-            .Where(line => !line.EndsWith(_pngFileMarker, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+            .Select(line => line.Split("\t").Last());
 
-        return new string[2];
+        return files;
     }
 }
 

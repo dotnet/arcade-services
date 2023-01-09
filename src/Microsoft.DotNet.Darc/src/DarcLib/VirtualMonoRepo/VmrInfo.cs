@@ -62,6 +62,7 @@ public class VmrInfo : IVmrInfo
     // These git attributes can override cloaking of files when set it individual repositories
     public const string KeepAttribute = "vmr-preserve";
     public const string IgnoreAttribute = "vmr-ignore";
+    public const string VmrIgnoreBinaryAttribute = "vmr-binary-ignore";
 
     public const string ReadmeFileName = "README.md";
     public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";

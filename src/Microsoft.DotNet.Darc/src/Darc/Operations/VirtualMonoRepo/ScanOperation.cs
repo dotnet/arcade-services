@@ -13,8 +13,13 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class ScanOperation : Operation
 {
+    private readonly bool _scanCloaked;
+    private readonly bool _scanBinary;
+
     public ScanOperation(ScanCommandLineOptions options) : base(options, options.RegisterServices())
     {
+        _scanBinary = options.Binary;
+        _scanCloaked = options.Cloaked;
     }
 
     public override async Task<int> ExecuteAsync()
@@ -22,8 +27,16 @@ internal class ScanOperation : Operation
         var vmrScanner = Provider.GetRequiredService<IVmrScanner>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        //await vmrScanner.ListCloakedFiles(listener.Token);
-        await vmrScanner.ListBinaryFiles(listener.Token);
+        if (_scanCloaked)
+        {
+            await vmrScanner.ListCloakedFiles(listener.Token);
+        }
+
+        if (_scanBinary)
+        {
+            await vmrScanner.ListBinaryFiles(listener.Token);
+        }
+
         return 0;
     }
 }
