@@ -22,7 +22,8 @@ internal class ScanOperation : Operation
         var vmrScanner = Provider.GetRequiredService<IVmrScanner>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        await vmrScanner.ListCloakedFiles(listener.Token);
+        //await vmrScanner.ListCloakedFiles(listener.Token);
+        await vmrScanner.ListBinaryFiles(listener.Token);
         return 0;
     }
 }

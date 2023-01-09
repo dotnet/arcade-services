@@ -25,6 +25,9 @@ public class VmrScanner : IVmrScanner
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger<VmrScanner> _logger;
 
+    private const string _binaryFileMarker = "-\t-";
+    private const string _pngFileMarker = ".png";
+
     public VmrScanner(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
@@ -48,13 +51,13 @@ public class VmrScanner : IVmrScanner
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            cloakedFiles.AddRange(await ScanRepository(sourceMapping, cancellationToken));
+            cloakedFiles.AddRange(await ScanRepositoryForCloackedFiles(sourceMapping, cancellationToken));
         }
 
         return cloakedFiles;
     }
 
-    private async Task<string[]> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
+    private async Task<string[]> ScanRepositoryForCloackedFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
         var args = new List<string>
@@ -86,5 +89,40 @@ public class VmrScanner : IVmrScanner
     }
 
     private static string ExcludeFile(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+
+    public async Task<List<string>> ListBinaryFiles(CancellationToken cancellationToken)
+    {
+        await _dependencyTracker
+            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+
+        var binaryFiles = new List<string>();
+
+        await ScanRepositoryForBinaryFiles(_dependencyTracker.Mappings.First(), cancellationToken);
+        return new List<string>();
+    }
+
+    private async Task<IEnumerable<string>> ScanRepositoryForBinaryFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
+        var args = new string[]{
+            "diff",
+            Constants.EmptyGitObject,
+            "--numstat",
+            _vmrInfo.GetRepoSourcesPath(sourceMapping)
+        };
+
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
+
+        ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
+
+        var files = ret.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith(_binaryFileMarker))
+            .Select(line => line.Split("\t").Last())
+            .Where(line => !line.EndsWith(_pngFileMarker, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return new string[2];
+    }
 }
 
