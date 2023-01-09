@@ -40,8 +40,7 @@
     <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
     <Error Text="GrafanaKeyVaultName is required" Condition=" '$(GrafanaKeyVaultName)' == '' "/>
-    <Error Text="GrafanaKeyVaultServicePrincipalId is required" Condition=" '$(GrafanaKeyVaultServicePrincipalId)' == '' "/>
-    <Error Text="GrafanaKeyVaultServicePrincipalSecret is required" Condition=" '$(GrafanaKeyVaultServicePrincipalSecret)' == '' "/>
+    <Error Text="GrafanaKeyVaultConnectionString is required" Condition=" '$(GrafanaKeyVaultConnectionString)' == '' "/>
     <Error Text="GrafanaEnvironment is required" Condition=" '$(GrafanaEnvironment)' == '' "/>
     <Error Text="ParametersFile is required" Condition=" '$(ParametersFile)' == '' "/>
 
@@ -52,8 +51,7 @@
       Host="$(GrafanaHost)"
       AccessToken="$(GrafanaAccessToken)"
       KeyVaultName="$(GrafanaKeyVaultName)"
-      KeyVaultServicePrincipalId="$(GrafanaKeyVaultServicePrincipalId)"
-      KeyVaultServicePrincipalSecret="$(GrafanaKeyVaultServicePrincipalSecret)"
+      KeyVaultConnectionString="$(GrafanaKeyVaultConnectionString)"
       Tag="$(GrafanaDashboardTag)"
       Environment="$(GrafanaEnvironment)"
       ParametersFile="$(ParametersFile)"

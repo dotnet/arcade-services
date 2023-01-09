@@ -4,13 +4,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
@@ -22,21 +22,18 @@ namespace Microsoft.DotNet.Monitoring.Sdk;
 
 public sealed class DeployPublisher : DeployToolBase, IDisposable
 {
-    private readonly string _tenantId = "72f988bf-86f1-41af-91ab-2d7cd011db47"; // microsoft.onmicrosoft.com
     private readonly string _keyVaultName;
-    private readonly string _servicePrincipalId;
-    private readonly string _servicePrincipalSecret;
-    private readonly Lazy<SecretClient> _keyVault;
+    private readonly string _keyVaultConnectionString;
+    private readonly Lazy<KeyVaultClient> _keyVault;
     private readonly string _environment;
     private readonly string _parameterFile;
 
-    private SecretClient KeyVault => _keyVault.Value;
+    private KeyVaultClient KeyVault => _keyVault.Value;
 
     public DeployPublisher(
         GrafanaClient grafanaClient,
         string keyVaultName,
-        string servicePrincipalId,
-        string servicePrincipalSecret,
+        string keyVaultConnectionString,
         string sourceTagValue,
         string dashboardDirectory,
         string datasourceDirectory,
@@ -47,10 +44,9 @@ public sealed class DeployPublisher : DeployToolBase, IDisposable
         grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
     {
         _keyVaultName = keyVaultName;
-        _servicePrincipalId = servicePrincipalId;
-        _servicePrincipalSecret = servicePrincipalSecret;
+        _keyVaultConnectionString = keyVaultConnectionString;
         _environment = environment;
-        _keyVault = new Lazy<SecretClient>(GetKeyVaultClient);
+        _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
         _parameterFile = parametersFile;
     }
         
@@ -59,7 +55,11 @@ public sealed class DeployPublisher : DeployToolBase, IDisposable
 
     public void Dispose()
     {
-        // Nothing to dispose of
+        // If it's not already created, don't create it just to dispose it
+        if (_keyVault.IsValueCreated)
+        {
+            _keyVault.Value.Dispose();
+        }
     }
 
     public async Task PostToGrafanaAsync()
@@ -273,15 +273,13 @@ public sealed class DeployPublisher : DeployToolBase, IDisposable
 
     private async Task<string> GetSecretAsync(string name)
     {
-        KeyVaultSecret result = await KeyVault.GetSecretAsync(name).ConfigureAwait(false);
+        SecretBundle result = await KeyVault.GetSecretAsync($"https://{_keyVaultName}.vault.azure.net/", name).ConfigureAwait(false);
         return result.Value;
     }
 
-
-    private SecretClient GetKeyVaultClient()
+    private KeyVaultClient GetKeyVaultClient()
     {
-        Uri vaultUri = new($"https://{_keyVaultName}.vault.azure.net/");
-        TokenCredential credential = new ClientSecretCredential(_tenantId, _servicePrincipalId, _servicePrincipalSecret);
-        return new SecretClient(vaultUri, credential);
+        var tokenProvider = new AzureServiceTokenProvider(_keyVaultConnectionString);
+        return new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
     }
 }

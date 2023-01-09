@@ -32,10 +32,7 @@ public class MonitoringPublish : BuildTask
     public string KeyVaultName { get; set; }
 
     [Required]
-    public string KeyVaultServicePrincipalId { get; set; }
-
-    [Required]
-    public string KeyVaultServicePrincipalSecret { get; set; }
+    public string KeyVaultConnectionString { get; set; }
 
     [Required]
     public string Tag { get; set; }
@@ -58,8 +55,7 @@ public class MonitoringPublish : BuildTask
         using (var deploy = new DeployPublisher(
                    grafanaClient: client,
                    keyVaultName: KeyVaultName,
-                   servicePrincipalId: KeyVaultServicePrincipalId,
-                   servicePrincipalSecret: KeyVaultServicePrincipalSecret,
+                   keyVaultConnectionString: KeyVaultConnectionString,
                    sourceTagValue: Tag,
                    dashboardDirectory: DashboardDirectory,
                    datasourceDirectory: DataSourceDirectory,
