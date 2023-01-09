@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
 using System.Linq;

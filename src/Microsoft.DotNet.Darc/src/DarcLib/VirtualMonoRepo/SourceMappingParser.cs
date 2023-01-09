@@ -10,13 +10,15 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface ISourceMappingParser
 {
-    Task<IReadOnlyCollection<SourceMapping>> ParseMappings();
+    Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath);
 }
 
 /// <summary>
@@ -33,15 +35,14 @@ public class SourceMappingParser : ISourceMappingParser
         _vmrInfo = vmrInfo;
     }
 
-    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings()
+    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath)
     {
-        var mappingFilePath = _vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {VmrInfo.SourceMappingsFileName} file in the VMR directory",
+                $"Failed to find {VmrInfo.SourceMappingsFileName} file.",
                 mappingFilePath);
         }
 
@@ -57,6 +58,7 @@ public class SourceMappingParser : ISourceMappingParser
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
         _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
+        _vmrInfo.SourceMappingsPath = settings.SourceMappingsPath;
 
         if (settings.AdditionalMappings is not null)
         {
@@ -134,38 +136,5 @@ public class SourceMappingParser : ISourceMappingParser
         }
 
         return relativePath;
-    }
-
-    private class SourceMappingFile
-    {
-        public SourceMappingSetting Defaults { get; set; } = new()
-        {
-            DefaultRef = "main",
-            Include = Array.Empty<string>(),
-            Exclude = Array.Empty<string>(),
-        };
-
-        public string? PatchesPath { get; set; }
-
-        public List<SourceMappingSetting> Mappings { get; set; } = new();
-
-        public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
-    }
-
-    private class SourceMappingSetting
-    {
-        public string? Name { get; set; }
-        public string? Version { get; set; }
-        public string? DefaultRemote { get; set; }
-        public string? DefaultRef { get; set; }
-        public string[]? Include { get; set; }
-        public string[]? Exclude { get; set; }
-        public bool IgnoreDefaults { get; set; }
-    }
-
-    private class AdditionalMappingSetting
-    {
-        public string? Source { get; set; }
-        public string? Destination { get; set; }
     }
 }

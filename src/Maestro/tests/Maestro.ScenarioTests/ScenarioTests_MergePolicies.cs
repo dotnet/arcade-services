@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
-using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.TeamFoundation.Build.WebApi;
 using NUnit.Framework;
 using Build = Microsoft.DotNet.Maestro.Client.Models.Build;
 

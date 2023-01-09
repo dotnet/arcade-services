@@ -48,7 +48,7 @@ public abstract class LocalPath
 
     protected abstract string NormalizePath(string s);
 
-    private string Combine(string left, string right)
+    protected string Combine(string left, string right)
     {
         var slashCount = (left.EndsWith(_separator) ? 1 : 0) + (right.StartsWith(_separator) ? 1 : 0);
 
@@ -79,6 +79,9 @@ public class NativePath : LocalPath
     {
     }
 
+    public static NativePath operator /(NativePath left, string right)
+        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
+
     protected override LocalPath CreateMergedPath(string path) => new NativePath(path, false);
 
     protected override string NormalizePath(string s)
@@ -98,6 +101,9 @@ public class UnixPath : LocalPath
     {
     }
 
+    public static UnixPath operator /(UnixPath left, string right)
+        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
+
     protected override LocalPath CreateMergedPath(string path) => new UnixPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
@@ -115,6 +121,9 @@ public class WindowsPath : LocalPath
     private WindowsPath(string path, bool normalize) : base(path, '\\', normalize)
     {
     }
+
+    public static WindowsPath operator /(WindowsPath left, string right)
+        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
 
     protected override LocalPath CreateMergedPath(string path) => new WindowsPath(path, false);
 

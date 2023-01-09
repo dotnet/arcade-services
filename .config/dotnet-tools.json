@@ -9,7 +9,7 @@
       ]
     },
     "microsoft.dnceng.secretmanager": {
-      "version": "1.1.0-beta.22174.7",
+      "version": "1.1.0-beta.22580.1",
       "commands": [
         "secret-manager"
       ]

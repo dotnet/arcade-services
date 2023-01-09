@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -97,7 +96,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
+            .Returns((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
 
         _processManager.Reset();
         _processManager
@@ -140,7 +139,7 @@ public class VmrPatchHandlerTests
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
-        await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
+        await _patchHandler.ApplyPatch(patch, new CancellationToken());
 
         // Verify
         VerifyGitCall(new List<string>
@@ -158,64 +157,6 @@ public class VmrPatchHandlerTests
             "checkout",
             $"src/{IndividualRepoName}",
         });
-    }
-
-    [Test]
-    public async Task PatchedFilesAreRestoredTest()
-    {
-        // Setup
-        var patch = $"{_patchDir}/test-repo.patch";
-
-        var patchedFiles = new[]
-        {
-            "src/roslyn-analyzers/eng/Versions.props",
-            "src/foo/bar.xml",
-        };
-
-        _fileSystem
-            .Setup(x => x.FileExists($"{_clonePath}/{patchedFiles[0]}"))
-            .Returns(true);
-
-        _fileSystem
-            .Setup(x => x.FileExists($"{_clonePath}/{patchedFiles[1]}"))
-            .Returns(false);
-
-        _fileSystem
-            .SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Length == 1024 && x.Exists));
-
-        SetupGitCall(
-            new[] { "apply", "--numstat", patch },
-            new ProcessExecutionResult()
-            {
-                ExitCode = 0,
-                StandardOutput = $"""
-                    0       14      {patchedFiles[0]}
-                    -        -      {patchedFiles[1]}
-                    """,
-            },
-            _clonePath);
-
-        // Act
-        await _patchHandler.RestoreFilesFromPatch(
-            _testRepoMapping,
-            new UnixPath("/tmp/" + IndividualRepoName),
-            patch,
-            CancellationToken.None);
-
-        // Verify
-        _localGitRepo.Verify(x => x.Stage(_vmrPath, "src/" + IndividualRepoName), Times.Once);
-
-        // Restores a version
-        _fileSystem
-            .Verify(x => x.CopyFile(
-                _clonePath + '/' + patchedFiles[0],
-                _vmrPath + "/src/test-repo/" + patchedFiles[0],
-                true),
-              Times.Once);
-
-        // File is added by the patch => restore means deleting it
-        _fileSystem
-            .Verify(x => x.DeleteFile(_vmrPath + "/src/test-repo/" + patchedFiles[1]), Times.Once);
     }
 
     [Test]
@@ -273,6 +214,19 @@ public class VmrPatchHandlerTests
                 ($"src/{_testRepoMapping.Name}/SourceBuild/tarball/content", null),
                 ($"src/{_testRepoMapping.Name}/eng/common", "eng/common"),
             });
+
+        _fileSystem
+            .Setup(x => x.DirectoryExists($"{_clonePath}/SourceBuild/tarball/content"))
+            .Returns(true);
+        _fileSystem
+            .Setup(x => x.DirectoryExists($"{_clonePath}/eng/common"))
+            .Returns(true);
+        _fileSystem
+            .Setup(x => x.GetFileName($"src/{_testRepoMapping.Name}/SourceBuild/tarball/content"))
+            .Returns("content");
+        _fileSystem
+            .Setup(x => x.GetFileName($"src/{_testRepoMapping.Name}/eng/common"))
+            .Returns("common");
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -343,7 +297,7 @@ public class VmrPatchHandlerTests
 
         patches.Should().Equal(
             new VmrIngestionPatch(expectedPatchName1, "src/" + IndividualRepoName),
-            new VmrIngestionPatch(expectedPatchName2, null),
+            new VmrIngestionPatch(expectedPatchName2, (string?)null),
             new VmrIngestionPatch(expectedPatchName3, "eng/common"));
     }
 
@@ -859,7 +813,7 @@ public class VmrPatchHandlerTests
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
-        await _patchHandler.ApplyPatch(_testRepoMapping, patch, new CancellationToken());
+        await _patchHandler.ApplyPatch(patch, new CancellationToken());
 
         // Verify
         VerifyGitCall(new List<string>
