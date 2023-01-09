@@ -47,17 +47,13 @@ internal static class LibGit2SharpHelpers
                 log.LogDebug($"Post-fetch, trying to checkout {repo.Info.WorkingDirectory} at {commit} again");
                 Commands.Checkout(repo, commit, options);
             }
-            catch (Exception ex) when (ex is InvalidSpecificationException
-                                       || ex is NameConflictException
-                                       || ex is LibGit2SharpException)
-            {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({ex})." +
-                               "  Attempting to checkout by individual files.");
-                SafeCheckoutByIndividualFiles(repo, commit, options, log);
-            }
             catch (Exception ex)
             {
-                log.LogWarning($"Couldn't check out one or more files ({ex})." +
+                var isDueToPathLength = ex is InvalidSpecificationException
+                    || ex is NameConflictException
+                    || ex is LibGit2SharpException;
+
+                log.LogWarning($"Couldn't check out one or more files{(isDueToPathLength ? ", possibly due to path length limitations" : "")} ({ex})." +
                                "  Attempting to checkout by individual files.");
                 SafeCheckoutByIndividualFiles(repo, commit, options, log);
             }
