@@ -261,6 +261,13 @@ public partial class ServiceHost
 
     public static void ConfigureLoggingServices(IServiceCollection services)
     {
+        services.TryAddSingleton(InitializeEnvironment());
+        services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
+        services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
+#pragma warning disable 618 // use of obsolete symbol: some of the packages we are using still resolve this so we need to inject it
+        services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+        services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+#pragma warning restore 618
         ConfigureApplicationInsights(services);
         services.AddLogging(
             builder =>
@@ -272,13 +279,6 @@ public partial class ServiceHost
     public static void ConfigureDefaultServices(IServiceCollection services)
     {
         services.AddOptions();
-        services.TryAddSingleton(InitializeEnvironment());
-        services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
-        services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
-#pragma warning disable 618 // use of obsolete symbol: some of the packages we are using still resolve this so we need to inject it
-        services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
-        services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
-#pragma warning restore 618
         ConfigureLoggingServices(services);
         services.AddOperationTracking(o => { });
         services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
