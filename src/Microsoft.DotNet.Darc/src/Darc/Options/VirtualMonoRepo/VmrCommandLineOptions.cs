@@ -3,15 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CommandLine;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -25,24 +23,37 @@ internal abstract class VmrCommandLineOptions : CommandLineOptions
 
     public IServiceCollection RegisterServices()
     {
-        var services = new ServiceCollection();
+        var tmpPath = Path.GetFullPath(TmpPath ?? Path.GetTempPath());
+        LocalSettings localDarcSettings = null;
 
-        services.TryAddSingleton<IRemoteFactory>(_ => new RemoteFactory(this));
-        services.AddVmrManagers(GitLocation, configure: sp =>
+        var gitHubToken = GitHubPat;
+        var azureDevOpsToken = AzureDevOpsPat;
+
+        if (gitHubToken == null || azureDevOpsToken == null)
         {
-            var processManager = sp.GetRequiredService<IProcessManager>();
-            var logger = sp.GetRequiredService<ILogger<DarcSettings>>();
-
-            var vmrPath = VmrPath ?? processManager.FindGitRoot(Directory.GetCurrentDirectory()) ?? throw new ArgumentException("VMR path not supplied!");
-            var tmpPath = TmpPath ?? LocalSettings.GetDarcSettings(this, logger).TemporaryRepositoryRoot;
-
-            if (tmpPath != null)
+            try
             {
-                tmpPath = Path.GetFullPath(tmpPath);
+                localDarcSettings = LocalSettings.LoadSettingsFile(this);
+            }
+            catch (DarcException)
+            {
+                // The VMR synchronization often works with public repositories where tokens are not required
             }
 
-            return new VmrInfo(Path.GetFullPath(vmrPath), tmpPath);
-        });
+            gitHubToken = localDarcSettings?.GitHubToken;
+            azureDevOpsToken = localDarcSettings?.AzureDevOpsToken;
+        }
+
+        var services = new ServiceCollection();
+        services
+            .AddTransient<GitFileManagerFactory>()
+            .AddVmrManagers(
+                sp => sp.GetRequiredService<GitFileManagerFactory>(),
+                GitLocation,
+                VmrPath,
+                tmpPath,
+                gitHubToken,
+                azureDevOpsToken);
 
         return services;
     }

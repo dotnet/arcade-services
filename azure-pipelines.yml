@@ -6,8 +6,6 @@ variables:
     value: true
   - name: _DotNetArtifactsCategory
     value: .NETCore
-  - name: skipComponentGovernanceDetection
-    value: true
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - group: SDL_Settings
 
@@ -23,7 +21,21 @@ pr:
 - production
 
 stages:
+- stage: GitHub_Issue_Verification
+  displayName: GitHub Issue Verification
+  condition: and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
+  jobs:
+    - job: VerifyGitHubIssue
+      displayName: Verify GitHub Issue Link included in all PRs
+      pool: 
+        vmImage: 'windows-latest'
+      steps:
+        - checkout: self
+        - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
+          displayName: Enforce GitHub issue link presence
+
 - stage: build
+  dependsOn: []
   displayName: Build
   # Three phases for each of the three OSes we want to run on
   jobs:
@@ -160,7 +172,7 @@ stages:
             Get-ChildItem .vault-config/*.yaml |% {
               $manifestArgs += @("-m", $_.FullName)
             }
-            dotnet run -p src/Microsoft.DncEng.SecretManager -- validate-all -b src @manifestArgs
+            dotnet run --project src/Microsoft.DncEng.SecretManager -- validate-all -b src @manifestArgs
           displayName: Verify Secret Usages
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:

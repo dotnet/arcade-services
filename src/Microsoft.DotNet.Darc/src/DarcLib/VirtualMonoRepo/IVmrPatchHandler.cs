@@ -6,49 +6,25 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPatchHandler
 {
-    Task ApplyPatch(
-        SourceMapping mapping,
-        VmrIngestionPatch patch,
-        CancellationToken cancellationToken);
-
-    Task ApplyPatch(
-        SourceMapping mapping,
-        string patchPath,
-        CancellationToken cancellationToken)
-        => ApplyPatch(mapping, new VmrIngestionPatch(patchPath, mapping.Name), cancellationToken);
+    Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        string repoPath,
+        LocalPath repoPath,
         string sha1,
         string sha2,
-        string destDir,
-        string tmpPath,
-        CancellationToken cancellationToken);
-
-    Task RestoreFilesFromPatch(
-        SourceMapping mapping,
-        string clonePath,
-        string patch,
+        LocalPath destDir,
+        LocalPath tmpPath,
         CancellationToken cancellationToken);
 
     IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping);
 
-    Task<IReadOnlyCollection<string>> GetPatchedFiles(
-        string repoPath,
-        string patchPath,
-        CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken);
 }
-
-/// <summary>
-/// Patch that is created/applied during sync of the VMR.
-/// </summary>
-/// <param name="Path">Path where the patch is located</param>
-/// <param name="ApplicationPath">Relative path within the VMR to which the patch is applied onto</param>
-public record VmrIngestionPatch(string Path, string ApplicationPath);

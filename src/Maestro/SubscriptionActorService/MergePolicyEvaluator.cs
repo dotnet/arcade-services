@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;

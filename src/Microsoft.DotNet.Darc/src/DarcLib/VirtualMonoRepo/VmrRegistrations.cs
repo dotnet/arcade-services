@@ -17,46 +17,58 @@ public static class VmrRegistrations
 {
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
-        string tmpPath)
+        string tmpPath,
+        string? gitHubToken,
+        string? azureDevOpsToken)
     {
-        RegisterManagers(services, gitLocation);
+        RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
+        services.TryAddSingleton(new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken));
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
+        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
-        Func<IServiceProvider, IVmrInfo> configure)
+        string vmrPath,
+        string tmpPath,
+        Func<IServiceProvider, VmrRemoteConfiguration> configure)
     {
-        RegisterManagers(services, gitLocation);
-        services.TryAddSingleton<IVmrInfo>(configure);
+        RegisterCommonServices(services, gitLocation);
+        services.TryAddSingleton(configure);
+        services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
+        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
-    private static void RegisterManagers(IServiceCollection services, string gitLocation)
+    private static void RegisterCommonServices(IServiceCollection services, string gitLocation)
     {
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<ILocalGitRepo>(sp => ActivatorUtilities.CreateInstance<LocalGitClient>(sp, gitLocation));
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<IVmrManager>>());
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
-        services.TryAddSingleton<IRepositoryCloneManager, RepositoryCloneManager>();
-        services.TryAddSingleton<IFileSystem, FileSystem>();
-        services.TryAddSingleton<IVmrDependencyTracker>(sp =>
+        services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
+        services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
+        services.TryAddTransient<IFileSystem, FileSystem>();
+        services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
+        services.TryAddTransient<IVmrScanner, VmrScanner>();
+
+        // These initialize the configuration by reading the JSON files in VMR's src/
+        services.TryAddSingleton<ISourceManifest>(sp =>
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();
-            var mappingParser = sp.GetRequiredService<ISourceMappingParser>();
-            var fileSystem = sp.GetRequiredService<IFileSystem>();
-            var mappings = mappingParser.ParseMappings().GetAwaiter().GetResult();
-            var sourceManifest = SourceManifest.FromJson(configuration.GetSourceManifestPath());
-            return new VmrDependencyTracker(configuration, fileSystem, mappings, sourceManifest);
+            return SourceManifest.FromJson(configuration.GetSourceManifestPath());
         });
     }
 }

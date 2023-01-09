@@ -46,15 +46,18 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
-        var vmrTpnPath = _fileSystem.PathCombine(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
-        var header = GetTpnHeader(vmrTpnPath);
+        var templatePath = _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath;
+        string header = string.Empty;
+        if (_fileSystem.FileExists(templatePath))
+        {
+            header = await _fileSystem.ReadAllTextAsync(templatePath);
+        }
+
+        var vmrTpnPath = _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesFileName;
 
         using (var tpnWriter = new StreamWriter(vmrTpnPath, append: false))
         {
-            foreach (var headerLine in header)
-            {
-                tpnWriter.WriteLine(headerLine);
-            }
+            await tpnWriter.WriteAsync(header);
 
             foreach (var notice in GetAllNotices())
             {
@@ -93,30 +96,6 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
         }
 
         return paths.OrderBy(p => p);
-    }
-
-    /// <summary>
-    /// Reads the header of the THIRD-PARTY-NOTICES file (until 2 empty lines are found).
-    /// </summary>
-    private List<string> GetTpnHeader(string path)
-    {
-        var header = new List<string>();
-
-        using var stream = _fileSystem.GetFileStream(path, FileMode.Open, FileAccess.Read);
-        using var reader = new StreamReader(stream);
-
-        string? line;
-        while ((line = reader.ReadLine()) != null)
-        {
-            if (line.StartsWith("####"))
-            {
-                break;
-            }
-
-            header.Add(line);
-        }
-
-        return header;
     }
 
     /// <summary>

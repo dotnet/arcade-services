@@ -10,18 +10,21 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface ISourceMappingParser
 {
-    Task<IReadOnlyCollection<SourceMapping>> ParseMappings();
+    Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath);
 }
 
 /// <summary>
 /// Class responsible for parsing the source-mappings.json file.
-/// TODO (https://github.com/dotnet/arcade/issues/11226): Link to source-mappings.json documentation
+/// More details about source-mappings.json are directly in the file or at
+/// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Design-And-Operation.md#repository-source-mappings
 /// </summary>
 public class SourceMappingParser : ISourceMappingParser
 {
@@ -32,15 +35,14 @@ public class SourceMappingParser : ISourceMappingParser
         _vmrInfo = vmrInfo;
     }
 
-    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings()
+    public async Task<IReadOnlyCollection<SourceMapping>> ParseMappings(string mappingFilePath)
     {
-        var mappingFilePath = Path.Combine(_vmrInfo.VmrPath, VmrInfo.SourcesDir, VmrInfo.SourceMappingsFileName);
         var mappingFile = new FileInfo(mappingFilePath);
 
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {VmrInfo.SourceMappingsFileName} file in the VMR directory",
+                $"Failed to find {VmrInfo.SourceMappingsFileName} file.",
                 mappingFilePath);
         }
 
@@ -55,16 +57,23 @@ public class SourceMappingParser : ISourceMappingParser
         var settings = await JsonSerializer.DeserializeAsync<SourceMappingFile>(stream, options)
             ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
 
-        var patchesPath = settings.PatchesPath;
-        if (patchesPath is not null)
+        _vmrInfo.PatchesPath = NormalizePath(settings.PatchesPath);
+        _vmrInfo.SourceMappingsPath = settings.SourceMappingsPath;
+
+        if (settings.AdditionalMappings is not null)
         {
-            if (patchesPath.Contains('\\') || patchesPath.StartsWith('/'))
+            var additionalMappings = new List<(string Source, string? Destination)>();
+            foreach (var additionalMapping in settings.AdditionalMappings)
             {
-                throw new Exception($"Invalid value '{patchesPath}' for {VmrInfo.SourceMappingsFileName} attribute {nameof(settings.PatchesPath)}! " +
-                    $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
+                if (additionalMapping.Source is null || NormalizePath(additionalMapping.Source) is null || !additionalMapping.Source.StartsWith($"{VmrInfo.SourcesDir}/"))
+                {
+                    throw new Exception($"Additional mapping for {additionalMapping.Destination} needs to declare the source pointing to {VmrInfo.SourcesDir}/");
+                }
+
+                additionalMappings.Add((additionalMapping.Source, NormalizePath(additionalMapping.Destination)));
             }
-            
-            _vmrInfo.PatchesPath = Path.Combine(_vmrInfo.VmrPath, patchesPath.Replace('/', Path.DirectorySeparatorChar));
+
+            _vmrInfo.AdditionalMappings = additionalMappings.ToImmutableArray();
         }
 
         var mappings = settings.Mappings
@@ -113,28 +122,19 @@ public class SourceMappingParser : ISourceMappingParser
             Exclude: exclude.ToImmutableArray());
     }
 
-    private class SourceMappingFile
+    private static string? NormalizePath(string? relativePath)
     {
-        public SourceMappingSetting Defaults { get; set; } = new()
+        if (relativePath is null || relativePath == "." || relativePath == "/" || relativePath.Length == 0)
         {
-            DefaultRef = "main",
-            Include = Array.Empty<string>(),
-            Exclude = Array.Empty<string>(),
-        };
+            return null;
+        }
 
-        public string? PatchesPath { get; set; }
+        if (relativePath.Contains('\\') || relativePath.StartsWith('/'))
+        {
+            throw new Exception($"Invalid value '{relativePath}' in {VmrInfo.SourceMappingsFileName}. " +
+                $"The path must be relative to the VMR directory and use UNIX directory separators (e.g. src/installer/patches).");
+        }
 
-        public List<SourceMappingSetting> Mappings { get; set; } = new();
-    }
-
-    private class SourceMappingSetting
-    {
-        public string? Name { get; set; }
-        public string? Version { get; set; }
-        public string? DefaultRemote { get; set; }
-        public string? DefaultRef { get; set; }
-        public string[]? Include { get; set; }
-        public string[]? Exclude { get; set; }
-        public bool IgnoreDefaults { get; set; }
+        return relativePath;
     }
 }

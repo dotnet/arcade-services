@@ -4,19 +4,25 @@
 
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+public record AdditionalRemote(string Mapping, string RemoteUri);
+
 public interface IRepositoryCloneManager
 {
-    Task<string> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+    LocalPath PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+
+    LocalPath PrepareClone(
+        SourceMapping mapping,
+        string[] remotes,
+        string checkoutRef,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -29,71 +35,93 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IRemoteFactory _remoteFactory;
-    private readonly IProcessManager _processManager;
+    private readonly IGitRepoClonerFactory _remoteFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
+    // Map of URI => dir name
+    private readonly Dictionary<string, LocalPath> _clones = new();
+
+    // Repos we have already pulled updates for during this run
     private readonly List<string> _upToDateRepos = new();
 
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         ILocalGitRepo localGitRepo,
-        IRemoteFactory remoteFactory,
-        IProcessManager processManager,
+        IGitRepoClonerFactory remoteFactory,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
         _localGitRepo = localGitRepo;
         _remoteFactory = remoteFactory;
-        _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public async Task<string> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken)
+    public LocalPath PrepareClone(
+        SourceMapping mapping,
+        string[] remoteUris,
+        string checkoutRef,
+        CancellationToken cancellationToken)
+    {
+        if (remoteUris.Length == 0)
+        {
+            throw new ArgumentException("No remote URIs provided to clone");
+        }
+
+        LocalPath path = null!;
+        foreach (string remoteUri in remoteUris)
+        {
+            // Path should be returned the same for all invocations
+            // We checkout a default ref
+            path = PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
+        }
+
+        _localGitRepo.Checkout(path, checkoutRef);
+
+        return path;
+    }
+
+    public LocalPath PrepareClone(
+        string repoUri,
+        string checkoutRef,
+        CancellationToken cancellationToken)
+    {
+        // We store clones in directories named as a hash of the repo URI
+        var cloneDir = StringUtils.GetXxHash64(repoUri);
+        var path = PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
+        _localGitRepo.Checkout(path, checkoutRef);
+        return path;
+    }
+
+    private LocalPath PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var hash = CreateMD5(repoUri);
-        var clonePath = _fileSystem.PathCombine(_vmrInfo.TmpPath, hash);
-
-        if (_upToDateRepos.Contains(repoUri))
+        if (_upToDateRepos.Contains(remoteUri))
         {
-            _localGitRepo.Checkout(clonePath, checkoutRef);
-            cancellationToken.ThrowIfCancellationRequested();
-            return clonePath;
+            return _clones[remoteUri];
         }
+
+        var clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
+            ? cachedPath
+            : _vmrInfo.TmpPath / dirName;
 
         if (!_fileSystem.DirectoryExists(clonePath))
         {
-            _logger.LogDebug("Cloning {repo} to {clonePath}", repoUri, clonePath);
-            var remoteRepo = await _remoteFactory.GetRemoteAsync(repoUri, _logger);
-            remoteRepo.Clone(repoUri, checkoutRef, clonePath, checkoutSubmodules: false, null);
-            cancellationToken.ThrowIfCancellationRequested();
+            _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
+            var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
+            repoCloner.Clone(remoteUri, clonePath, null);
         }
         else
         {
-            _logger.LogDebug("Clone of {repo} found, pulling new changes...", repoUri);
-
-            var result = await _processManager.ExecuteGit(clonePath, "fetch", "--all");
-            result.ThrowIfFailed($"Failed to pull new changes from {repoUri} into {clonePath}");
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _localGitRepo.Checkout(clonePath, checkoutRef);
+            _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
+            _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, forceFetch: true);
         }
 
-        _upToDateRepos.Add(repoUri);
+        _upToDateRepos.Add(remoteUri);
+        _clones[remoteUri] = clonePath;
         return clonePath;
-    }
-
-    // We store clones in directories named as a hash of the repo URI
-    private static string CreateMD5(string input)
-    {
-        using var md5 = MD5.Create();
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = md5.ComputeHash(inputBytes);
-        return Convert.ToHexString(hashBytes);
     }
 }

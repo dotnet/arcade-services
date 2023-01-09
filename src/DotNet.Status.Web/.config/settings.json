@@ -59,25 +59,25 @@
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade\\dotnet-arcade-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-service\\dotnet-helix-service-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
           "DefinitionPath": "\\dotnet\\helix-machines\\dotnet-helix-machines-weekly",
           "Branches": [ "main" ],
-          "IssuesId": "dotnet-arcade-first-responder"
+          "IssuesId": "dotnet-arcade-frops"
         },
         {
           "Project": "internal",
@@ -123,6 +123,12 @@
         "Labels": [ "Build Failed", "First Responder" ]
       },
       {
+        "Id": "dotnet-arcade-frops",
+        "Owner": "dotnet",
+        "Name": "arcade",
+        "Labels": [ "Build Failed", "FROps" ]
+      },
+      {
         "Id": "dotnet-aspnetcore-infra",
         "Owner": "dotnet",
         "Name": "aspnetcore",
@@ -165,10 +171,6 @@
   },
   "AzureTableTokenStore": {
     "TableUri": "[vault(token-table-sas-uri)]"
-  },
-  "DataProtection": {
-    "StorageAccountConnectionString": "[vault(dotnet-status-storage-account)]",
-    "KeyIdentifier": "dotnet-status-data-protection"
   },
   "Grafana": {
     "BaseUrl": "https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com",

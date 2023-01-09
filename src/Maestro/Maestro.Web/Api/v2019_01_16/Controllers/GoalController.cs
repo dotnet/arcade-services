@@ -3,18 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.KeyVault;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 

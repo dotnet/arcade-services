@@ -7,11 +7,43 @@ using System;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
+public interface ISourceComponent
+{
+    public string Path { get; }
+    public string RemoteUri { get; }
+    public string CommitSha { get; }
+
+    // TODO (https://github.com/dotnet/arcade/issues/10549): Add also non-GitHub implementations
+    public string GetPublicUrl()
+    {
+        var url = RemoteUri;
+
+        if (url.EndsWith(".git"))
+        {
+            url = url[..^4];
+        }
+
+        if (!url.EndsWith('/'))
+        {
+            url += '/';
+        }
+
+        url += "commit/" + CommitSha;
+
+        return url;
+    }
+}
+
+public interface IVersionedSourceComponent : ISourceComponent
+{
+    string PackageVersion { get; }
+}
+
 /// <summary>
 /// Represents a record in the source-manifest.json file which VMR uses to keep track of
 /// synchronized sources
 /// </summary>
-public abstract class ManifestRecord : IComparable<ManifestRecord>
+public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceComponent
 {
     public string Path { get; set; }
     public string RemoteUri { get; set; }
@@ -24,7 +56,7 @@ public abstract class ManifestRecord : IComparable<ManifestRecord>
         CommitSha = commitSha;
     }
 
-    public int CompareTo(ManifestRecord? other)
+    public int CompareTo(ISourceComponent? other)
     {
         if (other == null)
         {
@@ -35,7 +67,7 @@ public abstract class ManifestRecord : IComparable<ManifestRecord>
     }
 }
 
-public class RepositoryRecord : ManifestRecord
+public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
 {
     public RepositoryRecord(string path, string remoteUri, string commitSha, string packageVersion) 
         : base(path, remoteUri, commitSha)
@@ -52,10 +84,4 @@ public class SubmoduleRecord : ManifestRecord
         : base(path, remoteUri, commitSha)
     {
     }
-}
-
-// Read-only version that will be visible to outside classes
-public record SubmoduleInfo(string Path, string RemoteUri, string CommitSha)
-{
-    public static SubmoduleInfo FromRecord(SubmoduleRecord other) => new(other.Path, other.RemoteUri, other.CommitSha);
 }

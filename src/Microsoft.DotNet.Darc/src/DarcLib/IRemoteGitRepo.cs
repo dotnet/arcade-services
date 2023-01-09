@@ -2,13 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public interface IRemoteGitRepo : IGitRepo
+    public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     {
         /// <summary>
         /// Specifies whether functions with a retry field should employ retries
@@ -152,16 +152,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetVersion">Target version</param>
         /// <returns>Diff information</returns>
         Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion);
-
-        /// <summary>
-        ///     Clone a remote repository.
-        /// </summary>
-        /// <param name="repoUri">Repository uri</param>
-        /// <param name="commit">Branch, commit, or tag to checkout</param>
-        /// <param name="targetDirectory">Directory to clone to</param>
-        /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
-        /// <param name="gitDirectory">Location for .git directory, or null for default</param>
-        void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null);
 
         /// <summary>
         ///     Delete a pull request's branch if it still exists

@@ -19,8 +19,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
-using Maestro.Contracts;
 using System.Collections.Immutable;
+using Maestro.MergePolicyEvaluation;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -53,7 +53,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     public GitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(gitExecutable, temporaryRepositoryPath, cache)
+        : base(gitExecutable, temporaryRepositoryPath, cache, logger, accessToken)
     {
         _personalAccessToken = accessToken;
         _logger = logger;
@@ -744,8 +744,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>New http client</returns
     private HttpClient CreateHttpClient()
     {
-        var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {BaseAddress = new Uri(GitHubApiUri)};
-        client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+        var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+        {
+            BaseAddress = new Uri(GitHubApiUri)
+        };
+        
+        if (_personalAccessToken != null)
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+        }
+
         client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
 
         return client;
@@ -1203,19 +1211,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             return GitDiff.UnknownDiff();
         }
-    }
-
-    /// <summary>
-    ///     Clone a remote repository.
-    /// </summary>
-    /// <param name="repoUri">Repository uri to clone</param>
-    /// <param name="commit">Commit, branch, or tag to checkout</param>
-    /// <param name="targetDirectory">Directory to clone into</param>
-    /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
-    /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
-    {
-        Clone(repoUri, commit, targetDirectory, checkoutSubmodules, _logger, _personalAccessToken, gitDirectory);
     }
 
     /// <summary>

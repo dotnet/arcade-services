@@ -2,12 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 
@@ -20,13 +17,13 @@ public interface IVmrDependencyTracker
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version);
+    Task InitializeSourceMappings(string sourceMappingsPath);
+
+    void UpdateDependencyVersion(VmrDependencyUpdate update);
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
-        
-    IReadOnlyCollection<SubmoduleInfo> GetSubmodules();
 }
 
 /// <summary>
@@ -38,60 +35,68 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     // TODO: https://github.com/dotnet/source-build/issues/2250
     private const string DefaultVersion = "8.0.100";
 
-    private readonly Lazy<AllVersionsPropsFile> _repoVersions;
-    private readonly SourceManifest _sourceManifest;
-    private readonly string _allVersionsFilePath;
+    private readonly AllVersionsPropsFile _repoVersions;
+    private readonly ISourceManifest _sourceManifest;
+    private readonly LocalPath _allVersionsFilePath;
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
+    private readonly ISourceMappingParser _sourceMappingParser;
+    private IReadOnlyCollection<SourceMapping>? _mappings;
 
-    public IReadOnlyCollection<SourceMapping> Mappings { get; }
-
-    public IReadOnlyCollection<SubmoduleInfo> GetSubmodules()
-        => _sourceManifest.Submodules.Select(SubmoduleInfo.FromRecord).ToImmutableArray();
-
+    public IReadOnlyCollection<SourceMapping> Mappings
+    {
+        get => _mappings ?? throw new System.Exception("Source mappings have not been initialized.");
+    }
+            
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
-        IReadOnlyCollection<SourceMapping> mappings,
-        SourceManifest sourceManifest)
+        ISourceMappingParser sourceMappingParser,
+        ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
-        _allVersionsFilePath = Path.Combine(vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, AllVersionsPropsFile.FileName);
-        _repoVersions = new Lazy<AllVersionsPropsFile>(LoadAllVersionsFile, LazyThreadSafetyMode.ExecutionAndPublication);
+        _allVersionsFilePath = vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
         _sourceManifest = sourceManifest;
+        _repoVersions = new AllVersionsPropsFile(sourceManifest.Repositories);
         _fileSystem = fileSystem;
-        Mappings = mappings;
+        _sourceMappingParser = sourceMappingParser;
+        _mappings = null;
     }
 
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
-        => _repoVersions.Value.GetVersion(mapping.Name);
+        => _sourceManifest.GetVersion(mapping.Name);
 
-    public void UpdateDependencyVersion(SourceMapping mapping, VmrDependencyVersion version)
+    public async Task InitializeSourceMappings(string sourceMappingsPath)
+    {
+        _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
+    }
+
+    public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
         // TODO: https://github.com/dotnet/source-build/issues/2250
-        if (version.PackageVersion is null)
+        if (update.TargetVersion is null)
         {
-            version = version with { PackageVersion = DefaultVersion };
+            update = update with { TargetVersion = DefaultVersion };
         }
 
-        _repoVersions.Value.UpdateVersion(mapping.Name, version.Sha, version.PackageVersion);
-        _repoVersions.Value.SerializeToXml(_allVersionsFilePath);
+        _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
+        _repoVersions.SerializeToXml(_allVersionsFilePath);
 
-        _sourceManifest.UpdateVersion(mapping.Name, mapping.DefaultRemote, version.Sha, version.PackageVersion);
+        _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
 
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(mapping.Name, version.PackageVersion);
+        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, update.TargetVersion);
         
         var gitInfo = new GitInfoFile
         {
-            GitCommitHash = version.Sha,
+            GitCommitHash = update.TargetRevision,
             OfficialBuildId = buildId,
             PreReleaseVersionLabel = releaseLabel,
             IsStable = string.IsNullOrWhiteSpace(releaseLabel),
-            OutputPackageVersion = version.PackageVersion,
+            OutputPackageVersion = update.TargetVersion,
         };
 
-        gitInfo.SerializeToXml(GetGitInfoFilePath(mapping));
+        gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
     }
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)
@@ -105,21 +110,11 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             else
             {
                 _sourceManifest.UpdateSubmodule(submodule);
-            } 
+            }
         }
 
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
     }
 
-    private AllVersionsPropsFile LoadAllVersionsFile()
-    {
-        if (!File.Exists(_allVersionsFilePath))
-        {
-            return new AllVersionsPropsFile(new());
-        }
-
-        return AllVersionsPropsFile.DeserializeFromXml(_allVersionsFilePath);
-    }
-
-    private string GetGitInfoFilePath(SourceMapping mapping) => Path.Combine(_vmrInfo.VmrPath, VmrInfo.GitInfoSourcesDir, $"{mapping.Name}.props");
+    private string GetGitInfoFilePath(SourceMapping mapping) => _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{mapping.Name}.props";
 }

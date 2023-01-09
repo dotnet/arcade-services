@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+</Project>

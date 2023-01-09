@@ -15,12 +15,13 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Data.Tables" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
+    <PackageReference Include="Azure.Security.KeyVault.Keys" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Azure.Storage.Queues" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />

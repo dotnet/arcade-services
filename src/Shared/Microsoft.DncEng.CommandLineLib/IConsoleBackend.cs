@@ -12,6 +12,7 @@ public interface IConsoleBackend
 {
     TextWriter Out { get; }
     TextWriter Error { get; }
+    TextReader In { get; }
     void SetColor(ConsoleColor color);
     void ResetColor();
     Task<string> PromptAsync(string message);

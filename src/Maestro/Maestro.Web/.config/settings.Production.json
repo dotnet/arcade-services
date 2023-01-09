@@ -4,5 +4,9 @@
   "ApiRedirect": {
     "uri": "",
     "token": ""
+  },
+  "DataProtection": {
+    "KeyBlobUri": "https://maestroprod.blob.core.windows.net/dataprotection/keys.xml",
+    "DataProtectionKeyUri": "https://maestroprod.vault.azure.net/keys/data-protection-encryption-key/"
   }
 }

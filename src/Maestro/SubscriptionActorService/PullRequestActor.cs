@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;

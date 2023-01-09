@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.MergePolicies;

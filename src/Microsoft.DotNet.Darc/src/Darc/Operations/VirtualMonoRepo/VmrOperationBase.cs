@@ -4,10 +4,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : IVmrManager
+internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : notnull
 {
     private readonly VmrSyncCommandLineOptions _options;
 
@@ -41,30 +41,16 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
 
         TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
-        IEnumerable<(SourceMapping Mapping, string? Revision)> reposToSync;
+        IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
+            .Select(a => a.Split(':') is string[] parts && parts.Length == 2
+                ? (Name: parts[0], Revision: parts[1])
+                : (a, null));
 
-        // 'all' means sync all of the repos
-        if (repositories.Count == 1 && repositories.First() == "all")
-        {
-            reposToSync = vmrManager.Mappings.Select<SourceMapping, (SourceMapping Mapping, string? Revision)>(m => (m, null));
-        }
-        else
-        {
-            IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
-                .Select(a => a.Split(':') is string[] parts && parts.Length == 2
-                    ? (Name: parts[0], Revision: parts[1])
-                    : (a, null));
-
-            SourceMapping ResolveMapping(string repo)
-            {
-                return vmrManager.Mappings.FirstOrDefault(m => m.Name.Equals(repo, StringComparison.InvariantCultureIgnoreCase))
-                    ?? throw new Exception($"No mapping named '{repo}' found");
-            }
-
-            reposToSync = repoNamesWithRevisions
-                .Select(repo => (ResolveMapping(repo.Name), repo.Revision))
-                .ToList();
-        }
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes = _options.AdditionalRemotes
+            .Split(',')
+            .Select(a => a.Split(':', 2))
+            .Select(parts => new AdditionalRemote(parts[0], parts[1]))
+            .ToImmutableArray();
 
         var success = true;
 
@@ -74,10 +60,10 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
 
         try
         {
-            foreach (var (mapping, revision) in reposToSync)
+            foreach (var (repoName, revision) in repoNamesWithRevisions)
             {
                 listener.Token.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, mapping, revision, listener.Token);
+                success &= await ExecuteAsync(vmrManager, repoName, revision, additionalRemotes, listener.Token);
             }
         }
         catch (OperationCanceledException)
@@ -95,21 +81,23 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
 
     protected abstract Task ExecuteInternalAsync(
         TVmrManager vmrManager,
-        SourceMapping mapping,
+        string repoName,
         string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
         TVmrManager vmrManager,
-        SourceMapping mapping,
+        string repoName,
         string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        using (Logger.BeginScope(mapping.Name))
+        using (Logger.BeginScope(repoName))
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, mapping, targetRevision, cancellationToken);
+                await ExecuteInternalAsync(vmrManager, repoName, targetRevision, additionalRemotes, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
@@ -119,7 +107,11 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             }
             catch (Exception e)
             {
-                Logger.LogError("Failed to synchronize repo {name}{exception}", mapping.Name, Environment.NewLine + e.Message);
+                Logger.LogError(
+                    "Failed to synchronize repo {name}{exception}.", 
+                    repoName, 
+                    Environment.NewLine + e.Message);
+
                 Logger.LogDebug("{exception}", e);
                 return false;
             }
