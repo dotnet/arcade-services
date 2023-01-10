@@ -46,11 +46,15 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
                 ? (Name: parts[0], Revision: parts[1])
                 : (a, null));
 
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes = _options.AdditionalRemotes
-            .Split(',')
-            .Select(a => a.Split(':', 2))
-            .Select(parts => new AdditionalRemote(parts[0], parts[1]))
-            .ToImmutableArray();
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes = Array.Empty<AdditionalRemote>();
+        if (_options.AdditionalRemotes != null)
+        {
+            additionalRemotes = _options.AdditionalRemotes
+                .Split(',')
+                .Select(a => a.Split(':', 2))
+                .Select(parts => new AdditionalRemote(parts[0], parts[1]))
+                .ToImmutableArray();
+        }
 
         var success = true;
 
