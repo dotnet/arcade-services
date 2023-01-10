@@ -29,12 +29,7 @@ internal class ScanOperation : Operation
 
         if (_scanCloaked)
         {
-            await vmrScanner.ListCloakedFiles(listener.Token);
-        }
-
-        if (_scanBinary)
-        {
-            await vmrScanner.ListBinaryFiles(listener.Token);
+            await vmrScanner.ScanVmr(listener.Token);
         }
 
         return 0;

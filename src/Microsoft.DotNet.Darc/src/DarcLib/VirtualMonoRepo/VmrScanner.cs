@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// <summary>
 /// Class that scans the VMR for cloaked files that shouldn't be inside.
 /// </summary>
-public class VmrScanner : IVmrScanner
+public abstract class VmrScanner : IVmrScanner
 {
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
@@ -40,26 +40,41 @@ public class VmrScanner : IVmrScanner
         _logger = logger;
     }
 
-    public async Task<List<string>> ListCloakedFiles(CancellationToken cancellationToken)
+    public async Task<List<string>> ScanVmr(CancellationToken cancellationToken)
     {
         await _dependencyTracker
             .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
 
         var taskList = new List<Task<string[]>>();
 
+        _logger.LogInformation("Scanning VMR repositories for {type} files", ScanType());
+
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
-            taskList.Add(ScanRepositoryForCloackedFiles(sourceMapping, cancellationToken));
+            taskList.Add(ScanRepository(sourceMapping, cancellationToken));
         }
 
         await Task.WhenAll(taskList);
 
+        var cloakedFiles = taskList.SelectMany(task => task.Result).OrderBy(file => file);
+
+        if (cloakedFiles.Any())
+        {
+            _logger.LogInformation("The scanner found {number} {type} files:", cloakedFiles.Count(), ScanType());
+            foreach (var file in cloakedFiles)
+            {
+                _logger.LogWarning("File {file} is {type} but present in the VMR", file, ScanType());
+            }
+        }
+
         return taskList.SelectMany(task => task.Result).ToList();
     }
 
+    protected abstract string ScanType();
+    protected abstract Task<string[]> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken);
+
     private async Task<string[]> ScanRepositoryForCloackedFiles(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
         var args = new List<string>
         {
             "diff",
@@ -77,15 +92,9 @@ public class VmrScanner : IVmrScanner
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
-        var files = ret.StandardOutput
+
+        return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var file in files)
-        {
-            _logger.LogWarning("File in {file} is cloaked but present in the VMR", file);
-        }
-
-        return files;
     }
 
     private static string ExcludeFile(string file, string gitAttribute) => $":(attr:!{gitAttribute}){file}";
