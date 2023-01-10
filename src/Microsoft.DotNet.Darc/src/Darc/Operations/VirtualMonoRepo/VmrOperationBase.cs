@@ -46,7 +46,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
                 ? (Name: parts[0], Revision: parts[1])
                 : (a, null));
 
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes = new List<AdditionalRemote>();
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes = Array.Empty<AdditionalRemote>();
         if (_options.AdditionalRemotes != null)
         {
             additionalRemotes = _options.AdditionalRemotes
