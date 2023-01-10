@@ -56,7 +56,7 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
     public IEnumerable<string> SubscriptionIds { get; set; }
 
-    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IRemote remote)
+    public virtual async Task<IEnumerable<Subscription>> FilterSubscriptions(IRemote remote)
     {
         IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
         return (await remote.GetSubscriptionsAsync()).Where(subscription =>

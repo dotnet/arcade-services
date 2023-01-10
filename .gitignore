@@ -334,3 +334,4 @@ ASALocalRun/
 
 # angular stuff
 .angulardoc.json
+*.received.*
