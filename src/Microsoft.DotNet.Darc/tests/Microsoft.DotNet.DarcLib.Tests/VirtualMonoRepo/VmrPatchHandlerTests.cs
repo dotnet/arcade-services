@@ -96,7 +96,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareClone(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
+            .ReturnsAsync((string uri, string _, CancellationToken _) => new UnixPath("/tmp/" + uri.Split("/").Last()));
 
         _processManager.Reset();
         _processManager

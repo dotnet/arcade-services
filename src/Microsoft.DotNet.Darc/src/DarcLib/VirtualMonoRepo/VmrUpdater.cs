@@ -122,7 +122,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .Prepend(mapping.DefaultRemote)
                 .ToArray();
 
-            var clonePath = _cloneManager.PrepareClone(
+            var clonePath = await _cloneManager.PrepareClone(
                 mapping,
                 remotes,
                 targetRevision ?? mapping.DefaultRef, 
@@ -173,7 +173,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        LocalPath clonePath = _cloneManager.PrepareClone(update.Mapping, remotes, update.TargetRevision, cancellationToken);
+        LocalPath clonePath = await _cloneManager.PrepareClone(
+            update.Mapping,
+            remotes,
+            update.TargetRevision,
+            cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -529,7 +533,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 source.RemoteUri,
                 source.CommitSha);
 
-            var clonePath = _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
 
             foreach ((UnixPath relativePath, UnixPath pathInVmr) in group)
             {
