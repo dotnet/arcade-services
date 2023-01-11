@@ -17,6 +17,4 @@ internal class CloakedFileScanOperation : ScanOperationBase<VmrCloakedFileScanne
     public CloakedFileScanOperation(CloakedFileScanOptions options) : base(options, options.RegisterServices())
     {
     }
-
-    protected override Type GetScannerType() => typeof(VmrCloakedFileScanner);
 }

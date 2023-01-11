@@ -25,6 +25,4 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
         await vmrScanner.ScanVmr(listener.Token);
         return 0;
     }
-
-    protected abstract Type GetScannerType();
 }

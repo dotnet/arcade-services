@@ -14,6 +14,4 @@ internal class BinaryFileScanOperation : ScanOperationBase<VmrBinaryFileScanner>
     public BinaryFileScanOperation(BinaryFileScanOptions options) : base(options, options.RegisterServices())
     {
     }
-
-    protected override Type GetScannerType() => typeof(VmrBinaryFileScanner);
 }
