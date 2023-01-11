@@ -33,6 +33,10 @@ internal static class LibGit2SharpHelpers
             log.LogDebug($"Trying safe checkout of {repo.Info.WorkingDirectory} at {commit}");
             Commands.Checkout(repo, commit, options);
         }
+        catch (NotFoundException e)
+        {
+            throw new Exception($"Failed to find commit {commit} when checking out {repo.Info.WorkingDirectory}", e);
+        }
         catch (Exception e) when (e is InvalidSpecificationException
                                   || e is NameConflictException
                                   || e is LibGit2SharpException)
