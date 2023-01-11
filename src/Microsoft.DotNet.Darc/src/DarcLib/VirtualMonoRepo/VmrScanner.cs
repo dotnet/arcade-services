@@ -44,7 +44,7 @@ public abstract class VmrScanner : IVmrScanner
 
         var taskList = new List<Task<IEnumerable<string>>>();
 
-        _logger.LogInformation("Scanning VMR repositories for {type} files", ScanType());
+        _logger.LogInformation("Scanning VMR repositories for {type} files", ScanType);
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
@@ -57,7 +57,7 @@ public abstract class VmrScanner : IVmrScanner
 
         if (files.Any())
         {
-            _logger.LogInformation("The scanner found {number} {type} files:", files.Count(), ScanType());
+            _logger.LogInformation("The scanner found {number} {type} files:", files.Count(), ScanType);
             foreach (var file in files)
             {
                 _logger.LogWarning(file);
@@ -67,7 +67,7 @@ public abstract class VmrScanner : IVmrScanner
         return taskList.SelectMany(task => task.Result).ToList();
     }
 
-    protected abstract string ScanType();
+    protected virtual string ScanType { get; }
     protected abstract Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken);
 }
 

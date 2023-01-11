@@ -49,8 +49,6 @@ public class VmrBinaryFileScanner : VmrScanner
             .Select(line => line.Split('\t').Last());
     }
 
-    protected override string ScanType() => "binary";
-    private string GetExclusionFilter(string file) => $":(attr:!{GetExclusionAttribute()}){file}";
-    private string GetExclusionAttribute() => VmrInfo.VmrIgnoreBinaryAttribute;
-
+    protected override string ScanType { get; } = "binary";
+    private string GetExclusionFilter(string file) => $":(attr:!{VmrInfo.VmrIgnoreBinaryAttribute}){file}";
 }

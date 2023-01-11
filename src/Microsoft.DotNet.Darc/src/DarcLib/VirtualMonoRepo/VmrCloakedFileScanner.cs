@@ -50,8 +50,7 @@ public class VmrCloakedFileScanner : VmrScanner
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    protected override string ScanType() => "cloaked";
-    private string GetExclusionFilter(string file) => $":(attr:!{GetExclusionAttribute()}){file}";
-    private string GetExclusionAttribute() => VmrInfo.KeepAttribute;
+    protected override string ScanType { get; } = "cloaked";
+    private string GetExclusionFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
 
 }
