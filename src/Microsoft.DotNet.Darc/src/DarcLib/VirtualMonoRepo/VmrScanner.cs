@@ -53,14 +53,14 @@ public abstract class VmrScanner : IVmrScanner
 
         await Task.WhenAll(taskList);
 
-        var cloakedFiles = taskList.SelectMany(task => task.Result).OrderBy(file => file);
+        var files = taskList.SelectMany(task => task.Result).OrderBy(file => file);
 
-        if (cloakedFiles.Any())
+        if (files.Any())
         {
-            _logger.LogInformation("The scanner found {number} {type} files:", cloakedFiles.Count(), ScanType());
-            foreach (var file in cloakedFiles)
+            _logger.LogInformation("The scanner found {number} {type} files:", files.Count(), ScanType());
+            foreach (var file in files)
             {
-                _logger.LogWarning("File {file} is {type} but present in the VMR", file, ScanType());
+                _logger.LogWarning(file);
             }
         }
 
@@ -69,7 +69,5 @@ public abstract class VmrScanner : IVmrScanner
 
     protected abstract string ScanType();
     protected abstract Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken);
-    protected abstract string GetExclusionAttribute();
-    protected string GetExclusionFilter(string file) => $":(attr:!{GetExclusionAttribute()}){file}";
 }
 

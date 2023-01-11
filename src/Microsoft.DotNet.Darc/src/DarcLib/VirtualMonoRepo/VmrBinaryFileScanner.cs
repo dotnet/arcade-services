@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public class VmrBinaryFileScanner : VmrScanner
 {
     // Git output from the diff --numstat command, when it finds a binary file
-    private const string _binaryFileMarker = "-\t-";
+    private const string BinaryFileMarker = "-\t-";
 
     public VmrBinaryFileScanner(
         IVmrDependencyTracker dependencyTracker, 
@@ -28,17 +28,16 @@ public class VmrBinaryFileScanner : VmrScanner
     {
     }
 
-    protected override string GetExclusionAttribute() => VmrInfo.VmrIgnoreBinaryAttribute;
-
     protected override async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var args = new string[]{
-        "diff",
-        Constants.EmptyGitObject,
-        "--numstat",
-        GetExclusionFilter(_vmrInfo.GetRepoSourcesPath(sourceMapping))
-    };
+        var args = new string[]
+        {
+            "diff",
+            Constants.EmptyGitObject,
+            "--numstat",
+            GetExclusionFilter(_vmrInfo.GetRepoSourcesPath(sourceMapping))
+        };
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
@@ -46,9 +45,12 @@ public class VmrBinaryFileScanner : VmrScanner
 
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Where(line => line.StartsWith(_binaryFileMarker))
-            .Select(line => line.Split('\t' ).Last());
+            .Where(line => line.StartsWith(BinaryFileMarker))
+            .Select(line => line.Split('\t').Last());
     }
 
     protected override string ScanType() => "binary";
+    private string GetExclusionFilter(string file) => $":(attr:!{GetExclusionAttribute()}){file}";
+    private string GetExclusionAttribute() => VmrInfo.VmrIgnoreBinaryAttribute;
+
 }

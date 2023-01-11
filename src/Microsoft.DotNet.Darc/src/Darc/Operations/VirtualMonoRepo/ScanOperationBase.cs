@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class ScanOperationBase : Operation
+internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
 {
     public ScanOperationBase(CommandLineOptions options, IServiceCollection services = null) : base(options, services)
     {
@@ -19,10 +19,10 @@ internal abstract class ScanOperationBase : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        var vmrCloakedFileScanner = Provider.GetServices<IVmrScanner>().First(scanner => scanner.GetType() == GetScannerType());
+        var vmrScanner = Provider.GetRequiredService<T>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        await vmrCloakedFileScanner.ScanVmr(listener.Token);
+        await vmrScanner.ScanVmr(listener.Token);
         return 0;
     }
 

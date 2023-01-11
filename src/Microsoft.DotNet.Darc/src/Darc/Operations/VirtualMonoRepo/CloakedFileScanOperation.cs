@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class CloakedFileScanOperation : ScanOperationBase
+internal class CloakedFileScanOperation : ScanOperationBase<VmrCloakedFileScanner>
 {
     public CloakedFileScanOperation(CloakedFileScanOptions options) : base(options, options.RegisterServices())
     {
