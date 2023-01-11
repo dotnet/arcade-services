@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -16,9 +17,9 @@ public record AdditionalRemote(string Mapping, string RemoteUri);
 
 public interface IRepositoryCloneManager
 {
-    LocalPath PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+    Task<LocalPath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
 
-    LocalPath PrepareClone(
+    Task<LocalPath> PrepareClone(
         SourceMapping mapping,
         string[] remotes,
         string checkoutRef,
@@ -36,6 +37,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepo _localGitRepo;
     private readonly IGitRepoClonerFactory _remoteFactory;
+    private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
@@ -49,17 +51,19 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         IVmrInfo vmrInfo,
         ILocalGitRepo localGitRepo,
         IGitRepoClonerFactory remoteFactory,
+        IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
         _localGitRepo = localGitRepo;
         _remoteFactory = remoteFactory;
+        _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public LocalPath PrepareClone(
+    public async Task<LocalPath> PrepareClone(
         SourceMapping mapping,
         string[] remoteUris,
         string checkoutRef,
@@ -75,7 +79,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         {
             // Path should be returned the same for all invocations
             // We checkout a default ref
-            path = PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
+            path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
         _localGitRepo.Checkout(path, checkoutRef);
@@ -83,19 +87,19 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path;
     }
 
-    public LocalPath PrepareClone(
+    public async Task<LocalPath> PrepareClone(
         string repoUri,
         string checkoutRef,
         CancellationToken cancellationToken)
     {
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
-        var path = PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
+        var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
         _localGitRepo.Checkout(path, checkoutRef);
         return path;
     }
 
-    private LocalPath PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
+    private async Task<LocalPath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -117,7 +121,11 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         else
         {
             _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
-            _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, forceFetch: true);
+            var remoteName = _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, skipFetch: true);
+
+            // We need to perform a full fetch and not the one provided by localGitRepo as we want all commits
+            var result = await _processManager.ExecuteGit(clonePath, new[] { "fetch", remoteName }, cancellationToken);
+            result.ThrowIfFailed($"Failed to fetch changes from {remoteUri} into {clonePath}");
         }
 
         _upToDateRepos.Add(remoteUri);

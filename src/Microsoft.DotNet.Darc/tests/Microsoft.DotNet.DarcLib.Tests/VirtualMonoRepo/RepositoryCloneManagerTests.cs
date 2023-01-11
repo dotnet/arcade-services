@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -22,6 +23,7 @@ public class RepositoryCloneManagerTests
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
+    private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
     private readonly Mock<IGitRepoClonerFactory> _remoteFactory = new();
     private readonly Mock<IGitRepoCloner> _remote = new();
@@ -46,6 +48,9 @@ public class RepositoryCloneManagerTests
 
         _localGitRepo.Reset();
 
+        _processManager.Reset();
+        _processManager.SetReturnsDefault(Task.FromResult(new ProcessExecutionResult() { ExitCode = 0 }));
+
         _fileSystem.Reset();
         _fileSystem
             .Setup(x => x.PathCombine(It.IsAny<string>(), It.IsAny<string>()))
@@ -59,18 +64,19 @@ public class RepositoryCloneManagerTests
             _vmrInfo.Object,
             _localGitRepo.Object,
             _remoteFactory.Object,
+            _processManager.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
     }
 
     [Test]
-    public void RepoIsClonedOnceTest()
+    public async Task RepoIsClonedOnceTest()
     {
-        var path = _manager.PrepareClone(RepoUri, Ref, default);
+        var path = await _manager.PrepareClone(RepoUri, Ref, default);
         path.Should().Be(_clonePath);
-        path = _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
-        path = _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
         _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Once);
@@ -80,15 +86,15 @@ public class RepositoryCloneManagerTests
     }
 
     [Test]
-    public void CloneIsReusedTest()
+    public async Task CloneIsReusedTest()
     {
         _fileSystem
             .Setup(x => x.DirectoryExists(_clonePath))
             .Returns(true);
 
-        var path = _manager.PrepareClone(RepoUri, Ref, default);
+        var path = await _manager.PrepareClone(RepoUri, Ref, default);
         path.Should().Be(_clonePath);
-        path = _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
         _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Never);
@@ -98,7 +104,7 @@ public class RepositoryCloneManagerTests
     }
 
     [Test]
-    public void MultipleRemotesAreConfiguredTest()
+    public async Task MultipleRemotesAreConfiguredTest()
     {
         var mapping = new SourceMapping(
             "test-repo",
@@ -106,6 +112,8 @@ public class RepositoryCloneManagerTests
             "main",
             Array.Empty<string>(),
             Array.Empty<string>());
+
+        var newRemote = "https://dev.azure.com/dnceng/test-repo";
 
         var clonePath = _tmpDir / mapping.Name;
 
@@ -117,15 +125,24 @@ public class RepositoryCloneManagerTests
             .Returns(true)
             .Returns(true);
 
+        _localGitRepo
+            .Setup(x => x.AddRemoteIfMissing(clonePath, mapping.DefaultRemote, true))
+            .Returns("default");
+
+        _localGitRepo
+            .Setup(x => x.AddRemoteIfMissing(clonePath, newRemote, true))
+            .Returns("new");
+
         void ResetCalls()
         {
+            _processManager.ResetCalls();
             _remoteFactory.ResetCalls();
             _localGitRepo.ResetCalls();
             _remote.ResetCalls();
         }
 
         // Clone for the first time
-        var path = _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, "main", default);
+        var path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, "main", default);
         path.Should().Be(clonePath);
 
         _remoteFactory.Verify(x => x.GetCloner(mapping.DefaultRemote, It.IsAny<ILogger>()), Times.Once);
@@ -134,51 +151,55 @@ public class RepositoryCloneManagerTests
 
         // A second clone of the same
         ResetCalls();
-        path = _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, Ref, default);
+        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, Ref, default);
         
         path.Should().Be(clonePath);
         _remote.Verify(x => x.Clone(mapping.DefaultRemote, clonePath, null), Times.Never);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", mapping.DefaultRemote }, default), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref, false), Times.Once);
 
         // A third clone with a new remote
         ResetCalls();
-        var newRemote = "https://dev.azure.com/dnceng/test-repo";
-        path = _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
+        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         path.Should().Be(clonePath);
         _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref, false), Times.Once);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", "new" }, default), Times.Once);
 
         // Same again, should be cached
         ResetCalls();
-        path = _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
+        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         path.Should().Be(clonePath);
         _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "3", false), Times.Once);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", mapping.DefaultRemote }, default), Times.Never);
 
         // Call with URI directly
         ResetCalls();
-        path = _manager.PrepareClone(RepoUri, Ref + "4", default);
+        path = await _manager.PrepareClone(RepoUri, Ref + "4", default);
 
         path.Should().Be(clonePath);
         _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, RepoUri, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "4", false), Times.Once);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", mapping.DefaultRemote }, default), Times.Never);
 
         // Call with the second URI directly
         ResetCalls();
-        path = _manager.PrepareClone(newRemote, Ref + "5", default);
+        path = await _manager.PrepareClone(newRemote, Ref + "5", default);
 
         path.Should().Be(clonePath);
         _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "5", false), Times.Once);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", mapping.DefaultRemote }, default), Times.Never);
     }
 }

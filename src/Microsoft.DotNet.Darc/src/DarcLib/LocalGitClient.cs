@@ -357,19 +357,18 @@ public class LocalGitClient : ILocalGitRepo
     /// <summary>
     ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
     /// </summary>
-    public void AddRemoteIfMissing(string repoDir, string repoUrl, bool forceFetch = false)
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoUrl">URL of the remote to add</param>
+    /// <param name="skipFetch">Skip fetching remote changes</param>
+    /// <returns>Name of the remote</returns>
+    public string AddRemoteIfMissing(string repoDir, string repoUrl, bool skipFetch = false)
     {
         using var repo = new Repository(repoDir);
         var remote = repo.Network.Remotes.FirstOrDefault(r => r.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase));
         string remoteName;
 
-        if (remote is not null)
+        if (remote is null)
         {
-            if (!forceFetch)
-            {
-                return;
-            }
-
             remoteName = remote.Name;
         }
         else
@@ -381,13 +380,18 @@ public class LocalGitClient : ILocalGitRepo
             repo.Network.Remotes.Add(remoteName, repoUrl);
         }
 
-        _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
-        Commands.Fetch(
-            repo,
-            remoteName,
-            new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" },
-            new FetchOptions(),
-            $"Fetching {repoUrl} into {repoDir}");
+        if (!skipFetch)
+        {
+            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+            Commands.Fetch(
+                repo,
+                remoteName,
+                Array.Empty<string>(),
+                new FetchOptions(),
+                $"Fetching {repoUrl} into {repoDir}");
+        }
+
+        return remoteName;
     }
 
     public List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit)

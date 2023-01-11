@@ -1480,7 +1480,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// </summary>
     /// <param name="repoDir">Ignored</param>
     /// <param name="repoUrl">Ignored</param>
-    public void AddRemoteIfMissing(string repoDir, string repoUrl)
+    public string AddRemoteIfMissing(string repoDir, string repoUrl)
     {
         throw new NotImplementedException("Cannot add a remote to a remote repo.");
     }
