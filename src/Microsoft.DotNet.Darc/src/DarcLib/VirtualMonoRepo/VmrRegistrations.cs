@@ -62,7 +62,9 @@ public static class VmrRegistrations
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
-        services.TryAddTransient<IVmrScanner, VmrScanner>();
+        // If we use TryAddTransient, the second service won't get registered
+        services.AddTransient<IVmrScanner, VmrCloakedFileScanner>();
+        services.AddTransient<IVmrScanner, VmrBinaryFileScanner>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<ISourceManifest>(sp =>

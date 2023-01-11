@@ -8,49 +8,47 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public class VmrCloakedFileScanner : VmrScanner
+public class VmrBinaryFileScanner : VmrScanner
 {
-    public VmrCloakedFileScanner(
-        IVmrDependencyTracker dependencyTracker,
+    // Git output from the diff --numstat command, when it finds a binary file
+    private const string _binaryFileMarker = "-\t-";
+
+    public VmrBinaryFileScanner(
+        IVmrDependencyTracker dependencyTracker, 
         IProcessManager processManager,
-        IVmrInfo vmrInfo,
-        ILogger<VmrScanner> logger)
+        IVmrInfo vmrInfo, 
+        ILogger<VmrScanner> logger) 
         : base(dependencyTracker, processManager, vmrInfo, logger)
     {
     }
 
-    protected override string GetExclusionAttribute() => VmrInfo.KeepAttribute;
+    protected override string GetExclusionAttribute() => VmrInfo.VmrIgnoreBinaryAttribute;
 
     protected override async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
     {
-        var args = new List<string>
-    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var args = new string[]{
         "diff",
-        "--name-only",
-        Constants.EmptyGitObject
+        Constants.EmptyGitObject,
+        "--numstat",
+        GetExclusionFilter(_vmrInfo.GetRepoSourcesPath(sourceMapping))
     };
-
-        var baseExcludePath = _vmrInfo.GetRepoSourcesPath(sourceMapping);
-
-        foreach (var exclude in sourceMapping.Exclude)
-        {
-            args.Add(GetExclusionFilter(baseExcludePath / exclude));
-        }
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
 
         return ret.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith(_binaryFileMarker))
+            .Select(line => line.Split('\t' ).Last());
     }
 
-    protected override string ScanType() => "cloaked";
+    protected override string ScanType() => "binary";
 }
