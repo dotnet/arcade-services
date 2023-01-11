@@ -367,7 +367,7 @@ public class LocalGitClient : ILocalGitRepo
         var remote = repo.Network.Remotes.FirstOrDefault(r => r.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase));
         string remoteName;
 
-        if (remote is null)
+        if (remote is not null)
         {
             remoteName = remote.Name;
         }
@@ -386,7 +386,7 @@ public class LocalGitClient : ILocalGitRepo
             Commands.Fetch(
                 repo,
                 remoteName,
-                Array.Empty<string>(),
+                new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" },
                 new FetchOptions(),
                 $"Fetching {repoUrl} into {repoDir}");
         }
