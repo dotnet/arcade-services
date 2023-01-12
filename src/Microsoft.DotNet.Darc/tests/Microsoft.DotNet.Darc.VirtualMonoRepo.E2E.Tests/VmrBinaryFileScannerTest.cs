@@ -47,14 +47,6 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         list.Count().Should().Be(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
-
-        File.WriteAllText(newFilePath / ".gitattributes", $"*.jpg {VmrInfo.VmrIgnoreBinaryAttribute}");
-        await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
-
-        // Test the scanner when the .gitattributes file is preserving the cloacked file
-        list = await CallDarcBinaryFileScan();
-
-        list.Count().Should().Be(0);
     }
 
     protected override async Task CopyReposForCurrentTest()

@@ -36,7 +36,7 @@ public class VmrBinaryFileScanner : VmrScanner
             "diff",
             Constants.EmptyGitObject,
             "--numstat",
-            GetExclusionFilter(_vmrInfo.GetRepoSourcesPath(sourceMapping))
+            _vmrInfo.GetRepoSourcesPath(sourceMapping)
         };
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
@@ -50,5 +50,4 @@ public class VmrBinaryFileScanner : VmrScanner
     }
 
     protected override string ScanType { get; } = "binary";
-    private string GetExclusionFilter(string file) => $":(attr:!{VmrInfo.VmrIgnoreBinaryAttribute}){file}";
 }
