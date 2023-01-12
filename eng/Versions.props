@@ -14,7 +14,7 @@
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.23060.6</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
     <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23060.6</MicrosoftDotNetGitIssueManagerVersion>
     <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23060.6</MicrosoftDotNetVersionToolsVersion>
-    <MicrosoftNetTestSdkVersion>17.4.0</MicrosoftNetTestSdkVersion>
+    <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
