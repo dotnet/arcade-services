@@ -44,7 +44,7 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         // Test the scanner when there is a cloacked file to be found
         list = await CallDarcBinaryFileScan();
 
-        list.Count().Should().Be(1);
+        list.Should().HaveCount(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
     }
