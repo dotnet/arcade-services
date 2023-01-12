@@ -167,7 +167,7 @@ public class RepositoryCloneManagerTests
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref, false), Times.Once);
-        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", "new" }, default), Times.Once);
+        _processManager.Verify(x => x.ExecuteGit(clonePath, new[] { "fetch", newRemote }, default), Times.Once);
 
         // Same again, should be cached
         ResetCalls();
