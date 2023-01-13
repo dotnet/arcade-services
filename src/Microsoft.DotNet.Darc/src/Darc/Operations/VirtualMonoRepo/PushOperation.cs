@@ -2,26 +2,31 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using CommandLine.Text;
-using CommandLine;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class PushOperation : Operation
 {
+    private VmrPushCommandLineOptions _options;
+
     public PushOperation(VmrPushCommandLineOptions options)
-        : base(options)
+        : base(options, options.RegisterServices())
     {
+        _options = options;
     }
 
-    public override Task<int> ExecuteAsync()
+    public override async Task<int> ExecuteAsync()
     {
-        throw new NotImplementedException();
+        var vmrPusher = Provider.GetRequiredService<IVmrPusher>();
+        using var listener = CancellationKeyListener.ListenForCancellation(Logger);
+        //var remoteFactory = new RemoteFactory(_options);
+        
+        await vmrPusher.Push(listener.Token);
+        return 0;
     }
 }
