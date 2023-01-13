@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -10,10 +11,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
@@ -45,53 +49,84 @@ public class VmrPusher : IVmrPusher
 
     public async Task Push(CancellationToken cancellationToken)
     {
-        await ValidateCommits(cancellationToken);
+        ExecutePush("main", cancellationToken);
     }
 
-    private async Task ExecutePush(CancellationToken cancellationToken)
+    private void ExecutePush(
+        string branchName,
+        CancellationToken cancellationToken)
     {
-        var vmrUrl = "https://github.com/MilenaHristova/individual-repo";
+        var vmrUrl = "";
+        var remoteName = "dotnet";
+     
+        using var vmrRepo = new Repository(_vmrInfo.VmrPath);
+        vmrRepo.Config.Add("user.name", Constants.DarcBotName);
+        vmrRepo.Config.Add("user.email", Constants.DarcBotEmail);
 
-        await _processManager.ExecuteGit(_vmrInfo.VmrPath, "config", "user.email", Constants.DarcBotEmail);
-        await _processManager.ExecuteGit(_vmrInfo.VmrPath, "config", "user.name", Constants.DarcBotName);
+        vmrRepo.Network.Remotes.Update(remoteName, r => r.Url = vmrUrl);
 
-        await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            new string[] { "remote", "add", "dotnet", vmrUrl },
-            cancellationToken: cancellationToken);
+        var remote = vmrRepo.Network.Remotes[remoteName];
+        var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+        
+        try
+        {
+            Commands.Fetch(vmrRepo, remoteName, refSpecs, new FetchOptions(), "Fetching dotnet");
+        }
+        catch
+        {
+            _logger.LogWarning($"Fetching failed.");
+        }
 
-        await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            new string[] { "fetch", "dotnet" },
-            cancellationToken: cancellationToken);
+        Branch branch;
+        if (!vmrRepo.Branches.Any(b => b.FriendlyName == branchName))
+        {
+            branch = vmrRepo.CreateBranch(branchName);
+        }
+        else
+        {
+            branch = vmrRepo.Branches[branchName];
+        }
 
-        await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            new string[] { "branch", "main" },
-            cancellationToken: cancellationToken);
+        vmrRepo.Branches.Update(branch, b => b.Remote = remoteName, b => b.UpstreamBranch = remoteName + "/" + branchName);
 
-        await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            new string[] { "branch", "--set-upstream-to=dotnet/main", "main" },
-            cancellationToken: cancellationToken);
+        var pushOptions = new PushOptions
+        {
+            CredentialsProvider = (url, user, cred) =>
+                new UsernamePasswordCredentials
+                {
+                    Username = Constants.DarcBotName,
+                    Password = _vmrRemoteConfiguration.GitHubToken
+                }
+        };
 
-        await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            new string[] { "push", "dotnet", "main" },
-            cancellationToken: cancellationToken);
+        vmrRepo.Network.Push(remote, branch.CanonicalName, pushOptions);
     }
 
-    private async Task ValidateCommits(CancellationToken cancellationToken)
+    private async Task<bool> ValidateCommits(CancellationToken cancellationToken)
     {
         var publicRepos = _sourceManifest
             .Repositories
-            .ToDictionary(r => r.Path.Replace("-", ""), r => $"{r.RemoteUri}/commit/{r.CommitSha}");
+            .ToDictionary(r => r.Path.Replace("-", ""), r => GetPublicRepoCommitUri(r.RemoteUri, r.CommitSha));
 
         var commits = await GetRepositoriesCommits(publicRepos, cancellationToken);
+        
+        if(commits == null || commits.Data == null)
+        {
+            return false;
+        }
 
+        foreach(var pair in commits.Data)
+        {
+            if(pair.Value == null)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    private async Task<CommitsQueryResult> GetRepositoriesCommits(
+    private async Task<CommitsQueryResult?> GetRepositoriesCommits(
         Dictionary<string, string> repos,
         CancellationToken cancellationToken)
     {
@@ -101,7 +136,7 @@ public class VmrPusher : IVmrPusher
         var query = string.Join(", ", queries);
         var body = @"{""query"" : ""{" + query + @"}""}";
 
-        HttpResponseMessage response = null;
+        HttpResponseMessage? response = null;
 
         using var client = new HttpClient();
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AppName", "1.0"));
@@ -116,7 +151,12 @@ public class VmrPusher : IVmrPusher
             response.EnsureSuccessStatusCode();
 
             var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
-            var result = JsonSerializer.Deserialize<CommitsQueryResult>(content);
+            var settings = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+            };
+
+            var result = JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
             return result;
         }
         catch (HttpRequestException exc)
@@ -126,5 +166,32 @@ public class VmrPusher : IVmrPusher
         }
     }
 
-    private record CommitsQueryResult(Dictionary<string, Dictionary<string, string>> data);
+    private string GetPublicRepoCommitUri(string uri, string commit)
+    {
+        if (uri.StartsWith("https://dev.azure.com", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] repoParts = uri.Substring(uri.LastIndexOf('/')).Split('-', 2);
+
+            if (repoParts.Length != 2)
+            {
+                throw new Exception($"Invalid URI in source manifest. Repo '{uri}' does not end with the expected <GH organization>-<GH repo> format.");
+            }
+
+            string org = repoParts[0];
+            string repo = repoParts[1];
+
+            // The internal Nuget.Client repo has suffix which needs to be accounted for.
+            const string trustedSuffix = "-Trusted";
+            if (uri.EndsWith(trustedSuffix, StringComparison.OrdinalIgnoreCase))
+            {
+                repo = repo.Substring(0, repo.Length - trustedSuffix.Length);
+            }
+
+            uri = $"https://github.com/{org}/{repo}";
+        }
+
+        return $"{uri}/commit/{commit}";
+    }
+
+    private record CommitsQueryResult(Dictionary<string, Dictionary<string, string>>? Data);
 }
