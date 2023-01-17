@@ -9,12 +9,8 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("scan", HelpText = "Scans the VMR, checking if it contains any cloacked files")]
-internal class ScanCommandLineOptions : VmrCommandLineOptions
+[Verb("scan-binary-files", HelpText = "Scans the VMR, checking if it contains any binary files")]
+internal class BinaryFileScanOptions : VmrCommandLineOptions
 {
-    public ScanCommandLineOptions()
-    {
-    }
-
-    public override Operation GetOperation() => new ScanOperation(this);
+    public override Operation GetOperation() => new BinaryFileScanOperation(this);
 }

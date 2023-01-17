@@ -2,27 +2,27 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
-#nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class ScanOperation : Operation
+internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
 {
-    public ScanOperation(ScanCommandLineOptions options) : base(options, options.RegisterServices())
+    public ScanOperationBase(CommandLineOptions options, IServiceCollection services = null) : base(options, services)
     {
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        var vmrScanner = Provider.GetRequiredService<IVmrScanner>();
+        var vmrScanner = Provider.GetRequiredService<T>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        await vmrScanner.ListCloakedFiles(listener.Token);
+        await vmrScanner.ScanVmr(listener.Token);
         return 0;
     }
 }

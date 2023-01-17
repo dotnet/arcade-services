@@ -10,46 +10,43 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrScannerTest : VmrTestsBase
+public class VmrBinaryFileScannerTest : VmrTestsBase
 {
     [Test]
-    public async Task VmrScannerTests()
+    public async Task VmrBinaryFileScannerTests()
     {
-        var testFileName = "test.dll";
+        var testFileName = "test.jpg";
+
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         // Test the scanner when there are no cloacked files to be found
-        var list = await CallDarcScan();
+        var list = await CallDarcBinaryFileScan();
 
         list.Count().Should().Be(0);
 
         var newFilePath = VmrPath / "src" / Constants.ProductRepoName / "src";
         Directory.CreateDirectory(newFilePath);
-        File.WriteAllText(newFilePath / testFileName, "this is a test file");
+        using var bitmap = new Bitmap(3, 3);
+        bitmap.Save(newFilePath / testFileName, ImageFormat.Jpeg);
         await GitOperations.CommitAll(VmrPath, "Commit dll file");
 
         // Test the scanner when there is a cloacked file to be found
-        list = await CallDarcScan();
+        list = await CallDarcBinaryFileScan();
 
-        list.Count().Should().Be(1);
+        list.Should().HaveCount(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
-
-        File.WriteAllText(newFilePath / ".gitattributes", $"*.dll {VmrInfo.KeepAttribute}");
-        await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
-
-        // Test the scanner when the .gitattributes file is preserving the cloacked file
-        list = await CallDarcScan();
-
-        list.Count().Should().Be(0);
     }
 
     protected override async Task CopyReposForCurrentTest()
@@ -57,7 +54,7 @@ public class VmrScannerTest : VmrTestsBase
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
     }
 
-    protected async override Task CopyVmrForCurrentTest()
+    protected override async Task CopyVmrForCurrentTest()
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
@@ -81,4 +78,3 @@ public class VmrScannerTest : VmrTestsBase
         await WriteSourceMappingsInVmr(sourceMappings);
     }
 }
-
