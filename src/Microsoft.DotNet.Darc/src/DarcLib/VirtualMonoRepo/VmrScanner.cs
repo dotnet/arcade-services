@@ -67,7 +67,7 @@ public abstract class VmrScanner : IVmrScanner
         return taskList.SelectMany(task => task.Result).ToList();
     }
 
-    protected virtual string ScanType { get; }
+    protected abstract string ScanType { get; }
     protected abstract Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken);
 }
 

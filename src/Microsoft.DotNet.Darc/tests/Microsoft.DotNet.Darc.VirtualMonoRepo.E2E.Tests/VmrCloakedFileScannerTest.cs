@@ -27,7 +27,7 @@ public class VmrCloakedFileScannerTest : VmrTestsBase
         var testFileName = "test.dll";
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        // Test the scanner when there are no cloacked files to be found
+        // Test the scanner when there are no cloaked files to be found
         var list = await CallDarcCloakedFileScan();
 
         list.Count().Should().Be(0);
@@ -37,7 +37,7 @@ public class VmrCloakedFileScannerTest : VmrTestsBase
         File.WriteAllText(newFilePath / testFileName, "this is a test file");
         await GitOperations.CommitAll(VmrPath, "Commit dll file");
 
-        // Test the scanner when there is a cloacked file to be found
+        // Test the scanner when there is a cloaked file to be found
         list = await CallDarcCloakedFileScan();
 
         list.Should().HaveCount(1);
@@ -47,7 +47,7 @@ public class VmrCloakedFileScannerTest : VmrTestsBase
         File.WriteAllText(newFilePath / ".gitattributes", $"*.dll {VmrInfo.KeepAttribute}");
         await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
 
-        // Test the scanner when the .gitattributes file is preserving the cloacked file
+        // Test the scanner when the .gitattributes file is preserving the cloaked file
         list = await CallDarcCloakedFileScan();
 
         list.Count().Should().Be(0);
