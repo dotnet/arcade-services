@@ -135,8 +135,8 @@ public static class LocalHelpers
         Directory.CreateDirectory(workingDirectory);
 
         ExecuteGitCommand(gitLocation, $"init {repoFolderName}", logger, workingDirectory);
-        string configKey = $"http.{repoUri}.extraheader";
-        string configEnv = ComposeEnvVarArgs(configKey, user, pat);
+        string configKey = $"http.extraheader";
+        string configEnv = ComposeEnvVarArgs(configKey, repoUri, user, pat);
 
         workingDirectory = Path.Combine(workingDirectory, repoFolderName);
 
@@ -148,7 +148,7 @@ public static class LocalHelpers
 
         File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
-        ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= pull --depth=1 {configEnv} {remote} {branch}", logger, workingDirectory, secretToMask: pat);
+        ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= {configEnv} pull --depth=1 {remote} {branch}", logger, workingDirectory, secretToMask: pat);
         ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
 
         return workingDirectory;
@@ -156,12 +156,13 @@ public static class LocalHelpers
 
     private static string ComposeEnvVarArgs(
         string configKey,
+        string repoUri,
         string username,
         string password)
     {
         string configValue = $"AUTHORIZATION: {GenerateAuthHeader(username, password)}";
-
-        string envVariableName = $"env_var_{configKey}";
+        string formattedRepoUri = repoUri.Replace("https://",""); // Env variables name can't use ':'
+        string envVariableName = $"env_var_{formattedRepoUri}";
         Environment.SetEnvironmentVariable(envVariableName, configValue);
 
         return $"--config-env={configKey}={envVariableName}";
