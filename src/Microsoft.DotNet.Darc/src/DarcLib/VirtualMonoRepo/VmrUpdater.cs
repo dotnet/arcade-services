@@ -104,8 +104,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker
-            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+        await _dependencyTracker.InitializeSourceMappings();
 
         var mapping = _dependencyTracker.Mappings
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))

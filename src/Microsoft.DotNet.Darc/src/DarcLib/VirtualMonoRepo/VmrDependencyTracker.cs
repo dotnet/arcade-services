@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -17,7 +16,11 @@ public interface IVmrDependencyTracker
 {
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
-    Task InitializeSourceMappings(string sourceMappingsPath);
+    /// <summary>
+    /// Loads repository mappings from source-mappings.json
+    /// </summary>
+    /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
+    Task InitializeSourceMappings(string? sourceMappingsPath = null);
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
@@ -66,8 +69,9 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);
 
-    public async Task InitializeSourceMappings(string sourceMappingsPath)
+    public async Task InitializeSourceMappings(string? sourceMappingsPath = null)
     {
+        sourceMappingsPath ??= _vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
         _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 

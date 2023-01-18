@@ -41,8 +41,7 @@ public abstract class VmrScanner : IVmrScanner
 
     public async Task<List<string>> ScanVmr(string baselineFilePath, CancellationToken cancellationToken)
     {
-        await _dependencyTracker
-            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+        await _dependencyTracker.InitializeSourceMappings();
 
         var taskList = new List<Task<IEnumerable<string>>>();
 
