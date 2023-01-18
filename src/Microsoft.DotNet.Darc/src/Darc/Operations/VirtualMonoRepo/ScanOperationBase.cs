@@ -16,7 +16,7 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
 {
     private readonly VmrScanOptions _options;
 
-    public ScanOperationBase(VmrScanOptions options, IServiceCollection services = null) : base(options, services)
+    public ScanOperationBase(VmrScanOptions options) : base(options, options.RegisterServices())
     {
         _options = options;
     }

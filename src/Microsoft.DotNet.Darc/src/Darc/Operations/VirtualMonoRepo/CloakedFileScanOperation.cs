@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class CloakedFileScanOperation : ScanOperationBase<VmrCloakedFileScanner>
 {
-    public CloakedFileScanOperation(CloakedFileScanOptions options) : base(options, options.RegisterServices())
+    public CloakedFileScanOperation(CloakedFileScanOptions options) : base(options)
     {
     }
 }

@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class BinaryFileScanOperation : ScanOperationBase<VmrBinaryFileScanner>
 {
-    public BinaryFileScanOperation(BinaryFileScanOptions options) : base(options, options.RegisterServices())
+    public BinaryFileScanOperation(BinaryFileScanOptions options) : base(options)
     {
     }
 }
