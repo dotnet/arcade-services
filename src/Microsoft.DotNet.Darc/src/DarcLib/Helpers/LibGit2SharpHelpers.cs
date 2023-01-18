@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
@@ -36,18 +35,30 @@ internal static class LibGit2SharpHelpers
         }
         catch (Exception e) when (e is InvalidSpecificationException
                                   || e is NameConflictException
-                                  || e is LibGit2SharpException)
+                                  || e is LibGit2SharpException
+                                  || e is NotFoundException)
         {
-            log.LogInformation($"Checkout of {repo.Info.WorkingDirectory} at {commit} failed, fetching before attempting individual files.");
+            log.LogInformation($"Checkout of {repo.Info.WorkingDirectory} at {commit} failed: {e}");
+            log.LogInformation($"Fetching before attempting individual files.");
+
             FetchRepo(repo, log);
+
             try
             {
                 log.LogDebug($"Post-fetch, trying to checkout {repo.Info.WorkingDirectory} at {commit} again");
                 Commands.Checkout(repo, commit, options);
             }
-            catch
+            catch (NotFoundException ex)
             {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." +
+                throw new Exception($"Failed to find commit {commit} when checking out {repo.Info.WorkingDirectory}", ex);
+            }
+            catch (Exception ex)
+            {
+                var isDueToPathLength = ex is InvalidSpecificationException
+                    || ex is NameConflictException
+                    || ex is LibGit2SharpException;
+
+                log.LogWarning($"Couldn't check out one or more files{(isDueToPathLength ? ", possibly due to path length limitations" : "")} ({ex})." +
                                "  Attempting to checkout by individual files.");
                 SafeCheckoutByIndividualFiles(repo, commit, options, log);
             }

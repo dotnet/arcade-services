@@ -172,10 +172,6 @@
   "AzureTableTokenStore": {
     "TableUri": "[vault(token-table-sas-uri)]"
   },
-  "DataProtection": {
-    "StorageAccountConnectionString": "[vault(dotnet-status-storage-account)]",
-    "KeyIdentifier": "dotnet-status-data-protection"
-  },
   "Grafana": {
     "BaseUrl": "https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com",
     "ApiToken": "[vault(grafana-api-token)]",

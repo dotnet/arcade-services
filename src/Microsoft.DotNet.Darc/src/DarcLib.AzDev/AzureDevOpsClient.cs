@@ -11,7 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -1480,7 +1480,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// </summary>
     /// <param name="repoDir">Ignored</param>
     /// <param name="repoUrl">Ignored</param>
-    public void AddRemoteIfMissing(string repoDir, string repoUrl)
+    public string AddRemoteIfMissing(string repoDir, string repoUrl)
     {
         throw new NotImplementedException("Cannot add a remote to a remote repo.");
     }

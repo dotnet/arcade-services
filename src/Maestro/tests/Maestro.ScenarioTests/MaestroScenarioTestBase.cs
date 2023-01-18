@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;

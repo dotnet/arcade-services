@@ -42,7 +42,7 @@ public class LocalGitClient : ILocalGitRepo
             }
             else
             {
-                throw new InvalidOperationException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
+                throw new DependencyFileNotFoundException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
             }
         }
 
@@ -69,7 +69,7 @@ public class LocalGitClient : ILocalGitRepo
         string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
         try
         {
-            using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+            using (Repository localRepo = new Repository(repoDir))
             {
                 foreach (GitFile file in filesToCommit)
                 {
@@ -180,14 +180,14 @@ public class LocalGitClient : ILocalGitRepo
     public void Checkout(string repoDir, string commit, bool force = false)
     {
         _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
-        LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+        CheckoutOptions checkoutOptions = new CheckoutOptions
         {
-            CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
+            CheckoutModifiers = force ? CheckoutModifiers.Force : CheckoutModifiers.None,
         };
         try
         {
             _logger.LogDebug($"Reading local repo from {repoDir}");
-            using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+            using (Repository localRepo = new Repository(repoDir))
             {
                 if (commit == null)
                 {
@@ -203,7 +203,7 @@ public class LocalGitClient : ILocalGitRepo
                         CleanRepoAndSubmodules(localRepo, _logger);
                     }
                 }
-                catch (LibGit2Sharp.NotFoundException)
+                catch (NotFoundException)
                 {
                     _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
                     try
@@ -214,7 +214,7 @@ public class LocalGitClient : ILocalGitRepo
                             _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
                             try
                             {
-                                LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                Commands.Fetch(localRepo, r.Name, refSpecs, new FetchOptions(), $"Fetching from {r.Url}");
                             }
                             catch
                             {
@@ -249,20 +249,20 @@ public class LocalGitClient : ILocalGitRepo
         Commands.Stage(repository, pathToStage);
     }
 
-    private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
+    private static void CleanRepoAndSubmodules(Repository repo, ILogger log)
     {
         using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))
         {
             log.LogDebug($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules");
-            LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
+            StatusOptions options = new StatusOptions
             {
                 IncludeUntracked = true,
                 RecurseUntrackedDirs = true,
             };
             int count = 0;
-            foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
+            foreach (StatusEntry item in repo.RetrieveStatus(options))
             {
-                if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
+                if (item.State == FileStatus.NewInWorkdir)
                 {
                     File.Delete(Path.Combine(repo.Info.WorkingDirectory, item.FilePath));
                     ++count;
@@ -270,7 +270,7 @@ public class LocalGitClient : ILocalGitRepo
             }
             log.LogDebug($"Deleted {count} untracked files");
 
-            foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+            foreach (Submodule sub in repo.Submodules)
             {
                 string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
                 string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
@@ -281,16 +281,16 @@ public class LocalGitClient : ILocalGitRepo
                     // hasn't been initialized yet, can happen when different hashes have new or moved submodules
                     try
                     {
-                        repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { Init = true });
+                        repo.Submodules.Update(sub.Name, new SubmoduleUpdateOptions { Init = true });
                     }
                     catch
                     {
                         log.LogDebug($"Submodule {sub.Name} in {subRepoPath} is already initialized, trying to adopt from super-repo {repo.Info.Path}");
 
                         // superrepo thinks it is initialized, but it's orphaned.  Go back to the master repo to find out where this is supposed to point.
-                        using (LibGit2Sharp.Repository masterRepo = new LibGit2Sharp.Repository(repo.Info.WorkingDirectory))
+                        using (Repository masterRepo = new Repository(repo.Info.WorkingDirectory))
                         {
-                            LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
+                            Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
                             string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
                             log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
                             Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
@@ -305,8 +305,8 @@ public class LocalGitClient : ILocalGitRepo
 
                     // The worktree is stored in the .gitdir/config file, so we have to change it
                     // to get it to check out to the correct place.
-                    LibGit2Sharp.ConfigurationEntry<string> oldWorkTree = null;
-                    using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                    ConfigurationEntry<string> oldWorkTree = null;
+                    using (Repository subRepo = new Repository(subRepoPath))
                     {
                         oldWorkTree = subRepo.Config.Get<string>("core.worktree");
                         if (oldWorkTree != null)
@@ -321,10 +321,10 @@ public class LocalGitClient : ILocalGitRepo
                         }
                     }
 
-                    using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                    using (Repository subRepo = new Repository(subRepoPath))
                     {
                         log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
-                        subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
+                        subRepo.Reset(ResetMode.Hard, subRepo.Commits.QueryBy(new CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
                         // Now we reset the worktree back so that when we can initialize a Repository
                         // from it, instead of having to figure out which hash of the repo was most recently checked out.
                         if (oldWorkTree != null)
@@ -357,21 +357,41 @@ public class LocalGitClient : ILocalGitRepo
     /// <summary>
     ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
     /// </summary>
-    public void AddRemoteIfMissing(string repoDir, string repoUrl)
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoUrl">URL of the remote to add</param>
+    /// <param name="skipFetch">Skip fetching remote changes</param>
+    /// <returns>Name of the remote</returns>
+    public string AddRemoteIfMissing(string repoDir, string repoUrl, bool skipFetch = false)
     {
-        using LibGit2Sharp.Repository repo = new LibGit2Sharp.Repository(repoDir);
-        if (repo.Network.Remotes.Any(remote => remote.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)))
+        using var repo = new Repository(repoDir);
+        var remote = repo.Network.Remotes.FirstOrDefault(r => r.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase));
+        string remoteName;
+
+        if (remote is not null)
         {
-            return;
+            remoteName = remote.Name;
+        }
+        else
+        {
+            _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
+
+            // Remote names don't matter much but should be stable
+            remoteName = StringUtils.GetXxHash64(repoUrl);
+            repo.Network.Remotes.Add(remoteName, repoUrl);
         }
 
-        _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
+        if (!skipFetch)
+        {
+            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+            Commands.Fetch(
+                repo,
+                remoteName,
+                new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" },
+                new FetchOptions(),
+                $"Fetching {repoUrl} into {repoDir}");
+        }
 
-        // remote names don't matter, make sure it's unique
-        string remoteName = Guid.NewGuid().ToString();
-        repo.Network.Remotes.Add(remoteName, repoUrl);
-        _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
-        LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
+        return remoteName;
     }
 
     public List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit)

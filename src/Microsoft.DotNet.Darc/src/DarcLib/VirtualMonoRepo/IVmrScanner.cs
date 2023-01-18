@@ -3,12 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using System.Threading;
+using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrManager
+public interface IVmrScanner
 {
-    IReadOnlyCollection<SourceMapping> Mappings { get; }
+    Task<List<string>> ListCloakedFiles(CancellationToken cancellationToken);
 }

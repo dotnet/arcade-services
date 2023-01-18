@@ -19,8 +19,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
-using Maestro.Contracts;
 using System.Collections.Immutable;
+using Maestro.MergePolicyEvaluation;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -744,8 +744,16 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>New http client</returns
     private HttpClient CreateHttpClient()
     {
-        var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {BaseAddress = new Uri(GitHubApiUri)};
-        client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+        var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+        {
+            BaseAddress = new Uri(GitHubApiUri)
+        };
+        
+        if (_personalAccessToken != null)
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
+        }
+
         client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
 
         return client;

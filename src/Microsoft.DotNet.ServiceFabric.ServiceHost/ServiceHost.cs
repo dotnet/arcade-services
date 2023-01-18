@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.Internal.Logging;
@@ -85,12 +86,41 @@ public partial class ServiceHost
             ServicePointManager.CheckCertificateRevocationList = true;
             JsonConvert.DefaultSettings =
                 () => new JsonSerializerSettings {TypeNameHandling = TypeNameHandling.None};
-            var host = new ServiceHost();
-            configure(host);
-            host.Start();
-            packageActivationContext.ReportDeployedServicePackageHealth(
-                new HealthInformation("ServiceHost", "ServiceHost.Run", HealthState.Ok));
-            Thread.Sleep(Timeout.Infinite);
+            var loggingServices = new ServiceCollection();
+            ConfigureLoggingServices(loggingServices);
+            using var loggingServiceProvider = loggingServices.BuildServiceProvider();
+            try
+            {
+                var loggerFactory = loggingServiceProvider.GetRequiredService<ILoggerFactory>();
+                using var eventListener = ServiceHostEventListener.ListenToEventSources(loggerFactory,
+                    // event sources we are interested in
+                    // Service Fabric sources
+                    "ServiceFramework",
+                    "ActorFramework",
+                    // aspnet sources
+                    "Microsoft.AspNetCore.Hosting",
+                    "Microsoft.AspNetCore.Http.Connections",
+                    "Microsoft-AspNetCore-Server-Kestrel",
+                    // dotnet sources
+                    "System.Data.DataCommonEventSource");
+                var host = new ServiceHost();
+                configure(host);
+                host.Start();
+                packageActivationContext.ReportDeployedServicePackageHealth(
+                    new HealthInformation("ServiceHost", "ServiceHost.Run", HealthState.Ok));
+                Thread.Sleep(Timeout.Infinite);
+            }
+            finally
+            {
+                try
+                {
+                    loggingServiceProvider.GetService<ITelemetryChannel>()?.Flush();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to flush application insights telemetry channel. {ex}");
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -229,9 +259,8 @@ public partial class ServiceHost
         }
     }
 
-    public static void ConfigureDefaultServices(IServiceCollection services)
+    public static void ConfigureLoggingServices(IServiceCollection services)
     {
-        services.AddOptions();
         services.TryAddSingleton(InitializeEnvironment());
         services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
         services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
@@ -240,12 +269,18 @@ public partial class ServiceHost
         services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
 #pragma warning restore 618
         ConfigureApplicationInsights(services);
-        services.AddOperationTracking(o => { });
         services.AddLogging(
             builder =>
             {
                 builder.AddDebug();
             });
+    }
+
+    public static void ConfigureDefaultServices(IServiceCollection services)
+    {
+        services.AddOptions();
+        ConfigureLoggingServices(services);
+        services.AddOperationTracking(o => { });
         services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
         services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
         services.AddHttpClient();

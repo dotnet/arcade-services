@@ -1,0 +1,12 @@
+diff --git a/product-repo1-file.txt b/product-repo1-file.txt
+deleted file mode 100644
+index ba59085..0000000
+--- a/product-repo1-file.txt
++++ /dev/null
+@@ -1,5 +0,0 @@
+-File in the test repo
+-patches will change the next lines
+-AAA
+-BBB
+-end of changes
+\ No newline at end of file

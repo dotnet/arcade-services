@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.IO;
+using System.IO.Hashing;
+using System.Text;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -63,5 +66,14 @@ public class StringUtils
         readable /= 1024;
         // Return formatted number with suffix
         return readable.ToString("0.### ") + suffix;
+    }
+
+    public static string GetXxHash64(string input)
+    {
+        var hasher = new XxHash64(0);
+        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+        hasher.Append(inputBytes);
+        byte[] hashBytes = hasher.GetCurrentHash();
+        return Convert.ToHexString(hashBytes);
     }
 }

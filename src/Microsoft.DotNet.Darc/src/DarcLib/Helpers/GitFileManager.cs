@@ -16,7 +16,7 @@ using System.Xml;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class GitFileManager
+public class GitFileManager : IGitFileManager
 {
     private readonly IGitRepo _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -1445,8 +1445,8 @@ public class GitFileManager
         }
         else
         {
-            _logger.LogError($"Unable to parse feed { feed } as a Maestro managed feed");
-            throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed");
+            _logger.LogError($"Unable to parse feed {feed} as a Maestro managed feed");
+            throw new ArgumentException($"feed {feed} is not a valid Maestro managed feed");
         }
     }
 
