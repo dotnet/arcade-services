@@ -43,7 +43,7 @@ public class VmrBinaryFileScanner : VmrScanner
             _vmrInfo.GetRepoSourcesPath(sourceMapping)
         };
 
-        args.AddRange(await GetBaselineFilesAsync(baselineFilePath));
+        args.AddRange(await GetBaselineFilesAsync(sourceMapping.Name, baselineFilePath));
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 

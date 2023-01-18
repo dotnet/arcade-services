@@ -74,10 +74,11 @@ public abstract class VmrScanner : IVmrScanner
     /// <summary>
     /// Returns a list of files that will be exluded from the scan operation, loaded from the baselineFilesPath
     /// </summary>
-    protected async Task<IEnumerable<string>> GetBaselineFilesAsync(string baselineFilePath)
+    protected async Task<IEnumerable<string>> GetBaselineFilesAsync(string repoName, string baselineFilePath)
     {
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
         return text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith($"src/{repoName}") || line.StartsWith('*'))
             .Select(line =>
             {
                 // Ignore comments
