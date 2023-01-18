@@ -70,7 +70,7 @@ public abstract class VmrScanner : IVmrScanner
     /// </summary>
     /// <param name="baselineFilesPath"></param>
     /// <returns></returns>
-    protected IEnumerable<string> GetBaselineFilesExclusionList(string baselineFilesPath)
+    protected IEnumerable<string> GetBaselineFiles(string baselineFilesPath)
     {
         var a =  File.ReadAllLines(baselineFilesPath).Select(line =>
             {

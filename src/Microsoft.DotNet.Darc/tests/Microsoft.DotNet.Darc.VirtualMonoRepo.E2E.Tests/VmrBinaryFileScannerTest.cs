@@ -23,13 +23,13 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
     public async Task VmrBinaryFileScannerTests()
     {
         var testFileName = "test.jpg";
-        var baselineFilePath = VmrTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
-        File.Create(baselineFilePath).Close();
+        var baselinesFilePath = VmrTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
+        File.Create(baselinesFilePath).Close();
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         // Test the scanner when there are no cloacked files to be found
-        var list = await CallDarcBinaryFileScan(baselineFilePath);
+        var list = await CallDarcBinaryFileScan(baselinesFilePath);
 
         list.Count().Should().Be(0);
 
@@ -40,16 +40,16 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         await GitOperations.CommitAll(VmrPath, "Commit dll file");
 
         // Test the scanner when there is a binary file to be found
-        list = await CallDarcBinaryFileScan(baselineFilePath);
+        list = await CallDarcBinaryFileScan(baselinesFilePath);
 
         list.Should().HaveCount(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
 
-        File.WriteAllText(baselineFilePath, "*.jpg");
+        File.WriteAllText(baselinesFilePath, "*.jpg");
 
         // Test the scanner when the binary file is a baseline file
-        list = await CallDarcBinaryFileScan(baselineFilePath);
+        list = await CallDarcBinaryFileScan(baselinesFilePath);
 
         list.Count().Should().Be(0);
     }
