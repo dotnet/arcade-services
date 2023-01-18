@@ -26,7 +26,7 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
         var vmrScanner = Provider.GetRequiredService<T>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        var files = await vmrScanner.ScanVmr(_options.BaselineFilePath, listener.Token);
+        var files = await vmrScanner.ScanVmr(_options.BaselineFilesPath, listener.Token);
 
         foreach (var file in files)
         {
