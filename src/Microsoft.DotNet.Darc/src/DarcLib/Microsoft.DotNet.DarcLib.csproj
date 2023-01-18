@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
-    <PackageReference Include="Microsoft.Azure.KeyVault" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
     <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
@@ -25,7 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
-    <ProjectReference Include="..\..\..\Maestro\Maestro.Contracts\Maestro.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
     <ProjectReference Include="..\..\..\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj" />
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>

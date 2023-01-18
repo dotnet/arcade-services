@@ -30,6 +30,11 @@ public interface IVmrInfo
     string? PatchesPath { get; set; }
 
     /// <summary>
+    /// Path to the source-mappings.json file 
+    /// </summary>
+    string? SourceMappingsPath { get; set; }
+
+    /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
     /// Paths are UNIX style and relative.
     /// Example: ("src/installer/eng/common", "eng/common")
@@ -51,9 +56,13 @@ public class VmrInfo : IVmrInfo
 {
     public const string SourcesDir = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
-    public const string GitInfoSourcesDir = "git-info";
+    public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
-    
+
+    // These git attributes can override cloaking of files when set it individual repositories
+    public const string KeepAttribute = "vmr-preserve";
+    public const string IgnoreAttribute = "vmr-ignore";
+
     public const string ReadmeFileName = "README.md";
     public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";
 
@@ -67,6 +76,8 @@ public class VmrInfo : IVmrInfo
     public LocalPath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
+
+    public string? SourceMappingsPath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
@@ -82,7 +93,7 @@ public class VmrInfo : IVmrInfo
 
     public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
 
-    public static LocalPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+    public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
     public LocalPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

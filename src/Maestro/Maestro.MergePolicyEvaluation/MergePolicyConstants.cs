@@ -2,13 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+namespace Maestro.MergePolicyEvaluation;
 
-namespace Maestro.Contracts;
-
-public static class MergePolicyConstants
+public class MergePolicyConstants
 {
     public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessful";
     public const string StandardMergePolicyName = "Standard";
@@ -21,3 +17,4 @@ public static class MergePolicyConstants
 
     public const string MaestroMergePolicyDisplayName = "Maestro auto-merge";
 }
+

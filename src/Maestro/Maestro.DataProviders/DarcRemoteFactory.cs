@@ -2,15 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Maestro.AzureDevOps;
-using Maestro.Data;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Kusto;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using Maestro.AzureDevOps;
+using Maestro.Data;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Kusto;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders;
 
@@ -60,28 +61,27 @@ public class DarcRemoteFactory : IRemoteFactory
             // get a token. When we do coherency updates we build a repo graph and
             // may end up traversing links to classic azdo uris.
             string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
-            Uri normalizedRepoUri = new Uri(normalizedUrl);
-
-            IRemoteGitRepo gitClient;
 
             long installationId = await Context.GetInstallationId(normalizedUrl);
 
-            switch (normalizedRepoUri.Host)
+            IRemoteGitRepo gitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
             {
-                case "github.com":
-                    if (installationId == default)
-                    {
-                        throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
-                    }
-                    gitClient = new GitHubClient(null, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
-                        logger, null, Cache.Cache);
-                    break;
-                case "dev.azure.com":
-                    gitClient = new AzureDevOpsClient(null, await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
-                        logger, null);
-                    break;
-                default:
-                    throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
+                GitRepoType.GitHub => installationId == default
+                    ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
+                    : new GitHubClient(
+                        null,
+                        await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
+                        logger,
+                        null,
+                        Cache.Cache),
+
+                GitRepoType.AzureDevOps => new AzureDevOpsClient(
+                    null,
+                    await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
+                    logger,
+                    null),
+
+                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
             return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);

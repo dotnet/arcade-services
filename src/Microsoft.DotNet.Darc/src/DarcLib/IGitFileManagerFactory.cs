@@ -2,12 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.Darc;
+namespace Microsoft.DotNet.DarcLib;
 
-public enum GitRepoType
+public interface IGitFileManagerFactory
 {
-    GitHub,
-    AzureDevOps,
-    Local,
-    None
+    IGitFileManager Create(string repoUri);
 }

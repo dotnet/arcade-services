@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.IO;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
@@ -18,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    private static string _defaultBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
+    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
 
     public string BuildAssetRegistryPassword { get; set; }
 
@@ -77,58 +76,56 @@ internal class LocalSettings
     public static DarcSettings GetDarcSettings(CommandLineOptions options, ILogger logger, string repoUri = null)
     {
         LocalSettings localSettings = null;
-        DarcSettings darcSettings = new DarcSettings();
-        darcSettings.GitType = GitRepoType.None;
+        DarcSettings darcSettings = new DarcSettings
+        {
+            GitType = GitRepoType.None
+        };
 
         try
         {
             localSettings = LoadSettingsFile(options);
-
-            if (localSettings != null)
-            {
-                darcSettings.BuildAssetRegistryBaseUri = localSettings.BuildAssetRegistryBaseUri;
-                darcSettings.BuildAssetRegistryPassword = localSettings.BuildAssetRegistryPassword;
-            }
-            else
-            {
-                darcSettings.BuildAssetRegistryBaseUri = _defaultBuildAssetRegistryBaseUri;
-                darcSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword;
-            }
-
-            if (!string.IsNullOrEmpty(repoUri))
-            {
-                if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
-                {
-                    if (parsedUri.Host == "github.com")
-                    {
-                        darcSettings.GitType = GitRepoType.GitHub;
-                        darcSettings.GitRepoPersonalAccessToken = 
-                            localSettings != null ?
-                                (string.IsNullOrEmpty(localSettings.GitHubToken) ? options.GitHubPat : localSettings.GitHubToken) :
-                                options.GitHubPat;
-                    }
-                    else if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
-                    {
-                        darcSettings.GitType = GitRepoType.AzureDevOps;
-                        darcSettings.GitRepoPersonalAccessToken = 
-                            localSettings != null ? 
-                                (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken) : 
-                                options.AzureDevOpsPat;
-                    }
-                }
-
-                if (darcSettings.GitType == GitRepoType.None)
-                {
-                    Console.WriteLine($"Unknown repository '{repoUri}', repo type set to 'None'. " +
-                                      ((!repoUri.StartsWith("http", StringComparison.OrdinalIgnoreCase)) ? 
-                                          $"Please inform the full URL of the repository including the http[s] prefix." 
-                                          : string.Empty));
-                }
-            }
         }
         catch (Exception e)
         {
             logger.LogWarning(e, $"Failed to load the darc settings file, may be corrupted");
+        }
+
+        if (localSettings != null)
+        {
+            darcSettings.BuildAssetRegistryBaseUri = localSettings.BuildAssetRegistryBaseUri;
+            darcSettings.BuildAssetRegistryPassword = localSettings.BuildAssetRegistryPassword;
+        }
+        else
+        {
+            darcSettings.BuildAssetRegistryBaseUri = _defaultBuildAssetRegistryBaseUri;
+            darcSettings.BuildAssetRegistryPassword = options.BuildAssetRegistryPassword;
+        }
+
+        if (!string.IsNullOrEmpty(repoUri))
+        {
+            darcSettings.GitType = GitRepoTypeParser.ParseFromUri(repoUri);
+            switch (darcSettings.GitType)
+            {
+                case GitRepoType.GitHub:
+                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
+                        ? (string.IsNullOrEmpty(localSettings.GitHubToken) ? options.GitHubPat : localSettings.GitHubToken)
+                        : options.GitHubPat;
+                    break;
+
+                case GitRepoType.AzureDevOps:
+                    darcSettings.GitRepoPersonalAccessToken = localSettings != null
+                        ? (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken)
+                        : options.AzureDevOpsPat;
+                    break;
+
+                case GitRepoType.None:
+                    Console.WriteLine(
+                        $"Unknown repository '{repoUri}', repo type set to 'None'. " +
+                        ((!repoUri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                            ? $"Please inform the full URL of the repository including the http[s] prefix."
+                            : string.Empty));
+                    break;
+            }
         }
 
         // Override if non-empty on command line
@@ -136,10 +133,6 @@ internal class LocalSettings
             options.BuildAssetRegistryBaseUri);
         darcSettings.BuildAssetRegistryPassword = OverrideIfSet(darcSettings.BuildAssetRegistryPassword,
             options.BuildAssetRegistryPassword);
-
-        // Currently the darc settings only has one PAT type which is interpreted differently based
-        // on the git type (Azure DevOps vs. GitHub).  For now, leave this setting empty until
-        // we know what we are talking to.
 
         return darcSettings;
     }

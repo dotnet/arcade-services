@@ -1,0 +1,8 @@
+diff --git a/submodules/submodule1/foo/patched-submodule-file.txt b/submodules/submodule1/foo/patched-submodule-file.txt
+new file mode 100644
+index 0000000..1271944
+--- /dev/null
++++ b/submodules/submodule1/foo/patched-submodule-file.txt
+@@ -0,0 +1 @@
++new file
+\ No newline at end of file
