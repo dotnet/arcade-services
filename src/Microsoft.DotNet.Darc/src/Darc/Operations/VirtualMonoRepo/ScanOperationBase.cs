@@ -5,7 +5,8 @@
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 #nullable enable
@@ -25,7 +26,13 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
         var vmrScanner = Provider.GetRequiredService<T>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
 
-        await vmrScanner.ScanVmr(_options.BaselineFilePath, listener.Token);
-        return 0;
+        var files = await vmrScanner.ScanVmr(_options.BaselineFilePath, listener.Token);
+
+        foreach (var file in files)
+        {
+            Console.WriteLine(file);
+        }
+
+        return files.Any() ? 1 : Constants.SuccessCode;
     }
 }
