@@ -2,19 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("get-version", HelpText = "Gets the current version (a SHA) of a repository in the VMR.")]
 internal class GetRepoVersionCommandLineOptions : VmrCommandLineOptionsBase
 {
     [Value(0, Required = true, HelpText = "Repository names (e.g. runtime) to get the versions for.")]
-    public IEnumerable<string> Repositories { get; set; }
+    public IEnumerable<string> Repositories { get; set; } = Array.Empty<string>();
 
     public override Operation GetOperation() => new GetRepoVersionOperation(this);
 
