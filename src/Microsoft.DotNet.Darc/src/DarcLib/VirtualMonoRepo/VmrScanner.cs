@@ -23,8 +23,6 @@ public abstract class VmrScanner : IVmrScanner
     protected readonly IVmrInfo _vmrInfo;
     protected readonly ILogger<VmrScanner> _logger;
 
-    
-
     public VmrScanner(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
@@ -53,18 +51,14 @@ public abstract class VmrScanner : IVmrScanner
 
         await Task.WhenAll(taskList);
 
-        var files = taskList.SelectMany(task => task.Result).OrderBy(file => file);
+        var files = taskList
+            .SelectMany(task => task.Result)
+            .OrderBy(file => file)
+            .ToList();
 
-        if (files.Any())
-        {
-            _logger.LogInformation("The scanner found {number} {type} files:", files.Count(), ScanType);
-            foreach (var file in files)
-            {
-                _logger.LogWarning(file);
-            }
-        }
+        _logger.LogInformation("The scanner found {number} {type} files", files.Count, ScanType);
 
-        return taskList.SelectMany(task => task.Result).ToList();
+        return files;
     }
 
     protected abstract string ScanType { get; }
