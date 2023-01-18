@@ -31,7 +31,7 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         // Test the scanner when there are no cloacked files to be found
         var list = await CallDarcBinaryFileScan(baselinesFilePath);
 
-        list.Count().Should().Be(0);
+        list.Should().BeEmpty();
 
         var newFilePath = VmrPath / "src" / Constants.ProductRepoName / "src";
         Directory.CreateDirectory(newFilePath);
@@ -51,7 +51,7 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         // Test the scanner when the binary file is a baseline file
         list = await CallDarcBinaryFileScan(baselinesFilePath);
 
-        list.Count().Should().Be(0);
+        list.Should().BeEmpty();
     }
 
     protected override async Task CopyReposForCurrentTest()

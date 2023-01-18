@@ -29,7 +29,10 @@ public class VmrBinaryFileScanner : VmrScanner
     {
     }
 
-    protected override async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, string baselineFilesPath, CancellationToken cancellationToken)
+    protected override async Task<IEnumerable<string>> ScanRepository(
+        SourceMapping sourceMapping,
+        string baselineFilePath, 
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var args = new List<string>
@@ -40,7 +43,7 @@ public class VmrBinaryFileScanner : VmrScanner
             _vmrInfo.GetRepoSourcesPath(sourceMapping)
         };
 
-        args.AddRange(GetBaselineFiles(baselineFilesPath));
+        args.AddRange(await GetBaselineFilesAsync(baselineFilePath));
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 

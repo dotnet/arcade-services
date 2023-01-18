@@ -9,6 +9,6 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal abstract class VmrScanOptions : VmrCommandLineOptions
 {
-    [Option("baseline-file", Required = true, HelpText = "Path to the file containing a list of the VMR baseline files")]
-    public string BaselineFilesPath { get; set; } = string.Empty;
+    [Option("baseline-file", Required = true, HelpText = "Path to the scan baseline file (list of files ignored by the scan)")]
+    public string BaselineFilePath { get; set; } = null!;
 }
