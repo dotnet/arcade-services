@@ -5,6 +5,7 @@
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using NuGet.Packaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,16 +29,18 @@ public class VmrBinaryFileScanner : VmrScanner
     {
     }
 
-    protected override async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
+    protected override async Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, string baselineFilesPath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var args = new string[]
+        var args = new List<string>
         {
             "diff",
             Constants.EmptyGitObject,
             "--numstat",
             _vmrInfo.GetRepoSourcesPath(sourceMapping)
         };
+
+        args.AddRange(GetBaselineFilesExclusionList(baselineFilesPath));
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 

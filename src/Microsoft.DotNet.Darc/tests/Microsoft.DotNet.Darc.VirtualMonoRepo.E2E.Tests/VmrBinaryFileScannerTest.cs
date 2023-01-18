@@ -3,18 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 #nullable enable
@@ -27,11 +23,13 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
     public async Task VmrBinaryFileScannerTests()
     {
         var testFileName = "test.jpg";
+        var baselineFilePath = VmrTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
+        File.Create(baselineFilePath).Close();
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         // Test the scanner when there are no cloacked files to be found
-        var list = await CallDarcBinaryFileScan();
+        var list = await CallDarcBinaryFileScan(baselineFilePath);
 
         list.Count().Should().Be(0);
 
@@ -41,12 +39,19 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         bitmap.Save(newFilePath / testFileName, ImageFormat.Jpeg);
         await GitOperations.CommitAll(VmrPath, "Commit dll file");
 
-        // Test the scanner when there is a cloacked file to be found
-        list = await CallDarcBinaryFileScan();
+        // Test the scanner when there is a binary file to be found
+        list = await CallDarcBinaryFileScan(baselineFilePath);
 
         list.Should().HaveCount(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
+
+        File.WriteAllText(baselineFilePath, "*.jpg");
+
+        // Test the scanner when the binary file is a baseline file
+        list = await CallDarcBinaryFileScan(baselineFilePath);
+
+        list.Count().Should().Be(0);
     }
 
     protected override async Task CopyReposForCurrentTest()

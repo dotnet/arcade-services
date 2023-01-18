@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,8 +24,6 @@ public abstract class VmrScanner : IVmrScanner
     protected readonly IVmrInfo _vmrInfo;
     protected readonly ILogger<VmrScanner> _logger;
 
-    
-
     public VmrScanner(
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
@@ -37,7 +36,7 @@ public abstract class VmrScanner : IVmrScanner
         _logger = logger;
     }
 
-    public async Task<List<string>> ScanVmr(CancellationToken cancellationToken)
+    public async Task<List<string>> ScanVmr(string baselineFilesPath, CancellationToken cancellationToken)
     {
         await _dependencyTracker
             .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
@@ -48,7 +47,7 @@ public abstract class VmrScanner : IVmrScanner
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
-            taskList.Add(ScanRepository(sourceMapping, cancellationToken));
+            taskList.Add(ScanRepository(sourceMapping, baselineFilesPath, cancellationToken));
         }
 
         await Task.WhenAll(taskList);
@@ -68,6 +67,22 @@ public abstract class VmrScanner : IVmrScanner
     }
 
     protected abstract string ScanType { get; }
-    protected abstract Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken);
+    protected abstract Task<IEnumerable<string>> ScanRepository(SourceMapping sourceMapping, string baselineFilesPath, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns a list of files that will be exluded from the scan operation, loaded from the baselineFilesPath
+    /// </summary>
+    /// <param name="baselineFilesPath"></param>
+    /// <returns></returns>
+    protected IEnumerable<string> GetBaselineFilesExclusionList(string baselineFilesPath)
+    {
+        var a =  File.ReadAllLines(baselineFilesPath).Select(line =>
+            {
+                var index = line.IndexOf('#');
+                return index >= 0 ? line.Substring(0, index).TrimEnd() : line;
+            })
+            .Select(filePath => $":(exclude){filePath}");
+        return a;
+    }
 }
 

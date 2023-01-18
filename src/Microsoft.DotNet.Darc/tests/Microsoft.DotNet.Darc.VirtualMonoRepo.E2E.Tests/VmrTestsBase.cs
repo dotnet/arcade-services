@@ -171,16 +171,16 @@ public abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, _cancellationToken.Token);
     }
 
-    protected async Task<List<string>> CallDarcCloakedFileScan()
+    protected async Task<List<string>> CallDarcCloakedFileScan(string baselineFilePath)
     {
         var cloakedFileScanner = _serviceProvider.Value.GetRequiredService<VmrCloakedFileScanner>();
-        return await cloakedFileScanner.ScanVmr(_cancellationToken.Token);
+        return await cloakedFileScanner.ScanVmr(baselineFilePath, _cancellationToken.Token);
     }
 
-    protected async Task<List<string>> CallDarcBinaryFileScan()
+    protected async Task<List<string>> CallDarcBinaryFileScan(string baselineFilePath)
     {
         var binaryFileScanner = _serviceProvider.Value.GetRequiredService<VmrBinaryFileScanner>();
-        return await binaryFileScanner.ScanVmr(_cancellationToken.Token);
+        return await binaryFileScanner.ScanVmr(baselineFilePath, _cancellationToken.Token);
     }
 
     protected void CopyDirectory(string source, LocalPath destination)

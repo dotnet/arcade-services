@@ -10,7 +10,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("scan-binary-files", HelpText = "Scans the VMR, checking if it contains any binary files")]
-internal class BinaryFileScanOptions : VmrCommandLineOptions
+internal class BinaryFileScanOptions : VmrScanOptions
 {
     public override Operation GetOperation() => new BinaryFileScanOperation(this);
 }
