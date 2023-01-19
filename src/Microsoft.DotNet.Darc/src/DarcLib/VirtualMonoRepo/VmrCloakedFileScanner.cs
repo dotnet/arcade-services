@@ -46,7 +46,7 @@ public class VmrCloakedFileScanner : VmrScanner
             args.Add(GetExclusionFilter(baseExcludePath / exclude));
         }
 
-        args.AddRange(await GetBaselineFilesAsync(sourceMapping.Name, baselineFilePath));
+        args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
 
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
