@@ -10,7 +10,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("scan-cloaked-files", HelpText = "Scans the VMR, checking if it contains any cloaked files")]
-internal class CloakedFileScanOptions : VmrCommandLineOptions
+internal class CloakedFileScanOptions : VmrScanOptions
 {
     public override Operation GetOperation() => new CloakedFileScanOperation(this);
 }
