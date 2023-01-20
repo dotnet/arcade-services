@@ -110,6 +110,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
             ?? throw new Exception($"No mapping named '{mappingName}' found");
 
+        if (_dependencyTracker.GetDependencyVersion(mapping)?.Sha == targetRevision && targetRevision != null)
+        {
+            _logger.LogInformation("Repository {repo} is already at {sha}", mapping.Name, targetRevision);
+            return;
+        }
+
         if (_vmrInfo.SourceMappingsPath != null
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
@@ -317,6 +323,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
+
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootUpdate.Mapping.Name,
             DarcLib.Commit.GetShortSha(originalRootSha),
