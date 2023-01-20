@@ -7,11 +7,12 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class PushOperation : Operation
 {
-    private VmrPushCommandLineOptions _options;
+    private readonly VmrPushCommandLineOptions _options;
 
     public PushOperation(VmrPushCommandLineOptions options)
         : base(options, options.RegisterServices())

@@ -31,9 +31,9 @@ public class VmrPusher : IVmrPusher
     private readonly ISourceManifest _sourceManifest;
     private readonly HttpClient _httpClient;
     private readonly VmrRemoteConfiguration _vmrRemoteConfiguration;
-   
-    public VmrPusher(
-        IProcessManager processManager, 
+    private const string GraphQLUrl = "https://api.github.com/graphql";
+
+    public VmrPusher( 
         IVmrInfo vmrInfo, 
         ILogger logger,
         ISourceManifest sourceManifest,
@@ -49,13 +49,13 @@ public class VmrPusher : IVmrPusher
 
     public async Task Push(string remote, string branch, string gitHubApiPat, CancellationToken cancellationToken)
     {
-        if(await ValidateCommits(gitHubApiPat, cancellationToken))
+        if (await CheckCommitAvailability(gitHubApiPat, cancellationToken))
         {
             ExecutePush(remote, branch);
         }
         else
         {
-            _logger.LogError("Cannot push to the VMR");
+            _logger.LogError("Pushing to the VMR failed. Not all pushed commits are publicly available");
         }  
     }
 
@@ -85,20 +85,20 @@ public class VmrPusher : IVmrPusher
                 new UsernamePasswordCredentials
                 {
                     Username = _vmrRemoteConfiguration.GitHubToken,
-                    Password = ""
+                    Password = string.Empty
                 }
         };
 
         vmrRepo.Network.Push(remote, branch.CanonicalName, pushOptions);
     }
 
-    private async Task<bool> ValidateCommits(string gitHubApiPat, CancellationToken cancellationToken)
+    private async Task<bool> CheckCommitAvailability(string gitHubApiPat, CancellationToken cancellationToken)
     {
         var commitsSearchArguments = _sourceManifest
             .Repositories
             .Select(r => GetCommitSearchArguments(r.RemoteUri, r.CommitSha));
 
-        var commits = await GetRepositoriesCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);
+        var commits = await GetGitHubCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);
         
         if (commits == null || commits.Data == null)
         {
@@ -110,15 +110,15 @@ public class VmrPusher : IVmrPusher
         {
             if (pair.Value == null)
             {
-                var commitArgs = commitsSearchArguments.First(r => SanitizeName(r.RepoName) == pair.Key);
-                _logger.LogError($"Repository {commitArgs.RepoName} with owner {commitArgs.RepoOwner} couldn't be found on GitHub.");
+                var commitArgs = commitsSearchArguments.First(r => GetGraphQlIdentifier(r.RepoName) == pair.Key);
+                _logger.LogError($"Repository {Constants.GitHubUrlPrefix}{commitArgs.RepoOwner}/{commitArgs.RepoName} was not found!");
                 return false;
             }
 
             if (pair.Value.Object == null)
             {
-                var commitArgs = commitsSearchArguments.First(r => SanitizeName(r.RepoName) == pair.Key);
-                _logger.LogError($"The commit {commitArgs.Sha} couldn't be found in public repo {commitArgs.RepoName} with owner {commitArgs.RepoOwner} on GitHub.");
+                var commitArgs = commitsSearchArguments.First(r => GetGraphQlIdentifier(r.RepoName) == pair.Key);
+                _logger.LogError($"Commit {commitArgs.Sha} was not found in {Constants.GitHubUrlPrefix}{commitArgs.RepoOwner}/{commitArgs.RepoName}!");
                 return false;
             }
         }
@@ -126,25 +126,25 @@ public class VmrPusher : IVmrPusher
         return true;
     }
 
-    private async Task<CommitsQueryResult?> GetRepositoriesCommits(
+    private async Task<CommitsQueryResult?> GetGitHubCommits(
         IEnumerable<CommitSearchArguments> commits,
         string gitHubApiPat,
         CancellationToken cancellationToken)
     {
         var queries = commits
-            .Select(c => $@"{SanitizeName(c.RepoName)}: repository(name: \""{c.RepoName}\"", owner: \""{c.RepoOwner}\""){{object(oid: \""{c.Sha}\""){{ ... on Commit {{id}}}}}}");
+            .Select(c => $@"{GetGraphQlIdentifier(c.RepoName)}: repository(name: \""{c.RepoName}\"", owner: \""{c.RepoOwner}\""){{object(oid: \""{c.Sha}\""){{ ... on Commit {{id}}}}}}");
         var query = string.Join(", ", queries);
         var body = @"{""query"" : ""{" + query + @"}""}";
 
-        HttpResponseMessage? response = null;
-        var url = "https://api.github.com/graphql";
+        _logger.LogDebug("Sending GraphQL query: {query}", body);
 
         _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Darc", null));
 
-        using HttpRequestMessage message = new(HttpMethod.Post, url);
+        using HttpRequestMessage message = new(HttpMethod.Post, GraphQLUrl);
         message.Content = new StringContent(body, Encoding.UTF8, "application/json");
         message.Headers.Authorization = new AuthenticationHeaderValue("Token", gitHubApiPat);
 
+        HttpResponseMessage response;
         try
         {
             response = await _httpClient.SendAsync(message, cancellationToken);
@@ -152,7 +152,7 @@ public class VmrPusher : IVmrPusher
         }
         catch (HttpRequestException)
         {
-            _logger.LogError("Cannot connect to GraphQl api");
+            _logger.LogError("Cannot connect to GraphQL API");
             throw;
         }
 
@@ -168,10 +168,9 @@ public class VmrPusher : IVmrPusher
 
     private CommitSearchArguments GetCommitSearchArguments(string uri, string sha)
     {
-        var gitHubUrlPrefix = "https://github.com";
-        var azDoUrlPrefix = "https://dev.azure.com";
-
-        if (uri.StartsWith(azDoUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        var repoType = GitRepoTypeParser.ParseFromUri(uri);
+        
+        if (repoType == GitRepoType.AzureDevOps)
         {
             string[] repoParts = uri.Substring(uri.LastIndexOf('/')).Split('-', 2);
 
@@ -192,9 +191,9 @@ public class VmrPusher : IVmrPusher
 
             return new CommitSearchArguments(repo, org, sha);
         }
-        else if (uri.StartsWith(gitHubUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        else if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(gitHubUrlPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(Constants.GitHubUrlPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {
@@ -204,10 +203,10 @@ public class VmrPusher : IVmrPusher
             return new CommitSearchArguments(repoParts[1], repoParts[0], sha);
         }
 
-        throw new Exception("Unsupported repo url format.");
+        throw new Exception("Unsupported format of repository url " + uri);
     }
 
-    private string SanitizeName(string repoName) => repoName.Replace("-", string.Empty).Replace(".", string.Empty);
+    private string GetGraphQlIdentifier(string repoName) => repoName.Replace("-", string.Empty).Replace(".", string.Empty);
 
     private record CommitSearchArguments(string RepoName, string RepoOwner, string Sha);
     private record CommitsQueryResult(Dictionary<string, CommitResult>? Data);
