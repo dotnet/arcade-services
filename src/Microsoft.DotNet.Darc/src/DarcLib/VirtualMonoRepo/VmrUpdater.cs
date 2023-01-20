@@ -323,7 +323,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
-
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootUpdate.Mapping.Name,
             DarcLib.Commit.GetShortSha(originalRootSha),
