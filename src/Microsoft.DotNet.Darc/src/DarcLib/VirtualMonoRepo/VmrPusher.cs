@@ -15,22 +15,21 @@ using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
 {
-    Task Push(CancellationToken cancellationToken);
+    Task Push(string remote, string branch, string gitHubApiPat, CancellationToken cancellationToken);
 }
 
 public class VmrPusher : IVmrPusher
 {
-    private readonly IProcessManager _processManager;
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger _logger;
     private readonly ISourceManifest _sourceManifest;
+    private readonly HttpClient _httpClient;
     private readonly VmrRemoteConfiguration _vmrRemoteConfiguration;
    
     public VmrPusher(
@@ -38,44 +37,37 @@ public class VmrPusher : IVmrPusher
         IVmrInfo vmrInfo, 
         ILogger logger,
         ISourceManifest sourceManifest,
+        IHttpClientFactory httpClientFactory,
         VmrRemoteConfiguration config)
     {
-        _processManager = processManager;
         _vmrInfo = vmrInfo;
         _logger = logger;
         _sourceManifest = sourceManifest;
         _vmrRemoteConfiguration = config;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
-    public async Task Push(CancellationToken cancellationToken)
+    public async Task Push(string remote, string branch, string gitHubApiPat, CancellationToken cancellationToken)
     {
-        ExecutePush("main", cancellationToken);
+        if(await ValidateCommits(gitHubApiPat, cancellationToken))
+        {
+            ExecutePush(remote, branch);
+        }
+        else
+        {
+            _logger.LogError("Cannot push to the VMR");
+        }  
     }
 
     private void ExecutePush(
-        string branchName,
-        CancellationToken cancellationToken)
+        string remoteName,
+        string branchName)
     {
-        var vmrUrl = "";
-        var remoteName = "dotnet";
-     
         using var vmrRepo = new Repository(_vmrInfo.VmrPath);
         vmrRepo.Config.Add("user.name", Constants.DarcBotName);
         vmrRepo.Config.Add("user.email", Constants.DarcBotEmail);
 
-        vmrRepo.Network.Remotes.Update(remoteName, r => r.Url = vmrUrl);
-
         var remote = vmrRepo.Network.Remotes[remoteName];
-        var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
-        
-        try
-        {
-            Commands.Fetch(vmrRepo, remoteName, refSpecs, new FetchOptions(), "Fetching dotnet");
-        }
-        catch
-        {
-            _logger.LogWarning($"Fetching failed.");
-        }
 
         Branch branch;
         if (!vmrRepo.Branches.Any(b => b.FriendlyName == branchName))
@@ -87,38 +79,46 @@ public class VmrPusher : IVmrPusher
             branch = vmrRepo.Branches[branchName];
         }
 
-        vmrRepo.Branches.Update(branch, b => b.Remote = remoteName, b => b.UpstreamBranch = remoteName + "/" + branchName);
-
         var pushOptions = new PushOptions
         {
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = Constants.DarcBotName,
-                    Password = _vmrRemoteConfiguration.GitHubToken
+                    Username = _vmrRemoteConfiguration.GitHubToken,
+                    Password = ""
                 }
         };
 
         vmrRepo.Network.Push(remote, branch.CanonicalName, pushOptions);
     }
 
-    private async Task<bool> ValidateCommits(CancellationToken cancellationToken)
+    private async Task<bool> ValidateCommits(string gitHubApiPat, CancellationToken cancellationToken)
     {
-        var publicRepos = _sourceManifest
+        var commitsSearchArguments = _sourceManifest
             .Repositories
-            .ToDictionary(r => r.Path.Replace("-", ""), r => GetPublicRepoCommitUri(r.RemoteUri, r.CommitSha));
+            .Select(r => GetCommitSearchArguments(r.RemoteUri, r.CommitSha));
 
-        var commits = await GetRepositoriesCommits(publicRepos, cancellationToken);
+        var commits = await GetRepositoriesCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);
         
-        if(commits == null || commits.Data == null)
+        if (commits == null || commits.Data == null)
         {
+            _logger.LogError("The Graphql query is not in the correct format.");
             return false;
         }
 
-        foreach(var pair in commits.Data)
+        foreach (var pair in commits.Data)
         {
-            if(pair.Value == null)
+            if (pair.Value == null)
             {
+                var commitArgs = commitsSearchArguments.First(r => SanitizeName(r.RepoName) == pair.Key);
+                _logger.LogError($"Repository {commitArgs.RepoName} with owner {commitArgs.RepoOwner} couldn't be found on GitHub.");
+                return false;
+            }
+
+            if (pair.Value.Object == null)
+            {
+                var commitArgs = commitsSearchArguments.First(r => SanitizeName(r.RepoName) == pair.Key);
+                _logger.LogError($"The commit {commitArgs.Sha} couldn't be found in public repo {commitArgs.RepoName} with owner {commitArgs.RepoOwner} on GitHub.");
                 return false;
             }
         }
@@ -127,48 +127,51 @@ public class VmrPusher : IVmrPusher
     }
 
     private async Task<CommitsQueryResult?> GetRepositoriesCommits(
-        Dictionary<string, string> repos,
+        IEnumerable<CommitSearchArguments> commits,
+        string gitHubApiPat,
         CancellationToken cancellationToken)
     {
-        var queries = repos
-            .Select(r => $@"{r.Key}: resource(url: \""{r.Value}\""){{ ... on Commit {{id}}}}");
-
+        var queries = commits
+            .Select(c => $@"{SanitizeName(c.RepoName)}: repository(name: \""{c.RepoName}\"", owner: \""{c.RepoOwner}\""){{object(oid: \""{c.Sha}\""){{ ... on Commit {{id}}}}}}");
         var query = string.Join(", ", queries);
         var body = @"{""query"" : ""{" + query + @"}""}";
 
         HttpResponseMessage? response = null;
+        var url = "https://api.github.com/graphql";
 
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("AppName", "1.0"));
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Darc", null));
 
-        using HttpRequestMessage message = new(HttpMethod.Post, "https://api.github.com/graphql");
+        using HttpRequestMessage message = new(HttpMethod.Post, url);
         message.Content = new StringContent(body, Encoding.UTF8, "application/json");
-        message.Headers.Authorization = new AuthenticationHeaderValue("Token", _vmrRemoteConfiguration.GitHubToken);
+        message.Headers.Authorization = new AuthenticationHeaderValue("Token", gitHubApiPat);
 
         try
         {
-            response = await client.SendAsync(message, cancellationToken);
+            response = await _httpClient.SendAsync(message, cancellationToken);
             response.EnsureSuccessStatusCode();
-
-            var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
-            var settings = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-            };
-
-            var result = JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
-            return result;
         }
-        catch (HttpRequestException exc)
+        catch (HttpRequestException)
         {
-            _logger.LogError(exc.Message);
-            return null;
+            _logger.LogError("Cannot connect to GraphQl api");
+            throw;
         }
+
+        var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
+        var settings = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
+        var result = JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
+        return result;
     }
 
-    private string GetPublicRepoCommitUri(string uri, string commit)
+    private CommitSearchArguments GetCommitSearchArguments(string uri, string sha)
     {
-        if (uri.StartsWith("https://dev.azure.com", StringComparison.OrdinalIgnoreCase))
+        var gitHubUrlPrefix = "https://github.com";
+        var azDoUrlPrefix = "https://dev.azure.com";
+
+        if (uri.StartsWith(azDoUrlPrefix, StringComparison.OrdinalIgnoreCase))
         {
             string[] repoParts = uri.Substring(uri.LastIndexOf('/')).Split('-', 2);
 
@@ -187,11 +190,27 @@ public class VmrPusher : IVmrPusher
                 repo = repo.Substring(0, repo.Length - trustedSuffix.Length);
             }
 
-            uri = $"https://github.com/{org}/{repo}";
+            return new CommitSearchArguments(repo, org, sha);
+        }
+        else if (uri.StartsWith(gitHubUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            string[] repoParts = uri.Substring(gitHubUrlPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            if (repoParts.Length != 2)
+            {
+                throw new Exception($"Invalid URI in source manifest. Repo '{uri}' does not end with the expected <GH organization>/<GH repo> format.");
+            }
+
+            return new CommitSearchArguments(repoParts[1], repoParts[0], sha);
         }
 
-        return $"{uri}/commit/{commit}";
+        throw new Exception("Unsupported repo url format.");
     }
 
-    private record CommitsQueryResult(Dictionary<string, Dictionary<string, string>>? Data);
+    private string SanitizeName(string repoName) => repoName.Replace("-", string.Empty).Replace(".", string.Empty);
+
+    private record CommitSearchArguments(string RepoName, string RepoOwner, string Sha);
+    private record CommitsQueryResult(Dictionary<string, CommitResult>? Data);
+    private record CommitObject(string Id);
+    private record CommitResult(CommitObject? Object);
 }

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,9 +23,8 @@ internal class PushOperation : Operation
     {
         var vmrPusher = Provider.GetRequiredService<IVmrPusher>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
-        //var remoteFactory = new RemoteFactory(_options);
-        
-        await vmrPusher.Push(listener.Token);
+
+        await vmrPusher.Push(_options.Remote, _options.Branch,  _options.GitHubApiPat, listener.Token);
         return 0;
     }
 }
