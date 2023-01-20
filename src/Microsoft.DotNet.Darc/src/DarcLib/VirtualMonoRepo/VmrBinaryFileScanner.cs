@@ -29,7 +29,7 @@ public class VmrBinaryFileScanner : VmrScanner
     {
     }
 
-    protected override async Task<IEnumerable<string>> ScanRepository(
+    protected override async Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping,
         string baselineFilePath, 
         CancellationToken cancellationToken)
@@ -48,6 +48,30 @@ public class VmrBinaryFileScanner : VmrScanner
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
+
+        return ret.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith(BinaryFileMarker))
+            .Select(line => line.Split('\t').Last());
+    }
+
+    protected override async Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var args = new List<string>
+        {
+            "diff",
+            Constants.EmptyGitObject,
+            "--numstat",
+            _vmrInfo.VmrPath,
+            $":(exclude){VmrInfo.SourcesDir}"
+        };
+
+        args.AddRange(await GetExclusionFilters(null, baselineFilePath));
+
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
+
+        ret.ThrowIfFailed($"Failed to scan the base VMR repository");
 
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)

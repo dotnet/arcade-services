@@ -27,11 +27,13 @@ public class VmrCloakedFileScanner : VmrScanner
     {
     }
 
-    protected override async Task<IEnumerable<string>> ScanRepository(
+    protected override async Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping, 
         string baselineFilePath,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var args = new List<string>
         {
             "diff",
@@ -43,7 +45,7 @@ public class VmrCloakedFileScanner : VmrScanner
 
         foreach (var exclude in sourceMapping.Exclude)
         {
-            args.Add(GetExclusionFilter(baseExcludePath / exclude));
+            args.Add(GetCloakedFileFilter(baseExcludePath / exclude));
         }
 
         args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
@@ -57,5 +59,44 @@ public class VmrCloakedFileScanner : VmrScanner
     }
 
     protected override string ScanType { get; } = "cloaked";
-    private string GetExclusionFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+    private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+
+    protected override async Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var args = new List<string>
+        {
+            "diff",
+            "--name-only",
+            Constants.EmptyGitObject,
+            $":(exclude){VmrInfo.SourcesDir}"
+        };
+
+        foreach (var exclude in GetGlobalExcludeFilters())
+        {
+            args.Add(GetCloakedFileFilter(_vmrInfo.VmrPath / exclude));
+        }
+
+        args.AddRange(await GetExclusionFilters(null, baselineFilePath));
+
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
+
+        ret.ThrowIfFailed($"Failed to scan the base VMR repository");
+
+        return ret.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private IEnumerable<string> GetGlobalExcludeFilters()
+    {
+        IEnumerable<string> intersection = _dependencyTracker.Mappings.First().Exclude;
+
+        foreach (var mapping in _dependencyTracker.Mappings.Skip(1))
+        {
+            intersection = intersection.Intersect(mapping.Exclude);
+        }
+
+        return intersection;
+    }
 }
