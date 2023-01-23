@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,10 +72,12 @@ public class VmrBinaryFileScanner : VmrScanner
 
         ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 
+        // We want to exlude empty files from the list. These empty files still have a few chracters that we want to ignore
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(BinaryFileMarker))
-            .Select(line => line.Split('\t').Last());
+            .Select(line => line.Split('\t').Last())
+            .Where(file => new FileInfo(_vmrInfo.VmrPath / file).Length > 6);
     }
 
     protected override string ScanType { get; } = "binary";
