@@ -137,7 +137,7 @@ public class VmrPusher : IVmrPusher
         CancellationToken cancellationToken)
     {
         var queries = commits
-            .Select(c => $@"{GetGraphQlIdentifier(c.RepoName)}: repository(name: \""{c.RepoName}\"", owner: \""{c.RepoOwner}\""){{object(oid: \""{c.Sha}\""){{ ... on Commit {{id}}}}}}");
+            .Select(c => $"{GetGraphQlIdentifier(c.RepoName)}: repository(name: \\\"{c.RepoName}\\\", owner: \\\"{c.RepoOwner}\\\"){{object(oid: \\\"{c.Sha}\\\"){{ ... on Commit {{id}}}}}}");
         var query = string.Join(", ", queries);
         var body = @"{""query"" : ""{" + query + @"}""}";
 
