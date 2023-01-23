@@ -10,7 +10,6 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
-
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
@@ -30,7 +29,6 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         var newPatchFileName = "new-patch.patch";
         var fileAfterNewPatchName = "test-file-after-new-patch.txt";
         var changedFileName = "changed-test-repo-file.txt";
-
 
         // initialize repo with a vmr patch
 
@@ -84,12 +82,22 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         expectedFiles.Add(VmrPatchesDir / newPatchFileName);
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(ProductRepoFilePathInVmr, fileAfterNewPatchName);
-     
+
         // change the file so the vmr patch cannot be applied
 
+        var before = File.ReadAllText(ProductRepoPath / productRepoFileName);
+
         File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / changedFileName, ProductRepoPath / productRepoFileName, true);
-        await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");
-        var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
+
+        var after = File.ReadAllText(ProductRepoPath / productRepoFileName);
+
+        throw new Exception($"File in {ProductRepoPath} before {ProductRepoPath / productRepoFileName}:" +
+            $"\r\n{before}" +
+            $"\r\n\r\n\r\nFile after {VmrTestsOneTimeSetUp.ResourcesPath / changedFileName}:" +
+            $"\r\n{after}");
+
+        //await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");
+        //var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        //this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }
