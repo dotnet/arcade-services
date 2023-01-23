@@ -41,7 +41,7 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
         );
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Change a file in the mapped folder
 
@@ -52,7 +52,7 @@ public class VmrSyncAdditionalMappingsTest : VmrTestsBase
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         CheckFileContents(VmrPath / _fileName, "A file with a change that needs to be copied outside of the src folder");
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
     protected override async Task CopyReposForCurrentTest()

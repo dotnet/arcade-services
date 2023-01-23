@@ -20,17 +20,27 @@ public class GitOperationsHelper
         ProcessManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
     }
     
-    public async Task CommitAll(LocalPath repo, string commitMessage)
+    public async Task CommitAll(LocalPath repo, string commitMessage, bool allowEmpty = false)
     {
-        await ProcessManager.ExecuteGit(repo, "add", "-A");
-        await ProcessManager.ExecuteGit(repo, "commit", "-m", commitMessage);
+        var result = await ProcessManager.ExecuteGit(repo, "add", "-A");
+
+        if (!allowEmpty)
+        {
+            result.ThrowIfFailed($"No files to add in {repo}");
+        }
+
+        result = await ProcessManager.ExecuteGit(repo, "commit", "-m", commitMessage);
+        if (!allowEmpty)
+        {
+            result.ThrowIfFailed($"No changes to commit in {repo}");
+        }
     }
 
     public async Task InitialCommit(LocalPath repo)
     {
         await ProcessManager.ExecuteGit(repo, "init", "-b", "main");
         await ConfigureGit(repo);
-        await CommitAll(repo, "Initial commit");
+        await CommitAll(repo, "Initial commit", allowEmpty: true);
     }
 
     public async Task<string> GetRepoLastCommit(LocalPath repo)
@@ -39,7 +49,7 @@ public class GitOperationsHelper
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
-    public async Task CheckAllIsCommited(string repo)
+    public async Task CheckAllIsCommitted(string repo)
     {
         var gitStatus = await ProcessManager.ExecuteGit(repo, "status", "--porcelain");
         gitStatus.StandardOutput.Should().BeEmpty();

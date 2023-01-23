@@ -53,7 +53,7 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(ProductRepoFilePathInVmr, fileAfterPatch);
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // a change in the patch
 

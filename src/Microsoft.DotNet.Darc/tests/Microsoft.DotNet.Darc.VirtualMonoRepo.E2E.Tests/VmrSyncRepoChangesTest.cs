@@ -55,7 +55,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(_productRepoFilePath, "Test changes in repo file");
         CheckFileContents(_dependencyRepoFilePath, "File in dependency");
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
     [Test]
@@ -91,7 +91,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(_productRepoPath / excludedFileName, "File to be excluded");
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
     [Test]
@@ -128,7 +128,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
         CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         CheckFileContents(submoduleFilePath, "File in product-repo2");
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Add a file in the submodule
 
@@ -142,7 +142,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         expectedFiles.Add(additionalSubmoduleFilePath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Remove submodule
 
@@ -154,7 +154,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         expectedFiles.Remove(additionalSubmoduleFilePath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
     protected override async Task CopyReposForCurrentTest()
@@ -223,7 +223,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
         CheckFileContents(_dependencyRepoFilePath, "File in dependency");
-        await GitOperations.CheckAllIsCommited(VmrPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 }
 
