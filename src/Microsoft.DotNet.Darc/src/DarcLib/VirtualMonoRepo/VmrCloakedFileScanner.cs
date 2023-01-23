@@ -50,12 +50,8 @@ public class VmrCloakedFileScanner : VmrScanner
 
         args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
 
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
+        return await ScanAndParseResult(args.ToArray(), sourceMapping.Name, cancellationToken);
 
-        ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
-
-        return ret.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 
     protected override string ScanType { get; } = "cloaked";
@@ -80,9 +76,14 @@ public class VmrCloakedFileScanner : VmrScanner
 
         args.AddRange(await GetExclusionFilters(null, baselineFilePath));
 
+        return await ScanAndParseResult(args.ToArray(), "base VMR", cancellationToken);
+    }
+
+    private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken)
+    {
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
-        ret.ThrowIfFailed($"Failed to scan the base VMR repository");
+        ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
