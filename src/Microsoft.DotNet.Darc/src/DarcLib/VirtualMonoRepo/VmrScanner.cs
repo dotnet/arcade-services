@@ -90,7 +90,7 @@ public abstract class VmrScanner : IVmrScanner
     {
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
         return text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Where(line => (repoName is null ? true : line.StartsWith($"src/{repoName}")) || line.StartsWith('*'))
+            .Where(line => (repoName is null ? false : line.StartsWith($"src/{repoName}")) || line.StartsWith('*'))
             .Select(line =>
             {
                 // Ignore comments
