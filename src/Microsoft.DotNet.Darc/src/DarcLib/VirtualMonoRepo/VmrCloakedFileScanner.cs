@@ -50,54 +50,17 @@ public class VmrCloakedFileScanner : VmrScanner
 
         args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
 
-        return await ScanAndParseResult(args.ToArray(), sourceMapping.Name, cancellationToken);
-
-    }
-
-    protected override string ScanType { get; } = "cloaked";
-    private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
-
-    protected override async Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var args = new List<string>
-        {
-            "diff",
-            "--name-only",
-            Constants.EmptyGitObject,
-            $":(exclude){VmrInfo.SourcesDir}"
-        };
-
-        foreach (var exclude in GetGlobalExcludeFilters())
-        {
-            args.Add(GetCloakedFileFilter(_vmrInfo.VmrPath / exclude));
-        }
-
-        args.AddRange(await GetExclusionFilters(null, baselineFilePath));
-
-        return await ScanAndParseResult(args.ToArray(), "base VMR", cancellationToken);
-    }
-
-    private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken)
-    {
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
 
-        ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
+        ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
 
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private IEnumerable<string> GetGlobalExcludeFilters()
-    {
-        IEnumerable<string> intersection = _dependencyTracker.Mappings.First().Exclude;
+    protected override string ScanType { get; } = "cloaked";
+    private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
 
-        foreach (var mapping in _dependencyTracker.Mappings.Skip(1))
-        {
-            intersection = intersection.Intersect(mapping.Exclude);
-        }
-
-        return intersection;
-    }
+    protected override Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken) 
+        => Task.FromResult((IEnumerable<string>)new List<string>());
 }
