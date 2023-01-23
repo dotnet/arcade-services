@@ -88,10 +88,11 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         var before = File.ReadAllText(ProductRepoPath / productRepoFileName);
 
         File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / changedFileName, ProductRepoPath / productRepoFileName, true);
-
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         var after = File.ReadAllText(ProductRepoPath / productRepoFileName);
 
-        throw new Exception($"File in {ProductRepoPath} before {ProductRepoPath / productRepoFileName}:" +
+        throw new Exception(
+            $"File in {ProductRepoPath} before {ProductRepoPath / productRepoFileName}:" +
             $"\r\n{before}" +
             $"\r\n\r\n\r\nFile after {VmrTestsOneTimeSetUp.ResourcesPath / changedFileName}:" +
             $"\r\n{after}");
