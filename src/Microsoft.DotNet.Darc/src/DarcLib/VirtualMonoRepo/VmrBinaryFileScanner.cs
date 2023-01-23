@@ -73,12 +73,12 @@ public class VmrBinaryFileScanner : VmrScanner
 
         ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 
-        // Git marks UTF 16 text files as binary, we want to exclude these
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(BinaryFileMarker))
             .Select(line => line.Split('\t').Last())
             .ToAsyncEnumerable()
+            // Git evaluates UTF-16 text files as binary, we want to exclude these
             .WhereAwait(async file => await IsNotUTF16(_vmrInfo.VmrPath / file, cancellationToken))
             .ToEnumerable();
     }
@@ -89,7 +89,7 @@ public class VmrBinaryFileScanner : VmrScanner
         {
             var ret = await _processManager.Execute(executable: "file", arguments: new string[] { filePath }, cancellationToken: cancellationToken);
 
-            ret.ThrowIfFailed($"Error executing the 'file' coommand on file {filePath}");
+            ret.ThrowIfFailed($"Error executing 'file {filePath}'");
 
             if (ret.StandardOutput.Contains(Utf16Marker))
             {
