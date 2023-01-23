@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -24,8 +25,14 @@ internal class PushOperation : Operation
     {
         var vmrPusher = Provider.GetRequiredService<IVmrPusher>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
+        
+        if (_options.VerifyCommits && _options.CommitVerificationPat == null)
+        {
+            Logger.LogError("Please specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
+            return Constants.ErrorCode;
+        }
 
-        await vmrPusher.Push(_options.Remote, _options.Branch,  _options.GitHubApiPat, listener.Token);
+        await vmrPusher.Push(_options.Remote, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
         return 0;
     }
 }

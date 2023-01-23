@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
 {
-    Task Push(string remote, string branch, string gitHubApiPat, CancellationToken cancellationToken);
+    Task Push(string remote, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken);
 }
 
 public class VmrPusher : IVmrPusher
@@ -31,7 +31,6 @@ public class VmrPusher : IVmrPusher
     private readonly ISourceManifest _sourceManifest;
     private readonly HttpClient _httpClient;
     private readonly VmrRemoteConfiguration _vmrRemoteConfiguration;
-    private const string GraphQLUrl = "https://api.github.com/graphql";
 
     public VmrPusher( 
         IVmrInfo vmrInfo, 
@@ -44,12 +43,13 @@ public class VmrPusher : IVmrPusher
         _logger = logger;
         _sourceManifest = sourceManifest;
         _vmrRemoteConfiguration = config;
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClientFactory.CreateClient("GraphQL");
     }
 
-    public async Task Push(string remote, string branch, string gitHubApiPat, CancellationToken cancellationToken)
+    public async Task Push(string remote, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken)
     {
-        if (await CheckCommitAvailability(gitHubApiPat, cancellationToken))
+        if (!verifyCommits ||
+            (gitHubApiPat != null && await CheckCommitAvailability(gitHubApiPat, cancellationToken)))
         {
             ExecutePush(remote, branch);
         }
@@ -67,10 +67,15 @@ public class VmrPusher : IVmrPusher
         vmrRepo.Config.Add("user.name", Constants.DarcBotName);
         vmrRepo.Config.Add("user.email", Constants.DarcBotEmail);
 
+        if(vmrRepo.Network.Remotes.FirstOrDefault(r => r.Name == remoteName) == null)
+        {
+            throw new Exception($"No remote with name {remoteName} found in VMR repo.");
+        }
+
         var remote = vmrRepo.Network.Remotes[remoteName];
 
         Branch branch;
-        if (!vmrRepo.Branches.Any(b => b.FriendlyName == branchName))
+        if (vmrRepo.Branches.FirstOrDefault(b => b.FriendlyName == branchName) == null)
         {
             branch = vmrRepo.CreateBranch(branchName);
         }
@@ -138,23 +143,15 @@ public class VmrPusher : IVmrPusher
 
         _logger.LogDebug("Sending GraphQL query: {query}", body);
 
-        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Darc", null));
+        var httpRequestManager = new HttpRequestManager(
+            _httpClient,
+            HttpMethod.Post,
+            string.Empty,
+            _logger,
+            body,
+            authHeader: new AuthenticationHeaderValue("Token", gitHubApiPat));
 
-        using HttpRequestMessage message = new(HttpMethod.Post, GraphQLUrl);
-        message.Content = new StringContent(body, Encoding.UTF8, "application/json");
-        message.Headers.Authorization = new AuthenticationHeaderValue("Token", gitHubApiPat);
-
-        HttpResponseMessage response;
-        try
-        {
-            response = await _httpClient.SendAsync(message, cancellationToken);
-            response.EnsureSuccessStatusCode();
-        }
-        catch (HttpRequestException)
-        {
-            _logger.LogError("Cannot connect to GraphQL API");
-            throw;
-        }
+        using var response = await httpRequestManager.ExecuteAsync(0);
 
         var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
         var settings = new JsonSerializerOptions

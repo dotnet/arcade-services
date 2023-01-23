@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -65,7 +66,12 @@ public static class VmrRegistrations
         services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
         services.TryAddTransient<VmrCloakedFileScanner>();
         services.TryAddTransient<VmrBinaryFileScanner>();
-        services.AddHttpClient();
+        services.AddHttpClient("GraphQL", httpClient =>
+        {
+            httpClient.BaseAddress = new Uri("https://api.github.com/graphql");
+            httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+            httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "Darc");
+        });
         services.TryAddTransient<IVmrPusher, VmrPusher>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
