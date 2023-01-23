@@ -79,15 +79,15 @@ public class VmrBinaryFileScanner : VmrScanner
             .Where(line => line.StartsWith(BinaryFileMarker))
             .Select(line => line.Split('\t').Last())
             .ToAsyncEnumerable()
-            .WhereAwait(async file => await IsNotUTF16(_vmrInfo.VmrPath / file))
+            .WhereAwait(async file => await IsNotUTF16(_vmrInfo.VmrPath / file, cancellationToken))
             .ToEnumerable();
     }
 
-    private async Task<bool> IsNotUTF16(LocalPath filePath)
+    private async Task<bool> IsNotUTF16(LocalPath filePath, CancellationToken cancellationToken)
     {
         if (Environment.OSVersion.Platform == PlatformID.Unix)
         {
-            var ret = await _processManager.Execute(executable: "file", arguments: new string[] { filePath });
+            var ret = await _processManager.Execute(executable: "file", arguments: new string[] { filePath }, cancellationToken: cancellationToken);
 
             ret.ThrowIfFailed($"Error executing the 'file' coommand on file {filePath}");
 
