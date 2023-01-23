@@ -47,11 +47,6 @@ internal class Program
             return Errors.BadArguments;
         }
 
-        if (args.Length == 1)
-        {
-            dir = Path.GetFullPath(args[0]);
-        }
-
         if (string.IsNullOrEmpty(dir))
         {
             dir = Environment.CurrentDirectory;
@@ -343,12 +338,8 @@ internal class Program
         IEnumerable<XElement> packageVersions = packagesDocument?.Element("Project")
             ?.Elements("ItemGroup")
             ?.Elements("PackageVersion");
-
-        if (packageReferences == null && packageVersions == null)
-        {
-            WriteError($"No PackageReferences found in {repoName} Packages.props or PackageVersions found in {repoName} Directory.Packages.props");
-        }
-        else if (packageReferences != null)
+        
+        if (packageReferences != null)
         {
             foreach (XElement packageRef in packageReferences)
             {
@@ -375,7 +366,8 @@ internal class Program
                 versions.Add(name, version);
             }
         }
-        else if (packageVersions != null)
+        
+        if (packageVersions != null)
         {
             foreach (XElement packageRef in packageVersions)
             {
@@ -401,6 +393,11 @@ internal class Program
 
                 versions.Add(name, version);
             }
+        }
+
+        if (versions.Count == 0)
+        {
+            WriteError($"No PackageReferences found in {repoName} Packages.props or PackageVersions found in {repoName} Directory.Packages.props");
         }
 
         return versions;
