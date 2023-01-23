@@ -20,6 +20,7 @@ public class VmrBinaryFileScanner : VmrScanner
 {
     // Git output from the diff --numstat command, when it finds a binary file
     private const string BinaryFileMarker = "-\t-";
+    private const string Utf16Marker = "UTF-16 Unicode text";
 
     public VmrBinaryFileScanner(
         IVmrDependencyTracker dependencyTracker, 
@@ -72,12 +73,31 @@ public class VmrBinaryFileScanner : VmrScanner
 
         ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 
-        // We want to exlude empty files from the list. These empty files still have a few chracters that we want to ignore
+        // Git marks UTF 16 text files as binary, we want to exclude these
         return ret.StandardOutput
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => line.StartsWith(BinaryFileMarker))
             .Select(line => line.Split('\t').Last())
-            .Where(file => new FileInfo(_vmrInfo.VmrPath / file).Length > 6);
+            .ToAsyncEnumerable()
+            .WhereAwait(async file => await IsNotUTF16(_vmrInfo.VmrPath / file))
+            .ToEnumerable();
+    }
+
+    private async Task<bool> IsNotUTF16(LocalPath filePath)
+    {
+        if (Environment.OSVersion.Platform == PlatformID.Unix)
+        {
+            var ret = await _processManager.Execute(executable: "file", arguments: new string[] { filePath });
+
+            ret.ThrowIfFailed($"Error executing the 'file' coommand on file {filePath}");
+
+            if (ret.StandardOutput.Contains(Utf16Marker))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected override string ScanType { get; } = "binary";
