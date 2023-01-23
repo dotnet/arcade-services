@@ -42,6 +42,9 @@ Generated\ Files/
 *.VisualState.xml
 TestResult.xml
 
+# Verify and AppovalTests
+*.received.*
+
 # Build Results of an ATL Project
 [Dd]ebugPS/
 [Rr]eleasePS/
@@ -334,4 +337,3 @@ ASALocalRun/
 
 # angular stuff
 .angulardoc.json
-*.received.*

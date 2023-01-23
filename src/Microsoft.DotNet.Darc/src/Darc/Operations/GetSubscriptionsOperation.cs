@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -117,7 +116,6 @@ class GetSubscriptionsOperation : Operation
 
     // Based on the current output schema, sort by source repo, target repo, target branch, etc.
     // Concat the input strings as a simple sorting mechanism.
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static IEnumerable<Subscription> Sort(IEnumerable<Subscription> subscriptions)
         => subscriptions.OrderBy(subscription => $"{subscription.SourceRepository}{subscription.Channel}{subscription.TargetRepository}{subscription.TargetBranch}");
 }
