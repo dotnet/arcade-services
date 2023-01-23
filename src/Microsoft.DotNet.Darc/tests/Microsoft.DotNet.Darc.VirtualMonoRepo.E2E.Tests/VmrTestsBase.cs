@@ -26,13 +26,13 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public abstract class VmrTestsBase
 {
-    protected LocalPath CurrentTestDirectory { get; private set; } = null!;
-    protected LocalPath ProductRepoPath { get; private set; } = null!;
-    protected LocalPath VmrPath { get; private set; } = null!;
-    protected LocalPath TmpPath { get; private set; } = null!;
-    protected LocalPath SecondRepoPath { get; private set; } = null!;
-    protected LocalPath DependencyRepoPath { get; private set; } = null!;
-    protected LocalPath InstallerRepoPath { get; private set; } = null!;
+    protected NativePath CurrentTestDirectory { get; private set; } = null!;
+    protected NativePath ProductRepoPath { get; private set; } = null!;
+    protected NativePath VmrPath { get; private set; } = null!;
+    protected NativePath TmpPath { get; private set; } = null!;
+    protected NativePath SecondRepoPath { get; private set; } = null!;
+    protected NativePath DependencyRepoPath { get; private set; } = null!;
+    protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected VmrInfo Info { get; private set; } = null!;
     
