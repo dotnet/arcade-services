@@ -28,7 +28,6 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         var fileAfterChangedPatch = "test-file-after-changed-patch.txt";
         var newPatchFileName = "new-patch.patch";
         var fileAfterNewPatchName = "test-file-after-new-patch.txt";
-        var changedFileName = "changed-test-repo-file.txt";
 
         // initialize repo with a vmr patch
 
