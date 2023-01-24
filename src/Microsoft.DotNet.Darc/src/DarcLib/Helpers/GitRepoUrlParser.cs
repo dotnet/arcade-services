@@ -8,7 +8,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 internal class GitRepoUrlParser
 {
-    internal static (string, string) GetRepoNameAndOwner(string uri)
+    internal static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
     {
         var repoType = GitRepoTypeParser.ParseFromUri(uri);
 

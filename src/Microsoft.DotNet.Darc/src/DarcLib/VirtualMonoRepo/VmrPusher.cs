@@ -59,9 +59,7 @@ public class VmrPusher : IVmrPusher
         }  
     }
 
-    private void ExecutePush(
-        string remoteName,
-        string branchName)
+    private void ExecutePush(string remoteName, string branchName)
     {
         using var vmrRepo = new Repository(_vmrInfo.VmrPath);
         vmrRepo.Config.Add("user.name", Constants.DarcBotName);
@@ -69,7 +67,7 @@ public class VmrPusher : IVmrPusher
 
         if(vmrRepo.Network.Remotes.FirstOrDefault(r => r.Name == remoteName) == null)
         {
-            throw new Exception($"No remote with name {remoteName} found in VMR repo.");
+            throw new Exception($"No remote named {remoteName} found in VMR repo.");
         }
 
         var remote = vmrRepo.Network.Remotes[remoteName];
@@ -102,7 +100,7 @@ public class VmrPusher : IVmrPusher
         var commitsSearchArguments = _sourceManifest
             .Repositories
             .Select(r => (GitRepoUrlParser.GetRepoNameAndOwner(r.RemoteUri), r.CommitSha))
-            .Select(r => new CommitSearchArguments(r.Item1.Item1, r.Item1.Item2, r.CommitSha));
+            .Select(r => new CommitSearchArguments(r.Item1.RepoName, r.Item1.Org, r.CommitSha));
 
         var commits = await GetGitHubCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);
         

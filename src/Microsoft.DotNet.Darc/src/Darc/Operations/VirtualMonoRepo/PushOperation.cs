@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -28,11 +29,24 @@ internal class PushOperation : Operation
         
         if (_options.VerifyCommits && _options.CommitVerificationPat == null)
         {
-            Logger.LogError("Please specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
+            Logger.LogError("Please use --commit-verification-pat to specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
             return Constants.ErrorCode;
         }
+        
+        try
+        {
+            await vmrPusher.Push(_options.Remote, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
+            return 0;
+        }
+        catch(Exception e)
+        {
+            Logger.LogError(
+                    "Pushing to the VMR failed. {exception}",
+                    Environment.NewLine + e.Message);
 
-        await vmrPusher.Push(_options.Remote, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
-        return 0;
+            Logger.LogDebug("{exception}", e);
+
+            return Constants.ErrorCode;
+        }
     }
 }
