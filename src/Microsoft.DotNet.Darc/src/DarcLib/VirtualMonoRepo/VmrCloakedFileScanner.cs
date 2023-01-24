@@ -62,5 +62,5 @@ public class VmrCloakedFileScanner : VmrScanner
     private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
 
     protected override Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken) 
-        => Task.FromResult((IEnumerable<string>)new List<string>());
+        => Task.FromResult(Enumerable.Empty<string>());
 }
