@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -11,21 +10,20 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [SetUpFixture]
 public class VmrTestsOneTimeSetUp
 {
-    public static readonly LocalPath TestsDirectory;
-    public static readonly LocalPath CommonVmrPath;
-    public static readonly LocalPath CommonProductRepoPath;
-    public static readonly LocalPath CommonDependencyPath;
-    public static readonly LocalPath CommonInstallerPath;
-    public static readonly LocalPath CommonExternalRepoPath;
-    public static readonly LocalPath ResourcesPath;
-    private GitOperationsHelper _gitOperations { get; } = new();
-
+    public static readonly NativePath TestsDirectory;
+    public static readonly NativePath CommonVmrPath;
+    public static readonly NativePath CommonProductRepoPath;
+    public static readonly NativePath CommonDependencyPath;
+    public static readonly NativePath CommonInstallerPath;
+    public static readonly NativePath CommonExternalRepoPath;
+    public static readonly NativePath ResourcesPath;
+    
+    private readonly GitOperationsHelper _gitOperations = new();
 
     static VmrTestsOneTimeSetUp()
     {

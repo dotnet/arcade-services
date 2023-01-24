@@ -27,23 +27,13 @@ public interface IFileSystem
 
     string? GetDirectoryName(string? path);
 
-    string? GetFileNameWithoutExtension(string? path);
-
-    string? GetExtension(string? path);
-
     string PathCombine(string path1, string path2);
-
-    string PathCombine(string path1, string path2, string path3);
 
     void DeleteFile(string path);
 
     void CopyFile(string sourceFileName, string destFileName, bool overwrite = false);
 
-    void MoveFile(string sourceFileName, string destFileName, bool overwrite = false);
-
     Stream GetFileStream(string path, FileMode mode, FileAccess access);
-
-    FileAttributes GetAttributes(string path);
 
     IFileInfo GetFileInfo(string path);
 

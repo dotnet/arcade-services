@@ -82,6 +82,9 @@ public class NativePath : LocalPath
     public static NativePath operator /(NativePath left, string right)
         => new(left.Combine(left.Path, left.NormalizePath(right)), false);
 
+    public static NativePath operator /(NativePath left, LocalPath right)
+        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
+
     protected override LocalPath CreateMergedPath(string path) => new NativePath(path, false);
 
     protected override string NormalizePath(string s)

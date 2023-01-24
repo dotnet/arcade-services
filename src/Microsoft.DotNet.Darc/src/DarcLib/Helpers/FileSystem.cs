@@ -27,13 +27,7 @@ public class FileSystem : IFileSystem
 
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
-    public string? GetFileNameWithoutExtension(string? path) => Path.GetFileNameWithoutExtension(path);
-
-    public string? GetExtension(string? path) => Path.GetExtension(path);
-
     public string PathCombine(string path1, string path2) => Path.Combine(path1, path2);
-
-    public string PathCombine(string path1, string path2, string path3) => Path.Combine(path1, path2, path3);
 
     public void WriteToFile(string path, string content)
     {
@@ -44,11 +38,7 @@ public class FileSystem : IFileSystem
 
     public void CopyFile(string sourceFileName, string destFileName, bool overwrite = false) => File.Copy(sourceFileName, destFileName, overwrite);
 
-    public void MoveFile(string sourceFileName, string destFileName, bool overwrite = false) => File.Move(sourceFileName, destFileName, overwrite);
-
     public Stream GetFileStream(string path, FileMode mode, FileAccess access) => new FileStream(path, mode, access);
-
-    public FileAttributes GetAttributes(string path) => File.GetAttributes(path);
 
     public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
 
