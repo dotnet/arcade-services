@@ -27,11 +27,13 @@ public class VmrCloakedFileScanner : VmrScanner
     {
     }
 
-    protected override async Task<IEnumerable<string>> ScanRepository(
+    protected override async Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping, 
         string baselineFilePath,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var args = new List<string>
         {
             "diff",
@@ -43,7 +45,7 @@ public class VmrCloakedFileScanner : VmrScanner
 
         foreach (var exclude in sourceMapping.Exclude)
         {
-            args.Add(GetExclusionFilter(baseExcludePath / exclude));
+            args.Add(GetCloakedFileFilter(baseExcludePath / exclude));
         }
 
         args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
@@ -57,5 +59,8 @@ public class VmrCloakedFileScanner : VmrScanner
     }
 
     protected override string ScanType { get; } = "cloaked";
-    private string GetExclusionFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+    private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+
+    protected override Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken) 
+        => Task.FromResult(Enumerable.Empty<string>());
 }

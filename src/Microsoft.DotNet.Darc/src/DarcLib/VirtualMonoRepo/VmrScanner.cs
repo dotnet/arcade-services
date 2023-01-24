@@ -49,8 +49,9 @@ public abstract class VmrScanner : IVmrScanner
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
-            taskList.Add(ScanRepository(sourceMapping, baselineFilePath, cancellationToken));
+            taskList.Add(ScanSubRepository(sourceMapping, baselineFilePath, cancellationToken));
         }
+        taskList.Add(ScanBaseRepository(baselineFilePath, cancellationToken));
 
         await Task.WhenAll(taskList);
 
@@ -65,19 +66,31 @@ public abstract class VmrScanner : IVmrScanner
     }
 
     protected abstract string ScanType { get; }
-    protected abstract Task<IEnumerable<string>> ScanRepository(
+
+    /// <summary>
+    /// Scans the subrepositories in the src/ folder (arcade, runtime, etc..)
+    /// </summary>
+    protected abstract Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping,
-        string baselineFilesPath,
+        string baselineFilePath,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Scans the base VMR repository, excluding the src/ folder
+    /// </summary>
+    protected abstract Task<IEnumerable<string>> ScanBaseRepository(
+        string baselineFilePath,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Returns a list of files that will be exluded from the scan operation, loaded from the baselineFilesPath
+    /// Use repoName = null for global filters
     /// </summary>
-    protected async Task<IEnumerable<string>> GetExclusionFilters(string repoName, string baselineFilePath)
+    protected async Task<IEnumerable<string>> GetExclusionFilters(string? repoName, string baselineFilePath)
     {
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
         return text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Where(line => line.StartsWith($"src/{repoName}") || line.StartsWith('*'))
+            .Where(line => (repoName is null ? false : line.StartsWith($"src/{repoName}")) || line.StartsWith('*'))
             .Select(line =>
             {
                 // Ignore comments

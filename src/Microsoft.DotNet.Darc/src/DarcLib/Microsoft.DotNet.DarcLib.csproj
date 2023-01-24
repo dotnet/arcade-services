@@ -19,6 +19,7 @@
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="System.IO.Hashing" />
+    <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
   </ItemGroup>
