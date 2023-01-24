@@ -85,18 +85,9 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
 
         // change the file so the vmr patch cannot be applied
 
-        var before = File.ReadAllText(ProductRepoPath / productRepoFileName);
-        File.Copy(VmrTestsOneTimeSetUp.ResourcesPath / changedFileName, ProductRepoPath / productRepoFileName, true);
-        var after = File.ReadAllText(ProductRepoPath / productRepoFileName);
-
-        throw new Exception(
-            $"File {ProductRepoPath / productRepoFileName} before:" +
-            $"\r\n{before}" +
-            $"\r\n\r\n\r\nFile after:" +
-            $"\r\n{after}");
-
-        //await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");
-        //var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        //this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
+        await File.WriteAllTextAsync(ProductRepoPath / productRepoFileName, "New content");
+        await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");
+        var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
+        this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }
