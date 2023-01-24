@@ -52,13 +52,20 @@ public abstract class LocalPath
     {
         var slashCount = (left.EndsWith(_separator) ? 1 : 0) + (right.StartsWith(_separator) ? 1 : 0);
 
-        return slashCount switch
+        var result = slashCount switch
         {
             0 => left + _separator + right,
             1 => left + right,
             2 => left + right[1..],
             _ => throw new System.NotImplementedException(),
         };
+
+        if (right == "_vmrTests")
+        {
+            throw new System.Exception($"@@@@ {left}:{left.Length},{right}:{right.Length},{slashCount} => {result}");
+        }
+
+        return result;
     }
 
     public override bool Equals(object? obj) => Path.Equals((obj as LocalPath)?.Path ?? obj as string);
