@@ -56,13 +56,15 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
-        services.TryAddTransient<IVmrScanner, VmrScanner>();
+        services.TryAddTransient<VmrCloakedFileScanner>();
+        services.TryAddTransient<VmrBinaryFileScanner>();
 
         // These initialize the configuration by reading the JSON files in VMR's src/
         services.TryAddSingleton<ISourceManifest>(sp =>

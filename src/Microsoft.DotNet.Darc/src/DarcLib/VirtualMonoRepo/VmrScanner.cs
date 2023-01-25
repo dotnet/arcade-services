@@ -18,12 +18,13 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// <summary>
 /// Class that scans the VMR for cloaked files that shouldn't be inside.
 /// </summary>
-public class VmrScanner : IVmrScanner
+public abstract class VmrScanner : IVmrScanner
 {
-    private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IProcessManager _processManager;
-    private readonly IVmrInfo _vmrInfo;
-    private readonly ILogger<VmrScanner> _logger;
+    protected readonly IVmrDependencyTracker _dependencyTracker;
+    protected readonly IProcessManager _processManager;
+    protected readonly IVmrInfo _vmrInfo;
+    protected readonly ILogger<VmrScanner> _logger;
+    protected readonly IFileSystem _fileSystem;
 
     public VmrScanner(
         IVmrDependencyTracker dependencyTracker,
@@ -35,56 +36,55 @@ public class VmrScanner : IVmrScanner
         _processManager = processManager;
         _vmrInfo = vmrInfo;
         _logger = logger;
+        _fileSystem = new FileSystem();
     }
 
-    public async Task<List<string>> ListCloakedFiles(CancellationToken cancellationToken)
+    public async Task<List<string>> ScanVmr(string baselineFilePath, CancellationToken cancellationToken)
     {
-        await _dependencyTracker
-            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+        await _dependencyTracker.InitializeSourceMappings();
 
-        var cloakedFiles = new List<string>();
+        var taskList = new List<Task<IEnumerable<string>>>();
+
+        _logger.LogInformation("Scanning VMR repositories for {type} files", ScanType);
 
         foreach (var sourceMapping in _dependencyTracker.Mappings)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            cloakedFiles.AddRange(await ScanRepository(sourceMapping, cancellationToken));
+            taskList.Add(ScanRepository(sourceMapping, baselineFilePath, cancellationToken));
         }
 
-        return cloakedFiles;
-    }
+        await Task.WhenAll(taskList);
 
-    private async Task<string[]> ScanRepository(SourceMapping sourceMapping, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Scanning {repository} repository", sourceMapping.Name);
-        var args = new List<string>
-        {
-            "diff",
-            "--name-only",
-            Constants.EmptyGitObject
-        };
+        var files = taskList
+            .SelectMany(task => task.Result)
+            .OrderBy(file => file)
+            .ToList();
 
-        var baseExcludePath = _vmrInfo.GetRepoSourcesPath(sourceMapping);
-
-        foreach (var exclude in sourceMapping.Exclude)
-        {
-            args.Add(ExcludeFile(baseExcludePath / exclude));
-        }
-
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
-
-        ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
-        var files = ret.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var file in files)
-        {
-            _logger.LogWarning("File {file} is cloaked but present in the VMR", file);
-        }
+        _logger.LogInformation("The scanner found {number} {type} files", files.Count, ScanType);
 
         return files;
     }
 
-    private static string ExcludeFile(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
+    protected abstract string ScanType { get; }
+    protected abstract Task<IEnumerable<string>> ScanRepository(
+        SourceMapping sourceMapping,
+        string baselineFilesPath,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Returns a list of files that will be exluded from the scan operation, loaded from the baselineFilesPath
+    /// </summary>
+    protected async Task<IEnumerable<string>> GetExclusionFilters(string repoName, string baselineFilePath)
+    {
+        var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
+        return text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Where(line => line.StartsWith($"src/{repoName}") || line.StartsWith('*'))
+            .Select(line =>
+            {
+                // Ignore comments
+                var index = line.IndexOf('#');
+                return index >= 0 ? line.Substring(0, index).TrimEnd() : line;
+            })
+            .Select(filePath => $":(exclude){filePath}");
+    }
 }
 

@@ -15,19 +15,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#nullable enable 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrScannerTest : VmrTestsBase
+public class VmrCloakedFileScannerTest : VmrTestsBase
 {
     [Test]
-    public async Task VmrScannerTests()
+    public async Task VmrCloakedFileScannerTests()
     {
         var testFileName = "test.dll";
+        var baselinesFilePath = VmrTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
+        File.Create(baselinesFilePath).Close();
+
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        // Test the scanner when there are no cloacked files to be found
-        var list = await CallDarcScan();
+        // Test the scanner when there are no cloaked files to be found
+        var list = await CallDarcCloakedFileScan(baselinesFilePath);
 
         list.Count().Should().Be(0);
 
@@ -36,18 +40,18 @@ public class VmrScannerTest : VmrTestsBase
         File.WriteAllText(newFilePath / testFileName, "this is a test file");
         await GitOperations.CommitAll(VmrPath, "Commit dll file");
 
-        // Test the scanner when there is a cloacked file to be found
-        list = await CallDarcScan();
+        // Test the scanner when there is a cloaked file to be found
+        list = await CallDarcCloakedFileScan(baselinesFilePath);
 
-        list.Count().Should().Be(1);
+        list.Should().HaveCount(1);
         var path = new NativePath(list.First());
         path.Should().BeEquivalentTo(new NativePath(Path.Join("src", Constants.ProductRepoName, "src", testFileName)));
 
         File.WriteAllText(newFilePath / ".gitattributes", $"*.dll {VmrInfo.KeepAttribute}");
         await GitOperations.CommitAll(VmrPath, "Commit .gitattributes file");
 
-        // Test the scanner when the .gitattributes file is preserving the cloacked file
-        list = await CallDarcScan();
+        // Test the scanner when the .gitattributes file is preserving the cloaked file
+        list = await CallDarcCloakedFileScan(baselinesFilePath);
 
         list.Count().Should().Be(0);
     }

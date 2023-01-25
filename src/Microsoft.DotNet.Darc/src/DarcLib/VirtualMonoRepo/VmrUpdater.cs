@@ -104,8 +104,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker
-            .InitializeSourceMappings(_vmrInfo.VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName);
+        await _dependencyTracker.InitializeSourceMappings();
 
         var mapping = _dependencyTracker.Mappings
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
@@ -547,15 +546,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     // Copy old revision to VMR
                     _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
                     _fileSystem.CopyFile(originalFile, destination, overwrite: true);
+
+                    Commands.Stage(repository, pathInVmr);
                 }
-                else
+                else if (_fileSystem.FileExists(destination))
                 {
                     // File is being added by the patch - we need to remove it
                     _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
                     _fileSystem.DeleteFile(destination);
-                }
 
-                Commands.Stage(repository, pathInVmr);
+                    Commands.Stage(repository, pathInVmr);
+                }
+                // else file is being added together with a patch at the same time
             }
         }
 

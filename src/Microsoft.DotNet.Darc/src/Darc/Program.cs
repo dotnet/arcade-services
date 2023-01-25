@@ -195,7 +195,9 @@ internal static class Program
         typeof(InitializeCommandLineOptions),
         typeof(UpdateCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
-        typeof(ScanCommandLineOptions),
+        typeof(CloakedFileScanOptions),
+        typeof(BinaryFileScanOptions),
+        typeof(GetRepoVersionCommandLineOptions),
     };
 
     private static void InitializeTelemetry()
