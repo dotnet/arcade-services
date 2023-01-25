@@ -65,21 +65,17 @@ public class VmrPusher : IVmrPusher
         vmrRepo.Config.Add("user.name", Constants.DarcBotName);
         vmrRepo.Config.Add("user.email", Constants.DarcBotEmail);
 
-        if(vmrRepo.Network.Remotes.FirstOrDefault(r => r.Name == remoteName) == null)
+        var remote = vmrRepo.Network.Remotes[remoteName];
+        if (remote == null)
         {
             throw new Exception($"No remote named {remoteName} found in VMR repo.");
         }
 
-        var remote = vmrRepo.Network.Remotes[remoteName];
-
-        Branch branch;
-        if (vmrRepo.Branches.FirstOrDefault(b => b.FriendlyName == branchName) == null)
+        var branch = vmrRepo.Branches[branchName];
+        if (branch == null)
         {
+            _logger.LogDebug($"No branch {branchName} found in VMR repo. Creating a new branch {branchName}");
             branch = vmrRepo.CreateBranch(branchName);
-        }
-        else
-        {
-            branch = vmrRepo.Branches[branchName];
         }
 
         var pushOptions = new PushOptions
@@ -162,7 +158,7 @@ public class VmrPusher : IVmrPusher
         return result;
     }
 
-    private static string GetGraphQlIdentifier(string repoName) => repoName.Replace("-", string.Empty).Replace(".", string.Empty);
+    private static string GetGraphQlIdentifier(string repoName) => repoName.Replace("-", null).Replace(".", null);
 
     private record CommitSearchArguments(string RepoName, string RepoOwner, string Sha);
     private record CommitsQueryResult(Dictionary<string, CommitResult>? Data);

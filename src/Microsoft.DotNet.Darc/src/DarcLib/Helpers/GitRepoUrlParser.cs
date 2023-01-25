@@ -4,9 +4,10 @@
 
 using System;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
-internal class GitRepoUrlParser
+internal static class GitRepoUrlParser
 {
     internal static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
     {
@@ -33,7 +34,8 @@ internal class GitRepoUrlParser
 
             return new(repo, org);
         }
-        else if (repoType == GitRepoType.GitHub)
+
+        if (repoType == GitRepoType.GitHub)
         {
             string[] repoParts = uri.Substring(Constants.GitHubUrlPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
 
