@@ -70,7 +70,6 @@ public static class VmrRegistrations
         services.TryAddTransient<VmrBinaryFileScanner>();
         services.AddHttpClient("GraphQL", httpClient =>
         {
-            httpClient.BaseAddress = new Uri("https://api.github.com/graphql");
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
             httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "Darc");
         }).ConfigureHttpMessageHandlerBuilder(handler =>

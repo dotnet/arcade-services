@@ -31,6 +31,7 @@ public class VmrPusher : IVmrPusher
     private readonly ISourceManifest _sourceManifest;
     private readonly HttpClient _httpClient;
     private readonly VmrRemoteConfiguration _vmrRemoteConfiguration;
+    private const string GraphQLUrl = "https://api.github.com/graphql";
 
     public VmrPusher( 
         IVmrInfo vmrInfo, 
@@ -55,7 +56,7 @@ public class VmrPusher : IVmrPusher
         }
         else
         {
-            _logger.LogError("Pushing to the VMR failed. Not all pushed commits are publicly available");
+            throw new Exception("Not all pushed commits are publicly available");
         }  
     }
 
@@ -141,7 +142,7 @@ public class VmrPusher : IVmrPusher
         var httpRequestManager = new HttpRequestManager(
             _httpClient,
             HttpMethod.Post,
-            string.Empty,
+            GraphQLUrl,
             _logger,
             body,
             authHeader: new AuthenticationHeaderValue("Token", gitHubApiPat));
