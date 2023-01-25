@@ -7,15 +7,15 @@ using System;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
-internal static class GitRepoUrlParser
+public static class GitRepoUrlParser
 {
-    internal static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
+    public static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
     {
         var repoType = GitRepoTypeParser.ParseFromUri(uri);
 
         if (repoType == GitRepoType.AzureDevOps)
         {
-            string[] repoParts = uri.Substring(uri.LastIndexOf('/')).Split('-', 2);
+            string[] repoParts = uri.Substring(uri.LastIndexOf('/') + 1).Split('-', 2);
 
             if (repoParts.Length != 2)
             {
