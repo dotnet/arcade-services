@@ -7,10 +7,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -419,5 +421,50 @@ public class LocalGitClient : ILocalGitRepo
             .Concat(repositoryStatus.Removed)
             .Concat(repositoryStatus.Staged)
             .Select(file => file.FilePath);
+    }
+
+    public void Push(string repoPath, string remoteName, string branchName, LibGit2Sharp.Identity identity, string gitHubPat = null, string azureDevOpsPat = null)
+    {
+        using var repo = new Repository(
+            repoPath, 
+            new RepositoryOptions { Identity = identity });
+        
+        var remote = repo.Network.Remotes[remoteName];
+        if (remote == null)
+        {
+            throw new Exception($"No remote named {remoteName} found in repo {repo.Info.Path}.");
+        }
+
+        var branch = repo.Branches[branchName];
+        if (branch == null)
+        {
+            throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
+        }
+        
+        var repoType = GitRepoTypeParser.ParseFromUri(remote.Url);
+        
+        string pat = string.Empty;
+        if (repoType == GitRepoType.GitHub)
+        {
+            pat = gitHubPat;
+        }
+        if (repoType == GitRepoType.AzureDevOps) 
+        {
+            pat = azureDevOpsPat;
+        } 
+
+        var pushOptions = new PushOptions
+        {
+            CredentialsProvider = (url, user, cred) =>
+                new UsernamePasswordCredentials
+                {
+                    Username = pat,
+                    Password = string.Empty
+                }
+        };
+
+        repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+
+        _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
     }
 }

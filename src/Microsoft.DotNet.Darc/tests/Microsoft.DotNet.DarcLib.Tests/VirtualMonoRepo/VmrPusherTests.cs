@@ -7,8 +7,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,6 +25,7 @@ public class VmrPusherTests
 {
     private readonly Mock<ISourceManifest> _sourceManifest = new();
     private readonly Mock<IVmrInfo> _vmrInfo = new();
+    private readonly Mock<ILocalGitRepo> _localGitRepo = new();
     private const string GraphQLUri = "https://api.github.com/graphql";
     private const string Sha = "7cf329817c862c15f9a4e5849b2268d801cb1078";
 
@@ -34,7 +37,7 @@ public class VmrPusherTests
         _sourceManifest.Reset();
         _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo});
 
-        var _remoteConfiguration = new VmrRemoteConfiguration(null, null);
+        var remoteConfiguration = new VmrRemoteConfiguration(null, null);
         var mockHttpClientFactory = new MockHttpClientFactory();
 
         var responseMsg = "{\"data\":{\"somerepo\":{\"object\":null}}}";
@@ -49,12 +52,57 @@ public class VmrPusherTests
             _vmrInfo.Object, 
             new NullLogger<VmrPusher>(), 
             _sourceManifest.Object, 
-            mockHttpClientFactory, 
-            _remoteConfiguration);
+            mockHttpClientFactory,
+            _localGitRepo.Object,
+            remoteConfiguration);
 
         vmrPusher.Awaiting(p => p.Push("remote", "branch", true, "public-github-pat", CancellationToken.None))
             .Should()
             .Throw<Exception>()
             .WithMessage("Not all pushed commits are publicly available");
+    }
+
+    [Test]
+    public async Task PublicCommitsArePushedTest()
+    {
+        var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
+        LocalPath vmrPath = new NativePath("vmr");
+
+        _sourceManifest.Reset();
+        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo });
+
+        _vmrInfo.Reset();
+        _vmrInfo.SetupGet(i => i.VmrPath).Returns(vmrPath);
+
+        var remoteConfiguration = new VmrRemoteConfiguration("git-hub-pat", "az-do-pat");
+        var mockHttpClientFactory = new MockHttpClientFactory();
+
+        var responseMsg = "{\"data\":{\"somerepo\":{\"object\": {\"id\": \"C_kwDOBjr6NNoAKGNjYjQ2YWU5M2E4MjhkYjE4MWIzMTBkZTBkMmIwNTI1MWQ0ZDcxNDA\"}}}}";
+        mockHttpClientFactory.AddCannedResponse(
+            GraphQLUri,
+            responseMsg,
+            HttpStatusCode.OK,
+            "application/json",
+            HttpMethod.Post);
+
+        var vmrPusher = new VmrPusher(
+            _vmrInfo.Object,
+            new NullLogger<VmrPusher>(),
+            _sourceManifest.Object,
+            mockHttpClientFactory,
+            _localGitRepo.Object,
+            remoteConfiguration);
+
+        await vmrPusher.Push("remote", "branch", true, "public-github-pat", CancellationToken.None);
+
+        _localGitRepo.Verify(
+            x => x.Push(
+                vmrPath, 
+                "remote", 
+                "branch", 
+                It.Is<LibGit2Sharp.Identity>(x => x.Name == Constants.DarcBotName && x.Email == Constants.DarcBotEmail), 
+                "git-hub-pat", 
+                "az-do-pat"), 
+            Times.Once());
     }
 }

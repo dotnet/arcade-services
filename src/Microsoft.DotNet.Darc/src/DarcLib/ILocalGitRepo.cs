@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -45,4 +46,11 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoDir">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
     IEnumerable<string> GetStagedFiles(string repoDir);
+
+    /// <summary>
+    /// Pushes a branch to a remote
+    /// </summary>
+    /// <param name="remoteName">Name of remote to push to</param>
+    /// <param name="branchName">Name of branch to push</param>
+    void Push(string repoPath, string remoteName, string branchName, LibGit2Sharp.Identity identity, string gitHubPat = null, string azureDevOpsPat = null);
 }
