@@ -106,7 +106,13 @@
           "Branches": [ "main" ],
           "IssuesId": "dotnet-runtime-infra",
           "Tags": [ "runtime" ]
-        }
+        },
+        {
+          "Project": "internal",
+          "DefinitionPath": "\\dotnet\\arcade\\Maestro Build Promotion",
+          "Branches": [ "main" ],
+          "IssuesId": "dotnet-arcade-first-responder"
+        },
       ]
     },
     "Issues": [
