@@ -50,7 +50,17 @@ public interface ILocalGitRepo : IGitRepo
     /// <summary>
     /// Pushes a branch to a remote
     /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
     /// <param name="remoteName">Name of remote to push to</param>
     /// <param name="branchName">Name of branch to push</param>
-    void Push(string repoPath, string remoteName, string branchName, LibGit2Sharp.Identity identity, string gitHubPat = null, string azureDevOpsPat = null);
+    /// <param name="identity">Identity object containing username and email</param>
+    /// <param name="gitHubPat">Token to authenticate for pushing to GitHub</param>
+    /// <param name="azureDevOpsPat">Token to authenticate for pushing to AzureDevOps</param>
+    void Push(
+        string repoPath, 
+        string remoteName, 
+        string branchName, 
+        LibGit2Sharp.Identity identity, 
+        string gitHubPat = null, 
+        string azureDevOpsPat = null);
 }

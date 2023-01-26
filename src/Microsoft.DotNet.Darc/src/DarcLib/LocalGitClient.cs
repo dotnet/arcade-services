@@ -423,7 +423,13 @@ public class LocalGitClient : ILocalGitRepo
             .Select(file => file.FilePath);
     }
 
-    public void Push(string repoPath, string remoteName, string branchName, LibGit2Sharp.Identity identity, string gitHubPat = null, string azureDevOpsPat = null)
+    public void Push(
+        string repoPath, 
+        string remoteName, 
+        string branchName, 
+        LibGit2Sharp.Identity identity, 
+        string gitHubPat = null, 
+        string azureDevOpsPat = null)
     {
         using var repo = new Repository(
             repoPath, 
