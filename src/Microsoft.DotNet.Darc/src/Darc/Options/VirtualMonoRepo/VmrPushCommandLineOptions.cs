@@ -8,7 +8,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("push", HelpText = "Pushes given VMR branch to a given remote. Optionally verifies commit public availability.")]
+[Verb("push", HelpText = "Pushes given VMR branch to a given remote. Optionally verifies public availability of pushed commits.")]
 internal class VmrPushCommandLineOptions : VmrCommandLineOptions
 {
     [Option("remote", Required = true, HelpText = "Name of an already existing remote to push to")]

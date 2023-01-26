@@ -47,17 +47,31 @@ public class VmrPusher : IVmrPusher
         _httpClient = httpClientFactory.CreateClient("GraphQL");
     }
 
+    /// <summary>
+    /// Pushes the specified branch to the specified remote. If verifyCommits is true, checks that each commit is present in a public repo 
+    /// before pushing
+    /// </summary>
+    /// <param name="remote">Name of an already existing remote to push to</param>
+    /// <param name="branch">Name of an already existing branch to push</param>
+    /// <param name="verifyCommits">Verify that all commits are found in public repos before pushing</param>
+    /// <param name="gitHubApiPat">Token with no scopes for authenticating to GitHub GraphQL API.</param>
     public async Task Push(string remote, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken)
     {
-        if (!verifyCommits ||
-            (gitHubApiPat != null && await CheckCommitAvailability(gitHubApiPat, cancellationToken)))
+        if (verifyCommits)
         {
-            ExecutePush(remote, branch);
+            if(gitHubApiPat == null)
+            {
+                throw new Exception("Please specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API.");
+            }
+
+            if(!await CheckCommitAvailability(gitHubApiPat, cancellationToken))
+            {
+                throw new Exception("Not all pushed commits are publicly available");
+            }
         }
-        else
-        {
-            throw new Exception("Not all pushed commits are publicly available");
-        }  
+
+        ExecutePush(remote, branch);
+        _logger.LogInformation($"Pushed branch {branch} to the VMR");
     }
 
     private void ExecutePush(string remoteName, string branchName)
@@ -69,14 +83,13 @@ public class VmrPusher : IVmrPusher
         var remote = vmrRepo.Network.Remotes[remoteName];
         if (remote == null)
         {
-            throw new Exception($"No remote named {remoteName} found in VMR repo.");
+            throw new Exception($"No remote named {remoteName} found in VMR repo {vmrRepo.Info.Path}.");
         }
 
         var branch = vmrRepo.Branches[branchName];
         if (branch == null)
         {
-            _logger.LogDebug($"No branch {branchName} found in VMR repo. Creating a new branch {branchName}");
-            branch = vmrRepo.CreateBranch(branchName);
+            throw new Exception($"No branch {branchName} found in VMR repo. {vmrRepo.Info.Path}");
         }
 
         var pushOptions = new PushOptions
@@ -127,6 +140,12 @@ public class VmrPusher : IVmrPusher
         return true;
     }
 
+    /// <summary>
+    /// Sends a query to GitHub GraphQL API searching for all commits in their respective public repos in one joined request
+    /// The result of each search is a property in the "data" object returned by the API
+    /// where Data.RepoName.Object.Id is a string if the commit was found in "RepoName"
+    /// and Data.RepoName.Object is null if the commit was not found
+    /// </summary>
     private async Task<CommitsQueryResult?> GetGitHubCommits(
         IEnumerable<CommitSearchArguments> commits,
         string gitHubApiPat,
