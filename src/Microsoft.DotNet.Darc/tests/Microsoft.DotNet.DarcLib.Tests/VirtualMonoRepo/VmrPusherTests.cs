@@ -15,28 +15,44 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 [TestFixture]
 public class VmrPusherTests
 {
     private readonly Mock<ISourceManifest> _sourceManifest = new();
+    private readonly Mock<IVmrInfo> _vmrInfo = new();
     private const string GraphQLUri = "https://api.github.com/graphql";
+    private const string Sha = "7cf329817c862c15f9a4e5849b2268d801cb1078";
 
     [Test]
     public void PushingUnexistingCommitThrowsExceptionTest()
     {
-        _sourceManifest.Reset();
-        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>());
+        var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
 
+        _sourceManifest.Reset();
+        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo});
+
+        var _remoteConfiguration = new VmrRemoteConfiguration(null, null);
         var mockHttpClientFactory = new MockHttpClientFactory();
 
         var responseMsg = "{\"data\":{\"somerepo\":{\"object\":null}}}";
-        mockHttpClientFactory.AddCannedResponse(GraphQLUri, responseMsg, HttpStatusCode.OK, "application/json", HttpMethod.Post);
+        mockHttpClientFactory.AddCannedResponse(
+            GraphQLUri, 
+            responseMsg, 
+            HttpStatusCode.OK, 
+            "application/json", 
+            HttpMethod.Post);
 
-        var vmrPusher = new VmrPusher(null, new NullLogger<VmrPusher>(), _sourceManifest.Object, mockHttpClientFactory, null);
+        var vmrPusher = new VmrPusher(
+            _vmrInfo.Object, 
+            new NullLogger<VmrPusher>(), 
+            _sourceManifest.Object, 
+            mockHttpClientFactory, 
+            _remoteConfiguration);
 
-        vmrPusher.Awaiting(p => p.Push(It.IsAny<string>(), It.IsAny<string>(), true, It.IsNotNull<string>(), It.IsAny<CancellationToken>()))
+        vmrPusher.Awaiting(p => p.Push("remote", "branch", true, "public-github-pat", CancellationToken.None))
             .Should()
             .Throw<Exception>()
             .WithMessage("Not all pushed commits are publicly available");
