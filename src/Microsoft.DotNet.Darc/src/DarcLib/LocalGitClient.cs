@@ -15,6 +15,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public class LocalGitClient : ILocalGitRepo
@@ -37,8 +38,8 @@ public class LocalGitClient : ILocalGitRepo
         string fullPath = Path.Combine(repoDir, relativeFilePath);
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
-            string parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
-            if (Directory.Exists(parentTwoDirectoriesUp))
+            string? parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+            if (parentTwoDirectoriesUp != null && Directory.Exists(parentTwoDirectoriesUp))
             {
                 throw new DependencyFileNotFoundException($"Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
             }
@@ -79,7 +80,10 @@ public class LocalGitClient : ILocalGitRepo
                     switch (file.Operation)
                     {
                         case GitFileOperation.Add:
-                            string parentDirectory = Directory.GetParent(file.FilePath).FullName;
+                            var parentDirectoryInfo = Directory.GetParent(file.FilePath) 
+                                ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
+                            
+                            string parentDirectory = parentDirectoryInfo.FullName;
 
                             if (!Directory.Exists(parentDirectory))
                             {
@@ -295,7 +299,7 @@ public class LocalGitClient : ILocalGitRepo
                             Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
                             string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
                             log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
-                            Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
+                            Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath) ?? throw new Exception($"Cannot get directory name of {subRepoGitFilePath}"));
                             File.WriteAllText(subRepoGitFilePath, $"gitdir: {masterSubPath}");
                         }
                     }
@@ -307,7 +311,7 @@ public class LocalGitClient : ILocalGitRepo
 
                     // The worktree is stored in the .gitdir/config file, so we have to change it
                     // to get it to check out to the correct place.
-                    ConfigurationEntry<string> oldWorkTree = null;
+                    ConfigurationEntry<string>? oldWorkTree = null;
                     using (Repository subRepo = new Repository(subRepoPath))
                     {
                         oldWorkTree = subRepo.Config.Get<string>("core.worktree");
@@ -433,7 +437,7 @@ public class LocalGitClient : ILocalGitRepo
         string branchName,
         string remoteUrl, 
         string token,
-        LibGit2Sharp.Identity identity = null)
+        LibGit2Sharp.Identity? identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
