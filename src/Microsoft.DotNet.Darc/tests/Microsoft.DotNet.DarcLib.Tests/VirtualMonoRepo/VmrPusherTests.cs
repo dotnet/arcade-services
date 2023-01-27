@@ -28,15 +28,20 @@ public class VmrPusherTests
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
     private const string GraphQLUri = "https://api.github.com/graphql";
     private const string Sha = "7cf329817c862c15f9a4e5849b2268d801cb1078";
+    private const string VmrUrl = "https://github.com/org/vmr";
 
-    [Test]
-    public void PushingUnexistingCommitThrowsExceptionTest()
+    [SetUp]
+    public void SetUp()
     {
         var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
 
         _sourceManifest.Reset();
-        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo});
+        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo });
+    }
 
+    [Test]
+    public void PushingUnexistingCommitThrowsExceptionTest()
+    {
         var remoteConfiguration = new VmrRemoteConfiguration(null, null);
         var mockHttpClientFactory = new MockHttpClientFactory();
 
@@ -56,7 +61,7 @@ public class VmrPusherTests
             _localGitRepo.Object,
             remoteConfiguration);
 
-        vmrPusher.Awaiting(p => p.Push("remote", "branch", true, "public-github-pat", CancellationToken.None))
+        vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", true, "public-github-pat", CancellationToken.None))
             .Should()
             .Throw<Exception>()
             .WithMessage("Not all pushed commits are publicly available");
@@ -65,11 +70,7 @@ public class VmrPusherTests
     [Test]
     public async Task PublicCommitsArePushedTest()
     {
-        var repo = new RepositoryRecord("some-repo", "https://github.com/org/some-repo", Sha, "8.0");
         LocalPath vmrPath = new NativePath("vmr");
-
-        _sourceManifest.Reset();
-        _sourceManifest.SetupGet(s => s.Repositories).Returns(new List<RepositoryRecord>() { repo });
 
         _vmrInfo.Reset();
         _vmrInfo.SetupGet(i => i.VmrPath).Returns(vmrPath);
@@ -93,16 +94,15 @@ public class VmrPusherTests
             _localGitRepo.Object,
             remoteConfiguration);
 
-        await vmrPusher.Push("remote", "branch", true, "public-github-pat", CancellationToken.None);
+        await vmrPusher.Push(VmrUrl, "branch", true, "public-github-pat", CancellationToken.None);
 
         _localGitRepo.Verify(
             x => x.Push(
-                vmrPath, 
-                "remote", 
+                vmrPath,  
                 "branch", 
-                It.Is<LibGit2Sharp.Identity>(x => x.Name == Constants.DarcBotName && x.Email == Constants.DarcBotEmail), 
-                "git-hub-pat", 
-                "az-do-pat"), 
+                VmrUrl,
+                "git-hub-pat",
+                It.Is<LibGit2Sharp.Identity>(x => x.Name == Constants.DarcBotName && x.Email == Constants.DarcBotEmail)), 
             Times.Once());
     }
 }

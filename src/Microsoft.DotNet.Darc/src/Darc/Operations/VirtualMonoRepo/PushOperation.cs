@@ -35,7 +35,7 @@ internal class PushOperation : Operation
         
         try
         {
-            await vmrPusher.Push(_options.Remote, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
+            await vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
             return 0;
         }
         catch(Exception e)

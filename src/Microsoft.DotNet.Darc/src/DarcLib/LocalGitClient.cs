@@ -366,6 +366,11 @@ public class LocalGitClient : ILocalGitRepo
     public string AddRemoteIfMissing(string repoDir, string repoUrl, bool skipFetch = false)
     {
         using var repo = new Repository(repoDir);
+        return AddRemoteIfMissing(repo, repoUrl, skipFetch);
+    }
+
+    private string AddRemoteIfMissing(Repository repo, string repoUrl, bool skipFetch = false)
+    {
         var remote = repo.Network.Remotes.FirstOrDefault(r => r.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase));
         string remoteName;
 
@@ -375,7 +380,7 @@ public class LocalGitClient : ILocalGitRepo
         }
         else
         {
-            _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
+            _logger.LogDebug($"Adding {repoUrl} remote to {repo.Info.Path}");
 
             // Remote names don't matter much but should be stable
             remoteName = StringUtils.GetXxHash64(repoUrl);
@@ -384,13 +389,13 @@ public class LocalGitClient : ILocalGitRepo
 
         if (!skipFetch)
         {
-            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repo.Info.Path}");
             Commands.Fetch(
                 repo,
                 remoteName,
                 new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" },
                 new FetchOptions(),
-                $"Fetching {repoUrl} into {repoDir}");
+                $"Fetching {repoUrl} into {repo.Info.Path}");
         }
 
         return remoteName;
@@ -424,22 +429,20 @@ public class LocalGitClient : ILocalGitRepo
     }
 
     public void Push(
-        string repoPath, 
-        string remoteName, 
-        string branchName, 
-        LibGit2Sharp.Identity identity, 
-        string gitHubPat = null, 
-        string azureDevOpsPat = null)
+        string repoPath,
+        string branchName,
+        string remoteUrl, 
+        string pat,
+        LibGit2Sharp.Identity identity = null)
     {
+        identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
+
         using var repo = new Repository(
             repoPath, 
             new RepositoryOptions { Identity = identity });
-        
+
+        var remoteName = AddRemoteIfMissing(repo, remoteUrl, true);
         var remote = repo.Network.Remotes[remoteName];
-        if (remote == null)
-        {
-            throw new Exception($"No remote named {remoteName} found in repo {repo.Info.Path}.");
-        }
 
         var branch = repo.Branches[branchName];
         if (branch == null)
@@ -447,18 +450,6 @@ public class LocalGitClient : ILocalGitRepo
             throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
         }
         
-        var repoType = GitRepoTypeParser.ParseFromUri(remote.Url);
-        
-        string pat = string.Empty;
-        if (repoType == GitRepoType.GitHub)
-        {
-            pat = gitHubPat;
-        }
-        if (repoType == GitRepoType.AzureDevOps) 
-        {
-            pat = azureDevOpsPat;
-        } 
-
         var pushOptions = new PushOptions
         {
             CredentialsProvider = (url, user, cred) =>

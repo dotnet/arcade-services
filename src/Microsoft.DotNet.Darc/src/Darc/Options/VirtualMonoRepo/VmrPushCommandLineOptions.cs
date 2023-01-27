@@ -11,8 +11,8 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("push", HelpText = "Pushes given VMR branch to a given remote. Optionally verifies public availability of pushed commits.")]
 internal class VmrPushCommandLineOptions : VmrCommandLineOptions
 {
-    [Option("remote", Required = true, HelpText = "Name of an already existing remote to push to")]
-    public string Remote { get; set; }
+    [Option("remote-url", Required = true, HelpText = "URL to push to")]
+    public string RemoteUrl { get; set; }
 
     [Option("branch", Required = true, HelpText = "Branch to push")]
     public string Branch { get; set; }

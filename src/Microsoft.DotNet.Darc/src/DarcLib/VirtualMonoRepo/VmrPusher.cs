@@ -13,13 +13,14 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Octokit;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
 {
-    Task Push(string remote, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken);
+    Task Push(string remoteUrl, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken);
 }
 
 public class VmrPusher : IVmrPusher
@@ -52,11 +53,11 @@ public class VmrPusher : IVmrPusher
     /// Pushes the specified branch to the specified remote. If verifyCommits is true, checks that each commit is present in a public repo 
     /// before pushing
     /// </summary>
-    /// <param name="remote">Name of an already existing remote to push to</param>
+    /// <param name="remoteUrl">URL to push to</param>
     /// <param name="branch">Name of an already existing branch to push</param>
     /// <param name="verifyCommits">Verify that all commits are found in public repos before pushing</param>
     /// <param name="gitHubApiPat">Token with no scopes for authenticating to GitHub GraphQL API.</param>
-    public async Task Push(string remote, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken)
+    public async Task Push(string remoteUrl, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken)
     {
         if (verifyCommits)
         {
@@ -71,13 +72,24 @@ public class VmrPusher : IVmrPusher
             }
         }
 
+        var repoType = GitRepoTypeParser.ParseFromUri(remoteUrl);
+
+        string? pat = string.Empty;
+        if (repoType == GitRepoType.GitHub)
+        {
+            pat = _vmrRemoteConfiguration.GitHubToken;
+        }
+        if (repoType == GitRepoType.AzureDevOps)
+        {
+            pat = _vmrRemoteConfiguration.AzureDevOpsToken;
+        }
+
         _localGitRepo.Push(
             _vmrInfo.VmrPath,
-            remote,
             branch,
-            new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail),
-            _vmrRemoteConfiguration.GitHubToken,
-            _vmrRemoteConfiguration.AzureDevOpsToken);
+            remoteUrl,
+            pat,
+            new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail));
     }
 
     private async Task<bool> CheckCommitAvailability(string gitHubApiPat, CancellationToken cancellationToken)
@@ -149,8 +161,7 @@ public class VmrPusher : IVmrPusher
             PropertyNameCaseInsensitive = true,
         };
 
-        var result = JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
-        return result;
+        return JsonSerializer.Deserialize<CommitsQueryResult>(content, settings);
     }
 
     private static string GetGraphQlIdentifier(string repoName) => repoName.Replace("-", null).Replace(".", null);
