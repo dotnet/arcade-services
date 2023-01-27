@@ -39,7 +39,7 @@ public abstract class VmrScanner : IVmrScanner
         _fileSystem = new FileSystem();
     }
 
-    public async Task<List<string>> ScanVmr(string baselineFilePath, CancellationToken cancellationToken)
+    public async Task<List<string>> ScanVmr(string? baselineFilePath, CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings();
 
@@ -72,14 +72,14 @@ public abstract class VmrScanner : IVmrScanner
     /// </summary>
     protected abstract Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping,
-        string baselineFilePath,
+        string? baselineFilePath,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Scans the base VMR repository, excluding the src/ folder
     /// </summary>
     protected abstract Task<IEnumerable<string>> ScanBaseRepository(
-        string baselineFilePath,
+        string? baselineFilePath,
         CancellationToken cancellationToken);
 
     /// <summary>
