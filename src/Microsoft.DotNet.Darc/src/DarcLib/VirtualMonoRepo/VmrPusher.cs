@@ -101,7 +101,7 @@ public class VmrPusher : IVmrPusher
 
         var commits = await GetGitHubCommits(commitsSearchArguments, gitHubApiPat, cancellationToken);
         
-        if (commits == null || commits.Data == null)
+        if (commits?.Data == null)
         {
             _logger.LogError("The Graphql query is not in the correct format.");
             return false;
