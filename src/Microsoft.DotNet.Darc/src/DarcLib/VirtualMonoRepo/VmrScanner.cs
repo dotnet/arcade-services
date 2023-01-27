@@ -89,7 +89,7 @@ public abstract class VmrScanner : IVmrScanner
     protected async Task<IEnumerable<string>> GetExclusionFilters(string? repoName, string baselineFilePath)
     {
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
-        return text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+        return text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(line => (repoName is null ? false : line.StartsWith($"src/{repoName}")) || line.StartsWith('*'))
             .Select(line =>
             {
