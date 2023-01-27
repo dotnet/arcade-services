@@ -103,7 +103,7 @@ public class VmrPusher : IVmrPusher
         
         if (commits?.Data == null)
         {
-            _logger.LogError("The Graphql query is not in the correct format.");
+            _logger.LogError("The GraphQL response is invalid!");
             return false;
         }
 
