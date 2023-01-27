@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
 {
-    Task Push(string remoteUrl, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken);
+    Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubApiPat, CancellationToken cancellationToken);
 }
 
 public class VmrPusher : IVmrPusher
@@ -55,11 +55,11 @@ public class VmrPusher : IVmrPusher
     /// </summary>
     /// <param name="remoteUrl">URL to push to</param>
     /// <param name="branch">Name of an already existing branch to push</param>
-    /// <param name="verifyCommits">Verify that all commits are found in public repos before pushing</param>
+    /// <param name="skipCommitVerification">Push without verifying that all commits are found in public repos</param>
     /// <param name="gitHubApiPat">Token with no scopes for authenticating to GitHub GraphQL API.</param>
-    public async Task Push(string remoteUrl, string branch, bool verifyCommits, string? gitHubApiPat, CancellationToken cancellationToken)
+    public async Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubApiPat, CancellationToken cancellationToken)
     {
-        if (verifyCommits)
+        if (!skipCommitVerification)
         {
             if(gitHubApiPat == null)
             {

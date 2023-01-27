@@ -59,6 +59,6 @@ public interface ILocalGitRepo : IGitRepo
         string repoPath,
         string branchName,
         string remoteUrl,
-        string pat,
+        string token,
         LibGit2Sharp.Identity identity = null);
 }

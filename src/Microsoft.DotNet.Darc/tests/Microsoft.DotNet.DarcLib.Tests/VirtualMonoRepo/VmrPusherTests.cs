@@ -61,7 +61,7 @@ public class VmrPusherTests
             _localGitRepo.Object,
             remoteConfiguration);
 
-        vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", true, "public-github-pat", CancellationToken.None))
+        vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
             .Should()
             .Throw<Exception>()
             .WithMessage("Not all pushed commits are publicly available");
@@ -94,7 +94,7 @@ public class VmrPusherTests
             _localGitRepo.Object,
             remoteConfiguration);
 
-        await vmrPusher.Push(VmrUrl, "branch", true, "public-github-pat", CancellationToken.None);
+        await vmrPusher.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None);
 
         _localGitRepo.Verify(
             x => x.Push(

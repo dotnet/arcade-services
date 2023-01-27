@@ -27,7 +27,7 @@ internal class PushOperation : Operation
         var vmrPusher = Provider.GetRequiredService<IVmrPusher>();
         using var listener = CancellationKeyListener.ListenForCancellation(Logger);
         
-        if (_options.VerifyCommits && _options.CommitVerificationPat == null)
+        if (!_options.SkipCommitVerification && _options.CommitVerificationPat == null)
         {
             Logger.LogError("Please use --commit-verification-pat to specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API");
             return Constants.ErrorCode;
@@ -35,7 +35,7 @@ internal class PushOperation : Operation
         
         try
         {
-            await vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.VerifyCommits, _options.CommitVerificationPat, listener.Token);
+            await vmrPusher.Push(_options.RemoteUrl, _options.Branch, _options.SkipCommitVerification, _options.CommitVerificationPat, listener.Token);
             return 0;
         }
         catch(Exception e)

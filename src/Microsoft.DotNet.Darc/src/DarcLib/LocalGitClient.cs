@@ -432,7 +432,7 @@ public class LocalGitClient : ILocalGitRepo
         string repoPath,
         string branchName,
         string remoteUrl, 
-        string pat,
+        string token,
         LibGit2Sharp.Identity identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
@@ -455,7 +455,7 @@ public class LocalGitClient : ILocalGitRepo
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = pat,
+                    Username = token,
                     Password = string.Empty
                 }
         };
