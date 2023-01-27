@@ -11,5 +11,5 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrScanner
 {
-    Task<List<string>> ScanVmr(string baselineFilePath, CancellationToken cancellationToken);
+    Task<List<string>> ScanVmr(string? baselineFilePath, CancellationToken cancellationToken);
 }

@@ -33,7 +33,7 @@ public class VmrBinaryFileScanner : VmrScanner
 
     protected override async Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping,
-        string baselineFilePath, 
+        string? baselineFilePath, 
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -45,12 +45,15 @@ public class VmrBinaryFileScanner : VmrScanner
             _vmrInfo.GetRepoSourcesPath(sourceMapping)
         };
 
-        args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
+        if (baselineFilePath != null)
+        {
+            args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
+        }
 
         return await ScanAndParseResult(args.ToArray(), sourceMapping.Name, cancellationToken);
     }
 
-    protected override async Task<IEnumerable<string>> ScanBaseRepository(string baselineFilePath, CancellationToken cancellationToken)
+    protected override async Task<IEnumerable<string>> ScanBaseRepository(string? baselineFilePath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var args = new List<string>
@@ -62,7 +65,10 @@ public class VmrBinaryFileScanner : VmrScanner
             $":(exclude){VmrInfo.SourcesDir}"
         };
 
-        args.AddRange(await GetExclusionFilters(null, baselineFilePath));
+        if (baselineFilePath != null)
+        {
+            args.AddRange(await GetExclusionFilters(null, baselineFilePath));
+        }
 
         return await ScanAndParseResult(args.ToArray(), "base VMR", cancellationToken);
     }
