@@ -141,7 +141,7 @@ public class VmrPusher : IVmrPusher
         var queries = commits
             .Select(c => $"{GetGraphQlIdentifier(c.RepoName)}: repository(name: \\\"{c.RepoName}\\\", owner: \\\"{c.RepoOwner}\\\"){{object(oid: \\\"{c.Sha}\\\"){{ ... on Commit {{id}}}}}}");
         var query = string.Join(", ", queries);
-        var body = @"{""query"" : ""{" + query + @"}""}";
+        var body = "{\"query\" : \"{" + query + "}\"}";
 
         _logger.LogDebug("Sending GraphQL query: {query}", body);
 
@@ -153,7 +153,7 @@ public class VmrPusher : IVmrPusher
             body,
             authHeader: new AuthenticationHeaderValue("Token", gitHubApiPat));
 
-        using var response = await httpRequestManager.ExecuteAsync(0);
+        using var response = await httpRequestManager.ExecuteAsync(retryCount: 0);
 
         var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
         var settings = new JsonSerializerOptions
