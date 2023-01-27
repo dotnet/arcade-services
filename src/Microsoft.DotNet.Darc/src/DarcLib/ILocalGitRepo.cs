@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -45,4 +46,19 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoDir">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
     IEnumerable<string> GetStagedFiles(string repoDir);
+
+    /// <summary>
+    /// Pushes a branch to a remote
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <param name="branchName">Name of branch to push</param>
+    /// <param name="remoteUrl">URL to push to</param>
+    /// <param name="pat">Token for authenticating for pushing</param>
+    /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
+    void Push(
+        string repoPath,
+        string branchName,
+        string remoteUrl,
+        string token,
+        LibGit2Sharp.Identity identity = null);
 }
