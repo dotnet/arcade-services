@@ -153,7 +153,7 @@ public class VmrPusher : IVmrPusher
             body,
             authHeader: new AuthenticationHeaderValue("Token", gitHubApiPat));
 
-        using var response = await httpRequestManager.ExecuteAsync(retryCount: 0);
+        using var response = await httpRequestManager.ExecuteAsync(retryCount: 3);
 
         var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
         var settings = new JsonSerializerOptions
