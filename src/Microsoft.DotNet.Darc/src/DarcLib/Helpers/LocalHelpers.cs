@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
@@ -135,8 +136,12 @@ public static class LocalHelpers
 
         ExecuteGitCommand(gitLocation, $"init {repoFolderName}", logger, workingDirectory);
 
+        string configKey = $"http.extraheader";
+        string configValue = $"AUTHORIZATION: {GenerateAuthHeader(user, pat)}";
         workingDirectory = Path.Combine(workingDirectory, repoFolderName);
-        repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
+        Environment.SetEnvironmentVariable("GIT_CONFIG_COUNT", "1");
+        Environment.SetEnvironmentVariable("GIT_CONFIG_KEY_0", configKey);
+        Environment.SetEnvironmentVariable("GIT_CONFIG_VALUE_0", configValue);
 
         ExecuteGitCommand(gitLocation, $"remote add {remote} {repoUri}", logger, workingDirectory, secretToMask: pat);
         ExecuteGitCommand(gitLocation, "config core.sparsecheckout true", logger, workingDirectory);
@@ -150,6 +155,14 @@ public static class LocalHelpers
         ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
 
         return workingDirectory;
+    }
+
+    private static string GenerateAuthHeader(string username, string password)
+    {
+        // use basic auth header with username:password in base64encoding.
+        string authHeader = $"{username ?? string.Empty}:{password ?? string.Empty}";
+        string base64encodedAuthHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes(authHeader));
+        return $"basic {base64encodedAuthHeader}";
     }
 
     /// <summary>
