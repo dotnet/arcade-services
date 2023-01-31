@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)net6.0/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
-    <MicrosoftDotNetMonitoringSdkTasksAssembly Condition="!Exists('$(MicrosoftDotNetMonitoringSdkTasksAssembly)')">$(MSBuildThisFileDirectory)/../../../../artifacts/bin/Microsoft.DotNet.Monitoring.Sdk/$(Configuration)/net6.0/publish/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly Condition="!Exists('$(MicrosoftDotNetMonitoringSdkTasksAssembly)')">$(MSBuildThisFileDirectory)/../net6.0/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
     <GrafanaDashboardTag Condition="'$(GrafanaDashboardTag)' == ''">$(MSBuildProjectName)</GrafanaDashboardTag>
   </PropertyGroup>
 
