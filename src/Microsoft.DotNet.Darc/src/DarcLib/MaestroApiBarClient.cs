@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Azure;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using AsyncEnumerable = Microsoft.DotNet.Maestro.Client.AsyncEnumerable;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -378,7 +379,7 @@ public class MaestroApiBarClient : IBarClient
     {
         AsyncPageable<Asset> pagedResponse = _barClient.Assets.ListAssetsAsync(name: name,
             version: version, buildId: buildId, loadLocations: true);
-        return await pagedResponse.ToListAsync(CancellationToken.None);
+        return await AsyncEnumerable.ToListAsync(pagedResponse, CancellationToken.None);
     }
 
     /// <summary>
@@ -402,7 +403,7 @@ public class MaestroApiBarClient : IBarClient
     {
         AsyncPageable<Build> pagedResponse = _barClient.Builds.ListBuildsAsync(repository: repoUri,
             commit: commit, loadCollections: true);
-        return await pagedResponse.ToListAsync(CancellationToken.None);
+        return await AsyncEnumerable.ToListAsync(pagedResponse, CancellationToken.None);
     }
 
     public async Task AssignBuildToChannelAsync(int buildId, int channelId)

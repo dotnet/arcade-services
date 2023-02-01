@@ -37,8 +37,8 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         var patchPathInVmr = VmrPatchesDir / PatchFileName;
         var submoduleRelativePath = new NativePath("submodules") / "submodule1";
         var submodulePathInVmr = testRepoPathInVmr / "submodules" / "submodule1";
-        var submodulePathInRepo = "foo";
-        var patchedSubmoduleFileInVmr = submodulePathInVmr / submodulePathInRepo / FileCreatedByPatch;
+        var submodulePatchedFilePath = new NativePath("foo") / FileCreatedByPatch;
+        var patchedSubmoduleFileInVmr = submodulePathInVmr / submodulePatchedFilePath;
         var submoduleFileInVmr = submodulePathInVmr / Constants.GetRepoFileName(Constants.SecondRepoName);
 
         await GitOperations.InitializeSubmodule(ProductRepoPath, "submodule1", SecondRepoPath, submoduleRelativePath);
@@ -92,13 +92,13 @@ public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 
         // Add the file to the submodule so the vmr patch cannot be applied
 
-        Directory.CreateDirectory(SecondRepoPath / submodulePathInRepo);
-        File.WriteAllText(SecondRepoPath / submodulePathInRepo / FileCreatedByPatch, "New content");
+        Directory.CreateDirectory(SecondRepoPath / "foo");
+        File.WriteAllText(SecondRepoPath / submodulePatchedFilePath, "New content");
         await GitOperations.CommitAll(SecondRepoPath, "Added a new file into the repo");
 
         // Move submodule to a new commit and verify it breaks the patch
 
-        await GitOperations.UpdateSubmodule(ProductRepoPath, submodulePathInRepo);
+        await GitOperations.UpdateSubmodule(ProductRepoPath, submoduleRelativePath);
         var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
