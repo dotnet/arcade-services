@@ -123,32 +123,32 @@ public abstract class VmrTestsBase
         filesInDir.Should().BeEquivalentTo(expectedFiles);
     }
 
-    protected static void CheckFileContents(LocalPath filePath, string expected)
+    protected static void CheckFileContents(NativePath filePath, string expected)
     {
         var expectedLines = expected.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         CheckFileContents(filePath, expectedLines);
     }
 
-    protected static void CheckFileContents(LocalPath filePath, string[] expectedLines)
+    protected static void CheckFileContents(NativePath filePath, string[] expectedLines)
     {
         var fileContent = File.ReadAllLines(filePath);
         fileContent.Should().BeEquivalentTo(expectedLines);
     }
 
-    protected void CompareFileContents(LocalPath filePath, string resourceFileName)
+    protected void CompareFileContents(NativePath filePath, string resourceFileName)
     {
         var resourceContent = File.ReadAllLines(VmrTestsOneTimeSetUp.ResourcesPath / resourceFileName);
         CheckFileContents(filePath, resourceContent);
     }
 
-    protected async Task InitializeRepoAtLastCommit(string repoName, LocalPath repoPath, LocalPath? sourceMappingsPath = null)
+    protected async Task InitializeRepoAtLastCommit(string repoName, NativePath repoPath, LocalPath? sourceMappingsPath = null)
     {
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
         var sourceMappings = sourceMappingsPath ?? VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName;
         await CallDarcInitialize(repoName, commit, sourceMappings);
     }
 
-    protected async Task UpdateRepoToLastCommit(string repoName, LocalPath repoPath)
+    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath)
     {
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
         await CallDarcUpdate(repoName, commit);
@@ -225,7 +225,7 @@ public abstract class VmrTestsBase
     }
 
     internal async Task<string> CopyRepoAndCreateVersionDetails(
-        LocalPath currentTestDir,
+        NativePath currentTestDir,
         string repoName,
         IDictionary<string, List<string>>? dependencies = null)
     {

@@ -37,7 +37,7 @@ public class VmrBinaryFileScannerTest : VmrTestsBase
         Directory.CreateDirectory(newFilePath);
         using var bitmap = new Bitmap(3, 3);
         bitmap.Save(newFilePath / testFileName, ImageFormat.Jpeg);
-        await GitOperations.CommitAll(VmrPath, "Commit dll file");
+        await GitOperations.CommitAll(VmrPath, "Commit binary file");
 
         // Test the scanner when there is a binary file to be found
         list = await CallDarcBinaryFileScan(baselinesFilePath);
