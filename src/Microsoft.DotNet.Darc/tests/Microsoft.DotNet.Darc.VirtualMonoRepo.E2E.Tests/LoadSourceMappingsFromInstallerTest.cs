@@ -104,6 +104,18 @@ public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependencies);
         File.WriteAllText(InstallerRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
 
+        // We will also only add the new mapping with the dependency. This should verify we're syncing the new source-mappings file
+        _sourceMappings.Mappings.Add(
+            new SourceMappingSetting
+            {
+                Name = Constants.ProductRepoName,
+                DefaultRemote = ProductRepoPath
+            });
+
+        File.WriteAllText(
+            InstallerRepoPath / _sourceMappingsRelativePath,
+            JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
+
         await GitOperations.CommitAll(InstallerRepoPath, "Added new dependency");
 
         // We will sync new installer, which should bring in the new product repo
@@ -146,11 +158,6 @@ public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
                     Name = Constants.InstallerRepoName,
                     DefaultRemote = InstallerRepoPath,
                     Exclude = new[] { "src/*.dll" }
-                },
-                new SourceMappingSetting
-                {
-                    Name = Constants.ProductRepoName,
-                    DefaultRemote = ProductRepoPath
                 },
             }
         };
