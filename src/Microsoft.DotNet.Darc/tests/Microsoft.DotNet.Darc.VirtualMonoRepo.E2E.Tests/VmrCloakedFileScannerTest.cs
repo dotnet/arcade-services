@@ -85,4 +85,3 @@ public class VmrCloakedFileScannerTest : VmrTestsBase
         await WriteSourceMappingsInVmr(sourceMappings);
     }
 }
-
