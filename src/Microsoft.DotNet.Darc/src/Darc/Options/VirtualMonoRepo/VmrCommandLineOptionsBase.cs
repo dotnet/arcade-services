@@ -38,7 +38,7 @@ internal abstract class VmrCommandLineOptionsBase : CommandLineOptions
             }
 
             gitHubToken ??= localDarcSettings?.GitHubToken;
-            azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken; 
+            azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
         }
 
         var services = new ServiceCollection();
