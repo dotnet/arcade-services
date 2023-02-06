@@ -1,0 +1,7 @@
+﻿source (name) ==> 'target' ('test')
+  - Id: 00000000-0000-0000-0000-000000000000
+  - Update Frequency: EveryDay
+  - Enabled: True
+  - Batchable: False
+  - PR Failure Notification tags: 
+  - Merge Policies: []
