@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,6 +16,7 @@ using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
 using VerifyNUnit;
@@ -23,12 +26,18 @@ namespace Microsoft.DotNet.Darc.Tests.Operations;
 [TestFixture]
 public class GetSubscriptionsOperationTests
 {
-    private ConsoleOutputIntercepter _consoleOutput;
+    private ConsoleOutputIntercepter _consoleOutput = null!;
+    private ServiceCollection _services = null!;
+    private Mock<IRemote> _remoteMock = null!;
+
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
+
+        _remoteMock = new Mock<IRemote>();
+        _services = new ServiceCollection();
     }
 
     [TearDown]
@@ -40,11 +49,9 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_empty_set()
     {
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
-            .Returns(Task.FromResult(new List<Subscription>().AsEnumerable()));
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -57,11 +64,11 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_AuthenticationException()
     {
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
+        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new AuthenticationException("boo."));
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -74,11 +81,11 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_Exception()
     {
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
+        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new Exception("foo."));
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -92,8 +99,6 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_text()
     {
-        List<Subscription> subscriptions = new();
-
         Subscription subscription = new(Guid.Empty, true, "source", "target", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
@@ -102,14 +107,16 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+        List<Subscription> subscriptions = new()
+        {
+            subscription
+        };
 
-        subscriptions.Add(subscription);
-
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
+        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -122,8 +129,6 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_json()
     {
-        List<Subscription> subscriptions = new();
-
         Subscription subscription = new(Guid.Empty, true, "source", "target", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
@@ -132,15 +137,16 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+        List<Subscription> subscriptions = new()
+        {
+            subscription
+        };
 
-        subscriptions.Add(subscription);
-
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
+        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        optionsMock.Object.OutputFormat = DarcOutputType.json;
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.json }, _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -153,9 +159,7 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_sorted_text()
     {
-        List<Subscription> subscriptions = new();
-
-        Subscription subscription = new(Guid.Empty, true, "source2", "target2", "test", string.Empty)
+        Subscription subscription1 = new(Guid.Empty, true, "source2", "target2", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
@@ -163,9 +167,7 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        subscriptions.Add(subscription);
-
-        subscription = new(Guid.Empty, true, "source1", "target1", "test", string.Empty)
+        Subscription subscription2 = new(Guid.Empty, true, "source1", "target1", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
@@ -173,13 +175,17 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        subscriptions.Add(subscription);
+        List<Subscription> subscriptions = new()
+        {
+            subscription1,
+            subscription2,
+        };
 
-        var optionsMock = new Mock<GetSubscriptionsCommandLineOptions>();
-        optionsMock.Setup(t => t.FilterSubscriptions(It.IsAny<IRemote>()))
+        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+        _services.AddSingleton(_remoteMock.Object);
 
-        GetSubscriptionsOperation operation = new(optionsMock.Object);
+        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.text }, _services);
 
         int result = await operation.ExecuteAsync();
 

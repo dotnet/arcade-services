@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -12,6 +14,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -24,8 +27,8 @@ class GetSubscriptionsOperation : Operation
 {
     private readonly GetSubscriptionsCommandLineOptions _options;
 
-    public GetSubscriptionsOperation(GetSubscriptionsCommandLineOptions options)
-        : base(options)
+    public GetSubscriptionsOperation(GetSubscriptionsCommandLineOptions options, IServiceCollection? services = null)
+        : base(options, services)
     {
         _options = options;
     }
@@ -34,7 +37,7 @@ class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IRemote remote = Provider.GetService<IRemote>() ??  RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 

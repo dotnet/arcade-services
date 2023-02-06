@@ -56,7 +56,7 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
     public IEnumerable<string> SubscriptionIds { get; set; }
 
-    public virtual async Task<IEnumerable<Subscription>> FilterSubscriptions(IRemote remote)
+    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IRemote remote)
     {
         IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
         return (await remote.GetSubscriptionsAsync()).Where(subscription =>
@@ -93,14 +93,14 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     }
 
     public bool SubscriptionIdsParameterMatches(Subscription subscription)
-    {
-        return !SubscriptionIds.Any() || SubscriptionIds.Any(id => id.Equals(subscription.Id.ToString(), StringComparison.OrdinalIgnoreCase));
-    }
+        => SubscriptionIds is null
+        || !SubscriptionIds.Any()
+        || SubscriptionIds.Any(id => id.Equals(subscription.Id.ToString(), StringComparison.OrdinalIgnoreCase));
 
     public bool SubscriptionFrequenciesParameterMatches(Subscription subscription)
-    {
-        return !Frequencies.Any() || Frequencies.Any(frequency => subscription.Policy.UpdateFrequency.ToString().Contains(frequency, StringComparison.OrdinalIgnoreCase));
-    }
+        => Frequencies is null
+        || !Frequencies.Any()
+        || Frequencies.Any(frequency => subscription.Policy.UpdateFrequency.ToString().Contains(frequency, StringComparison.OrdinalIgnoreCase));
 
     public bool SubscriptionDefaultChannelTargetParameterMatches(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)
     {
