@@ -34,6 +34,10 @@ public interface IVmrInfo
     /// </summary>
     string? SourceMappingsPath { get; set; }
 
+    public string? ReadmeTemplatePath { get; set; }
+
+    public string? ThirdPartyNoticesTemplatePath { get; set; }
+
     /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
     /// Paths are UNIX style and relative.
@@ -64,10 +68,10 @@ public class VmrInfo : IVmrInfo
     public const string IgnoreAttribute = "vmr-ignore";
 
     public const string ReadmeFileName = "README.md";
-    public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";
+    //public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";
 
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
-    public const string ThirdPartyNoticesTemplatePath = "eng/bootstrap/THIRD-PARTY-NOTICES.template.txt";
+    //public const string ThirdPartyNoticesTemplatePath = "eng/bootstrap/THIRD-PARTY-NOTICES.template.txt";
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
@@ -78,6 +82,10 @@ public class VmrInfo : IVmrInfo
     public string? PatchesPath { get; set; }
 
     public string? SourceMappingsPath { get; set; }
+
+    public string? ReadmeTemplatePath { get; set; }
+
+    public string? ThirdPartyNoticesTemplatePath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 

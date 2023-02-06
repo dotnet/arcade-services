@@ -41,15 +41,14 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
 
     public async Task UpdateReadme()
     {
-        var readmeTemplatePath = _vmrInfo.VmrPath / VmrInfo.ReadmeTemplatePath;
-        if (!_fileSystem.FileExists(readmeTemplatePath))
+        if (_vmrInfo.ReadmeTemplatePath == null || !_fileSystem.FileExists(_vmrInfo.ReadmeTemplatePath))
         {
             return;
         }
 
         var readmePath = _vmrInfo.VmrPath / VmrInfo.ReadmeFileName;
 
-        using var readStream = _fileSystem.GetFileStream(readmeTemplatePath, FileMode.Open, FileAccess.Read);
+        using var readStream = _fileSystem.GetFileStream(_vmrInfo.ReadmeTemplatePath, FileMode.Open, FileAccess.Read);
         using var writeStream = _fileSystem.GetFileStream(readmePath, FileMode.Create, FileAccess.Write);
         using var reader = new StreamReader(readStream);
         using var writer = new StreamWriter(writeStream, Encoding.UTF8);

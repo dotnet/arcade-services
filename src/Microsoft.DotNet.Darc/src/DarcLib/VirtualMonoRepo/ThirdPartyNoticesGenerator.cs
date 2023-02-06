@@ -46,11 +46,10 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
-        var templatePath = _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesTemplatePath;
         string header = string.Empty;
-        if (_fileSystem.FileExists(templatePath))
+        if (_vmrInfo.ThirdPartyNoticesTemplatePath != null && _fileSystem.FileExists(_vmrInfo.ThirdPartyNoticesTemplatePath))
         {
-            header = await _fileSystem.ReadAllTextAsync(templatePath);
+            header = await _fileSystem.ReadAllTextAsync(_vmrInfo.ThirdPartyNoticesTemplatePath);
         }
 
         var vmrTpnPath = _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesFileName;

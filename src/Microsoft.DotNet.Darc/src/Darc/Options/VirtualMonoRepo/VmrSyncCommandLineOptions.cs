@@ -18,4 +18,10 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
         "Repository names in the form of NAME or NAME:REVISION where REVISION is a commit SHA or other git reference (branch, tag). " +
         "Omitting REVISION will synchronize the repo to current HEAD.")]
     public IEnumerable<string> Repositories { get; set; }
+
+    [Option("readme-template", Required = false, HelpText = "Path to a template for generating VMRs README file.")]
+    public string ReadMeTemplate { get; set; }
+
+    [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file.")]
+    public string TpnTemplate { get; set; }
 }
