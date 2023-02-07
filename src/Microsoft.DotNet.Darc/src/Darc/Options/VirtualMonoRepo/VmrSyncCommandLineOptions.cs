@@ -19,7 +19,7 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
         "Omitting REVISION will synchronize the repo to current HEAD.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("readme-template", Required = false, HelpText = "Path to a template for generating VMRs README file.")]
+    [Option("readme-template", Required = false, HelpText = "Path to a template for generating VMRs README file. Leave empty to skip generation.")]
     public string ReadMeTemplate { get; set; }
 
     [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file.")]
