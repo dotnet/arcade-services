@@ -23,6 +23,9 @@ internal class GenerateTpnOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         var generator = Provider.GetRequiredService<IThirdPartyNoticesGenerator>();
+        var dependencyTracker = Provider.GetRequiredService<IVmrDependencyTracker>();
+        await dependencyTracker.InitializeSourceMappings();
+
         await generator.UpdateThirdPartyNotices(_options.TpnTemplate);
         return 0;
     }

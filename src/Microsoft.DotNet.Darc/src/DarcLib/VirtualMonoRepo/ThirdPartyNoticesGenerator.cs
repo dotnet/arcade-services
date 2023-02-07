@@ -46,8 +46,6 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
-        await _dependencyTracker.InitializeSourceMappings();
-
         string header = string.Empty;
         if (_fileSystem.FileExists(templatePath))
         {
