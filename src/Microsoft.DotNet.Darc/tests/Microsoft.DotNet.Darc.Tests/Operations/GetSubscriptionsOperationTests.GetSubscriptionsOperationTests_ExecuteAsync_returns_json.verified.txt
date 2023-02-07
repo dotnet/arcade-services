@@ -1,0 +1,21 @@
+﻿[
+  {
+    "id": "00000000-0000-0000-0000-000000000000",
+    "channel": {
+      "id": 1,
+      "name": "name",
+      "classification": "classification"
+    },
+    "sourceRepository": "source",
+    "targetRepository": "target",
+    "targetBranch": "test",
+    "policy": {
+      "batchable": false,
+      "updateFrequency": 1,
+      "mergePolicies": []
+    },
+    "lastAppliedBuild": null,
+    "enabled": true,
+    "pullRequestFailureNotificationTags": ""
+  }
+]

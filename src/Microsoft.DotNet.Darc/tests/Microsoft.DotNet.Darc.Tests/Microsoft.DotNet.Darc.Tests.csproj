@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
+    <PackageReference Include="Verify.NUnit" />
   </ItemGroup>
 
   <ItemGroup>

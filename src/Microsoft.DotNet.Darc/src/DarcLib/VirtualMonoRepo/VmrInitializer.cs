@@ -77,6 +77,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        string? readmeTemplatePath,
+        string? tpnTemplatePath,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
@@ -112,7 +114,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     continue;
                 }
 
-                await InitializeRepository(update, additionalRemotes, cancellationToken);
+                await InitializeRepository(update, additionalRemotes, readmeTemplatePath, tpnTemplatePath, cancellationToken);
             }
         }
         catch (Exception)
@@ -135,6 +137,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private async Task InitializeRepository(
         VmrDependencyUpdate update,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        string? readmeTemplatePath,
+        string? tpnTemplatePath,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
@@ -167,6 +171,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             DotnetBotCommitSignature,
             commitMessage,
             reapplyVmrPatches: true,
+            readmeTemplatePath,
+            tpnTemplatePath,
             cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);

@@ -146,6 +146,7 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="4.7.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="6.0.0" />
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" /> 
+    <PackageVersion Include="Verify.NUnit" Version="19.6" />
     <PackageVersion Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageVersion Include="YamlDotNet" Version="9.1.4" />
     <PackageVersion Include="YamlDotNet.Signed" Version="5.3.0" />
