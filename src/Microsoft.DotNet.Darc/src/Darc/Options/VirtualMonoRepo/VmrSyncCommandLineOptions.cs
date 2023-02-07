@@ -22,6 +22,6 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
     [Option("readme-template", Required = false, HelpText = "Path to a template for generating VMRs README file. Leave empty to skip generation.")]
     public string ReadMeTemplate { get; set; }
 
-    [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file.")]
+    [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file. Leave empty to skip generation.")]
     public string TpnTemplate { get; set; }
 }
