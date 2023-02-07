@@ -97,7 +97,7 @@ public abstract class VmrManagerBase
 
         _dependencyInfo.UpdateDependencyVersion(update);
 
-        if(readmeTemplatePath != null)
+        if (readmeTemplatePath != null)
         {
             await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
         }
