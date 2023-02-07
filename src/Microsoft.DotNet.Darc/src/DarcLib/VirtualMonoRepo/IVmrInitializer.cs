@@ -27,5 +27,7 @@ public interface IVmrInitializer
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        string? readmeTemplatePath,
+        string? tpnTemplatePath,
         CancellationToken cancellationToken);
 }

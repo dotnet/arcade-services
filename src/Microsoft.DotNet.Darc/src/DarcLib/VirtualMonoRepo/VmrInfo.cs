@@ -64,10 +64,7 @@ public class VmrInfo : IVmrInfo
     public const string IgnoreAttribute = "vmr-ignore";
 
     public const string ReadmeFileName = "README.md";
-    public const string ReadmeTemplatePath = "eng/bootstrap/README.template.md";
-
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
-    public const string ThirdPartyNoticesTemplatePath = "eng/bootstrap/THIRD-PARTY-NOTICES.template.txt";
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
