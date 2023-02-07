@@ -56,11 +56,6 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
                 .ToImmutableArray();
         }
 
-        IVmrInfo vmrInfo = Provider.GetRequiredService<IVmrInfo>();
-
-        vmrInfo.ReadmeTemplatePath = _options.ReadMeTemplate;
-        vmrInfo.ThirdPartyNoticesTemplatePath = _options.TpnTemplate;
-
         var success = true;
 
         // We have a graceful cancellation to not leave the git repo in some inconsistent state

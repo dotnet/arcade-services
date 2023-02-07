@@ -27,5 +27,7 @@ public interface IVmrUpdater
         bool noSquash,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        string? readmeTemplatePath,
+        string? tpnTemplatePath,
         CancellationToken cancellationToken);
 }

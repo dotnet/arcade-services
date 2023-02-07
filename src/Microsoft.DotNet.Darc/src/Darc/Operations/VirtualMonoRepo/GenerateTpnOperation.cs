@@ -12,15 +12,18 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class GenerateTpnOperation : Operation
 {
+    private readonly GenerateTpnCommandLineOptions _options;
+
     public GenerateTpnOperation(GenerateTpnCommandLineOptions options)
         : base(options, options.RegisterServices())
     {
+        _options = options;
     }
 
     public override async Task<int> ExecuteAsync()
     {
         var generator = Provider.GetRequiredService<IThirdPartyNoticesGenerator>();
-        await generator.UpdateThirtPartyNotices();
+        await generator.UpdateThirtPartyNotices(_options.TpnTemplate);
         return 0;
     }
 }

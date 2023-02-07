@@ -34,10 +34,6 @@ public interface IVmrInfo
     /// </summary>
     string? SourceMappingsPath { get; set; }
 
-    public string? ReadmeTemplatePath { get; set; }
-
-    public string? ThirdPartyNoticesTemplatePath { get; set; }
-
     /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
     /// Paths are UNIX style and relative.
@@ -79,10 +75,6 @@ public class VmrInfo : IVmrInfo
     public string? PatchesPath { get; set; }
 
     public string? SourceMappingsPath { get; set; }
-
-    public string? ReadmeTemplatePath { get; set; }
-
-    public string? ThirdPartyNoticesTemplatePath { get; set; }
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 

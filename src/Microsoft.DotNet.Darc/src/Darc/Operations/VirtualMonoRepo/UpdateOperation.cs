@@ -35,5 +35,7 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
             _options.NoSquash,
             _options.Recursive,
             additionalRemotes,
+            _options.ReadMeTemplate,
+            _options.TpnTemplate,
             cancellationToken);
 }

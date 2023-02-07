@@ -70,6 +70,8 @@ public abstract class VmrManagerBase
         Signature author,
         string commitMessage,
         bool reapplyVmrPatches,
+        string? readmeTemplatePath,
+        string? tpnTemplatePath,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -94,8 +96,12 @@ public abstract class VmrManagerBase
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
-        await _readmeComponentListGenerator.UpdateReadme();
 
+        if(readmeTemplatePath != null)
+        {
+            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+        }
+        
         Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
         {
             VmrInfo.ReadmeFileName,
@@ -111,7 +117,10 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        await UpdateThirdPartyNotices(cancellationToken);
+        if(tpnTemplatePath != null)
+        {
+            await UpdateThirdPartyNotices(tpnTemplatePath, cancellationToken);
+        }
 
         // Commit without adding files as they were added to index directly
         Commit(commitMessage, author);
@@ -267,7 +276,7 @@ public abstract class VmrManagerBase
         return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
-    protected async Task UpdateThirdPartyNotices(CancellationToken cancellationToken)
+    protected async Task UpdateThirdPartyNotices(string templatePath, CancellationToken cancellationToken)
     {
         var isTpnUpdated = _localGitClient
             .GetStagedFiles(_vmrInfo.VmrPath)
@@ -276,7 +285,7 @@ public abstract class VmrManagerBase
 
         if (isTpnUpdated)
         {
-            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices();
+            await _thirdPartyNoticesGenerator.UpdateThirtPartyNotices(templatePath);
             _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
             cancellationToken.ThrowIfCancellationRequested();
         }
