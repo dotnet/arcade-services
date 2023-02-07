@@ -15,8 +15,5 @@ internal class GenerateTpnCommandLineOptions : VmrCommandLineOptions
     [Option("tpn-template", Required = true, HelpText = "Path to a header template for generating THIRD-PARTY-NOTICES file.")]
     public string TpnTemplate { get; set; }
 
-    [Option("source-mappings", Required = true, HelpText = $"A path to the {VmrInfo.SourceMappingsFileName} file.")]
-    public string SourceMappings { get; set; }
-
     public override Operation GetOperation() => new GenerateTpnOperation(this);
 }

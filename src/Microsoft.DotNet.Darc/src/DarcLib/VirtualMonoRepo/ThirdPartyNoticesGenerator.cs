@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IThirdPartyNoticesGenerator
 {
-    Task UpdateThirdPartyNotices(string templatePath, string? sourceMappingsPath = null);
+    Task UpdateThirdPartyNotices(string templatePath);
 }
 
 public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
@@ -42,14 +42,11 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     /// Generates the THIRD-PARTY-NOTICES.txt file by assembling other similar files from the whole VMR.
     /// </summary>
     /// <param name="force">Force generation (skip check of notice changes)</param>
-    public async Task UpdateThirdPartyNotices(string templatePath, string? sourceMappingsPath = null)
+    public async Task UpdateThirdPartyNotices(string templatePath)
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
-        if(sourceMappingsPath != null)
-        {
-            await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
-        }
+        await _dependencyTracker.InitializeSourceMappings();
 
         string header = string.Empty;
         if (_fileSystem.FileExists(templatePath))
