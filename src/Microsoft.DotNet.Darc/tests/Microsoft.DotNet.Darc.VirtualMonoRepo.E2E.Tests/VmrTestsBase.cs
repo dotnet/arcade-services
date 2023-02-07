@@ -157,7 +157,7 @@ public abstract class VmrTestsBase
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit)
@@ -168,7 +168,7 @@ public abstract class VmrTestsBase
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes)
     {
         var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, null, null, _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

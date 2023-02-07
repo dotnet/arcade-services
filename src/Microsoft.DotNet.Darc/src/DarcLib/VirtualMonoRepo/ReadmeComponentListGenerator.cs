@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IReadmeComponentListGenerator
 {
-    Task UpdateReadme();
+    Task UpdateReadme(string templatePath);
 }
 
 /// <summary>
@@ -39,17 +39,16 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
         _fileSystem = fileSystem;
     }
 
-    public async Task UpdateReadme()
+    public async Task UpdateReadme(string templatePath)
     {
-        var readmeTemplatePath = _vmrInfo.VmrPath / VmrInfo.ReadmeTemplatePath;
-        if (!_fileSystem.FileExists(readmeTemplatePath))
+        if (!_fileSystem.FileExists(templatePath))
         {
             return;
         }
 
         var readmePath = _vmrInfo.VmrPath / VmrInfo.ReadmeFileName;
 
-        using var readStream = _fileSystem.GetFileStream(readmeTemplatePath, FileMode.Open, FileAccess.Read);
+        using var readStream = _fileSystem.GetFileStream(templatePath, FileMode.Open, FileAccess.Read);
         using var writeStream = _fileSystem.GetFileStream(readmePath, FileMode.Create, FileAccess.Write);
         using var reader = new StreamReader(readStream);
         using var writer = new StreamWriter(writeStream, Encoding.UTF8);
