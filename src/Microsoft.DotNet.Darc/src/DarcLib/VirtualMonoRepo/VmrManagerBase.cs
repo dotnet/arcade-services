@@ -117,7 +117,7 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
 
-        if(tpnTemplatePath != null)
+        if (tpnTemplatePath != null)
         {
             await UpdateThirdPartyNotices(tpnTemplatePath, cancellationToken);
         }
