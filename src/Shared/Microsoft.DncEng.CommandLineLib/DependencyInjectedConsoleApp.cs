@@ -26,7 +26,7 @@ public abstract class DependencyInjectedConsoleApp
     {
         string settingsFile = Path.Join(AppContext.BaseDirectory, "appsettings.json");
         IConfigurationRoot config = new ConfigurationBuilder()
-            .AddJsonFile(settingsFile, optional: false, reloadOnChange: false)
+            .AddJsonFile(settingsFile, optional: true, reloadOnChange: false)
             .Build();
 
         services.AddSingleton(config);
@@ -57,7 +57,7 @@ public abstract class DependencyInjectedConsoleApp
                     }
                     else
                     {
-                        c.InstrumentationKey = provider.GetRequiredService<IConfiguration>()["ApplicationInsightsInstrumentationKey"];
+                        c.InstrumentationKey = provider.GetRequiredService<IConfiguration>()["ApplicationInsightsInstrumentationKey"] ?? "";
                     }
                 }
             )
