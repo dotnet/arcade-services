@@ -90,7 +90,7 @@ public class VmrTestsOneTimeSetUp
         Directory.Delete(targetDir, false);
     }
 
-    private async Task CreateRepository(LocalPath repoPath, string repoName, string? resourceFileName = null)
+    private async Task CreateRepository(NativePath repoPath, string repoName, string? resourceFileName = null)
     {
         Directory.CreateDirectory(repoPath);
         Directory.CreateDirectory(repoPath / "eng");

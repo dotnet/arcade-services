@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Darc\Microsoft.DotNet.Darc.csproj" />
   </ItemGroup>
 
@@ -45,6 +49,10 @@
     <None Update="Resources\product-repo1-file.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
 </Project>

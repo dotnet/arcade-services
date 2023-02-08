@@ -20,7 +20,7 @@ public class GitOperationsHelper
         ProcessManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
     }
     
-    public async Task CommitAll(LocalPath repo, string commitMessage, bool allowEmpty = false)
+    public async Task CommitAll(NativePath repo, string commitMessage, bool allowEmpty = false)
     {
         var result = await ProcessManager.ExecuteGit(repo, "add", "-A");
 
@@ -36,14 +36,14 @@ public class GitOperationsHelper
         }
     }
 
-    public async Task InitialCommit(LocalPath repo)
+    public async Task InitialCommit(NativePath repo)
     {
         await ProcessManager.ExecuteGit(repo, "init", "-b", "main");
         await ConfigureGit(repo);
         await CommitAll(repo, "Initial commit", allowEmpty: true);
     }
 
-    public async Task<string> GetRepoLastCommit(LocalPath repo)
+    public async Task<string> GetRepoLastCommit(NativePath repo)
     {
         var log = await ProcessManager.ExecuteGit(repo, "log", "--format=format:%H");
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
@@ -56,7 +56,7 @@ public class GitOperationsHelper
     }
 
     public async Task InitializeSubmodule(
-        LocalPath repo,
+        NativePath repo,
         string submoduleName,
         string submoduleUrl,
         string pathInRepo)
@@ -85,28 +85,28 @@ public class GitOperationsHelper
             pathInRepo);
     }
 
-    public async Task UpdateSubmodule(LocalPath repo, string pathToSubmodule)
+    public async Task UpdateSubmodule(NativePath repo, string pathToSubmodule)
     {
         await PullMain(repo / pathToSubmodule);
         await CommitAll(repo, "Update submodule");
     }
 
-    public Task RemoveSubmodule(LocalPath repo, string submoduleRelativePath)
+    public Task RemoveSubmodule(NativePath repo, string submoduleRelativePath)
     {
         return ProcessManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
     }
 
-    public Task PullMain(LocalPath repo)
+    public Task PullMain(NativePath repo)
     {
         return ProcessManager.ExecuteGit(repo, "pull", "origin", "main");
     }
 
-    public Task ChangeSubmoduleUrl(LocalPath repo, LocalPath submodulePath, LocalPath newUrl)
+    public Task ChangeSubmoduleUrl(NativePath repo, LocalPath submodulePath, LocalPath newUrl)
     {
         return ProcessManager.ExecuteGit(repo, "submodule", "set-url", submodulePath, newUrl);
     }
 
-    private async Task ConfigureGit(LocalPath repo)
+    private async Task ConfigureGit(NativePath repo)
     {
         await ProcessManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
         await ProcessManager.ExecuteGit(repo, "config", "user.name", DarcLib.Constants.DarcBotName);

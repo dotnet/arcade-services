@@ -15,8 +15,8 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class VmrMultipleRemotesTests : VmrTestsBase
 {
-    private LocalPath FirstDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "1");
-    private LocalPath SecondDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "2");
+    private NativePath FirstDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "1");
+    private NativePath SecondDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "2");
 
     /// <summary>
     /// The dependency tree of repos in this test looks like:

@@ -368,7 +368,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping.Name);
 
                 currentSha = Constants.EmptyGitObject;
-                _dependencyTracker.UpdateDependencyVersion(update);
+                _dependencyTracker.UpdateDependencyVersion(update with
+                {
+                    TargetRevision = currentSha
+                });
             }
 
             if (currentSha == update.TargetRevision)

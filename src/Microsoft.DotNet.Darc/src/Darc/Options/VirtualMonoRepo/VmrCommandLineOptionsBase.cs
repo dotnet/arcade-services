@@ -37,8 +37,8 @@ internal abstract class VmrCommandLineOptionsBase : CommandLineOptions
                 // The VMR synchronization often works with public repositories where tokens are not required
             }
 
-            gitHubToken = localDarcSettings?.GitHubToken;
-            azureDevOpsToken = localDarcSettings?.AzureDevOpsToken;
+            gitHubToken ??= localDarcSettings?.GitHubToken;
+            azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
         }
 
         var services = new ServiceCollection();

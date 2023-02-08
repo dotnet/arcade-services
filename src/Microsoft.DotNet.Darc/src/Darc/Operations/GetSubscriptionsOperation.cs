@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
@@ -11,7 +14,9 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -20,9 +25,10 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 class GetSubscriptionsOperation : Operation
 {
-    GetSubscriptionsCommandLineOptions _options;
-    public GetSubscriptionsOperation(GetSubscriptionsCommandLineOptions options)
-        : base(options)
+    private readonly GetSubscriptionsCommandLineOptions _options;
+
+    public GetSubscriptionsOperation(GetSubscriptionsCommandLineOptions options, IServiceCollection? services = null)
+        : base(options, services)
     {
         _options = options;
     }
@@ -31,7 +37,7 @@ class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IRemote remote = Provider.GetService<IRemote>() ??  RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
@@ -41,32 +47,78 @@ class GetSubscriptionsOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            // Based on the current output schema, sort by source repo, target repo, target branch, etc.
-            // Concat the input strings as a simple sorting mechanism.
-            foreach (var subscription in subscriptions.OrderBy(subscription =>
-                         $"{subscription.SourceRepository}{subscription.Channel}{subscription.TargetRepository}{subscription.TargetBranch}"))
+            switch (_options.OutputFormat)
             {
-                // If batchable, the merge policies come from the repository
-                IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
-                if (subscription.Policy.Batchable == true)
-                {
-                    mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
-                }
-
-                string subscriptionInfo = UxHelpers.GetTextSubscriptionDescription(subscription, mergePolicies);
-                Console.Write(subscriptionInfo);
+                case DarcOutputType.json:
+                    await OutputJsonAsync(subscriptions, remote);
+                    break;
+                case DarcOutputType.text:
+                    await OutputTextAsync(subscriptions, remote);
+                    break;
+                default:
+                    throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by get-subscriptions");
             }
+
             return Constants.SuccessCode;
         }
-        catch (AuthenticationException e)
+        catch (AuthenticationException ex)
         {
-            Console.WriteLine(e.Message);
+            Console.WriteLine(ex.Message);
             return Constants.ErrorCode;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Logger.LogError(e, "Error: Failed to retrieve subscriptions");
+            Logger.LogError(ex, "Error: Failed to retrieve subscriptions");
             return Constants.ErrorCode;
         }
     }
+
+    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
+        => outputFormat switch
+        {
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(outputFormat),
+        };
+
+    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IRemote remote)
+    {
+        foreach (var subscription in Sort(subscriptions))
+        {
+            // If batchable, the merge policies come from the repository
+            if (subscription.Policy.Batchable)
+            {
+                IEnumerable<MergePolicy> repoMergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
+                if (!repoMergePolicies.Any())
+                {
+                    continue;
+                }
+
+                IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
+                subscription.Policy.MergePolicies = mergePolicies.Union(repoMergePolicies).ToImmutableList();
+            }
+        }
+
+        Console.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
+    }
+
+    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IRemote remote)
+    {
+        foreach (var subscription in Sort(subscriptions))
+        {
+            // If batchable, the merge policies come from the repository
+            IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
+            if (subscription.Policy.Batchable)
+            {
+                mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
+            }
+
+            string subscriptionInfo = UxHelpers.GetTextSubscriptionDescription(subscription, mergePolicies);
+            Console.Write(subscriptionInfo);
+        }
+    }
+
+    // Based on the current output schema, sort by source repo, target repo, target branch, etc.
+    // Concat the input strings as a simple sorting mechanism.
+    private static IEnumerable<Subscription> Sort(IEnumerable<Subscription> subscriptions)
+        => subscriptions.OrderBy(subscription => $"{subscription.SourceRepository}{subscription.Channel}{subscription.TargetRepository}{subscription.TargetBranch}");
 }

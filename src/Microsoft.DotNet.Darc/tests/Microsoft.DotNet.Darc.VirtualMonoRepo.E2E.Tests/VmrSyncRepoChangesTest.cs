@@ -18,9 +18,9 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
     private string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
-    private LocalPath _productRepoPath = null!;
-    private LocalPath _productRepoFilePath = null!;
-    private LocalPath _dependencyRepoFilePath = null!;
+    private NativePath _productRepoPath = null!;
+    private NativePath _productRepoFilePath = null!;
+    private NativePath _dependencyRepoFilePath = null!;
 
     [SetUp]
     public void SetUp()

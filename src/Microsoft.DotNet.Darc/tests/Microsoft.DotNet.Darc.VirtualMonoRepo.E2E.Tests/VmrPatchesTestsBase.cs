@@ -15,11 +15,11 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 public class VmrPatchesTestsBase : VmrTestsBase
 {
     protected string PatchFileName { get; private set; } = null!;
-    protected LocalPath InstallerPatchesDir { get; private set; } = null!;
-    protected LocalPath InstallerFilePathInVmr { get; private set; } = null!;
+    protected NativePath InstallerPatchesDir { get; private set; } = null!;
+    protected NativePath InstallerFilePathInVmr { get; private set; } = null!;
 
-    protected LocalPath ProductRepoFilePathInVmr { get; private set; } = null!;
-    protected LocalPath VmrPatchesDir { get; private set; } = null!;
+    protected NativePath ProductRepoFilePathInVmr { get; private set; } = null!;
+    protected NativePath VmrPatchesDir { get; private set; } = null!;
 
     protected VmrPatchesTestsBase(string PatchFileName)
     {
