@@ -49,7 +49,7 @@ public interface IVmrInfo
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo
     /// </summary>
-    public LocalPath GetRepoSourcesPath(string mappingName);
+    LocalPath GetRepoSourcesPath(string mappingName);
 
     /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
@@ -93,7 +93,7 @@ public class VmrInfo : IVmrInfo
     {
     }
 
-    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
+    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => GetRepoSourcesPath(mapping.Name);
 
     public LocalPath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
 
