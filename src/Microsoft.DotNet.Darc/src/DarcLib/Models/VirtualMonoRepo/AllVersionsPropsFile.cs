@@ -16,6 +16,8 @@ public interface IAllVersionsPropsFile : IMsBuildPropsFile
     Dictionary<string, string> Versions { get; }
 
     void UpdateVersion(string repository, string sha, string packageVersion);
+
+    bool DeleteVersion(string repository);
 }
 
 /// <summary>
@@ -51,6 +53,12 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         var key = SanitizePropertyName(repository);
         Versions[key + ShaPropertyName] = sha;
         Versions[key + PackageVersionPropertyName] = packageVersion;
+    }
+
+    public bool DeleteVersion(string repository)
+    {
+        var key = SanitizePropertyName(repository);
+        return Versions.Remove(key + ShaPropertyName) && Versions.Remove(key + PackageVersionPropertyName);
     }
 
     public static AllVersionsPropsFile DeserializeFromXml(string path)

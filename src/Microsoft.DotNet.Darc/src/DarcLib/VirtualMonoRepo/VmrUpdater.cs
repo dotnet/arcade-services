@@ -701,21 +701,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         foreach (var repo in deletedRepos)
         {
             _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
-            var deletedFiles = DeleteRepository(repo.Path);
+            var modifiedFiles = DeleteRepository(repo.Path);
             
-            if(deletedFiles.Any())
+            if(modifiedFiles.Any())
             {
-                Commands.Stage(vmrRepository, deletedFiles);
+                Commands.Stage(vmrRepository, modifiedFiles);
                 Commit($"Delete {repo.Path} from the VMR", DotnetBotCommitSignature);
             }
         }
 
         var sourceManifestPath = _vmrInfo.GetSourceManifestPath();
         _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
-
-        var versions = new AllVersionsPropsFile(_sourceManifest.Repositories);
-        var allVersionsFilePath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
-        versions.SerializeToXml(allVersionsFilePath);
 
         if (readmeTemplatePath != null)
         {
@@ -730,50 +726,43 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         Commands.Stage(vmrRepository,
             new string[] {
                 sourceManifestPath,
-                allVersionsFilePath,
                 _vmrInfo.VmrPath / VmrInfo.ReadmeFileName,
                 _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesFileName
             });
 
-        Commit("Clean up files after removing repositories", DotnetBotCommitSignature);
+        Commit("Clean up files", DotnetBotCommitSignature);
     }
 
     private List<string> DeleteRepository(string repo)
     {
-        var deletedFiles = new List<string>();
+        var modifiedFiles = new List<string>();
 
         var repoSourcesDir = _vmrInfo.GetRepoSourcesPath(repo);
         try
         {
             _fileSystem.DeleteDirectory(repoSourcesDir, true);
-            deletedFiles.Add(repoSourcesDir);
-            _logger.LogDebug("Deleted directory {dir}", repoSourcesDir);
+            modifiedFiles.Add(repoSourcesDir);
+            _logger.LogInformation("Deleted directory {dir}", repoSourcesDir);
         }
         catch (DirectoryNotFoundException)
         {
-            _logger.LogDebug("Directory {dir} is already deleted", repoSourcesDir);
-        }
-        catch (Exception)
-        {
-            _logger.LogWarning("Deleting directory {dir} failed", repoSourcesDir);
-        }
-
-        var propsFilePath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props";
-        if (!_fileSystem.FileExists(propsFilePath))
-        {
-            _logger.LogDebug("File {path} is already deleted", propsFilePath);
-        }
-        else
-        {
-            _fileSystem.DeleteFile(propsFilePath);
-            deletedFiles.Add(propsFilePath);
-            _logger.LogDebug("Deleted file {path}", propsFilePath);
+            _logger.LogInformation("Directory {dir} is already deleted", repoSourcesDir);
         }
 
         _sourceManifest.RemoveRepository(repo);
-        _logger.LogDebug("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
+        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
 
-        return deletedFiles;
+        if (_dependencyTracker.RemoveRepositoryVersion(repo))
+        {
+            _logger.LogInformation("Deleted {repo} version information from git-info", repo);
+            modifiedFiles.Add(_vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir);
+        } 
+        else
+        {
+            _logger.LogInformation("{repo} version information is already deleted", repo);
+        }
+
+        return modifiedFiles;
     }
 
     private class RepositoryNotInitializedException : Exception

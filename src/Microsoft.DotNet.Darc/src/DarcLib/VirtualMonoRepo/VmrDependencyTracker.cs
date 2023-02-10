@@ -26,6 +26,8 @@ public interface IVmrDependencyTracker
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
+    bool RemoveRepositoryVersion(string repo);
+
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
 
@@ -103,6 +105,23 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
     }
 
+    public bool RemoveRepositoryVersion(string repo)
+    {
+        if (_repoVersions.DeleteVersion(repo))
+        {
+            _repoVersions.SerializeToXml(_allVersionsFilePath);
+        }
+        
+        var gitInfoFilePath = GetGitInfoFilePath(repo);
+        if (_fileSystem.FileExists(gitInfoFilePath))
+        {
+            _fileSystem.DeleteFile(gitInfoFilePath);
+            return true;
+        }
+
+        return false;
+    }
+
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)
     {
         foreach (var submodule in submodules)
@@ -120,5 +139,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
     }
 
-    private string GetGitInfoFilePath(SourceMapping mapping) => _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{mapping.Name}.props";
+    private string GetGitInfoFilePath(SourceMapping mapping) => GetGitInfoFilePath(mapping.Name);
+
+    private string GetGitInfoFilePath(string mappingName) => _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{mappingName}.props";
 }
