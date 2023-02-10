@@ -93,7 +93,7 @@ public class VmrInfo : IVmrInfo
     {
     }
 
-    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
+    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => GetRepoSourcesPath(mapping.Name);
 
     public LocalPath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
 
