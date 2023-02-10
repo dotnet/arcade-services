@@ -698,7 +698,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var repo in deletedRepos)
         {
-            _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
+            _logger.LogWarning("Mapping {name} was deleted. Removing the repository from the VMR.", repo.Path);
             DeleteRepository(repo.Path);
         }
 
