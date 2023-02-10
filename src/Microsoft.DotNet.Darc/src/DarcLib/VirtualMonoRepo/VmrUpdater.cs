@@ -176,8 +176,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 tpnTemplatePath, 
                 cancellationToken);
         }
-
-        CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
     }
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
@@ -485,6 +483,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
         }
 
+        await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
+
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
             rootUpdate.Mapping.Name,
@@ -684,7 +684,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return version.Sha;
     }
 
-    private void CleanUpRemovedRepos(string? readmeTemplatePath, string? tpnTemplatePath)
+    private async Task CleanUpRemovedRepos(string? readmeTemplatePath, string? tpnTemplatePath)
     {
         var deletedRepos = _sourceManifest
             .Repositories
@@ -696,13 +696,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return;
         }
 
+        using var vmrRepository = new Repository(_vmrInfo.VmrPath);
+
         foreach (var repo in deletedRepos)
         {
             _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
-            DeleteRepository(repo.Path);
+            var deletedFiles = DeleteRepository(repo.Path);
+            
+            if(deletedFiles.Any())
+            {
+                Commands.Stage(vmrRepository, deletedFiles);
+                Commit($"Delete {repo.Path} from the VMR", DotnetBotCommitSignature);
+            }
         }
 
-        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
+        var sourceManifestPath = _vmrInfo.GetSourceManifestPath();
+        _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
 
         var versions = new AllVersionsPropsFile(_sourceManifest.Repositories);
         var allVersionsFilePath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
@@ -710,21 +719,34 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (readmeTemplatePath != null)
         {
-            _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
         }
 
         if (tpnTemplatePath != null)
         {
-            _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
+            await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
         }
+
+        Commands.Stage(vmrRepository,
+            new string[] {
+                sourceManifestPath,
+                allVersionsFilePath,
+                _vmrInfo.VmrPath / VmrInfo.ReadmeFileName,
+                _vmrInfo.VmrPath / VmrInfo.ThirdPartyNoticesFileName
+            });
+
+        Commit("Clean up files after removing repositories", DotnetBotCommitSignature);
     }
 
-    private void DeleteRepository(string repo)
+    private List<string> DeleteRepository(string repo)
     {
+        var deletedFiles = new List<string>();
+
         var repoSourcesDir = _vmrInfo.GetRepoSourcesPath(repo);
         try
         {
             _fileSystem.DeleteDirectory(repoSourcesDir, true);
+            deletedFiles.Add(repoSourcesDir);
             _logger.LogDebug("Deleted directory {dir}", repoSourcesDir);
         }
         catch (DirectoryNotFoundException)
@@ -744,11 +766,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         else
         {
             _fileSystem.DeleteFile(propsFilePath);
+            deletedFiles.Add(propsFilePath);
             _logger.LogDebug("Deleted file {path}", propsFilePath);
         }
 
         _sourceManifest.RemoveRepository(repo);
         _logger.LogDebug("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
+
+        return deletedFiles;
     }
 
     private class RepositoryNotInitializedException : Exception
