@@ -107,19 +107,22 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public bool RemoveRepositoryVersion(string repo)
     {
+        var hasChanges = false;
+
         if (_repoVersions.DeleteVersion(repo))
         {
             _repoVersions.SerializeToXml(_allVersionsFilePath);
+            hasChanges = true;
         }
         
         var gitInfoFilePath = GetGitInfoFilePath(repo);
         if (_fileSystem.FileExists(gitInfoFilePath))
         {
             _fileSystem.DeleteFile(gitInfoFilePath);
-            return true;
+            hasChanges = true;
         }
 
-        return false;
+        return hasChanges;
     }
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)

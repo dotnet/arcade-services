@@ -58,7 +58,9 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
     public bool DeleteVersion(string repository)
     {
         var key = SanitizePropertyName(repository);
-        return Versions.Remove(key + ShaPropertyName) && Versions.Remove(key + PackageVersionPropertyName);
+        var deletedSha = Versions.Remove(key + ShaPropertyName);
+        var deletedVersion = Versions.Remove(key + PackageVersionPropertyName);
+        return deletedSha || deletedVersion;
     }
 
     public static AllVersionsPropsFile DeserializeFromXml(string path)
