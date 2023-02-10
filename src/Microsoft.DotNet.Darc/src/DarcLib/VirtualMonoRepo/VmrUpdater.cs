@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -70,6 +71,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
+    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -93,6 +96,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
+        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
+        _readmeComponentListGenerator = readmeComponentListGenerator;
     }
 
     public async Task UpdateRepository(
@@ -134,7 +139,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 remotes,
                 targetRevision ?? mapping.DefaultRef, 
                 cancellationToken);
-            
+
             _logger.LogDebug($"Loading a new version of source mappings from {clonePath / fileRelativePath}");
             await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
             
@@ -171,6 +176,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 tpnTemplatePath, 
                 cancellationToken);
         }
+
+        CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
     }
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
@@ -675,6 +682,73 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         return version.Sha;
+    }
+
+    private void CleanUpRemovedRepos(string? readmeTemplatePath, string? tpnTemplatePath)
+    {
+        var deletedRepos = _sourceManifest
+            .Repositories
+            .Where(r => _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == r.Path) == null)
+            .ToList();
+
+        if (!deletedRepos.Any())
+        {
+            return;
+        }
+
+        foreach (var repo in deletedRepos)
+        {
+            _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
+            DeleteRepository(repo.Path);
+        }
+
+        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
+
+        var versions = new AllVersionsPropsFile(_sourceManifest.Repositories);
+        var allVersionsFilePath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName;
+        versions.SerializeToXml(allVersionsFilePath);
+
+        if (readmeTemplatePath != null)
+        {
+            _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+        }
+
+        if (tpnTemplatePath != null)
+        {
+            _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
+        }
+    }
+
+    private void DeleteRepository(string repo)
+    {
+        var repoSourcesDir = _vmrInfo.GetRepoSourcesPath(repo);
+        try
+        {
+            _fileSystem.DeleteDirectory(repoSourcesDir, true);
+            _logger.LogDebug("Deleted directory {dir}", repoSourcesDir);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            _logger.LogDebug("Directory {dir} is already deleted", repoSourcesDir);
+        }
+        catch (Exception)
+        {
+            _logger.LogWarning("Deleting directory {dir} failed", repoSourcesDir);
+        }
+
+        var propsFilePath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props";
+        if (!_fileSystem.FileExists(propsFilePath))
+        {
+            _logger.LogDebug("File {path} is already deleted", propsFilePath);
+        }
+        else
+        {
+            _fileSystem.DeleteFile(propsFilePath);
+            _logger.LogDebug("Deleted file {path}", propsFilePath);
+        }
+
+        _sourceManifest.RemoveRepository(repo);
+        _logger.LogDebug("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
     }
 
     private class RepositoryNotInitializedException : Exception
