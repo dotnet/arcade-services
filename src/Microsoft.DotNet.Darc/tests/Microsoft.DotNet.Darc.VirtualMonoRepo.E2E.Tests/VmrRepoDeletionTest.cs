@@ -67,7 +67,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
             }
         };
 
-        File.WriteAllText(InstallerRepoPath / _sourceMappingsRelativePath,
+        await File.WriteAllTextAsync(InstallerRepoPath / _sourceMappingsRelativePath,
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
 
         await GitOperations.CommitAll(InstallerRepoPath, "Change source-mappings");
@@ -132,7 +132,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
 
         Directory.CreateDirectory(InstallerRepoPath / "src" / "SourceBuild" / "content");
 
-        File.WriteAllText(InstallerRepoPath / _sourceMappingsRelativePath,
+        await File.WriteAllTextAsync(InstallerRepoPath / _sourceMappingsRelativePath,
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
 
         await GitOperations.CommitAll(InstallerRepoPath, "Add files");
@@ -142,7 +142,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
-        File.WriteAllText(VmrPath / VmrInfo.SourcesDir / "some-file.txt",
+        await File.WriteAllTextAsync(VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             "Some file");
 
         await GitOperations.CommitAll(VmrPath, "Add source mappings");
