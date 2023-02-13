@@ -11,7 +11,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
@@ -20,45 +19,7 @@ using Asset = Maestro.Contracts.Asset;
 
 namespace SubscriptionActorService
 {
-    namespace unused
-    {
-        // class needed to appease service fabric build time generation of actor code
-        [StatePersistence(StatePersistence.Persisted)]
-        public class SubscriptionActor : Actor, ISubscriptionActor
-        {
-            public SubscriptionActor(ActorService actorService, ActorId actorId) : base(actorService, actorId)
-            {
-            }
-
-            public Task<string> RunActionAsync(string method, string arguments)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task UpdateAsync(int buildId)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task<bool> AddDependencyFlowEventAsync(
-                int updateBuildId, 
-                DependencyFlowEventType flowEvent, 
-                DependencyFlowEventReason reason, 
-                MergePolicyCheckResult policy,
-                string flowType,
-                string url)
-            {
-                throw new NotImplementedException();
-            }
-        }
-    }
-
-    public class SubscriptionActor : ISubscriptionActor, IActionTracker, IActorImplementation
+    public partial class SubscriptionActor : ISubscriptionActor, IActionTracker, IActorImplementation
     {
         public SubscriptionActor(
             BuildAssetRegistryContext context,

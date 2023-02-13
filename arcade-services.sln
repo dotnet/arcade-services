@@ -211,7 +211,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Authentica
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests", "src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests.csproj", "{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Maestro.MergePolicyEvaluation", "src\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj", "{D16DB73B-4EDF-4E61-9392-238CF3800DE2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.MergePolicyEvaluation", "src\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj", "{D16DB73B-4EDF-4E61-9392-238CF3800DE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers", "src\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers.csproj", "{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1171,6 +1173,18 @@ Global
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x64.Build.0 = Release|Any CPU
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x86.ActiveCfg = Release|Any CPU
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x86.Build.0 = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|x64.Build.0 = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Debug|x86.Build.0 = Debug|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|x64.ActiveCfg = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|x64.Build.0 = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|x86.ActiveCfg = Release|Any CPU
+		{19FE28A4-5A84-42FF-935F-7C088EE9D8C1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

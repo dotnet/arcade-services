@@ -15,7 +15,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Logging;
@@ -27,38 +26,11 @@ using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
 namespace SubscriptionActorService
 {
-    namespace unused
-    {
-        // class needed to appease service fabric build time generation of actor code
-        [StatePersistence(StatePersistence.Persisted)]
-        public class PullRequestActor : Actor, IPullRequestActor, IRemindable
-        {
-            public PullRequestActor(ActorService actorService, ActorId actorId) : base(actorService, actorId)
-            {
-            }
-
-            public Task<string> RunActionAsync(string method, string arguments)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
-            {
-                throw new NotImplementedException();
-            }
-
-            public Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
-            {
-                throw new NotImplementedException();
-            }
-        }
-    }
-
     /// <summary>
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
+    public partial class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;

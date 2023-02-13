@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />

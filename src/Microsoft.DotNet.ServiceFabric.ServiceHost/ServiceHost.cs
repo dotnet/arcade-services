@@ -28,7 +28,6 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
-using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Newtonsoft.Json;
 
@@ -185,61 +184,6 @@ public partial class ServiceHost
         return ConfigureServices(c => c.AddScoped<TService, TService>());
     }
 
-    private void RegisterActorService<TService, TActor>(
-        Func<StatefulServiceContext, ActorTypeInformation, TService> ctor)
-        where TService : ActorService where TActor : Actor
-    {
-        _serviceCallbacks.Add(() => ActorRuntime.RegisterActorAsync<TActor>(ctor));
-    }
-
-    private void RegisterStatefulActorService<TActor>(
-        string actorName,
-        Func<StatefulServiceContext, ActorTypeInformation, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>, ActorService> ctor)
-        where TActor : IActor, IActorImplementation
-    {
-        (Type actorType,
-                Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> actorFactory) =
-            DelegatedActor.CreateActorTypeAndFactory<TActor>(actorName);
-        // ReSharper disable once PossibleNullReferenceException
-        // The method search parameters are hard coded
-        MethodInfo registerActorAsyncMethod = typeof(ActorRuntime).GetMethod(
-                "RegisterActorAsync",
-                new[]
-                {
-                    typeof(Func<StatefulServiceContext, ActorTypeInformation, ActorService>),
-                    typeof(TimeSpan),
-                    typeof(CancellationToken)
-                })!
-            .MakeGenericMethod(actorType);
-        _serviceCallbacks.Add(
-            () => (Task) registerActorAsyncMethod.Invoke(
-                null,
-                new object[]
-                {
-                    (Func<StatefulServiceContext, ActorTypeInformation, ActorService>) ((context, info) =>
-                        ctor(context, info, actorFactory)),
-                    default(TimeSpan),
-                    default(CancellationToken)
-                })!);
-    }
-
-    public ServiceHost RegisterStatefulActorService<
-        [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-        TActor>(string actorName) where TActor : class, IActor, IActorImplementation
-    {
-        RegisterStatefulActorService<TActor>(
-            actorName,
-            (context, info, actorFactory) =>
-            {
-                return new DelegatedActorService<TActor>(
-                    context,
-                    info,
-                    ApplyConfigurationToServices,
-                    actorFactory);
-            });
-        return ConfigureServices(builder => builder.AddScoped<TActor>());
-    }
-
     public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName, Action<IWebHostBuilder> configureWebHost = null) where TStartup : class
     {
         RegisterStatelessService(
@@ -250,6 +194,20 @@ public partial class ServiceHost
                 ApplyConfigurationToServices));
         return ConfigureServices(builder => builder.AddScoped<TStartup>());
     }
+
+    #region Service Registration Methods
+    // Each of these methods is handled by the Source Generator. Any changes to signature or implementation require adjustments in the source generator
+
+    public ServiceHost RegisterStatefulActorService<
+        [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
+        TActor>(string actorName) where TActor : class, IActor, IActorImplementation
+    {
+        _serviceCallbacks.Add(() => TActor.RegisterActorAsync(ApplyConfigurationToServices));
+
+        return ConfigureServices(builder => builder.AddScoped<TActor>());
+    }
+
+    #endregion Service Registration Methods
 
     private void Start()
     {

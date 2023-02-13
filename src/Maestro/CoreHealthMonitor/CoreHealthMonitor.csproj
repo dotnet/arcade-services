@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers\Microsoft.DotNet.ServiceFabric.ServiceHost.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Health\Microsoft.DotNet.Internal.Health.csproj" />
   </ItemGroup>

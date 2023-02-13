@@ -29,6 +29,8 @@
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <WarningsAsErrors>true</WarningsAsErrors>
     <LangVersion>preview</LangVersion>
+    <!-- Static Abstract interface members is still preview for net6 -->
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <DebugType>Full</DebugType>
@@ -42,6 +44,7 @@
     <DisableImplicitNamespaceImports_Worker>true</DisableImplicitNamespaceImports_Worker>
 
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <PropertyGroup>
