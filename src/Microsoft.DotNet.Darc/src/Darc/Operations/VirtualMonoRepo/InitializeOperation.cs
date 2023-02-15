@@ -36,5 +36,7 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
             _options.Recursive,
             new NativePath(_options.SourceMappings),
             additionalRemotes,
+            _options.ReadMeTemplate,
+            _options.TpnTemplate,
             cancellationToken);
 }
