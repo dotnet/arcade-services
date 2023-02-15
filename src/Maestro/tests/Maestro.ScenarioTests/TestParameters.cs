@@ -25,7 +25,7 @@ namespace Maestro.ScenarioTests
             string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ??  userSecrets["MAESTRO_BASEURI"] ?? "https://maestro-int.westus2.cloudapp.azure.com";
             string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
-            string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+            string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE") ?? userSecrets["DARC_PACKAGE_SOURCE"];
             string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
 
             var testDir = TemporaryDirectory.Get();
@@ -35,7 +35,7 @@ namespace Maestro.ScenarioTests
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
                 : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
 
-            string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
+            string darcVersion = userSecrets["DARC_VERSION"] ?? await maestroApi.Assets.GetDarcVersionAsync();
             string dotnetExe = await TestHelpers.Which("dotnet");
 
             var toolInstallArgs = new List<string>

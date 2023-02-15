@@ -55,44 +55,46 @@ public static class StatefulActorServiceGenerator
             return;
         }
 
-        if (invocation.ArgumentList.Arguments[0] is not
-            {
-                Expression: LiteralExpressionSyntax
-                {
-                    Token:
-                    {
-                        RawKind: (int) SyntaxKind.StringLiteralToken,
-                        Value: string actorName,
-                    },
-                },
-            })
+        if (invocation.ArgumentList.Arguments[0].Expression is not LiteralExpressionSyntax literalExpression)
         {
             context.ReportDiagnostic(Diagnostic.Create(Diagnostics.InvalidActorRegisterMethodParameters,
-                invocation.ArgumentList.GetLocation()));
+                invocation.ArgumentList.Arguments[0].GetLocation()));
             return;
         }
 
-        if (invocation.Expression is not MemberAccessExpressionSyntax
-            {
-                Name: GenericNameSyntax
-                {
-                    TypeArgumentList.Arguments: var typeArgs,
-                },
-            })
+        if (!literalExpression.Token.IsKind(SyntaxKind.StringLiteralToken))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(Diagnostics.InvalidActorRegisterMethodParameters,
+                literalExpression.GetLocation()));
+            return;
+        }
+
+        string actorName = (string)literalExpression.Token.Value;
+
+        if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
         {
             context.ReportDiagnostic(Diagnostic.Create(Diagnostics.InvalidActorRegisterMethodTypeArgs,
                 invocation.Expression.GetLocation()));
             return;
         }
 
-        if (typeArgs.Count != 1)
+        if (memberAccess.Name is not GenericNameSyntax genericName)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(Diagnostics.InvalidActorRegisterMethodTypeArgs,
+                memberAccess.Name.GetLocation()));
+            return;
+        }
+
+        SeparatedSyntaxList<TypeSyntax> typeArguments = genericName.TypeArgumentList.Arguments;
+
+        if (typeArguments.Count != 1)
         {
             context.ReportDiagnostic(Diagnostic.Create(Diagnostics.InvalidActorRegisterMethodTypeArgs,
                 invocation.Expression.GetLocation()));
             return;
         }
 
-        var symbol = semanticModel.GetSymbolInfo(typeArgs[0]).Symbol;
+        var symbol = semanticModel.GetSymbolInfo(typeArguments[0]).Symbol;
 
         if (symbol is not INamedTypeSymbol actorTypeSymbol)
         {
@@ -104,7 +106,7 @@ public static class StatefulActorServiceGenerator
         actorTypeSymbol = actorTypeSymbol.OriginalDefinition;
         if (actorTypeSymbol.Locations.Any(l => l.IsInMetadata))
         {
-            context.ReportDiagnostic(Diagnostic.Create(Diagnostics.ActorTypeMustBeDefinedInSource, typeArgs[0].GetLocation()));
+            context.ReportDiagnostic(Diagnostic.Create(Diagnostics.ActorTypeMustBeDefinedInSource, typeArguments[0].GetLocation()));
             return;
         }
 
@@ -119,17 +121,6 @@ public static class StatefulActorServiceGenerator
         }
 
         var source = new StringBuilder();
-        source.AppendLine("using System;");
-        source.AppendLine("using System.Fabric;");
-        source.AppendLine("using System.Threading.Tasks;");
-        source.AppendLine("using Microsoft.ApplicationInsights;");
-        source.AppendLine("using Microsoft.ApplicationInsights.Extensibility;");
-        source.AppendLine("using Microsoft.ApplicationInsights.DataContracts;");
-        source.AppendLine("using Microsoft.DotNet.ServiceFabric.ServiceHost;");
-        source.AppendLine("using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;");
-        source.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        source.AppendLine("using Microsoft.ServiceFabric.Actors;");
-        source.AppendLine("using Microsoft.ServiceFabric.Actors.Runtime;");
         var ns = actorTypeSymbol.ContainingNamespace;
         if (ns != null)
         {
@@ -159,17 +150,17 @@ public static class StatefulActorServiceGenerator
             .ToList();
         var methodsToWrap = interfacesToWrap.SelectMany(iface => iface.GetMembers().OfType<IMethodSymbol>());
 
-        source.AppendLine("[StatePersistence(StatePersistence.Persisted)]");
-        source.Append($"public class {actorName} : DelegatedActor");
+        source.AppendLine("[global::Microsoft.ServiceFabric.Actors.Runtime.StatePersistence(global::Microsoft.ServiceFabric.Actors.Runtime.StatePersistence.Persisted)]");
+        source.Append($"public class {actorName} : global::Microsoft.DotNet.ServiceFabric.ServiceHost.Actors.DelegatedActor");
         foreach (var iface in interfacesToWrap)
         {
             source.Append(", ").AppendType(iface);
         }
 
         source.AppendLine().AppendLine("{");
-        source.AppendLine("private IServiceScopeFactory _scopeFactory;");
+        source.AppendLine("private global::Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;");
         source.AppendLine()
-            .AppendLine($"public {actorName}(ActorService actorService, ActorId actorId, IServiceScopeFactory scopeFactory)");
+            .AppendLine($"public {actorName}(global::Microsoft.ServiceFabric.Actors.Runtime.ActorService actorService, global::Microsoft.ServiceFabric.Actors.ActorId actorId, global::Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory)");
         source.AppendLine(": base(actorService, actorId)");
         source.AppendLine("{");
         source.AppendLine("_scopeFactory = scopeFactory;");
@@ -196,17 +187,17 @@ public static class StatefulActorServiceGenerator
 
             source.AppendLine(")");
             source.AppendLine("{");
-            source.AppendLine("using IServiceScope __scope = _scopeFactory.CreateScope();");
-            source.AppendLine("var __client = __scope.ServiceProvider.GetRequiredService<TelemetryClient>();");
-            source.AppendLine("var __context = __scope.ServiceProvider.GetRequiredService<ServiceContext>();");
+            source.AppendLine("using global::Microsoft.Extensions.DependencyInjection.IServiceScope __scope = _scopeFactory.CreateScope();");
+            source.AppendLine("var __client = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Microsoft.ApplicationInsights.TelemetryClient>(__scope.ServiceProvider);");
+            source.AppendLine("var __context = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::System.Fabric.ServiceContext>(__scope.ServiceProvider);");
             source.AppendLine($$"""
                 string __url = $"{__context.ServiceName}/{Id}/{{method.ContainingType.Name}}/{{method.Name}}";
                 """);
-            source.AppendLine("using IOperationHolder<RequestTelemetry> __op = __client.StartOperation<RequestTelemetry>($\"RPC {__url}\");");
+            source.AppendLine("using var __op = global::Microsoft.ApplicationInsights.TelemetryClientExtensions.StartOperation<global::Microsoft.ApplicationInsights.DataContracts.RequestTelemetry>(__client, $\"RPC {__url}\");");
             source.AppendLine("try").AppendLine("{");
-            source.AppendLine("__op.Telemetry.Url = new Uri(__url);")
-                .AppendType(actorTypeSymbol).Append(" __actor = __scope.ServiceProvider.GetRequiredService<")
-                .AppendType(actorTypeSymbol).AppendLine(">();")
+            source.AppendLine("__op.Telemetry.Url = new global::System.Uri(__url);")
+                .AppendType(actorTypeSymbol).Append(" __actor = global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<")
+                .AppendType(actorTypeSymbol).AppendLine(">(__scope.ServiceProvider);")
                 .AppendLine("__actor.Initialize(Id, StateManager, this);");
             if (method.ReturnType.ToDisplayString().Contains("Task<"))
             {
@@ -228,7 +219,7 @@ public static class StatefulActorServiceGenerator
 
 
             source.AppendLine("}");
-            source.AppendLine("catch (Exception ex)").AppendLine("{")
+            source.AppendLine("catch (global::System.Exception ex)").AppendLine("{")
                 .AppendLine("__op.Telemetry.Success = false;")
                 .AppendLine("__client.TrackException(ex);")
                 .AppendLine("throw;");
@@ -242,15 +233,19 @@ public static class StatefulActorServiceGenerator
     private static void GenerateIServiceHostActorImplementation(StringBuilder source, string actorName, INamedTypeSymbol actorTypeSymbol)
     {
         var generatedActorName = $"GeneratedCode.{actorName}";
+        var ns = actorTypeSymbol.ContainingNamespace;
+        if (ns != null)
+        {
+            generatedActorName = ns + "." + generatedActorName;
+        }
 
         source.AppendLine($$"""
-            partial class {{ actorTypeSymbol.Name}} : IActorImplementation
+            partial class {{actorTypeSymbol.Name}} : global::Microsoft.DotNet.ServiceFabric.ServiceHost.Actors.IActorImplementation
             {
-                public static Task RegisterActorAsync(Action<IServiceCollection> configureServices)
+                public static global::System.Threading.Tasks.Task RegisterActorAsync(global::System.Action<global::Microsoft.Extensions.DependencyInjection.IServiceCollection> configureServices)
                 {
-                    return ActorRuntime.RegisterActorAsync<{{ generatedActorName}}>((context, info) => new DelegatedActorService<{{ actorTypeSymbol.Name}}
-                    >(context, info, configureServices, (actorService, actorId, scopeFactory) => new {{
-                        generatedActorName}} (actorService, actorId, scopeFactory)));
+                    return global::Microsoft.ServiceFabric.Actors.Runtime.ActorRuntime.RegisterActorAsync<global::{{generatedActorName}}>((context, info) => new global::Microsoft.DotNet.ServiceFabric.ServiceHost.Actors.DelegatedActorService<{{SymbolDisplay.ToDisplayString(actorTypeSymbol, SymbolDisplayFormat.FullyQualifiedFormat)}}
+                    >(context, info, configureServices, (actorService, actorId, scopeFactory) => new global::{{generatedActorName}} (actorService, actorId, scopeFactory)));
                 }
             }
             """ );

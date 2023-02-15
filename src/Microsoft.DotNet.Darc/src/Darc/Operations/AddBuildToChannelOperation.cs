@@ -135,7 +135,8 @@ internal class AddBuildToChannelOperation : Operation
                 return Constants.SuccessCode;
             }
 
-            if (targetChannels.Any(ch => UnsupportedChannels.ContainsKey(ch.Id)))
+            // Checking for Just channel Id causes failures when running scenario tests locally.
+            if (targetChannels.Any(ch => UnsupportedChannels.ContainsKey(ch.Id) && UnsupportedChannels.ContainsValue(ch.Name)))
             {
                 Console.WriteLine($"Currently Darc doesn't support build promotion to the following channels:");
 
