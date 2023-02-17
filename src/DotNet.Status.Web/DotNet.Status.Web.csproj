@@ -25,6 +25,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="WindowsAzure.Storage" /> 

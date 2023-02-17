@@ -13,7 +13,7 @@
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
     <PackageVersion Include="Azure.Core" Version="1.25.0" />
     <PackageVersion Include="Azure.Data.AppConfiguration" Version="1.0.0" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.6.1" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.2.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.5.0" />
@@ -47,7 +47,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
-    <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="11.2.2" />
+    <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
     <PackageVersion Include="Microsoft.Azure.Management.EventHub" Version="2.7.2" />
     <PackageVersion Include="Microsoft.Azure.Management.Fluent" Version="1.31.0" />
     <PackageVersion Include="Microsoft.Azure.Management.ResourceManager.Fluent" Version="1.37.1" />
@@ -86,6 +86,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="6.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="3.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="$(AspNetAzureVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
@@ -101,7 +102,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="6.0.0" /> 
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="6.0.0" /> 
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.48.0" />
+    <PackageVersion Include="Microsoft.Identity.Client" Version="4.37.0" />
     <PackageVersion Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.7" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.17.0" />
     <PackageVersion Include="Microsoft.Net.Http" Version="2.2.29" />
@@ -120,7 +121,7 @@
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.3" />
     <PackageVersion Include="Mono.Options" Version="5.3.0.1" />
     <PackageVersion Include="Moq" Version="4.8.3" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageVersion Include="Newtonsoft.Json.Bson" Version="1.0.2" />
     <PackageVersion Include="NuGet.Configuration" Version="5.11.3" />
     <PackageVersion Include="NuGet.Packaging" Version="5.11.3" />
@@ -138,7 +139,7 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="6.17.0" />
     <PackageVersion Include="System.Drawing.Common" Version="4.7.2" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.8.5" />
-    <PackageVersion Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+    <PackageVersion Include="System.IO.FileSystem.AccessControl" Version="4.7.0" />
     <PackageVersion Include="System.IO.Hashing" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />

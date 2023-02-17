@@ -166,17 +166,22 @@ public class KustoHelpersTests
             }
         );
             
-        props.IngestionMapping.IngestionMappings.Should().NotBeNull();
-        props.IngestionMapping.IngestionMappings.Should().HaveCount(2);
-        ColumnMapping aMapping = props.IngestionMapping.IngestionMappings.FirstOrDefault(m => m.ColumnName == "a");
-        ColumnMapping bMapping = props.IngestionMapping.IngestionMappings.FirstOrDefault(m => m.ColumnName == "b");
+        props.CSVMapping.Should().NotBeNull();
+        props.CSVMapping.Should().HaveCount(2);
+        CsvColumnMapping aMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "a");
+        CsvColumnMapping bMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "b");
         aMapping.Should().NotBeNull();
         bMapping.Should().NotBeNull();
-        aMapping.ColumnType.Should().Be(KustoDataType.Int.CslDataType);
-        bMapping.ColumnType.Should().Be(KustoDataType.String.CslDataType);
+        bMapping.Ordinal.Should().NotBe(aMapping.Ordinal);
+        aMapping.CslDataType.Should().Be(KustoDataType.Int.CslDataType);
+        bMapping.CslDataType.Should().Be(KustoDataType.String.CslDataType);
         string[][] parsed = CsvWriterExtensions.ParseCsvFile(saved);
         parsed.Should().HaveCount(2);
         parsed[0].Should().HaveCount(2);
+        parsed[0][aMapping.Ordinal].Should().Be("1");
+        parsed[0][bMapping.Ordinal].Should().Be("bValue1");
+        parsed[1][aMapping.Ordinal].Should().Be("2");
+        parsed[1][bMapping.Ordinal].Should().Be("bValue2");
     }
 
     [Test]
@@ -217,17 +222,22 @@ public class KustoHelpersTests
             }
         );
             
-        props.IngestionMapping.IngestionMappings.Should().NotBeNull();
-        props.IngestionMapping.IngestionMappings.Should().HaveCount(2);
-        ColumnMapping aMapping = props.IngestionMapping.IngestionMappings.FirstOrDefault(m => m.ColumnName == "a");
-        ColumnMapping bMapping = props.IngestionMapping.IngestionMappings.FirstOrDefault(m => m.ColumnName == "b");
+        props.CSVMapping.Should().NotBeNull();
+        props.CSVMapping.Should().HaveCount(2);
+        CsvColumnMapping aMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "a");
+        CsvColumnMapping bMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "b");
         aMapping.Should().NotBeNull();
         bMapping.Should().NotBeNull();
-        aMapping.ColumnType.Should().Be(KustoDataType.Int.CslDataType);
-        bMapping.ColumnType.Should().Be(KustoDataType.String.CslDataType);
+        bMapping.Ordinal.Should().NotBe(aMapping.Ordinal);
+        aMapping.CslDataType.Should().Be(KustoDataType.Int.CslDataType);
+        bMapping.CslDataType.Should().Be(KustoDataType.String.CslDataType);
         string[][] parsed = CsvWriterExtensions.ParseCsvFile(saved);
         parsed.Should().HaveCount(2);
         parsed[0].Should().HaveCount(2);
+        parsed[0][aMapping.Ordinal].Should().Be("1");
+        parsed[0][bMapping.Ordinal].Should().Be("bValue1");
+        parsed[1][aMapping.Ordinal].Should().Be("2");
+        parsed[1][bMapping.Ordinal].Should().Be("bValue2");
     }
 
     public static IEnumerable<object[]> GetBasicDataTypes()
