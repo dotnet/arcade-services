@@ -124,6 +124,11 @@ public static class KustoHelpers
             return;
         }
 
+        for (int i = 0; i < mappings.Length; i++)
+        {
+            mappings[i].Properties.Add("Ordinal", i.ToString());
+        }
+
         stream.Seek(0, SeekOrigin.Begin);
 
         logger.LogInformation($"Ingesting {mappings.Length} columns at {stream.Length} bytes...");
