@@ -21,7 +21,7 @@ stages:
     - job: Synchronize
       pool: 
         name: NetCore1ESPool-Internal-NoMSI
-        demands: ImageOverride -equals 1es-windows-2022
+        demands: ImageOverride -equals 1es-windows-2019
       steps:
       - task: UseDotNet@2
         displayName: Install Correct .NET Version

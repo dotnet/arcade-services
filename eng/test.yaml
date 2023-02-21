@@ -20,7 +20,7 @@ steps:
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
-      -v minimal
+      -v quiet
       --
       "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
       RunConfiguration.MapCpuCount=4

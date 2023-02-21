@@ -26,7 +26,7 @@ stages:
   - job: ValidateSecrets
     pool: 
       name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2022
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - task: UseDotNet@2
       displayName: Install Correct .NET Version
@@ -80,7 +80,7 @@ stages:
   displayName: Deploy
   pool:
     name: NetCore1ESPool-Internal-NoMSI
-    demands: ImageOverride -equals 1es-windows-2022
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - predeploy
   - approval
@@ -133,7 +133,7 @@ stages:
     - updateDatabase
     pool:
       name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2022
+      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - download: current
       artifact: MaestroApplication
@@ -162,7 +162,7 @@ stages:
     displayName: Deploy telemetry service fabric application
     pool:
       name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2022    
+      demands: ImageOverride -equals 1es-windows-2019    
     dependsOn:
     steps:
     - download: current
@@ -192,7 +192,7 @@ stages:
     displayName: Deploy dotnet-status web app
     pool:
       name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2022
+      demands: ImageOverride -equals 1es-windows-2019
     dependsOn:
     steps:
     - download: current
@@ -215,7 +215,7 @@ stages:
     displayName: Deploy rollout scorer azure function
     pool:
       name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2022
+      demands: ImageOverride -equals 1es-windows-2019
     dependsOn:
     steps:
     - download: current
@@ -245,7 +245,7 @@ stages:
   displayName: Post-Deployment
   pool:
     name: NetCore1ESPool-Internal-NoMSI
-    demands: ImageOverride -equals 1es-windows-2022
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   variables:
@@ -286,7 +286,7 @@ stages:
   displayName: Validate deployment
   pool:
     name: NetCore1ESPool-Internal
-    demands: ImageOverride -equals 1es-windows-2022
+    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   variables:
