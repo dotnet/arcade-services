@@ -78,7 +78,7 @@ public static class KustoHelpers
         IAsyncEnumerable<T> data,
         Func<T, IList<KustoValue>> mapFunc)
     {
-        CsvColumnMapping[] mappings = null;
+        ColumnMapping[] mappings = null;
         int size = 5;
         await using var stream = new MemoryStream();
         await using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true))
@@ -94,10 +94,10 @@ public static class KustoHelpers
                 var dataList = new List<string>(size);
                 if (mappings == null)
                 {
-                    var mapList = new List<CsvColumnMapping>();
+                    var mapList = new List<ColumnMapping>();
                     foreach (KustoValue p in kustoValues)
                     {
-                        mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType.CslDataType});
+                        mapList.Add(new ColumnMapping {ColumnName = p.Column, ColumnType = p.DataType.CslDataType});
                         dataList.Add(p.StringValue);
                     }
 
@@ -126,7 +126,7 @@ public static class KustoHelpers
 
         for (int i = 0; i < mappings.Length; i++)
         {
-            mappings[i].Ordinal = i;
+            mappings[i].Properties.Add("Ordinal", i.ToString());
         }
 
         stream.Seek(0, SeekOrigin.Begin);
@@ -140,7 +140,7 @@ public static class KustoHelpers
                 Format = DataSourceFormat.csv,
                 ReportLevel = IngestionReportLevel.FailuresOnly,
                 ReportMethod = IngestionReportMethod.Queue,
-                CSVMapping = mappings
+                IngestionMapping = new IngestionMapping { IngestionMappings = mappings }
             });
 
         logger.LogTrace("Ingest complete");
