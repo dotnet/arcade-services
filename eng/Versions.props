@@ -9,11 +9,11 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <MicrosoftNetFrameworkReferenceAssembliesVersion>1.0.0-preview.1</MicrosoftNetFrameworkReferenceAssembliesVersion>
     <!-- Libs -->
-    <MicrosoftDotNetSignToolVersion>6.0.0-beta.23114.5</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>6.0.0-beta.23114.5</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.23114.5</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23114.5</MicrosoftDotNetGitIssueManagerVersion>
-    <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23114.5</MicrosoftDotNetVersionToolsVersion>
+    <MicrosoftDotNetSignToolVersion>6.0.0-beta.23073.7</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>6.0.0-beta.23073.7</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.23073.7</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23073.7</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23073.7</MicrosoftDotNetVersionToolsVersion>
     <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
   </PropertyGroup>
   <!--Package names-->
