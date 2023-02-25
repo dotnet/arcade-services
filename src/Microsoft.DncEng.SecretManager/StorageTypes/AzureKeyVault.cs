@@ -7,6 +7,7 @@ using Azure;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
 using JetBrains.Annotations;
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager.StorageTypes;
@@ -22,10 +23,12 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
 {
     private static readonly string _nextRotationOnTag = "next-rotation-on";
     private readonly TokenCredentialProvider _tokenCredentialProvider;
+    private readonly IConsole _console;
 
-    public AzureKeyVault(TokenCredentialProvider tokenCredentialProvider)
+    public AzureKeyVault(TokenCredentialProvider tokenCredentialProvider, IConsole console)
     {
         _tokenCredentialProvider = tokenCredentialProvider;
+        _console = console;
     }
 
     private async Task<SecretClient> CreateSecretClient(AzureKeyVaultParameters parameters)
@@ -51,7 +54,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         var secrets = new List<SecretProperties>();
         await foreach (var secret in client.GetPropertiesOfSecretsAsync())
         {
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Tags);
+            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Name, secret.Tags);
             ImmutableDictionary<string, string> tags = GetTags(secret);
             secrets.Add(new SecretProperties(secret.Name, secret.ExpiresOn ?? DateTimeOffset.MaxValue, nextRotationOn, tags));
         }
@@ -59,11 +62,12 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         return secrets;
     }
 
-    private static DateTimeOffset GetNextRotationOn(IDictionary<string, string> tags)
+    private DateTimeOffset GetNextRotationOn(string name, IDictionary<string, string> tags)
     {
         if (!tags.TryGetValue(_nextRotationOnTag, out var nextRotationOnString) ||
             !DateTimeOffset.TryParse(nextRotationOnString, out var nextRotationOn))
         {
+            _console.LogError($"Key Vault Secret '{name}' is missing {_nextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
             nextRotationOn = DateTimeOffset.MaxValue;
         }
 
@@ -78,7 +82,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
             SecretClient client = await CreateSecretClient(parameters);
             Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
             KeyVaultSecret secret = res.Value;
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
+            DateTimeOffset nextRotationOn = GetNextRotationOn(name, secret.Properties.Tags);
             ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
             return new SecretValue(secret.Value, tags, nextRotationOn,
                 secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
