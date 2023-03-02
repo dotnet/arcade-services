@@ -67,7 +67,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         if (!tags.TryGetValue(_nextRotationOnTag, out var nextRotationOnString) ||
             !DateTimeOffset.TryParse(nextRotationOnString, out var nextRotationOn))
         {
-            _console.LogError($"Key Vault Secret '{name}' is missing {_nextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+            _console.LogWarning($"Key Vault Secret '{name}' is missing {_nextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
             nextRotationOn = DateTimeOffset.MaxValue;
         }
 
