@@ -27,6 +27,8 @@ public class PullRequestDescriptionBuilder
 
     private readonly StringBuilder _description;
 
+    private const int _comparisonShaLength = 10;
+
     private int _startingReferenceId;
 
     /// <summary>
@@ -186,8 +188,8 @@ public class PullRequestDescriptionBuilder
             throw new ArgumentNullException(nameof(to));
         }
 
-        string fromSha = from.Length > 7 ? from.Substring(0, 7) : from;
-        string toSha = to.Length > 7 ? to.Substring(0, 7) : to;
+        string fromSha = from.Length > _comparisonShaLength ? from.Substring(0, _comparisonShaLength) : from;
+        string toSha = to.Length > _comparisonShaLength ? to.Substring(0, _comparisonShaLength) : to;
 
         if (repoURI.Contains("github.com"))
         {
