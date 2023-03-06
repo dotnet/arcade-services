@@ -186,14 +186,11 @@ public class PullRequestDescriptionBuilder
             throw new ArgumentNullException(nameof(to));
         }
 
-        string fromSha = from.Length > 7 ? from.Substring(0, 7) : from;
-        string toSha = to.Length > 7 ? to.Substring(0, 7) : to;
-
         if (repoURI.Contains("github.com"))
         {
-            return $"{repoURI}/compare/{fromSha}...{toSha}";
+            return $"{repoURI}/compare/{from}...{to}";
         }
-        return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
+        return $"{repoURI}/branches?baseVersion=GC{from}&targetVersion=GC{to}&_a=files";
     }
 
     public override string ToString()
