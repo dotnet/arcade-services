@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
+using Microsoft.DncEng.SecretManager.StorageTypes;
 using Mono.Options;
 using Command = Microsoft.DncEng.CommandLineLib.Command;
 
@@ -84,6 +85,12 @@ public class SynchronizeCommand : Command
             foreach (var (name, secret, secretType, secretReferences) in orderedSecretTypes)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
+
+                if (!existingSecrets[name].Tags.ContainsKey(AzureKeyVault.NextRotationOnTag))
+                {
+                    _console.LogError($"Key Vault Secret '{name}' is missing {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+                }
+
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
@@ -118,7 +125,10 @@ public class SynchronizeCommand : Command
                 else
                 {
                     // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
-                    DateTimeOffset nextRotation = existing.Select(e => e.NextRotationOn).Min();
+                    DateTimeOffset nextRotation = existing.Select(e => 
+                        e.Tags.GetValueOrDefault(AzureKeyVault.NextRotationOnTag, string.Empty))
+                        .Select(offset => DateTimeOffset.TryParse(offset, out var dateTimeOffset) ? dateTimeOffset : DateTimeOffset.MaxValue)
+                        .Min();
                     DateTimeOffset expires = existing.Select(e => e.ExpiresOn).Min();
                     if (nextRotation <= now)
                     {
