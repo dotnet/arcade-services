@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -33,6 +34,8 @@ public class SynchronizeCommandTests
         services.AddSingleton(p => clock.Object);
         services.AddSingleton<SynchronizeCommand>();
 
+        var existingSecretsWrapper = existingSecrets.Select(secret => new SecretPropertiesWrapper(secret, true)).ToList();
+
         var provider = services.BuildServiceProvider();
 
         var manifestFile = Path.GetTempFileName();
@@ -46,7 +49,7 @@ public class SynchronizeCommandTests
             storageLocationType.Protected().Setup("Dispose", true);
             storageLocationType
                 .Setup(storage => storage.ListSecretsAsync(It.IsAny<IDictionary<string, object>>()))
-                .ReturnsAsync(existingSecrets);
+                .ReturnsAsync(existingSecretsWrapper);
             var actualSetNames = new List<string>();
             var actualSetValues = new List<SecretValue>();
             storageLocationType

@@ -7,7 +7,7 @@ namespace Microsoft.DncEng.SecretManager;
 
 public abstract class StorageLocationType : IDisposable
 {
-    public abstract Task<List<SecretProperties>> ListSecretsAsync(IDictionary<string, object> parameters);
+    public abstract Task<List<SecretPropertiesWrapper>> ListSecretsAsync(IDictionary<string, object> parameters);
     [ItemCanBeNull]
     public abstract Task<SecretValue> GetSecretValueAsync(IDictionary<string, object> parameters, string name);
     public abstract Task SetSecretValueAsync(IDictionary<string, object> parameters, string name, SecretValue value);
@@ -39,7 +39,7 @@ public abstract class StorageLocationType : IDisposable
             _parameters = parameters;
         }
 
-        public Task<List<SecretProperties>> ListSecretsAsync()
+        public Task<List<SecretPropertiesWrapper>> ListSecretsAsync()
         {
             return _that.ListSecretsAsync(_parameters);
         }
@@ -70,7 +70,7 @@ public abstract class StorageLocationType : IDisposable
 public abstract class StorageLocationType<TParameters> : StorageLocationType
     where TParameters : new()
 {
-    public sealed override Task<List<SecretProperties>> ListSecretsAsync(IDictionary<string, object> parameters)
+    public sealed override Task<List<SecretPropertiesWrapper>> ListSecretsAsync(IDictionary<string, object> parameters)
     {
         var p = ParameterConverter.ConvertParameters<TParameters>(parameters);
         return ListSecretsAsync(p);
@@ -94,7 +94,7 @@ public abstract class StorageLocationType<TParameters> : StorageLocationType
         return EnsureKeyAsync(p, name, key);
     }
 
-    public abstract Task<List<SecretProperties>> ListSecretsAsync(TParameters parameters);
+    public abstract Task<List<SecretPropertiesWrapper>> ListSecretsAsync(TParameters parameters);
     public abstract Task<SecretValue> GetSecretValueAsync(TParameters parameters, string name);
     public abstract Task SetSecretValueAsync(TParameters parameters, string name, SecretValue value);
     public abstract Task EnsureKeyAsync(TParameters parameters, string name, SecretManifest.Key config);

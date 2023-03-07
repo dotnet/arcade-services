@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
+using Microsoft.DncEng.SecretManager.StorageTypes;
 using Mono.Options;
 using Command = Microsoft.DncEng.CommandLineLib.Command;
 
@@ -76,7 +77,7 @@ public class SynchronizeCommand : Command
                 references.Add(name, bound);
             }
 
-            Dictionary<string, SecretProperties> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Name);
+            Dictionary<string, SecretPropertiesWrapper> existingSecrets = (await storage.ListSecretsAsync()).ToDictionary(p => p.Properties.Name);
 
             List<(string name, SecretManifest.Secret secret, SecretType.Bound bound, HashSet<string> references)> orderedSecretTypes = GetTopologicallyOrderedSecrets(manifest.Secrets);
             var regeneratedSecrets = new HashSet<string>();
@@ -84,12 +85,21 @@ public class SynchronizeCommand : Command
             foreach (var (name, secret, secretType, secretReferences) in orderedSecretTypes)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
+                
+                if (existingSecrets.TryGetValue(name, out var secretPropertiesWrapper))
+                {
+                    if (secretPropertiesWrapper.NextRotationFound == false)
+                    {
+                        _console.LogError($"Key Vault Secret '{name}' is missing {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+                    }
+                }
+
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
                 {
-                    existingSecrets.Remove(n, out SecretProperties e);
-                    existing.Add(e); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
+                    existingSecrets.Remove(n, out SecretPropertiesWrapper e);
+                    existing.Add(e.Properties); // here we intentionally ignore the result of Remove because we want to add null to the list to represent "this isn't in the store"
                 }
 
                 bool regenerate = false;
