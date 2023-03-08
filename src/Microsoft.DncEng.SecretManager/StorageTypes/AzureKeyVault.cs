@@ -21,7 +21,7 @@ public class AzureKeyVaultParameters
 [Name("azure-key-vault")]
 public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
 {
-    public static readonly string NextRotationOnTag = "next-rotation-on";
+    public const string NextRotationOnTag = "next-rotation-on";
     private readonly TokenCredentialProvider _tokenCredentialProvider;
     private readonly IConsole _console;
 
