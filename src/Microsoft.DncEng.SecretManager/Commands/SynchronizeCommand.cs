@@ -86,9 +86,12 @@ public class SynchronizeCommand : Command
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
 
-                if (!existingSecrets[name].Tags.ContainsKey(AzureKeyVault.NextRotationOnTag))
+                if (existingSecrets.TryGetValue(name, out var existingSecret))
                 {
-                    _console.LogError($"Key Vault Secret '{name}' is missing {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+                    if (!existingSecret.Tags.ContainsKey(AzureKeyVault.NextRotationOnTag))
+                    {
+                        _console.LogError($"Key Vault Secret '{name}' is missing {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+                    }
                 }
 
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
