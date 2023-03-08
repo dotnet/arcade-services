@@ -351,6 +351,7 @@ internal class GatherDropOperation : Operation
         { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
         { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
         { $"{githubRepoPrefix}dotnet/roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
+        { $"{githubRepoPrefix}dotnet/linker", (coreRepoCategory, "linker") },
         // Internal
         { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
         { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
@@ -361,6 +362,7 @@ internal class GatherDropOperation : Operation
         { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
         { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
         { $"{azdoRepoPrefix}dotnet-roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
+        { $"{azdoRepoPrefix}dotnet-linker", (coreRepoCategory, "linker") },
 
         // ASPNET
 
