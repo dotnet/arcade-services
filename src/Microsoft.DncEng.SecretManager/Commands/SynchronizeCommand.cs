@@ -89,7 +89,7 @@ public class SynchronizeCommand : Command
                 if (existingSecrets.TryGetValue(name, out var existingSecret)
                     && !existingSecret.Tags.ContainsKey(AzureKeyVault.NextRotationOnTag))
                 {
-                    _console.LogError($"Key Vault Secret '{name}' is missing {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+                    _console.LogError($"Key Vault Secret '{name}' is listed in the secret manifest, but is missing {AzureKeyVault.NextRotationOnTag} tag. Please force a rotation or manually set this value.");
                 }
 
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
@@ -126,11 +126,21 @@ public class SynchronizeCommand : Command
                 else
                 {
                     // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
-                    DateTimeOffset nextRotation = existing.Select(e => 
-                        e.Tags.GetValueOrDefault(AzureKeyVault.NextRotationOnTag, string.Empty))
-                        .Select(offset => DateTimeOffset.TryParse(offset, out var dateTimeOffset) ? dateTimeOffset : DateTimeOffset.MaxValue)
-                        .Min();
+                    DateTimeOffset nextRotation = existing.Select(e =>
+                    {
+                        if (e.Tags.TryGetValue(AzureKeyVault.NextRotationOnTag, out var nextRotationOn) 
+                            && DateTimeOffset.TryParse(nextRotationOn, out var dateTimeOffset))
+                        {
+                            return dateTimeOffset;
+                        }
+                        else
+                        {
+                            _console.Write($"Secret {e.Name} does not have the {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value");
+                            return DateTimeOffset.MaxValue;
+                        }
+                    }).Min();
                     DateTimeOffset expires = existing.Select(e => e.ExpiresOn).Min();
+
                     if (nextRotation <= now)
                     {
                         _console.WriteLine($"Secret scheduled for rotation on {nextRotation}, will rotate.");
