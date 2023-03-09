@@ -21,7 +21,7 @@ public class AzureKeyVaultParameters
 [Name("azure-key-vault")]
 public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
 {
-    private static readonly string _nextRotationOnTag = "next-rotation-on";
+    public const string NextRotationOnTag = "next-rotation-on";
     private readonly TokenCredentialProvider _tokenCredentialProvider;
     private readonly IConsole _console;
 
@@ -54,9 +54,8 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         var secrets = new List<SecretProperties>();
         await foreach (var secret in client.GetPropertiesOfSecretsAsync())
         {
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Name, secret.Tags);
             ImmutableDictionary<string, string> tags = GetTags(secret);
-            secrets.Add(new SecretProperties(secret.Name, secret.ExpiresOn ?? DateTimeOffset.MaxValue, nextRotationOn, tags));
+            secrets.Add(new SecretProperties(secret.Name, secret.ExpiresOn ?? DateTimeOffset.MaxValue, tags));
         }
 
         return secrets;
@@ -64,10 +63,10 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
 
     private DateTimeOffset GetNextRotationOn(string name, IDictionary<string, string> tags)
     {
-        if (!tags.TryGetValue(_nextRotationOnTag, out var nextRotationOnString) ||
+        if (!tags.TryGetValue(NextRotationOnTag, out var nextRotationOnString) ||
             !DateTimeOffset.TryParse(nextRotationOnString, out var nextRotationOn))
         {
-            _console.LogError($"Key Vault Secret '{name}' is missing {_nextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
+            _console.LogError($"Key Vault Secret '{name}' is missing {NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
             nextRotationOn = DateTimeOffset.MaxValue;
         }
 
@@ -96,7 +95,6 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
     private static ImmutableDictionary<string, string> GetTags(global::Azure.Security.KeyVault.Secrets.SecretProperties properties)
     {
         ImmutableDictionary<string, string> tags = properties.Tags
-            .Where(p => p.Key != _nextRotationOnTag)
             .Where(p => p.Key != "Md5")
             .ToImmutableDictionary();
         return tags;
@@ -111,7 +109,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         {
             properties.Tags[k] = v;
         }
-        properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
+        properties.Tags[NextRotationOnTag] = value.NextRotationOn.ToString("O");
         properties.Tags["ChangedBy"] = "secret-manager.exe";
         // Tags to appease the old secret management system
         properties.Tags["Owner"] = "secret-manager.exe";
