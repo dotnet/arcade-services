@@ -128,16 +128,23 @@ public class SynchronizeCommand : Command
                     // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
                     DateTimeOffset nextRotation = existing.Select(e =>
                     {
-                        if (e.Tags.TryGetValue(AzureKeyVault.NextRotationOnTag, out var nextRotationOn) 
-                            && DateTimeOffset.TryParse(nextRotationOn, out var dateTimeOffset))
+                        var ret = DateTimeOffset.MaxValue;
+                        if (e.Tags.TryGetValue(AzureKeyVault.NextRotationOnTag, out var nextRotationOn))
                         {
-                            return dateTimeOffset;
+                            if (DateTimeOffset.TryParse(nextRotationOn, out var dateTimeOffset))
+                            {
+                                ret = dateTimeOffset;
+                            }
+                            else
+                            {
+                                _console.Write($"For secret {name}, could not parse the {AzureKeyVault.NextRotationOnTag} tag with value {nextRotationOn}");
+                            }
                         }
                         else
                         {
                             _console.Write($"Secret {e.Name} does not have the {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value");
-                            return DateTimeOffset.MaxValue;
                         }
+                        return ret;
                     }).Min();
                     DateTimeOffset expires = existing.Select(e => e.ExpiresOn).Min();
 
