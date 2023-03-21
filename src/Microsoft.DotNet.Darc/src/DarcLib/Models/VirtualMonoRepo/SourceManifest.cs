@@ -18,7 +18,6 @@ public interface ISourceManifest
     IReadOnlyCollection<ISourceComponent> Submodules { get; }
 
     string ToJson();
-    void RemoveRepository(string repository);
     void RemoveSubmodule(SubmoduleRecord submodule);
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string packageVersion);
@@ -56,17 +55,6 @@ public class SourceManifest : ISourceManifest
         {
             _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion));
         }
-    }
-
-    public void RemoveRepository(string repository)
-    {
-        var repo = _repositories.FirstOrDefault(r => r.Path == repository);
-        if (repo != null)
-        {
-            _repositories.Remove(repo);
-        }
-
-        _submodules.RemoveWhere(s => s.Path.StartsWith(repository + "/"));
     }
 
     public void RemoveSubmodule(SubmoduleRecord submodule)
