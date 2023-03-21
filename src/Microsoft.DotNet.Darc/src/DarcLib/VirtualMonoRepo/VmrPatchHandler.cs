@@ -30,7 +30,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// 0       14      /s/vmr/src/roslyn-analyzers/eng/Versions.props
     /// -       -       /s/vmr/src/roslyn-analyzers/some-binary.dll
     /// </summary>
-    private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\s]+)$", RegexOptions.Compiled);
+    private static readonly Regex GitPatchSummaryLine = new(@"^[\-0-9]+\s+[\-0-9]+\s+(?<file>[^\n\r]+)$", RegexOptions.Compiled);
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;

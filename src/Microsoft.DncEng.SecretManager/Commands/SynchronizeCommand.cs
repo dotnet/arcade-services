@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DncEng.CommandLineLib;
+using Microsoft.DncEng.SecretManager.StorageTypes;
 using Mono.Options;
 using Command = Microsoft.DncEng.CommandLineLib.Command;
 
@@ -84,6 +85,13 @@ public class SynchronizeCommand : Command
             foreach (var (name, secret, secretType, secretReferences) in orderedSecretTypes)
             {
                 _console.WriteLine($"Synchronizing secret {name}, type {secret.Type}");
+
+                if (existingSecrets.TryGetValue(name, out var existingSecret)
+                    && !existingSecret.Tags.ContainsKey(AzureKeyVault.NextRotationOnTag))
+                {
+                    _console.LogError($"Key Vault Secret '{name}' is listed in the secret manifest, but is missing {AzureKeyVault.NextRotationOnTag} tag. Please force a rotation or manually set this value.");
+                }
+
                 List<string> names = secretType.GetCompositeSecretSuffixes().Select(suffix => name + suffix).ToList();
                 var existing = new List<SecretProperties>();
                 foreach (string n in names)
@@ -118,8 +126,28 @@ public class SynchronizeCommand : Command
                 else
                 {
                     // If these fields aren't the same for every part of a composite secrets, assume the soonest value is right
-                    DateTimeOffset nextRotation = existing.Select(e => e.NextRotationOn).Min();
+                    DateTimeOffset nextRotation = existing.Select(e =>
+                    {
+                        var ret = DateTimeOffset.MaxValue;
+                        if (e.Tags.TryGetValue(AzureKeyVault.NextRotationOnTag, out var nextRotationOn))
+                        {
+                            if (DateTimeOffset.TryParse(nextRotationOn, out var dateTimeOffset))
+                            {
+                                ret = dateTimeOffset;
+                            }
+                            else
+                            {
+                                _console.Write($"For secret {name}, could not parse the {AzureKeyVault.NextRotationOnTag} tag with value {nextRotationOn}");
+                            }
+                        }
+                        else
+                        {
+                            _console.Write($"Secret {e.Name} does not have the {AzureKeyVault.NextRotationOnTag} tag, using the end of time as value");
+                        }
+                        return ret;
+                    }).Min();
                     DateTimeOffset expires = existing.Select(e => e.ExpiresOn).Min();
+
                     if (nextRotation <= now)
                     {
                         _console.WriteLine($"Secret scheduled for rotation on {nextRotation}, will rotate.");

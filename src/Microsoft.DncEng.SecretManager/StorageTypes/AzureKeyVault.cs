@@ -7,6 +7,7 @@ using Azure;
 using Azure.Security.KeyVault.Keys;
 using Azure.Security.KeyVault.Secrets;
 using JetBrains.Annotations;
+using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.CommandLineLib.Authentication;
 
 namespace Microsoft.DncEng.SecretManager.StorageTypes;
@@ -20,12 +21,14 @@ public class AzureKeyVaultParameters
 [Name("azure-key-vault")]
 public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
 {
-    private static readonly string _nextRotationOnTag = "next-rotation-on";
+    public const string NextRotationOnTag = "next-rotation-on";
     private readonly TokenCredentialProvider _tokenCredentialProvider;
+    private readonly IConsole _console;
 
-    public AzureKeyVault(TokenCredentialProvider tokenCredentialProvider)
+    public AzureKeyVault(TokenCredentialProvider tokenCredentialProvider, IConsole console)
     {
         _tokenCredentialProvider = tokenCredentialProvider;
+        _console = console;
     }
 
     private async Task<SecretClient> CreateSecretClient(AzureKeyVaultParameters parameters)
@@ -51,19 +54,19 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         var secrets = new List<SecretProperties>();
         await foreach (var secret in client.GetPropertiesOfSecretsAsync())
         {
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Tags);
             ImmutableDictionary<string, string> tags = GetTags(secret);
-            secrets.Add(new SecretProperties(secret.Name, secret.ExpiresOn ?? DateTimeOffset.MaxValue, nextRotationOn, tags));
+            secrets.Add(new SecretProperties(secret.Name, secret.ExpiresOn ?? DateTimeOffset.MaxValue, tags));
         }
 
         return secrets;
     }
 
-    private static DateTimeOffset GetNextRotationOn(IDictionary<string, string> tags)
+    private DateTimeOffset GetNextRotationOn(string name, IDictionary<string, string> tags)
     {
-        if (!tags.TryGetValue(_nextRotationOnTag, out var nextRotationOnString) ||
+        if (!tags.TryGetValue(NextRotationOnTag, out var nextRotationOnString) ||
             !DateTimeOffset.TryParse(nextRotationOnString, out var nextRotationOn))
         {
+            _console.LogError($"Key Vault Secret '{name}' is missing {NextRotationOnTag} tag, using the end of time as value. Please force a rotation or manually set this value.");
             nextRotationOn = DateTimeOffset.MaxValue;
         }
 
@@ -78,7 +81,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
             SecretClient client = await CreateSecretClient(parameters);
             Response<KeyVaultSecret> res = await client.GetSecretAsync(name);
             KeyVaultSecret secret = res.Value;
-            DateTimeOffset nextRotationOn = GetNextRotationOn(secret.Properties.Tags);
+            DateTimeOffset nextRotationOn = GetNextRotationOn(name, secret.Properties.Tags);
             ImmutableDictionary<string, string> tags = GetTags(secret.Properties);
             return new SecretValue(secret.Value, tags, nextRotationOn,
                 secret.Properties.ExpiresOn ?? DateTimeOffset.MaxValue);
@@ -92,7 +95,6 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
     private static ImmutableDictionary<string, string> GetTags(global::Azure.Security.KeyVault.Secrets.SecretProperties properties)
     {
         ImmutableDictionary<string, string> tags = properties.Tags
-            .Where(p => p.Key != _nextRotationOnTag)
             .Where(p => p.Key != "Md5")
             .ToImmutableDictionary();
         return tags;
@@ -107,7 +109,7 @@ public class AzureKeyVault : StorageLocationType<AzureKeyVaultParameters>
         {
             properties.Tags[k] = v;
         }
-        properties.Tags[_nextRotationOnTag] = value.NextRotationOn.ToString("O");
+        properties.Tags[NextRotationOnTag] = value.NextRotationOn.ToString("O");
         properties.Tags["ChangedBy"] = "secret-manager.exe";
         // Tags to appease the old secret management system
         properties.Tags["Owner"] = "secret-manager.exe";
