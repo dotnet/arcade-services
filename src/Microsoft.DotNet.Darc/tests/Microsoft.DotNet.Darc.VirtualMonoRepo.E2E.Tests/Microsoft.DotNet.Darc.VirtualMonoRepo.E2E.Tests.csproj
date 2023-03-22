@@ -51,8 +51,4 @@
     </None>
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Drawing.Common" />
-  </ItemGroup>
-
 </Project>

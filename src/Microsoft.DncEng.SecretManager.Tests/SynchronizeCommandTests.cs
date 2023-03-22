@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DncEng.CommandLineLib;
 using Microsoft.DncEng.SecretManager.Commands;
+using Microsoft.DncEng.SecretManager.StorageTypes;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Moq.Protected;
@@ -97,7 +100,7 @@ public class SynchronizeCommandTests
     [Test]
     public async Task ExpiredSecretsGetRotated()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -107,7 +110,7 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("expired", now.AddDays(-5), now.AddDays(10),
+                new SecretProperties("expired", now.AddDays(-5),
                     ImmutableDictionary.Create<string, string>()),
             },
             "test-secret",
@@ -128,7 +131,13 @@ secrets:
     [Test]
     public async Task ToBeRotatedSecretGetsRotated()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
+
+        var dic = new Dictionary<string, string>
+        {
+            { AzureKeyVault.NextRotationOnTag, now.AddDays(-1).ToString() }
+        };
+
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -138,8 +147,7 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("normal", now.AddDays(10), now.AddDays(-1),
-                    ImmutableDictionary.Create<string, string>()),
+                new SecretProperties("normal", now.AddDays(10), dic.ToImmutableDictionary()),
             },
             "test-secret",
             new List<string>{""},
@@ -152,14 +160,14 @@ secrets:
                 }
             }, new List<(string name, SecretValue value)>
             {
-                ("normal", new SecretValue("test-value", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20)))
+                ("normal", new SecretValue("test-value", dic.ToImmutableDictionary(), now.AddDays(5), now.AddDays(20)))
             });
     }
 
     [Test]
     public async Task ValidSecretIsntRotated()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -169,7 +177,7 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("normal", now.AddDays(10), now.AddDays(4),
+                new SecretProperties("normal", now.AddDays(10),
                     ImmutableDictionary.Create<string, string>()),
             },
             "test-secret",
@@ -185,7 +193,18 @@ secrets:
     [Test]
     public async Task CompositeSecretRotatesAll()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
+
+        var dic = new Dictionary<string, string>
+        {
+            { AzureKeyVault.NextRotationOnTag, now.AddDays(-2).ToString() }
+        };
+
+        var dic2 = new Dictionary<string, string>
+        {
+            { AzureKeyVault.NextRotationOnTag, now.AddDays(-2).ToString() }
+        };
+
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -195,10 +214,8 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("normal", now.AddDays(10), now.AddDays(-2),
-                    ImmutableDictionary.Create<string, string>()),
-                new SecretProperties("normal-2", now.AddDays(10), now.AddDays(-2),
-                    ImmutableDictionary.Create<string, string>()),
+                new SecretProperties("normal", now.AddDays(10), dic.ToImmutableDictionary()),
+                new SecretProperties("normal-2", now.AddDays(10), dic2.ToImmutableDictionary()),
             },
             "test-secret",
             new List<string>{"", "-2"},
@@ -212,15 +229,15 @@ secrets:
                 }
             }, new List<(string name, SecretValue value)>
             {
-                ("normal", new SecretValue("test-value-1", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
-                ("normal-2", new SecretValue("test-value-2", ImmutableDictionary.Create<string, string>(), now.AddDays(5), now.AddDays(20))),
+                ("normal", new SecretValue("test-value-1", dic.ToImmutableDictionary(), now.AddDays(5), now.AddDays(20))),
+                ("normal-2", new SecretValue("test-value-2", dic2.ToImmutableDictionary(), now.AddDays(5), now.AddDays(20))),
             });
     }
 
     [Test]
     public async Task SecretsAreRotatedInCorrectOrderAndAllTriggeredByExpiredMainSecret()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -238,11 +255,11 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("expired-main", now.AddDays(-5), now.AddDays(10),
+                new SecretProperties("expired-main", now.AddDays(-5),
                     ImmutableDictionary.Create<string, string>()),
-                new SecretProperties("child", now.AddDays(5), now.AddDays(10),
+                new SecretProperties("child", now.AddDays(5),
                     ImmutableDictionary.Create<string, string>()),
-                new SecretProperties("grand-child", now.AddDays(5), now.AddDays(10),
+                new SecretProperties("grand-child", now.AddDays(5),
                     ImmutableDictionary.Create<string, string>()),
             },
             "test-secret",
@@ -273,7 +290,7 @@ secrets:
     [Test]
     public async Task SecretsAreRotatedInCorrectOrderAndGrandChildTriggeredByExpiredChildSecret()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
         await TestCommand(now, @"
 storageLocation:
   type: test
@@ -291,11 +308,11 @@ secrets:
 ", "test",
             new List<SecretProperties>
             {
-                new SecretProperties("main", now.AddDays(5), now.AddDays(10),
+                new SecretProperties("main", now.AddDays(5),
                     ImmutableDictionary.Create<string, string>()),
-                new SecretProperties("expired-child", now.AddDays(-5), now.AddDays(10),
+                new SecretProperties("expired-child", now.AddDays(-5),
                     ImmutableDictionary.Create<string, string>()),
-                new SecretProperties("grand-child", now.AddDays(5), now.AddDays(10),
+                new SecretProperties("grand-child", now.AddDays(5),
                     ImmutableDictionary.Create<string, string>()),
             },
             "test-secret",
@@ -322,7 +339,7 @@ secrets:
     [Test]
     public void InvalidSecretReferenceThrowsException()
     {
-        var now = DateTimeOffset.Parse("3/25/2021 1:30");
+        var now = DateTimeOffset.ParseExact("03/25/2021 1:30", "MM/dd/yyyy m:ss", null);
         Assert.ThrowsAsync<FailWithExitCodeException>(() =>
             TestCommand(now, @"
     storageLocation:
@@ -337,9 +354,9 @@ secrets:
     ", "test",
                 new List<SecretProperties>
                 {
-                    new SecretProperties("main", now.AddDays(5), now.AddDays(10),
+                    new SecretProperties("main", now.AddDays(5),
                         ImmutableDictionary.Create<string, string>()),
-                    new SecretProperties("expired-child", now.AddDays(-5), now.AddDays(10),
+                    new SecretProperties("expired-child", now.AddDays(-5),
                         ImmutableDictionary.Create<string, string>()),
                 },
                 "test-secret",
