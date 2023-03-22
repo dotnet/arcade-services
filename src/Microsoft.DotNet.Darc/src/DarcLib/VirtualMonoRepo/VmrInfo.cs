@@ -47,11 +47,6 @@ public interface IVmrInfo
     LocalPath GetRepoSourcesPath(SourceMapping mapping);
 
     /// <summary>
-    /// Gets a full path leading to sources belonging to a given repo
-    /// </summary>
-    LocalPath GetRepoSourcesPath(string mappingName);
-
-    /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
     LocalPath GetSourceManifestPath();
@@ -93,9 +88,7 @@ public class VmrInfo : IVmrInfo
     {
     }
 
-    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => GetRepoSourcesPath(mapping.Name);
-
-    public LocalPath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
+    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => VmrPath / SourcesDir / mapping.Name;
 
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
