@@ -189,7 +189,7 @@ public class PersonalAccessTokenAuthenticationTests
     [Test]
     public async Task PasswordFromWrongSizeFails()
     {
-        using HttpClient client = CreateClient(out TestAppFactory factory);
+        using HttpClient client = CreateClient(out TestAppFactory<EmptyTestStartup> factory);
 
         var pat = factory.Services.GetRequiredService<PersonalAccessTokenAuthenticationHandler<TestUser>>();
         string token = PersonalAccessTokenUtilities.EncodeToken(42, GetPasswordBytesForToken(42, 10));
@@ -256,7 +256,7 @@ public class PersonalAccessTokenAuthenticationTests
     }
 
     private HttpClient CreateClient(
-        out TestAppFactory factory,
+        out TestAppFactory<EmptyTestStartup> factory,
         int passwordSize = 17,
         string schemeName = null,
         Func<PersonalAccessTokenValidatePrincipalContext<TestUser>, Task> validatedPrincipal = null)
@@ -305,7 +305,7 @@ public class PersonalAccessTokenAuthenticationTests
         }
 
         var localClock = new TestClock();
-        factory = new TestAppFactory();
+        factory = new TestAppFactory<EmptyTestStartup>();
         factory.ConfigureServices(services =>
         {
             services.AddSingleton<ISystemClock>(localClock);

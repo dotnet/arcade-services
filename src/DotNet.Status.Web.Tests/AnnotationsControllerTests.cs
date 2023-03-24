@@ -3,6 +3,7 @@ using DotNet.Status.Web.Options;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -118,7 +119,7 @@ public class AnnotationsControllerTests
 
         public TestData()
         {
-            var factory = new TestAppFactory();
+            var factory = new TestAppFactory<EmptyTestStartup>();
 
             factory.ConfigureServices(services =>
             {

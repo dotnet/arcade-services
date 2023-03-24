@@ -1,16 +1,15 @@
-using System;
-using System.IO;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.IO;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.Web.Authentication.Tests;
+namespace Microsoft.DotNet.Internal.Testing.Utility;
 
-public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
+public class TestAppFactory<TEmptyTestStartup> : WebApplicationFactory<TEmptyTestStartup> where TEmptyTestStartup : class
 {
     private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
     private Action<IServiceCollection> _configureServices;
@@ -28,7 +27,7 @@ public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
 
     protected override IWebHostBuilder CreateWebHostBuilder()
     {
-        return WebHost.CreateDefaultBuilder<EmptyTestStartup>(Array.Empty<string>());
+        return WebHost.CreateDefaultBuilder<TEmptyTestStartup>(Array.Empty<string>());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

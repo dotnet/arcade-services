@@ -900,7 +900,7 @@ public class GitHubHookControllerTests
     public TestData SetupTestData(bool expectNotification)
     {
         var mockClientFactory = new MockHttpClientFactory();
-        var factory = new TestAppFactory();
+        var factory = new TestAppFactory<EmptyTestStartup>();
         factory.ConfigureServices(services =>
         {
             services.AddControllers()
@@ -957,7 +957,7 @@ public class GitHubHookControllerTests
 
     public class TestData : IDisposable
     {
-        public TestData(HttpClient client, TestAppFactory factory, MockHttpClientFactory mockClientFactory)
+        public TestData(HttpClient client, TestAppFactory<EmptyTestStartup> factory, MockHttpClientFactory mockClientFactory)
         {
             Client = client;
             Factory = factory;
@@ -965,7 +965,7 @@ public class GitHubHookControllerTests
         }
 
         public HttpClient Client { get; }
-        public TestAppFactory Factory { get; }
+        public TestAppFactory<EmptyTestStartup> Factory { get; }
         public MockHttpClientFactory MockClientFactory { get; }
 
         public void VerifyAll()
