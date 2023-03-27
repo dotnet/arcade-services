@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Models;
-using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -17,10 +16,8 @@ using Microsoft.AspNetCore.WebHooks.Filters;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Internal.DependencyInjection;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.DotNet.Web.Authentication.Tests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -900,7 +897,7 @@ public class GitHubHookControllerTests
     public TestData SetupTestData(bool expectNotification)
     {
         var mockClientFactory = new MockHttpClientFactory();
-        var factory = new TestAppFactory();
+        var factory = new TestAppFactory<DotNetStatusEmptyTestStartup>();
         factory.ConfigureServices(services =>
         {
             services.AddControllers()
@@ -957,7 +954,7 @@ public class GitHubHookControllerTests
 
     public class TestData : IDisposable
     {
-        public TestData(HttpClient client, TestAppFactory factory, MockHttpClientFactory mockClientFactory)
+        public TestData(HttpClient client, TestAppFactory<DotNetStatusEmptyTestStartup> factory, MockHttpClientFactory mockClientFactory)
         {
             Client = client;
             Factory = factory;
@@ -965,7 +962,7 @@ public class GitHubHookControllerTests
         }
 
         public HttpClient Client { get; }
-        public TestAppFactory Factory { get; }
+        public TestAppFactory<DotNetStatusEmptyTestStartup> Factory { get; }
         public MockHttpClientFactory MockClientFactory { get; }
 
         public void VerifyAll()
