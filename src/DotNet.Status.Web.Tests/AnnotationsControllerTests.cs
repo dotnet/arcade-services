@@ -2,16 +2,12 @@ using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Options;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.Web.Authentication.Tests;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DotNet.Status.Web.Tests;

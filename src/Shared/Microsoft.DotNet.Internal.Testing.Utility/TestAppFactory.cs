@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Internal.Testing.Utility;
 
-public class TestAppFactory<TEmptyTestStartup> : WebApplicationFactory<TEmptyTestStartup> where TEmptyTestStartup : class
+public class TestAppFactory<TTestStartup> : WebApplicationFactory<TTestStartup> where TTestStartup : class
 {
     private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
     private Action<IServiceCollection> _configureServices;
@@ -27,7 +27,7 @@ public class TestAppFactory<TEmptyTestStartup> : WebApplicationFactory<TEmptyTes
 
     protected override IWebHostBuilder CreateWebHostBuilder()
     {
-        return WebHost.CreateDefaultBuilder<TEmptyTestStartup>(Array.Empty<string>());
+        return WebHost.CreateDefaultBuilder<TTestStartup>(Array.Empty<string>());
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
