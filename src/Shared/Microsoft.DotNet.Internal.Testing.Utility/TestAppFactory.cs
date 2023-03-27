@@ -1,11 +1,11 @@
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Internal.Testing.Utility;
 

@@ -115,7 +115,7 @@ public class AnnotationsControllerTests
 
         public TestData()
         {
-            var factory = new TestAppFactory<EmptyTestStartup>();
+            var factory = new TestAppFactory<DotNetStatusEmptyTestStartup>();
 
             factory.ConfigureServices(services =>
             {
