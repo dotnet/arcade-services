@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <IsPackable>true</IsPackable>
+    <IsShipping>false</IsShipping>
   </PropertyGroup>
 
   <ItemGroup>
