@@ -4,6 +4,10 @@
       {
         "placeholder": "  hasWebHookSecret: boolean",
         "_justification": "The word secret is not a secret"
+      },
+      {
+        "hash": "0wmzz0zI9MmVLebdqWxSIJ9uxLJ13oIQKoWkEWrmViw=",
+        "_justification": "SecretReference is the name of a Type. It is not a secret."
       }
     ]
 }
