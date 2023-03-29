@@ -43,6 +43,5 @@
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions\Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
-    <ProjectReference Include="..\Shared\Microsoft.DotNet.Web.Authentication.Tests\Microsoft.DotNet.Web.Authentication.Tests.csproj" />
   </ItemGroup>
 </Project>

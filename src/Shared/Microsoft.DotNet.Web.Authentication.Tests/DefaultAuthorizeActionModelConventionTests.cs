@@ -158,7 +158,7 @@ public class DefaultAuthorizeActionModelConventionTests
 
     private HttpClient CreateHttpClient(string user = null, string role = null)
     {
-        var factory = new TestAppFactory();
+        var factory = new TestAppFactory<EmptyTestStartup>();
         factory.ConfigureServices(services =>
             {
                 services.AddControllers(o =>
