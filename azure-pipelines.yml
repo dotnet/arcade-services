@@ -159,7 +159,6 @@ stages:
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
             -prepareMachine
-            -platform x64
             $(_InternalBuildArgs)
             $(_ProductionArgs)
             /p:Test=false
