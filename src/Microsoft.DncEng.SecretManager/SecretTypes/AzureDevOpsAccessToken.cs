@@ -51,7 +51,7 @@ public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Paramete
         
     }
 
-    private async Task<VssConnection> ConnectToAzDo(string userName, string password, CancellationToken cancellationToken)
+    private static async Task<VssConnection> ConnectToAzDo(string userName, string password, CancellationToken cancellationToken)
     {
         using var oauthClient = new HttpClient();
         var values = new Dictionary<string, string>
@@ -67,7 +67,13 @@ public class AzureDevOpsAccessToken : SecretType<AzureDevOpsAccessToken.Paramete
         using var response = await oauthClient.PostAsync(new Uri("https://login.microsoftonline.com/microsoft.onmicrosoft.com/oauth2/token"), content, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            throw new Exception(await response.Content.ReadAsStringAsync(cancellationToken));
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (errorContent.Contains("AADSTS50079"))
+            {
+                throw new Exception("Failed to get a token from AzDO. Please connect to CORPNET and try again." + Environment.NewLine + Environment.NewLine + errorContent);
+            }
+
+            throw new Exception(errorContent);
         }
 
         var result = await response.Content.ReadFromJsonAsync<OauthAccessTokenResponse>(cancellationToken: cancellationToken);
