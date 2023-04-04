@@ -16,7 +16,7 @@ public class BuildLogScraper : IBuildLogScraper
     private readonly IClientFactory<IAzureDevOpsClient> _azureDevOpsClientFactory;
 
     // Example: Environment: windows-latest
-    private static readonly Regex _azurePipelinesRegex = new Regex(@"Environment: (\S+)");
+    private static readonly Regex _azurePipelinesRegex = new Regex(@"Image: (\S+)");
     // Example: Image: build.ubuntu.1804.amd64
     private static readonly Regex _oneESRegex = new Regex(@"Image: (\S+)");
     // Example: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
