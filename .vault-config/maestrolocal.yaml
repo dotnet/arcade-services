@@ -81,3 +81,23 @@ secrets:
         name: dn-bot-account-redmond
       organizations: dnceng
       scopes: packaging_manage
+
+  dn-bot-dnceng-build-r:
+    type: azure-devops-access-token
+    parameters:
+      domainAccountName: dn-bot
+      domainAccountSecret:
+        location: helixkv
+        name: dn-bot-account-redmond
+      organizations: dnceng
+      scopes: build
+      
+  dn-bot-dnceng-public-build-r:
+    type: azure-devops-access-token
+    parameters:
+      domainAccountName: dn-bot
+      domainAccountSecret:
+        location: helixkv
+        name: dn-bot-account-redmond
+      organizations: dnceng-public
+      scopes: build

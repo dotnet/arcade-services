@@ -28,12 +28,12 @@
   "AzureDevOpsSettings": {
     "dnceng": {
       "Organization": "dnceng",
-      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "AccessToken": "[vault(dn-bot-dnceng-build-r)]",
       "MaxParallelRequests": 4
     },
     "dnceng-public": {
       "Organization": "dnceng-public",
-      "AccessToken": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]",
+      "AccessToken": "[vault(dn-bot-dnceng-public-build-r]",
       "MaxParallelRequests": 4
     }
   }
