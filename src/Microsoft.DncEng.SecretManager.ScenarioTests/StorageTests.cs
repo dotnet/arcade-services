@@ -21,6 +21,7 @@ namespace Microsoft.DncEng.SecretManager.Tests
         const string TableSasNamePrefix = "azure-storage-table-sas-uri";
         const string ContainerSasUriNamePrefix = "azure-storage-container-sas-uri";
         const string ContainerSasTokenNamePrefix = "azure-storage-container-sas-token";
+        const string StorageSasUriTokenNamePrefix = "azure-storage-account-sas-uri";
         const string KeyNamePrefix = "azure-storage-key";
         const string AccountKeyPrefix = "AccountKey=";
 
@@ -76,6 +77,14 @@ secrets:
     parameters:
       ConnectionString: {ConnectionStringNamePrefix}{{0}}
       Container: test
+      Permissions: l
+  {StorageSasUriTokenNamePrefix}{{0}}:
+    type: azure-storage-account-sas-uri
+    owner: scenarioTests
+    description: storage account sas URI
+    parameters:
+      ConnectionString: {ConnectionStringNamePrefix}{{0}}
+      Service: blob
       Permissions: l";
 
 
@@ -89,6 +98,7 @@ secrets:
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
             string containerSasUriSecretName = ContainerSasUriNamePrefix + nameSuffix;
             string containerSasTokenSecretName = ContainerSasTokenNamePrefix + nameSuffix;
+            string storageSasUriTokenSecretName = StorageSasUriTokenNamePrefix + nameSuffix;
             string manifest = string.Format(Manifest, nameSuffix);
 
             await ExecuteSynchronizeCommand(manifest);
@@ -111,6 +121,8 @@ secrets:
             AssertValidSasUri(containerSasUriSecret.Value.Value);
             Response<KeyVaultSecret> containerSasTokenSecret = await client.GetSecretAsync(containerSasTokenSecretName);
             AssertValidSas(containerSasTokenSecret.Value.Value);
+            Response<KeyVaultSecret> storageSasUriTokenSecret = await client.GetSecretAsync(storageSasUriTokenSecretName);
+            AssertValidSas(storageSasUriTokenSecret.Value.Value);
         }
 
         [Test]
@@ -123,6 +135,7 @@ secrets:
             string tableSasSecretName = TableSasNamePrefix + nameSuffix;
             string containerSasUriSecretName = ContainerSasUriNamePrefix + nameSuffix;
             string containerSasTokenSecretName = ContainerSasTokenNamePrefix + nameSuffix;
+            string storageSasUriTokenSecretName = StorageSasUriTokenNamePrefix + nameSuffix;
             string manifest = string.Format(Manifest, nameSuffix);
 
             SecretClient client = GetSecretClient();
@@ -139,6 +152,8 @@ secrets:
             await UpdateNextRotationTagIntoFuture(client, containerSasUriSecret.Value);
             Response<KeyVaultSecret> containerSasTokenSecret = await client.SetSecretAsync(containerSasTokenSecretName, "TEST");
             await UpdateNextRotationTagIntoFuture(client, containerSasTokenSecret.Value);
+            Response<KeyVaultSecret> storageSasUriTokenSecret = await client.SetSecretAsync(storageSasUriTokenSecretName, "TEST");
+            await UpdateNextRotationTagIntoFuture(client, storageSasUriTokenSecret.Value);
 
 
             HashSet<string> accessKeys = await GetAccessKeys();
@@ -168,6 +183,8 @@ secrets:
             AssertValidSasUri(containerSasUriSecret.Value.Value);
             containerSasTokenSecret = await client.GetSecretAsync(containerSasTokenSecretName);
             AssertValidSas(containerSasTokenSecret.Value.Value);
+            storageSasUriTokenSecret = await client.GetSecretAsync(storageSasUriTokenSecretName);
+            AssertValidSas(storageSasUriTokenSecret.Value.Value);
         }
 
         [OneTimeTearDown]
