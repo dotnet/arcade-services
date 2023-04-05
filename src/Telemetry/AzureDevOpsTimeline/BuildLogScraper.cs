@@ -15,10 +15,13 @@ public class BuildLogScraper : IBuildLogScraper
     private readonly ILogger<BuildLogScraper> _logger;
     private readonly IClientFactory<IAzureDevOpsClient> _azureDevOpsClientFactory;
 
-    // Example: Environment: windows-latest
+    // Example: Image: windows-latest
     private static readonly Regex _azurePipelinesRegex = new Regex(@"Image: (\S+)");
-    // Example: Image: build.ubuntu.1804.amd64
-    private static readonly Regex _oneESRegex = new Regex(@"Image: (\S+)");
+    // Example: 2023-04-04T15:46:13.8907100Z SKU: Standard_D4a_v4
+    //          2023-04-04T15:46:13.8907217Z Image: windows.vs2019.amd64
+    // or       2023-04-04T15:10:06.5649938Z SKU: Standard_D4a_v4
+    //          2023-04-04T15:10:06.5650033Z Image: 1es-windows-2022
+    private static readonly Regex _oneESRegex = new Regex(@"SKU:.+\n.+Image: (\S+)");
     // Example: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
     private static readonly Regex _dockerImageRegex = new Regex(@"mcr.microsoft.com\/dotnet-buildtools\/prereqs:\S+");
 

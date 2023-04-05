@@ -26,23 +26,43 @@ public class MockAzureClient : IAzureDevOpsClient
 
     public static string OneESImageName = "Build.Ubuntu.1804.Amd64";
     public static string MicrosoftHostedAgentImageName = "windows-2019";
+    public static string MmsOneESImageName = "1es-windows-2019";
     public static string OneESLogUrl = $"https://www.fakeurl.test/{OneESImageName}";
     public static string MicrosoftHostedAgentLogUrl = $"https://www.fakeurl.test/{MicrosoftHostedAgentImageName}";
-    public static string OneESLog = @$"SKU: Standard_D4_v3
-Image: {OneESImageName}
-Image Version: 2022.0219.013407";
-    public static string MicrosoftHostedLog = @$"SKU: Standard_D4_v3
-Environment: {MicrosoftHostedAgentImageName}
-Version: 20220223.1";
+    public static string MmsOneESLogUrl = $"https://www.fakeurl.test/{MmsOneESImageName}";
+    public static string OneESLog = $"""
+        2023-04-05T10:02:04.2858589Z ##[group]1ES Hosted Pool
+        2023-04-05T10:02:04.2858784Z SKU: Standard_D4a_v4
+        2023-04-05T10:02:04.2858877Z Image: {OneESImageName}
+        """;
+    public static string MicrosoftHostedLog = $"""
+        2023-04-05T08:34:15.6959600Z ##[group]Runner Image
+        2023-04-05T08:34:15.6959721Z Image: {MicrosoftHostedAgentImageName}
+        2023-04-05T08:34:15.6959819Z Version: 20230402.1
+        """;
+    public static string MmsOneESLog = $"""
+        2023-04-04T15:10:06.5649001Z ##[group]Runner Image
+        2023-04-04T15:10:06.5649079Z Image: {MicrosoftHostedAgentImageName}
+        2023-04-04T15:10:06.5649151Z Version: 20230326.1
+        2023-04-04T15:10:06.5649290Z Included Software: https://github.com/actions/runner-images/blob/win22/20230326.1/images/win/Windows2022-Readme.md
+        2023-04-04T15:10:06.5649490Z Image Release: https://github.com/actions/runner-images/releases/tag/win22%2F20230326.1
+        2023-04-04T15:10:06.5649608Z ##[endgroup]
+        2023-04-04T15:10:06.5649673Z ##[group]1ES Hosted Pool
+        2023-04-04T15:10:06.5649938Z SKU: Standard_D4a_v4
+        2023-04-04T15:10:06.5650033Z Image: {MmsOneESImageName}
+        2023-04-04T15:10:06.5650108Z Image Version: 60.0.0
+    """;
     public static string DockerImageName = "mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-mlnet-8bba86b-20190314145033";
     public static string DockerLogUrl = $"https://www.fakeurl.test/{DockerImageName}";
-    public static string DockerLog = $@"2022-08-04T08:00:55.3397230Z Docker client API version: '1.41'
-2022-08-04T08:00:55.3410985Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter 'label=82ff57'
-2022-08-04T08:00:55.3863389Z ##[command]/usr/bin/docker network prune --force --filter 'label=82ff57'
-2022-08-04T08:00:55.4450968Z ##[command]/usr/bin/docker pull mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-mlnet-8bba86b-20190314145033
-2022-08-04T08:00:55.8023661Z centos-7-mlnet-8bba86b-20190314145033: Pulling from dotnet-buildtools/prereqs
-2022-08-04T08:00:55.8024272Z a02a4930cb5d: Pulling fs layer
-2022-08-04T08:00:55.8024527Z 54355103c1c9: Pulling fs layer";
+    public static string DockerLog = $"""
+        2022-08-04T08:00:55.3397230Z Docker client API version: '1.41'
+        2022-08-04T08:00:55.3410985Z ##[command]/usr/bin/docker ps --all --quiet --no-trunc --filter 'label=82ff57'
+        2022-08-04T08:00:55.3863389Z ##[command]/usr/bin/docker network prune --force --filter 'label=82ff57'
+        2022-08-04T08:00:55.4450968Z ##[command]/usr/bin/docker pull {DockerImageName}
+        2022-08-04T08:00:55.8023661Z centos-7-mlnet-8bba86b-20190314145033: Pulling from dotnet-buildtools/prereqs
+        2022-08-04T08:00:55.8024272Z a02a4930cb5d: Pulling fs layer
+        2022-08-04T08:00:55.8024527Z 54355103c1c9: Pulling fs layer
+    """;
 
     private readonly IDictionary<string, string> _urlDictionary;
 

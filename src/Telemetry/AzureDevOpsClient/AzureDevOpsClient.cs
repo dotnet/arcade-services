@@ -167,14 +167,17 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader reader = new StreamReader(logStream);
-        string line;
-        while ((line = reader.ReadLine()) != null)
+        // The OneES regex needs two lines to correctly find the match
+        string firstLine = reader.ReadLine();
+        string secondLine;
+        while ((secondLine = reader.ReadLine()) != null)
         {
-            var imageName = findImageName(line);
+            var imageName = findImageName($"{firstLine}{Environment.NewLine}{secondLine}");
             if (imageName != null)
             {
                 return imageName;
             }
+            firstLine = secondLine;
         }
 
         return null;

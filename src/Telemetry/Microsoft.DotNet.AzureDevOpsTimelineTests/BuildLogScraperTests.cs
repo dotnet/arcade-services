@@ -90,6 +90,20 @@ public partial class BuildLogScraperTests
     }
 
     [Test]
+    public async Task BuildLogScraperShouldExtractMmsOneESHostedPoolImageName()
+    {
+        await using TestData testData = await TestData.Default
+            .WithMockRequest((MockAzureClient.MmsOneESLogUrl, MockAzureClient.MmsOneESLog))
+            .BuildAsync();
+
+        var imageName = await testData.Controller.ExtractOneESHostedPoolImageNameAsync(
+                       _project,
+                        MockAzureClient.MmsOneESLogUrl,
+                        CancellationToken.None);
+        Assert.AreEqual(MockAzureClient.MmsOneESImageName, imageName);
+    }
+
+    [Test]
     public async Task BuildLogScraperShouldExtractDockerImageName()
     {
         await using TestData testData = await TestData.Default
