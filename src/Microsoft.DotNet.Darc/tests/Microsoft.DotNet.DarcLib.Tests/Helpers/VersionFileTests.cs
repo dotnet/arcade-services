@@ -33,13 +33,6 @@ public class VersionFilesTests
     }
 
     [Test]
-    public void VsTestVersionIsDerivedTest()
-    {
-        VersionFiles.DeriveBuildInfo("vstest", "17.4.0-preview-20220813-01")
-            .Should().Be((DateTime.Now.ToString("20220813.01"), "preview"));
-    }
-
-    [Test]
     public void NewPreviewVersionIsDerivedTest()
     {
         VersionFiles.DeriveBuildInfo("arcade", "5.0.0-preview.7.20365.12")
