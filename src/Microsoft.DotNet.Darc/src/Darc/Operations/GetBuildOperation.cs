@@ -57,7 +57,7 @@ internal class GetBuildOperation : Operation
                 var subscriptions = await remote.GetSubscriptionsAsync();
                 var possibleRepos = subscriptions
                     .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
-                    .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
+                    .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))                    
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 matchingBuilds = new List<Build>();
@@ -65,6 +65,8 @@ internal class GetBuildOperation : Operation
                 {
                     matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));
                 }
+
+                matchingBuilds = matchingBuilds.GroupBy(build => UxHelpers.GetTextBuildDescription(build), build => build).Select(group => group.First()).ToList();
             }
             else
             {
