@@ -5,8 +5,8 @@ using Microsoft.DncEng.CommandLineLib;
 
 namespace Microsoft.DncEng.SecretManager.SecretTypes;
 
-[Name("azure-storage-account-sas-token")]
-public class AzureStorageAccountSas : SecretType<AzureStorageAccountSas.Parameters>
+[Name("azure-storage-account-sas-uri")]
+public class AzureStorageAccountSasUri : SecretType<AzureStorageAccountSasUri.Parameters>
 {
     public class Parameters
     {
@@ -17,7 +17,7 @@ public class AzureStorageAccountSas : SecretType<AzureStorageAccountSas.Paramete
 
     private readonly ISystemClock _clock;
 
-    public AzureStorageAccountSas(ISystemClock clock)
+    public AzureStorageAccountSasUri(ISystemClock clock)
     {
         _clock = clock;
     }
@@ -29,7 +29,9 @@ public class AzureStorageAccountSas : SecretType<AzureStorageAccountSas.Paramete
 
         string connectionString = await context.GetSecretValue(parameters.ConnectionString);
         (string accountUri, string sas) = StorageUtils.GenerateBlobAccountSas(connectionString, parameters.Permissions, parameters.Service, expiresOn);
+        string uriWithSas = accountUri + sas;
 
-        return new SecretData(sas, expiresOn, nextRotationOn);
+        return new SecretData(uriWithSas, expiresOn, nextRotationOn);
     }
 }
+
