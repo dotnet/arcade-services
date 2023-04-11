@@ -173,7 +173,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using StreamReader reader = new StreamReader(logStream);
         int regexIndex = 0;
         string line;
-        while ((line = reader.ReadLine()) != null)
+        while ((line = await reader.ReadLineAsync()) != null)
         {
             if (TryMatchRegex(line, regexes[regexIndex], out string imageName))
             {
