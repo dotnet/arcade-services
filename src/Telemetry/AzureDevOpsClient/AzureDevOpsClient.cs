@@ -184,9 +184,15 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
                     return imageName;
                 }
             }
-            else
+            else if (regexIndex > 0)
             {
                 regexIndex = 0;
+
+                // We need to check if the line we failed on matches the first regex in the list so we don't skip it
+                if (TryMatchRegex(line, regexes[regexIndex], out imageName))
+                {
+                    regexIndex++;
+                }
             }
         }
 
