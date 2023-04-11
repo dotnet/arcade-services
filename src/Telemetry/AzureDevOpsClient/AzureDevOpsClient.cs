@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -155,29 +156,38 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         return JsonConvert.DeserializeObject<WorkItem>(json);
     }
 
+    /// <summary>
+    /// The method reads the logs as a stream, line by line and tries to match the regexes in order. 
+    /// If the regexes are matched in order, the last match is returned.
+    /// </summary>
     public async Task<string> TryGetImageName(
         string logUri,
-        Func<string, string> findImageName,
+        Regex[] regexes,
         CancellationToken cancellationToken)
     {
-
         using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader reader = new StreamReader(logStream);
-        // The OneES regex needs two lines to correctly find the match
-        string firstLine = reader.ReadLine();
-        string secondLine;
-        while ((secondLine = reader.ReadLine()) != null)
+        int regexIndex = 0;
+        string line;
+        while ((line = reader.ReadLine()) != null)
         {
-            var imageName = findImageName($"{firstLine}{Environment.NewLine}{secondLine}");
-            if (imageName != null)
+            if (TryMatchRegex(line, regexes[regexIndex], out string imageName))
             {
-                return imageName;
+                regexIndex++;
+
+                if (regexIndex == regexes.Length)
+                {
+                    return imageName;
+                }
             }
-            firstLine = secondLine;
+            else
+            {
+                regexIndex = 0;
+            }
         }
 
         return null;
@@ -188,6 +198,19 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         var projects = await ListProjectsAsync();
         var map = projects.ToDictionary(p => p.Id, p => p.Name);
         return map.GetValueOrDefault(id);
+    }
+
+    private bool TryMatchRegex(string line, Regex regex, out string result)
+    {
+        var match = regex.Match(line);
+        if (match.Success)
+        {
+            result = match.Groups[1].Value;
+            return true;
+        }
+
+        result = string.Empty;
+        return false;
     }
 
     private async Task<string> CreateWorkItem(string project, string type, Dictionary<string, string> fields, CancellationToken cancellationToken)

@@ -132,7 +132,7 @@ public class MockAzureClient : IAzureDevOpsClient
         throw new NotImplementedException();
     }
 
-    public Task<string> TryGetImageName(string logUri, Func<string, string> findImageName, CancellationToken cancellationToken)
+    public Task<string> TryGetImageName(string logUri, Regex[] regexes, CancellationToken cancellationToken)
     {
         return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
     }
