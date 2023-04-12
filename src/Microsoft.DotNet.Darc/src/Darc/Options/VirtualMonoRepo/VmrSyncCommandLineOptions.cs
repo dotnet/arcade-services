@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
 {
-    [Option("additional-remotes", Required = false, Separator = ',', HelpText =
+    [Option("additional-remotes", Required = false, HelpText =
         "Comma separated list of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
         "Example: installer:https://github.com/myfork/installer,sdk:/local/path/to/sdk")]
     public string AdditionalRemotes { get; set; }
