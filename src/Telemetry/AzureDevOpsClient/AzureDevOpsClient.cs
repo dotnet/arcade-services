@@ -163,8 +163,8 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     }
 
     /// <summary>
-    /// The method reads the logs as a stream, line by line and tries to match the regexes in order. 
-    /// If the regexes are matched in order, the last match is returned.
+    /// The method reads the logs as a stream, line by line and tries to match the regexes in order, one regex per line. 
+    /// If the consecutive regexes match the lines, the last match is returned.
     /// </summary>
     public async Task<string?> TryGetImageName(
         string logUri,
@@ -200,7 +200,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
             }
             else if (regexIndex > 0)
             {
-                // Add the line that we missed on to the cache, it might fit the 
+                // Add the line that we missed on to the cache, it might fit the regex sequence when we go over the cache
                 lineCache.Enqueue(line);
                 regexIndex = 0;
 
@@ -208,7 +208,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
                 while (lineCache.Count > 0)
                 {
                     var cachedLine = lineCache.Dequeue();
-                    if (TryMatchRegex(cachedLine, regexes[regexIndex], out result))
+                    if (TryMatchRegex(cachedLine, regexes[regexIndex], out _))
                     {
                         regexIndex++;
                     }
