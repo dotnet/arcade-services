@@ -179,25 +179,43 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using StreamReader reader = new StreamReader(logStream);
         int regexIndex = 0;
         string? line;
+        Queue<string> lineCache = new Queue<string>();
         while ((line = await reader.ReadLineAsync()) != null)
         {
-            if (TryMatchRegex(line, regexes[regexIndex], out string? imageName))
+            if (TryMatchRegex(line, regexes[regexIndex], out string? result))
             {
+                // We need to cache lines to check the regex sequence again in case of a miss.
+                // We don't want to cache the line that was already matched by the first regex
+                if (regexIndex > 0)
+                {
+                    lineCache.Enqueue(line);
+                }
+
                 regexIndex++;
 
                 if (regexIndex == regexes.Length)
                 {
-                    return imageName;
+                    return result;
                 }
             }
             else if (regexIndex > 0)
             {
+                // Add the line that we missed on to the cache, it might fit the 
+                lineCache.Enqueue(line);
                 regexIndex = 0;
 
-                // We need to check if the line we failed on matches the first regex in the list so we don't skip it
-                if (TryMatchRegex(line, regexes[regexIndex], out imageName))
+                // We missed, time to go back to the cache and look if the sequence there will match
+                while (lineCache.Count > 0)
                 {
-                    regexIndex++;
+                    var cachedLine = lineCache.Dequeue();
+                    if (TryMatchRegex(cachedLine, regexes[regexIndex], out result))
+                    {
+                        regexIndex++;
+                    }
+                    else
+                    {
+                        regexIndex = 0;
+                    }
                 }
             }
         }
