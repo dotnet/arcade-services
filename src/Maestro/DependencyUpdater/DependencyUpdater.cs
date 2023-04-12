@@ -230,6 +230,12 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
                     .ThenInclude(bc => bc.Build)
                     .FirstOrDefaultAsync(cancellationToken);
 
+                if (subscriptionWithBuilds == null)
+                {
+                    Logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
+                    continue;
+                }
+
                 Build latestBuildInTargetChannel = subscriptionWithBuilds.Channel.BuildChannels.Select(bc => bc.Build)
                     .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
                     .OrderByDescending(b => b.DateProduced)
