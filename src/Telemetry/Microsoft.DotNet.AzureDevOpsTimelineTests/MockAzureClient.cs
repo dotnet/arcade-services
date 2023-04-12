@@ -4,17 +4,14 @@
 
 using Kusto.Cloud.Platform.Utils;
 using Microsoft.DotNet.Internal.AzureDevOps;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.AzureDevOpsTimeline.Tests;
 
 /// <summary>
@@ -64,12 +61,12 @@ public class MockAzureClient : IAzureDevOpsClient
         2022-08-04T08:00:55.8024527Z 54355103c1c9: Pulling fs layer
     """;
 
-    private readonly IDictionary<string, string> _urlDictionary;
+    private readonly IDictionary<string, string?> _urlDictionary;
 
     public MockAzureClient()
     {
         Builds = new Dictionary<Build, List<Timeline>>();
-        _urlDictionary = new Dictionary<string, string>()
+        _urlDictionary = new Dictionary<string, string?>()
         {
             { OneESLogUrl, OneESImageName },
             { MicrosoftHostedAgentLogUrl, MicrosoftHostedAgentImageName},
@@ -80,7 +77,7 @@ public class MockAzureClient : IAzureDevOpsClient
     public MockAzureClient(Dictionary<Build, List<Timeline>> builds)
     {
         Builds = builds;
-        _urlDictionary = new Dictionary<string, string>()
+        _urlDictionary = new Dictionary<string, string?>()
         {
             { OneESLogUrl, OneESImageName },
             { MicrosoftHostedAgentLogUrl, MicrosoftHostedAgentImageName},
@@ -93,51 +90,51 @@ public class MockAzureClient : IAzureDevOpsClient
         return Task.FromResult(Builds.Keys.ToArray());
     }
 
-    public Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
+    public Task<Timeline?> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
     {
         return Task.FromResult(Builds
             .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
-            .Value.OrderByDescending(timeline => timeline.LastChangedOn).First());
+            .Value.OrderByDescending(timeline => timeline.LastChangedOn).FirstOrDefault());
     }
 
-    public Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
+    public Task<Timeline?> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
     {
         return Task.FromResult(Builds
             .Single(build => build.Key.Id == buildId && build.Key.Project.Name == project)
-            .Value.Single(timeline => timeline.Id == timelineId));
+            .Value.SingleOrDefault(timeline => timeline.Id == timelineId));
     }
 
-    public Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    public Task<Build?> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    public Task<(BuildChange[]? changes, int? truncatedChangeCount)?> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
+    public Task<BuildChangeDetail?> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<Internal.AzureDevOps.AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+    public Task<Internal.AzureDevOps.AzureDevOpsProject[]?> ListProjectsAsync(CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
 
-    public Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
+    public Task<WorkItem?> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
 
-    public Task<string> TryGetImageName(string logUri, Regex[] regexes, CancellationToken cancellationToken)
+    public Task<string?> TryGetImageName(string logUri, Regex[] regexes, CancellationToken cancellationToken)
     {
-        return Task.FromResult(_urlDictionary.GetOrDefault(logUri, ""));
+        return Task.FromResult(_urlDictionary.GetOrDefault(logUri, null));
     }
 
-    public Task<string> GetProjectNameAsync(string id)
+    public Task<string?> GetProjectNameAsync(string id)
     {
         throw new NotImplementedException();
     }

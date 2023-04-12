@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -15,6 +16,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
+#nullable enable
 
 namespace Microsoft.DotNet.Internal.AzureDevOps;
 
@@ -49,7 +52,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     /// </summary>
     private async Task<JsonResult> ListBuildsRaw(
         string project,
-        string continuationToken,
+        string? continuationToken,
         DateTimeOffset? minTime,
         int? limit,
         CancellationToken cancellationToken)
@@ -84,27 +87,30 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         int? limit = default)
     {
         var buildList = new List<Build>();
-        string continuationToken = null;
+        string? continuationToken = null;
         do
         {
             JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, limit, cancellationToken);
             continuationToken = result.ContinuationToken;
             JObject root = JObject.Parse(result.Body);
-            var array = (JArray) root["value"];
-            var builds = array.ToObject<Build[]>();
-            buildList.AddRange(builds);
+            var array = (JArray?) root["value"];
+            var builds = array?.ToObject<Build[]>();
+            if (builds != null)
+            {
+                buildList.AddRange(builds);
+            }
         } while (continuationToken != null && (!limit.HasValue || buildList.Count < limit.Value));
 
         return buildList.ToArray();
     }
 
-    public async Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+    public async Task<AzureDevOpsProject[]?> ListProjectsAsync(CancellationToken cancellationToken = default)
     {
         JsonResult result = await GetJsonResult($"_apis/projects?api-version=5.1", cancellationToken);
-        return JsonConvert.DeserializeObject<AzureDevOpsArrayOf<AzureDevOpsProject>>(result.Body).Value;
+        return JsonConvert.DeserializeObject<AzureDevOpsArrayOf<AzureDevOpsProject>>(result.Body)?.Value;
     }
 
-    public async Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    public async Task<Build?> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
     {
         StringBuilder builder = GetProjectApiRootBuilder(project);
         builder.Append($"build/builds/{buildId}?api-version=5.1");
@@ -112,13 +118,13 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         return JsonConvert.DeserializeObject<Build>(jsonResult.Body);
     }
 
-    public async Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+    public async Task<(BuildChange[]? changes, int? truncatedChangeCount)?> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
     {
         StringBuilder builder = GetProjectApiRootBuilder(project);
         builder.Append($"build/builds/{buildId}/changes?$top=10&api-version=5.1");
         JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
         var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
-        return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);
+        return (arrayOf?.Value, arrayOf?.Count - arrayOf?.Value.Length);
     }
 
     private async Task<string> GetTimelineRaw(string project, int buildId, CancellationToken cancellationToken)
@@ -135,19 +141,19 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         return (await GetJsonResult(builder.ToString(), cancellationToken)).Body;
     }
 
-    public async Task<Timeline> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
+    public async Task<Timeline?> GetTimelineAsync(string project, int buildId, CancellationToken cancellationToken)
     {
         string json = await GetTimelineRaw(project, buildId, cancellationToken);
         return JsonConvert.DeserializeObject<Timeline>(json);
     }
 
-    public async Task<Timeline> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
+    public async Task<Timeline?> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken)
     {
         string json = await GetTimelineRaw(project, buildId, timelineId, cancellationToken);
         return JsonConvert.DeserializeObject<Timeline>(json);
     }
 
-    public async Task<WorkItem> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
+    public async Task<WorkItem?> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken)
     {
         Dictionary<string, string> fields = new Dictionary<string, string>();
         fields.Add("System.Title", title);
@@ -160,7 +166,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     /// The method reads the logs as a stream, line by line and tries to match the regexes in order. 
     /// If the regexes are matched in order, the last match is returned.
     /// </summary>
-    public async Task<string> TryGetImageName(
+    public async Task<string?> TryGetImageName(
         string logUri,
         Regex[] regexes,
         CancellationToken cancellationToken)
@@ -172,10 +178,10 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader reader = new StreamReader(logStream);
         int regexIndex = 0;
-        string line;
+        string? line;
         while ((line = await reader.ReadLineAsync()) != null)
         {
-            if (TryMatchRegex(line, regexes[regexIndex], out string imageName))
+            if (TryMatchRegex(line, regexes[regexIndex], out string? imageName))
             {
                 regexIndex++;
 
@@ -199,14 +205,14 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         return null;
     }
 
-    public async Task<string> GetProjectNameAsync(string id)
+    public async Task<string?> GetProjectNameAsync(string id)
     {
         var projects = await ListProjectsAsync();
-        var map = projects.ToDictionary(p => p.Id, p => p.Name);
-        return map.GetValueOrDefault(id);
+        var map = projects?.ToDictionary(p => p.Id, p => p.Name);
+        return map?.GetValueOrDefault(id);
     }
 
-    private bool TryMatchRegex(string line, Regex regex, out string result)
+    private bool TryMatchRegex(string line, Regex regex, [NotNullWhen(true)] out string? result)
     {
         var match = regex.Match(line);
         if (match.Success)
@@ -215,7 +221,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
             return true;
         }
 
-        result = string.Empty;
+        result = default;
         return false;
     }
 
@@ -275,8 +281,8 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
                         response.EnsureSuccessStatusCode();
                         string responseBody = await response.Content.ReadAsStringAsync();
                         response.Headers.TryGetValues("x-ms-continuationtoken",
-                            out IEnumerable<string> continuationTokenHeaders);
-                        string continuationToken = continuationTokenHeaders?.FirstOrDefault();
+                            out IEnumerable<string>? continuationTokenHeaders);
+                        string? continuationToken = continuationTokenHeaders?.FirstOrDefault();
                         var result = new JsonResult(responseBody, continuationToken);
 
                         return result;
@@ -315,8 +321,8 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
                         response.EnsureSuccessStatusCode();
                         string responseBody = await response.Content.ReadAsStringAsync();
                         response.Headers.TryGetValues("x-ms-continuationtoken",
-                            out IEnumerable<string> continuationTokenHeaders);
-                        string continuationToken = continuationTokenHeaders?.FirstOrDefault();
+                            out IEnumerable<string>? continuationTokenHeaders);
+                        string? continuationToken = continuationTokenHeaders?.FirstOrDefault();
                         var result = new JsonResult(responseBody, continuationToken);
 
                         return result;
@@ -338,7 +344,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         }
     }
 
-    public async Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
+    public async Task<BuildChangeDetail?> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
     {
         var result = await GetJsonResult(changeUrl, cancellationToken);
         return JsonConvert.DeserializeObject<BuildChangeDetail>(result.Body);
@@ -348,7 +354,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
 public class BuildChangeDetail
 {
     [JsonProperty("_links")]
-    public BuildLinks Links { get; set; }
+    public BuildLinks? Links { get; set; }
 }
 
 public class BuildChange
@@ -409,12 +415,12 @@ public class AzureDevOpsProject
 
 public sealed class JsonResult
 {
-    public JsonResult(string body, string continuationToken)
+    public JsonResult(string body, string? continuationToken)
     {
         Body = body;
         ContinuationToken = continuationToken;
     }
 
     public string Body { get; }
-    public string ContinuationToken { get; }
+    public string? ContinuationToken { get; }
 }
