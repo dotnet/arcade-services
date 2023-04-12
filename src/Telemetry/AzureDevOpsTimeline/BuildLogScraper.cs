@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Internal.DependencyInjection;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline;
 
@@ -34,15 +35,15 @@ public class BuildLogScraper : IBuildLogScraper
     }
 
     public Task<string> ExtractMicrosoftHostedPoolImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken)
-        => ExtractImageNameAsync(project, logUri, new[] { _azurePipelinesRegex }, cancellationToken);
+        => ExtractImageNameAsync(project, logUri, new List<Regex>() { _azurePipelinesRegex }, cancellationToken);
 
     public Task<string> ExtractOneESHostedPoolImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken)
-        => ExtractImageNameAsync(project, logUri, new[] { _oneESSkuRegex, _oneESImageRegex }, cancellationToken);
+        => ExtractImageNameAsync(project, logUri, new List<Regex>() { _oneESSkuRegex, _oneESImageRegex }, cancellationToken);
 
     public Task<string> ExtractDockerImageNameAsync(AzureDevOpsProject project, string logUri, CancellationToken cancellationToken)
-        => ExtractImageNameAsync(project, logUri, new[] { _dockerImageRegex }, cancellationToken);
+        => ExtractImageNameAsync(project, logUri, new List<Regex>() { _dockerImageRegex }, cancellationToken);
 
-    private async Task<string> ExtractImageNameAsync(AzureDevOpsProject project, string logUri, Regex[] regexes, CancellationToken cancellationToken)
+    private async Task<string> ExtractImageNameAsync(AzureDevOpsProject project, string logUri, List<Regex> regexes, CancellationToken cancellationToken)
     {
         using var clientRef = _azureDevOpsClientFactory.GetClient(project.Organization);
         var client = clientRef.Value;

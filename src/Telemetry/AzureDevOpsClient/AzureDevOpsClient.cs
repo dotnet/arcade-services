@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -168,7 +169,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     /// </summary>
     public async Task<string?> TryGetImageName(
         string logUri,
-        Regex[] regexes,
+        List<Regex> regexes,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
@@ -177,47 +178,62 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader reader = new StreamReader(logStream);
-        int regexIndex = 0;
         string? line;
-        Queue<string> lineCache = new Queue<string>();
-        while ((line = await reader.ReadLineAsync()) != null)
+        Queue<string> lineCache = new();
+        // need to check if a new line will be loaded when the cache is full, it shouldn't because the first condition will tell it to exit the loop
+        while ((line = await reader.ReadLineAsync()) != null && lineCache.Count < regexes.Count())
         {
-            if (TryMatchRegex(line, regexes[regexIndex], out string? result))
+            lineCache.Enqueue(line);
+        }
+
+        // Check if we didn't even have enough lines to fill the cache
+        if (lineCache.Count < regexes.Count())
+        {
+            return null;
+        }
+
+        string? result;
+        do
+        {
+            result = CheckLineCache(lineCache, regexes);
+
+            if (result != null)
             {
-                // We need to cache lines to check the regex sequence again in case of a miss.
-                // We don't want to cache the line that was already matched by the first regex
-                if (regexIndex > 0)
-                {
-                    lineCache.Enqueue(line);
-                }
-
-                regexIndex++;
-
-                if (regexIndex == regexes.Length)
-                {
-                    return result;
-                }
+                return result;
             }
-            else if (regexIndex > 0)
+
+            lineCache.Dequeue();
+            if (line != null)
             {
-                // Add the line that we missed on to the cache, it might fit the regex sequence when we go over the cache
                 lineCache.Enqueue(line);
-                regexIndex = 0;
-
-                // We missed, time to go back to the cache and look if the sequence there will match
-                while (lineCache.Count > 0)
-                {
-                    var cachedLine = lineCache.Dequeue();
-                    if (TryMatchRegex(cachedLine, regexes[regexIndex], out _))
-                    {
-                        regexIndex++;
-                    }
-                    else
-                    {
-                        regexIndex = 0;
-                    }
-                }
             }
+        }
+        while ((line = await reader.ReadLineAsync()) != null);
+
+        // This will return the value if it finds something in the last cache, or null if not
+        return CheckLineCache(lineCache, regexes);
+    }
+
+    private string? CheckLineCache(IEnumerable<string> lineCache, IEnumerable<Regex> regexes)
+    {
+        string? result = null;
+        bool ok = true;
+
+        using var cacheEnum = lineCache.GetEnumerator();
+        using var regexEnum = regexes.GetEnumerator();
+        while (cacheEnum.MoveNext() && regexEnum.MoveNext())
+        {
+            ok &= TryMatchRegex(cacheEnum.Current, regexEnum.Current, out result);
+
+            if (!ok)
+            {
+                break;
+            }
+        }
+
+        if (ok)
+        {
+            return result;
         }
 
         return null;

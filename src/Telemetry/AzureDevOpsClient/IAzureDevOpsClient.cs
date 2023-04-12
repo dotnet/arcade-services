@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -23,6 +24,6 @@ public interface IAzureDevOpsClient
     public Task<Timeline?> GetTimelineAsync(string project, int buildId, string timelineId, CancellationToken cancellationToken);
     public Task<BuildChangeDetail?> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default);
     public Task<WorkItem?> CreateRcaWorkItem(string project, string title, CancellationToken cancellationToken = default);
-    public Task<string?> TryGetImageName(string logUri, Regex[] regexes, CancellationToken cancellationToken = default);
+    public Task<string?> TryGetImageName(string logUri, List<Regex> regexes, CancellationToken cancellationToken = default);
     public Task<string?> GetProjectNameAsync(string id);
 }
