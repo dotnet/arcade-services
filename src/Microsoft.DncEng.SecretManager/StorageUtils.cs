@@ -72,7 +72,7 @@ public static class StorageUtils
         return accessAccountPermissions;
     }
 
-    public static string GenerateBlobAccountSas(string connectionString, string permissions, string service, DateTimeOffset expiryTime)
+    public static (string accountUri, string sas) GenerateBlobAccountSas(string connectionString, string permissions, string service, DateTimeOffset expiryTime)
     {
         CloudStorageAccount account = CloudStorageAccount.Parse(connectionString);
         SharedAccessAccountServices serviceList = default(SharedAccessAccountServices);
@@ -106,7 +106,7 @@ public static class StorageUtils
             ResourceTypes = SharedAccessAccountResourceTypes.Service | SharedAccessAccountResourceTypes.Container | SharedAccessAccountResourceTypes.Object,
             Protocols = SharedAccessProtocol.HttpsOnly,
         });
-        return sas;
+        return (account.BlobStorageUri.PrimaryUri.AbsoluteUri, sas);
     }
 
     public static (string containerUri,string sas) GenerateBlobContainerSas(string connectionString, string containerName, string permissions, DateTimeOffset expiryTime)

@@ -85,12 +85,6 @@ public static class VersionFiles
 
         if (releaseParts.Length == 3)
         {
-            // VSTest uses full dates for the first part of their preview build numbers
-            if (repoName.Contains("vstest"))
-            {
-                return ($"{releaseParts[1]}.{releaseParts[2]}", releaseParts[0]);
-            }
-                
             if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
             {
                 if (datePart > 1 && datePart < 8 && buildPart > 1000 && buildPart < 10000)
