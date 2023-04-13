@@ -31,7 +31,7 @@ public class TryGetImageNameTests
         var client = new AzureDevOpsClient(new AzureDevOpsClientOptions(), _logger, mockHttpClientFactory);
         var regexes = regexStrings.Select(regex => new Regex(regex)).ToList();
 
-        var result = await client.TryGetImageName(EmptyUrl, regexes, CancellationToken.None);
+        var result = await client.GetImageName(EmptyUrl, regexes, CancellationToken.None);
 
         result.Should().Be(expectedResult);
     }

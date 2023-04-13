@@ -167,7 +167,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     /// The method reads the logs as a stream, line by line and tries to match the regexes in order, one regex per line. 
     /// If the consecutive regexes match the lines, the last match is returned.
     /// </summary>
-    public async Task<string?> TryGetImageName(
+    public async Task<string?> GetImageName(
         string logUri,
         List<Regex> regexes,
         CancellationToken cancellationToken)
@@ -179,7 +179,7 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
         using Stream logStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader reader = new StreamReader(logStream);
         string? line;
-        Queue<string> lineCache = new();
+        Queue<string> lineCache = new(regexes.Count);
         // need to check if a new line will be loaded when the cache is full, it shouldn't because the first condition will tell it to exit the loop
         while ((line = await reader.ReadLineAsync()) != null && lineCache.Count < regexes.Count())
         {
@@ -217,26 +217,9 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     private string? CheckLineCache(IEnumerable<string> lineCache, IEnumerable<Regex> regexes)
     {
         string? result = null;
-        bool ok = true;
 
-        using var cacheEnum = lineCache.GetEnumerator();
-        using var regexEnum = regexes.GetEnumerator();
-        while (cacheEnum.MoveNext() && regexEnum.MoveNext())
-        {
-            ok &= TryMatchRegex(cacheEnum.Current, regexEnum.Current, out result);
-
-            if (!ok)
-            {
-                break;
-            }
-        }
-
-        if (ok)
-        {
-            return result;
-        }
-
-        return null;
+        return lineCache.Zip(regexes, (line, regex) => (line, regex))
+            .All(pair => TryMatchRegex(pair.line, pair.regex, out result)) ? result : null;
     }
 
     public async Task<string?> GetProjectNameAsync(string id)

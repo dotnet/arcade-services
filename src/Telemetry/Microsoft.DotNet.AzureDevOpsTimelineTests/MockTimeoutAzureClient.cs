@@ -67,7 +67,7 @@ public class MockTimeoutAzureClient : IAzureDevOpsClient
         throw new NotImplementedException();
     }
 
-    public async Task<string?> TryGetImageName(string logUri, List<Regex> regexes, CancellationToken cancellationToken)
+    public async Task<string?> GetImageName(string logUri, List<Regex> regexes, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));

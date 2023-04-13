@@ -47,7 +47,7 @@ public class BuildLogScraper : IBuildLogScraper
     {
         using var clientRef = _azureDevOpsClientFactory.GetClient(project.Organization);
         var client = clientRef.Value;
-        var imageName = await client.TryGetImageName(logUri, regexes, cancellationToken);
+        var imageName = await client.GetImageName(logUri, regexes, cancellationToken);
 
         if (imageName == null)
         {
