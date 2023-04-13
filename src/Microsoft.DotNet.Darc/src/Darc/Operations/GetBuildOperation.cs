@@ -61,7 +61,7 @@ internal class GetBuildOperation : Operation
                 var subscriptions = await remote.GetSubscriptionsAsync();
                 var possibleRepos = subscriptions
                     .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
-                    .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))                    
+                    .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 matchingBuilds = new List<Build>();

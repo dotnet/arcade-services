@@ -97,7 +97,6 @@ public class GetBuildOperationTests
 
         var output = _consoleOutput.GetOuput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
-
     }
 
     [Test]
@@ -126,7 +125,6 @@ public class GetBuildOperationTests
             GitHubRepository = githubRepo,
         };
 
-      
         _remoteMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(build));
 
@@ -145,7 +143,6 @@ public class GetBuildOperationTests
 
         var output = _consoleOutput.GetOuput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
-
     }
 
 
