@@ -211,7 +211,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Authentica
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests", "src\Microsoft.DotNet.Darc\tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests\Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests.csproj", "{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Maestro.MergePolicyEvaluation", "src\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj", "{D16DB73B-4EDF-4E61-9392-238CF3800DE2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.MergePolicyEvaluation", "src\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj", "{D16DB73B-4EDF-4E61-9392-238CF3800DE2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDevOpsClient.Tests", "src\Telemetry\AzureDevOpsClient.Tests\AzureDevOpsClient.Tests.csproj", "{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1171,6 +1173,18 @@ Global
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x64.Build.0 = Release|Any CPU
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x86.ActiveCfg = Release|Any CPU
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2}.Release|x86.Build.0 = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|x64.Build.0 = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Debug|x86.Build.0 = Debug|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|x64.ActiveCfg = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|x64.Build.0 = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|x86.ActiveCfg = Release|Any CPU
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1242,6 +1256,7 @@ Global
 		{8A8A95E8-C834-4771-9FF8-82A65F5E2BE5} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{8B2E07FA-ED55-40B4-8D3B-F73B4BD641F8} = {C0B90032-033F-4C3E-809F-BD3339E1E313}
 		{D16DB73B-4EDF-4E61-9392-238CF3800DE2} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
+		{6CAC1E0D-C81E-4A97-A836-2FEB697C424D} = {0D9FE592-7EB7-4CEE-95E8-3379B98041C6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

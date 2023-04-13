@@ -535,12 +535,11 @@ public partial class AzurePipelinesControllerTests
                     )
                     .Returns(Task.FromResult(build));
             }
-
             mockAzureDevOpsClient
                 .Setup(
                     m => m.GetBuildChangesAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>())
                 )
-                .Returns(Task.FromResult((new BuildChange[0], 0)));
+                .Returns(Task.FromResult(((BuildChange[] changes, int? truncatedChangeCount)?)(new BuildChange[0], 0)));
             mockAzureDevOpsClient
                 .Setup(m => m.GetTimelineAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(new Timeline()));

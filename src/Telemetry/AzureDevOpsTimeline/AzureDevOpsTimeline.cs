@@ -383,7 +383,6 @@ public sealed class AzureDevOpsTimeline : IServiceImplementation
             {
                 var childTask = GetDockerImageName(project, record, throttleSemaphore, cancellationToken);
                 taskList.Add(childTask);
-                continue;
             }
         }
 
