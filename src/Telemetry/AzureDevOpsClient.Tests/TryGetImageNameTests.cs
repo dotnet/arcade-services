@@ -23,7 +23,7 @@ public class TryGetImageNameTests
     [TestCase(new string[] { "a", "b", "b", "c"}, new string[] { "([ab])", "([ab])", "(c)" }, "c")]
     [TestCase(new string[] { "a", "b", "b", "b", "b", "c" }, new string[] { "([ab])", "([ab])", "(c)" }, "c")]
     [TestCase(new string[] { "a", "c", "c" }, new string[] { "([ab])", "([ab])", "(c)" }, null)]
-    public async Task AzureDevOpsClientShouldReturnImageName(string[] lines, string[] regexStrings, string? expectedResult)
+    public async Task AzureDevOpsClientShouldMatchLogLines(string[] lines, string[] regexStrings, string? expectedResult)
     {
         var mockHttpClientFactory = new MockHttpClientFactory();
         var response = string.Join(Environment.NewLine, lines);
