@@ -2,12 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#nullable enable
+
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -19,8 +23,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetBuildOperation : Operation
 {
     GetBuildCommandLineOptions _options;
-    public GetBuildOperation(GetBuildCommandLineOptions options)
-        : base(options)
+    public GetBuildOperation(GetBuildCommandLineOptions options, IServiceCollection? services = null)
+        : base(options, services)
     {
         _options = options;
     }
@@ -33,9 +37,9 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IRemote remote = Provider.GetService<IRemote>() ?? RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-            List<Build> matchingBuilds = null;
+            List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
             {
                 if (!string.IsNullOrEmpty(_options.Repo) ||
@@ -65,8 +69,7 @@ internal class GetBuildOperation : Operation
                 {
                     matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));
                 }
-
-                matchingBuilds = matchingBuilds.GroupBy(build => UxHelpers.GetTextBuildDescription(build), build => build).Select(group => group.First()).ToList();
+                matchingBuilds = matchingBuilds.DistinctBy(build => UxHelpers.GetTextBuildDescription(build)).ToList(); 
             }
             else
             {
