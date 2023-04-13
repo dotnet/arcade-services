@@ -167,9 +167,9 @@ public sealed class AzureDevOpsClient : IAzureDevOpsClient
     /// The method reads the logs as a stream, line by line and tries to match the regexes in order, one regex per line. 
     /// If the consecutive regexes match the lines, the last match is returned.
     /// </summary>
-    public async Task<string?> GetImageName(
+    public async Task<string?> MatchLogLineSequence(
         string logUri,
-        List<Regex> regexes,
+        IReadOnlyList<Regex> regexes,
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, logUri);
