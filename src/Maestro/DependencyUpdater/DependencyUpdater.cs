@@ -217,32 +217,42 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         {
             var enabledSubscriptionsWithTargetFrequency = (await Context.Subscriptions
                     .Where(s => s.Enabled)
-                    .Include(s => s.Channel)
-                    .ThenInclude(c => c.BuildChannels)
-                    .ThenInclude(bc => bc.Build)
-                    .ToListAsync())
-                .Where(s => s.PolicyObject.UpdateFrequency == targetUpdateFrequency);
+                    .ToListAsync(cancellationToken))
+                    .Where(s => s.PolicyObject.UpdateFrequency == targetUpdateFrequency);
 
             int subscriptionsUpdated = 0;
             foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
             {
-                Build latestBuildInTargetChannel = subscription.Channel.BuildChannels.Select(bc => bc.Build)
+                Subscription subscriptionWithBuilds = await Context.Subscriptions
+                    .Where(s => s.Id == subscription.Id)
+                    .Include(s => s.Channel)
+                    .ThenInclude(c => c.BuildChannels)
+                    .ThenInclude(bc => bc.Build)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (subscriptionWithBuilds == null)
+                {
+                    Logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
+                    continue;
+                }
+
+                Build latestBuildInTargetChannel = subscriptionWithBuilds.Channel.BuildChannels.Select(bc => bc.Build)
                     .Where(b => (subscription.SourceRepository == b.GitHubRepository || subscription.SourceRepository == b.AzureDevOpsRepository))
                     .OrderByDescending(b => b.DateProduced)
                     .FirstOrDefault();
 
                 bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
-                                                              (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
+                    (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
 
                 if (isThereAnUnappliedBuildInTargetChannel)
                 {
-                    Logger.LogInformation($"Will update {subscription.Id} to build {latestBuildInTargetChannel.Id}");
+                    Logger.LogInformation("Will update {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
                     await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
                     subscriptionsUpdated++;
                 }
             }
 
-            Logger.LogInformation($"Updated '{subscriptionsUpdated}' subscriptions");
+            Logger.LogInformation("Updated '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
         }
     }
 
