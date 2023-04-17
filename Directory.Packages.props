@@ -11,9 +11,9 @@
     <!-- Note: These libraries can be loaded by Arcade SDK clients, which may already have a
          newer copy of this package loaded. When updating one, be aware of the other to prevent runtime issues
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
-    <PackageVersion Include="Azure.Core" Version="1.25.0" />
+    <PackageVersion Include="Azure.Core" Version="1.31.0" />
     <PackageVersion Include="Azure.Data.AppConfiguration" Version="1.0.0" />
-    <PackageVersion Include="Azure.Data.Tables" Version="12.6.1" />
+    <PackageVersion Include="Azure.Data.Tables" Version="12.8.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.5.0" />
