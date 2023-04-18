@@ -62,8 +62,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		CodeCoverage.runsettings = CodeCoverage.runsettings
 		Directory.Build.props = Directory.Build.props
 		Directory.Build.targets = Directory.Build.targets
+		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
-		eng\Packages.props = eng\Packages.props
 		eng\Versions.props = eng\Versions.props
 	EndProjectSection
 EndProject
@@ -213,7 +213,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Darc.Virtu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.MergePolicyEvaluation", "src\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj", "{D16DB73B-4EDF-4E61-9392-238CF3800DE2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureDevOpsClient.Tests", "src\Telemetry\AzureDevOpsClient.Tests\AzureDevOpsClient.Tests.csproj", "{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureDevOpsClient.Tests", "src\Telemetry\AzureDevOpsClient.Tests\AzureDevOpsClient.Tests.csproj", "{6CAC1E0D-C81E-4A97-A836-2FEB697C424D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
