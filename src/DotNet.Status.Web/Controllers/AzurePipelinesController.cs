@@ -301,9 +301,9 @@ public class AzurePipelinesController : ControllerBase
 
     private async Task<string> BuildChangesMessage(IAzureDevOpsClient client, Build build)
     {
-        (BuildChange[] changes, int truncatedChangeCount) = await client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
+        var buildChanges = await client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
         StringBuilder b = new StringBuilder();
-        foreach (BuildChange change in changes.OrEmpty())
+        foreach (BuildChange change in buildChanges.Value.changes)
         {
             string url = change.DisplayUri;
 
@@ -336,10 +336,10 @@ public class AzurePipelinesController : ControllerBase
             b.AppendLine(change.Message);
         }
 
-        if (truncatedChangeCount > 0)
+        if (buildChanges.Value.truncatedChangeCount > 0)
         {
             b.Append("- ... and ");
-            b.Append(truncatedChangeCount);
+            b.Append(buildChanges.Value.truncatedChangeCount);
             b.AppendLine(" more ...");
         }
 
