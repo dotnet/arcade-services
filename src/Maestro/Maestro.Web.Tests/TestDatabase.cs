@@ -65,7 +65,7 @@ public class TestDatabase : IDisposable
         {
             string databaseName = $"{TestDatabasePrefix}_{TestContext.CurrentContext.Test.ClassName.Split('.').Last()}_{TestContext.CurrentContext.Test.MethodName}_{DateTime.Now:yyyyMMddHHmmss}";
             TestContext.WriteLine($"Creating database '{databaseName}'");
-            await using (var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true"))
+            await using (var connection = new SqlConnection("Data Source=localhost\\SQLEXPRESS;Initial Catalog=master;Integrated Security=true")) // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
             {
                 await connection.OpenAsync();
 
