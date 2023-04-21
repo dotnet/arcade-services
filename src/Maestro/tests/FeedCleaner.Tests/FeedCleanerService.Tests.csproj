@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\FeedCleanerService\FeedCleanerService.csproj" />
-    <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
   </ItemGroup>
 
 </Project>
