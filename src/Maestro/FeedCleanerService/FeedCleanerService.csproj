@@ -21,11 +21,11 @@
     <PackageReference Include="Microsoft.ServiceFabric" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" />
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
+    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
