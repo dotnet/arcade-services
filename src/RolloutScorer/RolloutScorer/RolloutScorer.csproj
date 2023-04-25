@@ -14,7 +14,9 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="WindowsAzure.Storage" />
-    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="config.json">

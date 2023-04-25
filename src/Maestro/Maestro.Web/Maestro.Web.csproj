@@ -36,31 +36,31 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="System.Text.Encodings.Web" />
-    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
-    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
-    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
-    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection" />
-    <PackageReference Include="Microsoft.DotNet.Kusto" />
-    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
-    <PackageReference Include="Microsoft.DotNet.Web.Authentication" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
-    <PackageReferenceWithConfiguration Include="Microsoft.AspNetCore.ApiVersioning.Analyzers">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <OutputItemType>Analyzer</OutputItemType>
-      <SetPlatform>Platform=AnyCPU</SetPlatform>
-    </PackageReferenceWithConfiguration>
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection\Microsoft.DotNet.Internal.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
+    <ProjectReference Include="..\..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
-    
+    <ProjectReference Include="..\Microsoft.AspNetCore.ApiPagination\Microsoft.AspNetCore.ApiPagination.csproj" />
+    <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning.Swashbuckle\Microsoft.AspNetCore.ApiVersioning.Swashbuckle.csproj" />
+    <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning\Microsoft.AspNetCore.ApiVersioning.csproj" />
+    <ProjectReferenceWithConfiguration Include="..\Microsoft.AspNetCore.ApiVersioning.Analyzers\Microsoft.AspNetCore.ApiVersioning.Analyzers.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+      <SetPlatform>Platform=AnyCPU</SetPlatform>
+    </ProjectReferenceWithConfiguration>
+
     <ProjectReferenceWithConfiguration Include="..\maestro-angular\maestro-angular.proj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>

@@ -11,7 +11,10 @@
 
   <ItemGroup>
     <PackageReference Include="Mono.Options" />
-    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
   </ItemGroup>
 
 </Project>

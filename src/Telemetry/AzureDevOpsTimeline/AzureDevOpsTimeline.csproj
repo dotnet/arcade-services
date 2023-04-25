@@ -23,13 +23,13 @@
     <PackageReference Include="Microsoft.ServiceFabric" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" />
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
-    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
-    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
-    <PackageReference Include="Microsoft.DotNet.Kusto" />
-    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\AzureDevOpsClient\AzureDevOpsClient.csproj" />
   </ItemGroup>
 
