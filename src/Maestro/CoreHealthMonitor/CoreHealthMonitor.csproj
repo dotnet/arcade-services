@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -19,11 +19,8 @@
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Health\Microsoft.DotNet.Internal.Health.csproj" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Health" />
   </ItemGroup>
 
 </Project>

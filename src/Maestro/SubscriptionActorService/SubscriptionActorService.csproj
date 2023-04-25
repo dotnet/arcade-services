@@ -26,14 +26,14 @@
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.ServiceFabric.Actors" />
+    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
+    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
