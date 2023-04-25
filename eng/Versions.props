@@ -15,7 +15,6 @@
     <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23221.7</MicrosoftDotNetGitIssueManagerVersion>
     <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23221.7</MicrosoftDotNetVersionToolsVersion>
     <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
-    <CoreHealthMonitorVersion>1.1.0-beta.23221.1</CoreHealthMonitorVersion>
     <MicrosoftDotNetInternalLoggingVersion>1.1.0-beta.23221.1</MicrosoftDotNetInternalLoggingVersion>
     <MicrosoftAspNetCoreApiPaginationVersion>1.1.0-beta.23221.1</MicrosoftAspNetCoreApiPaginationVersion>
     <MicrosoftAspNetCoreApiVersioningVersion>1.1.0-beta.23221.1</MicrosoftAspNetCoreApiVersioningVersion>

@@ -23,7 +23,6 @@
     <PackageVersion Include="Azure.Storage.Queues" Version="12.11.0" />
     <PackageVersion Include="Castle.Core" Version="4.3.0" />
     <PackageVersion Include="CommandLineParser" Version="2.2.1" />
-    <PackageVersion Include="CoreHealthMonitor" Version="$(CoreHealthMonitorVersion)" /> 
     <PackageVersion Include="EntityFrameworkCore.Triggers" Version="1.1.1" />
     <PackageVersion Include="FluentAssertions" Version="5.10.3" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="8.6.2" />
