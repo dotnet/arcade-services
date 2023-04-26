@@ -43,20 +43,6 @@
         },
         {
           "Project": "internal",
-          "DefinitionPath": "\\dotnet\\source-indexer\\dotnet-source-indexer CI",
-          "Branches": [ "main" ],
-          "Assignee": "alperovi",
-          "IssuesId": "dotnet-arcade"
-        },
-        {
-          "Project": "internal",
-          "DefinitionPath": "\\dotnet\\arcade-services\\arcade-services-internal-ci",
-          "Branches": [ "main" ],
-          "Assignee": "riarenas",
-          "IssuesId": "dotnet-arcade"
-        },
-        {
-          "Project": "internal",
           "DefinitionPath": "\\dotnet\\arcade-services\\dotnet-arcade-services-weekly",
           "Branches": [ "main" ],
           "IssuesId": "dotnet-arcade-frops"
