@@ -36,7 +36,7 @@ public interface ISourceComponent
 
 public interface IVersionedSourceComponent : ISourceComponent
 {
-    string PackageVersion { get; }
+    string? PackageVersion { get; }
 }
 
 /// <summary>
@@ -69,13 +69,13 @@ public abstract class ManifestRecord : IComparable<ISourceComponent>, ISourceCom
 
 public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
 {
-    public RepositoryRecord(string path, string remoteUri, string commitSha, string packageVersion) 
+    public RepositoryRecord(string path, string remoteUri, string commitSha, string? packageVersion) 
         : base(path, remoteUri, commitSha)
     {
         PackageVersion = packageVersion;
     }
 
-    public string PackageVersion { get; set; } = null!;
+    public string? PackageVersion { get; set; }
 }
 
 public class SubmoduleRecord : ManifestRecord

@@ -48,11 +48,15 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
         }
     }
 
-    public void UpdateVersion(string repository, string sha, string packageVersion)
+    public void UpdateVersion(string repository, string sha, string? packageVersion)
     {
         var key = SanitizePropertyName(repository);
         Versions[key + ShaPropertyName] = sha;
-        Versions[key + PackageVersionPropertyName] = packageVersion;
+
+        if (packageVersion != null)
+        {
+            Versions[key + PackageVersionPropertyName] = packageVersion;
+        }
     }
 
     public bool DeleteVersion(string repository)

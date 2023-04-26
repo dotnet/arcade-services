@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -37,9 +38,6 @@ public interface IVmrDependencyTracker
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
-    // TODO: https://github.com/dotnet/source-build/issues/2250
-    private const string DefaultVersion = "8.0.100";
-
     private readonly AllVersionsPropsFile _repoVersions;
     private readonly ISourceManifest _sourceManifest;
     private readonly LocalPath _allVersionsFilePath;
@@ -79,19 +77,20 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public void UpdateDependencyVersion(VmrDependencyUpdate update)
     {
-        // TODO: https://github.com/dotnet/source-build/issues/2250
-        if (update.TargetVersion is null)
-        {
-            update = update with { TargetVersion = DefaultVersion };
-        }
-
         _repoVersions.UpdateVersion(update.Mapping.Name, update.TargetRevision, update.TargetVersion);
         _repoVersions.SerializeToXml(_allVersionsFilePath);
 
         _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
         _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
 
-        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, update.TargetVersion);
+        // Root repository of an update does not have a package version associated with it
+        // For installer, we leave whatever was there (e.g. 8.0.100)
+        // For one-off non-recursive updates of repositories, we keep the previous
+        string packageVersion = update.TargetVersion
+            ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
+            ?? "0.0.0";
+
+        var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
         
         var gitInfo = new GitInfoFile
         {
@@ -99,7 +98,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             OfficialBuildId = buildId,
             PreReleaseVersionLabel = releaseLabel,
             IsStable = string.IsNullOrWhiteSpace(releaseLabel),
-            OutputPackageVersion = update.TargetVersion,
+            OutputPackageVersion = packageVersion,
         };
 
         gitInfo.SerializeToXml(GetGitInfoFilePath(update.Mapping));
