@@ -10,9 +10,9 @@
     <PackageReference Include="Microsoft.NET.Sdk.Functions" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />
+    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />
   </ItemGroup>
   <ItemGroup>

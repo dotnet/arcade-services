@@ -6,8 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CoreHealthMonitor\CoreHealthMonitor.csproj" />
   </ItemGroup>
 

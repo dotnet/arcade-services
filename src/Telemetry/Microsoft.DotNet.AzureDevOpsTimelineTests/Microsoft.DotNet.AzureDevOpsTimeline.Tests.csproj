@@ -6,9 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions\Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen\Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\AzureDevOpsTimeline\AzureDevOpsTimeline.csproj" />
   </ItemGroup>
 
