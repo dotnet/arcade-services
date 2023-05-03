@@ -50,7 +50,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         if (_options.AdditionalRemotes != null)
         {
             additionalRemotes = _options.AdditionalRemotes
-                .Split(',')
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(a => a.Split(':', 2))
                 .Select(parts => new AdditionalRemote(parts[0], parts[1]))
                 .ToImmutableArray();

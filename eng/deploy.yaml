@@ -208,7 +208,7 @@ stages:
         SlotName: staging
         Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
         enableCustomDeployment: true
-        DeploymentType: webDeploy
+        DeploymentType: zipDeploy
         RemoveAdditionalFilesFlag: true
 
   - job: deployRolloutScorer

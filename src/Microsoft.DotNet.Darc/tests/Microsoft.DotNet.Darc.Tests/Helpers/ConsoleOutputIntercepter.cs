@@ -14,19 +14,28 @@ public sealed class ConsoleOutputIntercepter : IDisposable
 {
     private readonly StringWriter _stringWriter;
     private readonly TextWriter _originalOutput;
+    private readonly StringWriter _errorWriter;
+    private readonly TextWriter _errorOutput;
 
     public ConsoleOutputIntercepter()
     {
         _stringWriter = new();
         _originalOutput = Console.Out;
+        _errorWriter = new();
+        _errorOutput = Console.Error;
         Console.SetOut(_stringWriter);
+        Console.SetError(_errorWriter);
     }
 
     public string GetOuput() => _stringWriter.ToString();
 
+    public string GetError() => _errorWriter.ToString();
+
     public void Dispose()
     {
         Console.SetOut(_originalOutput);
+        Console.SetError(_errorOutput);
         _stringWriter.Dispose();
+        _errorOutput.Dispose();
     }
 }
