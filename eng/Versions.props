@@ -36,6 +36,7 @@
     <MicrosoftDotNetServicesUtilityVersion>1.1.0-beta.23253.1</MicrosoftDotNetServicesUtilityVersion>
     <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.23253.1</MicrosoftDotNetWebAuthenticationVersion>
     <ServiceFabricMocksVersion>1.1.0-beta.23253.1</ServiceFabricMocksVersion>
+    <CoreHealthMonitorVersion>1.1.0-beta.23253.1</CoreHealthMonitorVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>

@@ -85,6 +85,10 @@
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
       <Sha>d02a43515be862028d6213ea9951636645831c8c</Sha>
     </Dependency>
+    <Dependency Name="CoreHealthMonitor" Version="1.1.0-beta.23253.1">
+      <Uri>https://github.com/dotnet/dnceng-shared</Uri>
+      <Sha>d02a43515be862028d6213ea9951636645831c8c</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.23221.7">
