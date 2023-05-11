@@ -272,12 +272,9 @@ stages:
               contents: update-database.ps1
               targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
 
-          - task: PublishBuildArtifacts@1
+          - publish: $(Build.ArtifactStagingDirectory)\Maestro.Data
+            artifact: Maestro.Data
             displayName: Publish Maestro.Data Artifact
-            inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
-              ArtifactName: Maestro.Data
-              ArtifactType: Container
 
           ## Prepare release utilities artifact
           - task: CopyFiles@2
