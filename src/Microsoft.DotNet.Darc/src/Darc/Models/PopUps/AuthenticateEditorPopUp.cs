@@ -41,7 +41,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         {
             new Line("Create new BAR tokens at https://maestro-prod.westus2.cloudapp.azure.com/Account/Tokens", isComment: true),
             new Line($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
-            new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens (no auth scopes needed)", isComment: true),
+            new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new Line($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
             new Line("Create new Azure Dev Ops tokens at https://dev.azure.com/dnceng/_details/security/tokens (code read and build read & execute scopes are needed)", isComment: true),
             new Line($"{azureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
