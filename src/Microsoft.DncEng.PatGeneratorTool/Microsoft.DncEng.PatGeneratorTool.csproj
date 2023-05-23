@@ -3,8 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
-    <IsPackable>true</IsPackable>
-    <PackAstool>true</PackAstool>
+    <IsPackable>false</IsPackable>
     <Description>Command line tool for generating Azure DevOps PATs.</Description>
     <ToolCommandName>pat-generator</ToolCommandName>
     <AssemblyName>pat-generator</AssemblyName>
