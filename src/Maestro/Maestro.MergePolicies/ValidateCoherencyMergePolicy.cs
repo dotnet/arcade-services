@@ -6,6 +6,7 @@ using Maestro.Contracts;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies;
@@ -17,9 +18,13 @@ public class ValidateCoherencyMergePolicy : MergePolicy
     public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc) =>
         Task.FromResult(pr.CoherencyCheckSuccessful ?
             Succeed("Coherency check successful.") :
-            Fail("Coherency check failed.", string.Concat(pr.CoherencyErrorMessage,
-                "\n\nThe documentation can be found at this location: ",
-                "https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies")));
+            Fail("Coherency check failed.",
+                string.Concat("Coherency update failed for the following dependencies:",
+                    string.Concat(pr.CoherencyErrors.Select(error =>
+                        string.Concat("\n * ", error.Error, error.PotentialSolutions.Count() < 1 ? "" :
+                            "\n    PotentialSolutions:" + string.Concat(error.PotentialSolutions.Select(s => "\n     * " + s))))),
+                    "\n\nThe documentation can be found at this location: ",
+                    "https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies")));
 }
 
 public class ValidateCoherencyMergePolicyBuilder : IMergePolicyBuilder

@@ -16,10 +16,10 @@ public interface IPullRequest
     bool CoherencyCheckSuccessful { get; set; }
 
     /// <summary>
-    /// In case of coherency algorithm failure, the coherency error message
+    /// In case of coherency algorithm failure,
     /// provides a list of dependencies that caused the failure.
     /// </summary>
-    string CoherencyErrorMessage { get; set; }
+    public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
 
     List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 }

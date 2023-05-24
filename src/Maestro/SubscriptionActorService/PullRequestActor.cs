@@ -786,7 +786,7 @@ namespace SubscriptionActorService
                             .ToList(),
 
                     CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
-                    CoherencyErrorMessage = repoDependencyUpdate.CoherencyErrorMessage
+                    CoherencyErrors = repoDependencyUpdate.CoherencyErrors
                 };
 
                 string prUrl = await darcRemote.CreatePullRequestAsync(
@@ -940,12 +940,6 @@ namespace SubscriptionActorService
             }
         }
 
-        private static string PrepareCoherencyErrorMessage(IEnumerable<CoherencyError> coherencyErrors) =>
-            "Coherency update failed for the following dependencies:" +
-                    string.Concat(coherencyErrors.Select(error =>
-                        string.Concat("\n * ", error.Error, error.PotentialSolutions.Count() < 1 ? "" :
-                            "\n    PotentialSolutions:" + string.Concat(error.PotentialSolutions.Select(s => "\n     * " + s)))));
-
         private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder message)
         {
             if (update.IsCoherencyUpdate)
@@ -983,7 +977,7 @@ namespace SubscriptionActorService
 
             pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, targetRepositoryUpdates.RequiredUpdates);
             pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
-            pr.CoherencyErrorMessage = targetRepositoryUpdates.CoherencyErrorMessage;
+            pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
 
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
@@ -1089,7 +1083,7 @@ namespace SubscriptionActorService
         private class TargetRepoDependencyUpdate
         {
             public bool CoherencyCheckSuccessful { get; set; } = true;
-            public string CoherencyErrorMessage { get; set; }
+            public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
             public List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = new();
         }
 
@@ -1174,7 +1168,11 @@ namespace SubscriptionActorService
                 Logger.LogInformation("Failed attempting strict coherency update on branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'.",
                      branch, targetRepository);
                 repoDependencyUpdate.CoherencyCheckSuccessful = false;
-                repoDependencyUpdate.CoherencyErrorMessage = PrepareCoherencyErrorMessage(e.Errors);
+                repoDependencyUpdate.CoherencyErrors = e.Errors.Select(e => new CoherencyErrorDetails
+                {
+                    Error = e.Error,
+                    PotentialSolutions = e.PotentialSolutions
+                }).ToList();
             }
 
             if (coherencyUpdates.Any())

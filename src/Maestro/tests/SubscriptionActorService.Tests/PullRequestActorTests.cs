@@ -375,7 +375,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, string coherencyErrorMessage = null)
+    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, List<CoherencyErrorDetails> coherencyErrors = null)
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequest,
@@ -398,7 +398,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                         })
                     .ToList(),
                 CoherencyCheckSuccessful = coherencyCheckSuccessful,
-                CoherencyErrorMessage = coherencyErrorMessage,
+                CoherencyErrors = coherencyErrors,
                 Url = PrUrl
             });
     }
@@ -731,7 +731,12 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(b,
                 coherencyCheckSuccessful: false,
-                coherencyErrorMessage: "Coherency update failed for the following dependencies:\n * Repo @ commit does not contain dependency fakeDependency");
+                coherencyErrors: new List<CoherencyErrorDetails>() {
+                    new CoherencyErrorDetails()
+                    {
+                        Error = "Repo @ commit does not contain dependency fakeDependency"
+                    }
+                });
             AndDependencyFlowEventsShouldBeAdded();
         }
     }
