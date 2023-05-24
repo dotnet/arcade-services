@@ -10,5 +10,16 @@ public interface IPullRequest
 {
     string Url { get; set; }
 
+    /// <summary>
+    /// Indicates whether the last coherency update is successful.
+    /// </summary>
+    bool CoherencyCheckSuccessful { get; set; }
+
+    /// <summary>
+    /// In case of coherency algorithm failure, the coherency error message
+    /// provides a list of dependencies that caused the failure.
+    /// </summary>
+    string CoherencyErrorMessage { get; set; }
+
     List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 }

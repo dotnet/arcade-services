@@ -51,6 +51,14 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
+        public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_ValidateCoherencyCheck() {
+            string testChannelName = GetTestChannelName();
+            var targetBranch = GetTargetBranch();
+
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--validate-coherency" });
+        }
+
+        [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_Standard()
         {
             string testChannelName = GetTestChannelName();

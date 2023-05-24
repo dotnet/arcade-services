@@ -270,18 +270,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
     }
 
-    private void WithFailsStrictButPassesLegacyChecksForCoherencyUpdates()
+    private void WithFailsStrictCheckForCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
-            .Setup(
-                r => r.GetRequiredCoherencyUpdatesAsync(
-                    It.IsAny<IEnumerable<DependencyDetail>>(),
-                    It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
-            .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
-                {
-                    return new List<DependencyUpdate>();
-                });
         DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
@@ -290,8 +280,12 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .ReturnsAsync(
                 (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
                 {
-                    CoherencyError fakeCoherencyError = new CoherencyError();
-                    fakeCoherencyError.Dependency = new DependencyDetail() { Name = "fakeDependency" };
+                    CoherencyError fakeCoherencyError = new CoherencyError()
+                    {
+                        Dependency = new DependencyDetail() { Name = "fakeDependency" },
+                        Error = "Repo @ commit does not contain dependency fakeDependency",
+                        PotentialSolutions = new List<string>()
+                    };
                     throw new DarcCoherencyException(fakeCoherencyError);
                 });
     }
@@ -304,6 +298,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             var pr = new InProgressPullRequest
             {
                 Url = InProgressPrUrl,
+                CoherencyCheckSuccessful = true,
                 ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
                 {
                     new SubscriptionPullRequestUpdate
@@ -380,7 +375,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 TimeSpan.FromMinutes(5)));
     }
 
-    private void AndShouldHaveInProgressPullRequestState(Build forBuild)
+    private void AndShouldHaveInProgressPullRequestState(Build forBuild, bool coherencyCheckSuccessful = true, string coherencyErrorMessage = null)
     {
         ExpectedActorState.Add(
             PullRequestActorImplementation.PullRequest,
@@ -402,6 +397,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                             ToVersion = d.Version
                         })
                     .ToList(),
+                CoherencyCheckSuccessful = coherencyCheckSuccessful,
+                CoherencyErrorMessage = coherencyErrorMessage,
                 Url = PrUrl
             });
     }
@@ -709,7 +706,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
         [TestCase(false)]
         [TestCase(true)]
-        public async Task UpdateWithAssetsWhenStrictFailsButLegacyWorks(bool batchable)
+        public async Task UpdateWithAssetsWhenStrictAlgorithmFails(bool batchable)
         {
             GivenATestChannel();
             GivenASubscription(
@@ -721,19 +718,20 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             Build b = GivenANewBuild(true);
 
             WithRequireNonCoherencyUpdates(b);
-            WithFailsStrictButPassesLegacyChecksForCoherencyUpdates();
+            WithFailsStrictCheckForCoherencyUpdates();
 
             CreatePullRequestShouldReturnAValidValue();
 
             await WhenUpdateAssetsAsyncIsCalled(b);
 
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Legacy);
             AndCreateNewBranchShouldHaveBeenCalled();
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndCreatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHaveInProgressPullRequestState(b,
+                coherencyCheckSuccessful: false,
+                coherencyErrorMessage: "Coherency update failed for the following dependencies:\n * Repo @ commit does not contain dependency fakeDependency");
             AndDependencyFlowEventsShouldBeAdded();
         }
     }

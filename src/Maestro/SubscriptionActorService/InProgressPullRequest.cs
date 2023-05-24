@@ -17,6 +17,12 @@ public class InProgressPullRequest : IPullRequest
     public string Url { get; set; }
 
     [DataMember]
+    public bool CoherencyCheckSuccessful { get; set; }
+
+    [DataMember]
+    public string CoherencyErrorMessage { get; set; }
+
+    [DataMember]
     public MergePolicyCheckResult MergePolicyResult { get; set; }
 
     [DataMember]

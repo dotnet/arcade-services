@@ -471,12 +471,12 @@ public sealed class Remote : IRemote
     ///     - You need to traverse all nodes in the graph
     ///     - If there is incremental servicing in some places, it's possible for dependencies to get
     ///       unintentionally downgraded (see https://github.com/dotnet/arcade/issues/5195).
-    ///       
+    ///
     ///     Fundamentally, strict coherency does the same thing as regular coherency, but with a limited
     ///     search space and no build information required. In the case where dependency A has CPD B....
     ///     - The version search is only one level deep.
     ///     - B's repo+sha must contain dependency A in its version.details.xml file.
-    ///     
+    ///
     ///     Because B's repo+sha may only have one version of A, this eliminates the need for any kind of version
     ///     check and vastly simplifies the algorithm. The downside is that more repos must bubble up dependencies,
     ///     but this is fairly minimal and generally covered by the need to have dependencies explicit in the
@@ -577,7 +577,7 @@ public sealed class Remote : IRemote
                             Error = $"{parentCoherentDependency.RepoUri} @ {parentCoherentDependency.Commit} does not contain dependency {dependencyToUpdate.Name}",
                             PotentialSolutions = new List<string> {
                                 $"Add the dependency to {parentCoherentDependency.RepoUri}.",
-                                $"Pin the dependenency.",
+                                $"Pin the dependency.",
                                 "Remove the CoherentParentDependency attribute."
                             }
                         });

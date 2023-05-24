@@ -10,6 +10,7 @@ public class MergePolicyConstants
     public const string StandardMergePolicyName = "Standard";
     public const string NoRequestedChangesMergePolicyName = "NoRequestedChanges";
     public const string DontAutomergeDowngradesPolicyName = "DontAutomergeDowngrades";
+    public const string ValidateCoherencyMergePolicyName = "ValidateCoherency";
 
     public const string IgnoreChecksMergePolicyPropertyName = "ignoreChecks";
 
