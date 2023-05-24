@@ -21,7 +21,6 @@ namespace Maestro.ScenarioTests
         private readonly List<DependencyDetail> expectedDependenciesSource1;
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
-        private readonly List<DependencyDetail> expectedCoherencyDependencies;
 
         public ScenarioTests_GitHubFlow()
         {
