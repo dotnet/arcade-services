@@ -19,7 +19,7 @@ public interface IPullRequest
     /// In case of coherency algorithm failure,
     /// provides a list of dependencies that caused the failure.
     /// </summary>
-    public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
+    List<CoherencyErrorDetails> CoherencyErrors { get; set; }
 
     List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 }
