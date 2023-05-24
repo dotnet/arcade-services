@@ -734,7 +734,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 coherencyErrors: new List<CoherencyErrorDetails>() {
                     new CoherencyErrorDetails()
                     {
-                        Error = "Repo @ commit does not contain dependency fakeDependency"
+                        Error = "Repo @ commit does not contain dependency fakeDependency",
+                        PotentialSolutions = new List<string>()
                     }
                 });
             AndDependencyFlowEventsShouldBeAdded();
