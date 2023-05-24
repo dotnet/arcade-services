@@ -5,7 +5,6 @@
     <LangVersion>latest</LangVersion>
     <ExcludeFromSourceBuild>true</ExcludeFromSourceBuild>
     <NoWarn>$(NoWarn);NU5110,NU5111</NoWarn>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
