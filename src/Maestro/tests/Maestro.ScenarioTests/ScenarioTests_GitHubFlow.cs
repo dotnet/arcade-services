@@ -18,8 +18,6 @@ namespace Maestro.ScenarioTests
         private readonly IImmutableList<AssetData> source1Assets;
         private readonly IImmutableList<AssetData> source2Assets;
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
-        private readonly IImmutableList<AssetData> childSourceBuildAssets;
-        private readonly IImmutableList<AssetData> childSourceAssets;
         private readonly List<DependencyDetail> expectedDependenciesSource1;
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
@@ -33,8 +31,6 @@ namespace Maestro.ScenarioTests
             source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
             source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
-            childSourceBuildAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
-            childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
 
             expectedDependenciesSource1 = new List<DependencyDetail>();
             string sourceRepoUri = GetRepoUrl(TestRepository.TestRepo1Name);
