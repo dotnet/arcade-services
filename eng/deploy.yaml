@@ -56,33 +56,14 @@ stages:
     displayName: deployment approval (conditional)
     environment: ${{ parameters.DeploymentEnvironment }}
 
-- stage: predeploy
-  displayName: Pre-Deployment
-  pool: server
-  dependsOn:
-  - build
-  - Validate
-  - approval
-  jobs:
-  - job: notifyStartDeployment
-    displayName: Notify deployment start
-    pool: server
-    steps:
-    - task: InvokeRESTAPI@1
-      displayName: Notify dotnet-eng-status/start
-      continueOnError: true
-      inputs:
-        serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
-        method: POST
-        urlSuffix: /arcade-services/$(Build.BuildNumber)/start
-
 - stage: deploy
   displayName: Deploy
   pool:
     name: NetCore1ESPool-Internal-NoMSI
     demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
-  - predeploy
+  - build
+  - Validate
   - approval
   variables:
   - group: ${{ parameters.VariableGroup }}
@@ -157,37 +138,6 @@ stages:
       env:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
-
-- stage: postdeploy
-  displayName: Post-Deployment
-  pool:
-    name: NetCore1ESPool-Internal-NoMSI
-    demands: ImageOverride -equals 1es-windows-2019
-  dependsOn:
-  - deploy
-  variables:
-  - group: ${{ parameters.StatusVariableGroup }}
-  - group: ${{ parameters.VariableGroup }}
-  - group: ${{ parameters.GrafanaVariableGroup }}
-  - name: DeploymentEnvironment
-    value: ${{ parameters.DeploymentEnvironment }}
-  - name: GrafanaHost
-    value: ${{ parameters.GrafanaHost }}
-  - name: GrafanaKeyVault
-    value: ${{ parameters.GrafanaKeyVault }}
-  jobs:
-  - job: notifyEndDeployment
-    displayName: Notify deployment end
-    condition: always()
-    pool: server
-    steps:
-    - task: InvokeRESTAPI@1
-      displayName: Notify dotnet-eng-status/end
-      continueOnError: true
-      inputs:
-        serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
-        method: POST
-        urlSuffix: /arcade-services/$(Build.BuildNumber)/end
 
 - stage: validateDeployment
   displayName: Validate deployment
