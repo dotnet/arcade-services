@@ -2,13 +2,10 @@ parameters:
   Subscription: ''
   ServiceFabricConnection: ''
   PublishProfile: ''
-  DotNetStatusAppName: ''
   DeploymentEnvironment: ''
   VariableGroup: ''
   MaestroPublishEndpoint: ''
   MaestroTestEndpoint: ''
-  DotNetStatusEndpoint: ''
-  StatusVariableGroup: ''
 
   # --- Secret Variable group requirements ---
   # build-asset-registry-admin-connection-string
