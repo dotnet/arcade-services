@@ -158,89 +158,6 @@ stages:
         PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
-  - job: deployTelemetry
-    displayName: Deploy telemetry service fabric application
-    pool:
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019    
-    dependsOn:
-    steps:
-    - download: current
-      artifact: TelemetryApplication
-    - download: current
-      artifact: ReleaseUtilities
-    - task: AzurePowerShell@5
-      displayName: Deploy Service Fabric Application (Telemetry)
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        scriptType: inlineScript
-        azurePowerShellVersion: LatestVersion
-        inline: |
-          $autoRollBack = $true
-          if ($env:DisableAutoRollBack -eq 'true') {
-            $autoRollBack = $false
-          }
-          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
-            $autoRollBack = $false
-          }
-          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
-      env:
-        PublishProfilePath: $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
-        ApplicationPackage: $(Pipeline.Workspace)/TelemetryApplication/applicationpackage
-
-  - job: deployStatus
-    displayName: Deploy dotnet-status web app
-    pool:
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
-    dependsOn:
-    steps:
-    - download: current
-      artifact: DotNetStatus
-    - task: AzureRmWebAppDeployment@4
-      inputs:
-        ConnectionType: AzureRM
-        azureSubscription: ${{ parameters.Subscription }}
-        appType: webApp
-        WebAppName: ${{ parameters.DotNetStatusAppName }}
-        deployToSlotOrASE: true
-        ResourceGroupName: monitoring
-        SlotName: staging
-        Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
-        enableCustomDeployment: true
-        DeploymentType: zipDeploy
-        RemoveAdditionalFilesFlag: true
-
-  - job: deployRolloutScorer
-    displayName: Deploy rollout scorer azure function
-    pool:
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
-    dependsOn:
-    steps:
-    - download: current
-      artifact: RolloutScorer
-    - task: AzureFunctionApp@1
-      displayName: Deploy RolloutScorer
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ${{ if ne(parameters.DeploymentEnvironment, 'Production') }}:
-          appSettings: >
-            -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
-            -DeploymentEnvironment Staging
-            -ScorecardsStorageAccountKeySecretName "rolloutscorecardsstaging-storage-key"
-            -ScorecardsStorageAccountName "rolloutscorecardsstaging"
-            -ScorecardsStorageAccountTableName "scorecardsstaging"
-        ${{ if eq(parameters.DeploymentEnvironment, 'Production') }}:
-          appSettings: >
-            -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
-            -DeploymentEnvironment Production
-            -ScorecardsStorageAccountKeySecretName "rolloutscorecards-storage-key"
-            -ScorecardsStorageAccountName "rolloutscorecards"
-            -ScorecardsStorageAccountTableName "scorecards"
-        package: $(Pipeline.Workspace)/RolloutScorer/RolloutScorer.zip
-        appName: ${{ parameters.RolloutScorerAppName }}
-
 - stage: postdeploy
   displayName: Post-Deployment
   pool:
@@ -271,16 +188,6 @@ stages:
         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
-  - job: updateMetrics
-    displayName: Update Grafana Metrics
-    dependsOn:
-    steps:
-    - task: UseDotNet@2
-      displayName: Install Correct .NET Version
-      inputs:
-        useGlobalJson: true
-    - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f net6.0
-    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultServicePrincipalId=$(engineering-services-app-id) -p:GrafanaKeyVaultServicePrincipalSecret=$(engineering-services-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -p:ParametersFile=parameters.json -v:normal
 
 - stage: validateDeployment
   displayName: Validate deployment
@@ -303,8 +210,6 @@ stages:
     - download: current
       artifact: PackageArtifacts
     - download: current
-      artifact: Microsoft.DncEng.SecretManager.ScenarioTests
-    - download: current
       artifact: Maestro.ScenarioTests
 
     - task: NuGetToolInstaller@1
@@ -316,16 +221,6 @@ stages:
       displayName: Install Correct .NET Version
       inputs:
         useGlobalJson: true
-
-    - task: VSTest@2
-      displayName: Secret Manager Scenario Tests
-      inputs:
-        testSelector: testAssemblies
-        testAssemblyVer2: |
-          Microsoft.DncEng.SecretManager.ScenarioTests.dll
-        searchFolder: $(Pipeline.Workspace)/Microsoft.DncEng.SecretManager.ScenarioTests
-      env:
-        AzureServicesAuthConnectionString: $(secret-manager-scenario-tests-client-secret)
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests
