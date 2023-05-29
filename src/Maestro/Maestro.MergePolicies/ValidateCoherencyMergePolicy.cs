@@ -7,6 +7,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies;
@@ -15,16 +16,31 @@ public class ValidateCoherencyMergePolicy : MergePolicy
 {
     public override string DisplayName => "Validate coherency";
 
-    public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc) =>
-        Task.FromResult(pr.CoherencyCheckSuccessful ?
-            Succeed("Coherency check successful.") :
-            Fail("Coherency check failed.",
-                string.Concat("Coherency update failed for the following dependencies:",
-                    string.Concat(pr.CoherencyErrors.Select(error =>
-                        string.Concat("\n * ", error.Error, error.PotentialSolutions.Count() < 1 ? "" :
-                            "\n    PotentialSolutions:" + string.Concat(error.PotentialSolutions.Select(s => "\n     * " + s))))),
-                    "\n\nThe documentation can be found at this location: ",
-                    "https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies")));
+    public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+    {
+        if (pr.CoherencyCheckSuccessful)
+            return Task.FromResult(Succeed("Coherency check successful."));
+
+        StringBuilder description = new StringBuilder("Coherency update failed for the following dependencies:");
+        foreach (CoherencyErrorDetails error in pr.CoherencyErrors)
+        {
+            description.Append("\n * ").Append(error.Error);
+
+            if (error.PotentialSolutions.Count() > 0)
+            {
+                description.Append("\n    PotentialSolutions:");
+                foreach (string solution in error.PotentialSolutions)
+                {
+                    description.Append("\n     * ").Append(solution);
+                }
+            }
+        }
+        description
+            .Append("\n\nThe documentation can be found at this location: ")
+            .Append("https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#coherent-parent-dependencies");
+
+        return Task.FromResult(Fail("Coherency check failed.", description.ToString()));
+    }
 }
 
 public class ValidateCoherencyMergePolicyBuilder : IMergePolicyBuilder

@@ -10,7 +10,6 @@ using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
-using Castle.Core.Internal;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -745,7 +744,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate repoDependencyUpdate =
                 await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
-            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.IsNullOrEmpty())
+            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count() < 1)
             {
                 return null;
             }
@@ -970,7 +969,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate targetRepositoryUpdates =
                 await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
-            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.IsNullOrEmpty())
+            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count() < 1)
             {
                 return;
             }
