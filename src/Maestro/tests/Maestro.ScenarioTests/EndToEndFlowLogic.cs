@@ -187,6 +187,77 @@ namespace Maestro.ScenarioTests
             }
         }
 
+        public async Task NonBatchedGitHubFlowCoherencyOnlyTestBase(string targetBranch, string channelName, IImmutableList<AssetData> sourceAssets,
+            IImmutableList<AssetData> childSourceAssets, List<DependencyDetail> expectedNonCoherencyDependencies,
+            List<DependencyDetail> expectedCoherencyDependencies, string coherentParent)
+        {
+            string targetRepoName = TestRepository.TestRepo3Name;
+            string sourceRepoName = TestRepository.TestRepo2Name;
+            string childRepoName = TestRepository.TestRepo1Name;
+
+            string testChannelName = channelName;
+            string sourceRepoUri = GetRepoUrl(sourceRepoName);
+            string targetRepoUri = GetRepoUrl(targetRepoName);
+            string childSourceRepoUri = GetRepoUrl(childRepoName);
+
+            TestContext.WriteLine($"Creating test channel {testChannelName}");
+            await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
+
+            await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+                testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks: true, false);
+
+            TestContext.WriteLine("Set up build for intake into target repository");
+            Build build1 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit,
+                sourceBuildNumber, sourceAssets);
+            await AddBuildToChannelAsync(build1.Id, testChannelName);
+
+            Build build2 = await CreateBuildAsync(childSourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo2Commit,
+                source2BuildNumber, childSourceAssets);
+            await AddBuildToChannelAsync(build2.Id, testChannelName);
+
+            TestContext.WriteLine("Cloning target repo to prepare the target branch");
+            TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+
+            using (ChangeDirectory(reposFolder.Directory))
+            {
+                await using (await CheckoutBranchAsync(targetBranch))
+                {
+                    TestContext.WriteLine("Adding dependencies to target repo");
+                    await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+
+                    TestContext.WriteLine("Pushing branch to remote");
+                    await GitCommitAsync("Add dependencies 1");
+
+                    await using (await PushGitBranchAsync("origin", targetBranch))
+                    {
+                        TestContext.WriteLine("Trigger the dependency update");
+                        await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                        TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                        await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedNonCoherencyDependencies, reposFolder.Directory, isCompleted: true, isUpdated: false);
+
+                        await RunGitAsync("checkout", targetBranch);
+                        await RunGitAsync("pull", "origin", targetBranch);
+
+                        await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, coherentParent);
+                        await GitCommitAsync("Add dependencies 2");
+
+                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        {
+                            TestContext.WriteLine("Trigger the dependency update");
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                            TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                            string expectedPRTitle = $"[{targetBranch}] Update dependencies to ensure coherency";
+                            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                        }
+                    }
+                }
+            }
+        }
+
         public async Task NonBatchedUpdatingGitHubFlowTestBase(string targetBranch, string channelName, IImmutableList<AssetData> source1Assets, IImmutableList<AssetData> source1AssetsUpdated,
             List<DependencyDetail> expectedDependencies, List<DependencyDetail> expectedUpdatedDependencies, bool allChecks = false)
         {

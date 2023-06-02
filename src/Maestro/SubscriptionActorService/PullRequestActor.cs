@@ -906,6 +906,15 @@ namespace SubscriptionActorService
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
 
+            // If the coherency algorithm failed and there are no non-coherency updates and
+            // we crate an empty commit that describes an issue.
+            if (requiredUpdates.Count == 0)
+            {
+                string message = "The Strict Coherency algorithm failed.";
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, new List<DependencyDetail>(), message);
+                return "This is a coherency update PR: " + message + ". Please check Github checks for details.";
+            }
+
             return pullRequestDescriptionBuilder.ToString();
         }
 
