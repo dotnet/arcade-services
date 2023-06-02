@@ -24,7 +24,7 @@ public static class SharedKustoQueries
 
         Uri uri = new Uri(repository);
 
-        // Builds in AzDo are only found in the internal project
+        // Builds in AzDo are only found in the internal project.
         if (uri.Host == "dev.azure.com")
         {
             prProject = "internal";
@@ -32,11 +32,13 @@ public static class SharedKustoQueries
 
         // We only care about builds that complete successfully or partially successfully 
         // from the given repository. We summarize duration of the builds over the last specified
-        // number of days. There are multiple different definitions that run in parallel, so we 
+        // number of days.
+        string commonQueryFilters = @"| where FinishTime > ago(_Days)
+                | where Result != 'failed' and Result != 'canceled'";
+
+        // There are multiple different definitions that run in parallel, so we
         // summarize on the definition id and ultimately choose the definition that took the longest.
-        string commonQueryText = @"| where Result != 'failed' and Result != 'canceled' 
-                | where FinishTime > ago(_Days) 
-                | extend duration = FinishTime - StartTime 
+        string postFilteringOperatorsQueryText = @"| extend duration = FinishTime - StartTime
                 | summarize average_duration = avg(duration) by DefinitionId";
 
         // We only want the pull request time from the public ci. We exclude on target branch,
@@ -44,17 +46,19 @@ public static class SharedKustoQueries
         // apply to.
         string publicQueryText = $@"TimelineBuilds 
                 | project Repository, SourceBranch, TargetBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
+                {commonQueryFilters}
                 | where Project == '{prProject}'
                 | where Repository endswith _Repository
                 | where Reason == 'pullRequest' 
                 | where TargetBranch == _SourceBranch
-                {commonQueryText}";
+                {postFilteringOperatorsQueryText}";
 
         // For the official build times, we want the builds that were generated as a CI run 
         // (either batchedCI or individualCI) for a specific branch--i.e. we want the builds
         // that are part of generating the product.
         string internalQueryText = $@"TimelineBuilds 
                 | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
+                {commonQueryFilters}
                 | where Project == 'internal' 
                 | where Repository endswith _Repository
                 | where Reason == 'batchedCI' or Reason == 'individualCI' or Reason == 'manual'
@@ -74,7 +78,7 @@ public static class SharedKustoQueries
         }
 
         internalQueryText += $@"
-                {commonQueryText}";
+                {postFilteringOperatorsQueryText}";
 
         return new MultiProjectKustoQuery(new KustoQuery(internalQueryText, parameters), new KustoQuery(publicQueryText, parameters));
     }
