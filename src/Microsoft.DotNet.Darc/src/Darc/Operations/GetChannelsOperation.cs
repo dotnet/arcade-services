@@ -14,80 +14,86 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class GetChannelsOperation : Operation
 {
-    internal class GetChannelsOperation : Operation
+    GetChannelsCommandLineOptions _options;
+    public GetChannelsOperation(GetChannelsCommandLineOptions options)
+        : base(options)
     {
-        GetChannelsCommandLineOptions _options;
-        public GetChannelsOperation(GetChannelsCommandLineOptions options)
-            : base(options)
-        {
-            _options = options;
-        }
+        _options = options;
+    }
 
-        /// <summary>
-        /// Retrieve information about channels
-        /// </summary>
-        /// <param name="options">Command line options</param>
-        /// <returns>Process exit code.</returns>
-        public override async Task<int> ExecuteAsync()
+    /// <summary>
+    /// Retrieve information about channels
+    /// </summary>
+    /// <param name="options">Command line options</param>
+    /// <returns>Process exit code.</returns>
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            try
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            var allChannels = await remote.GetChannelsAsync();
+            switch (_options.OutputFormat)
             {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+                case DarcOutputType.json:
+                    WriteJsonChannelList(allChannels);
+                    break;
+                case DarcOutputType.text:
+                    WriteYamlChannelList(allChannels);
+                    break;
+                default:
+                    throw new NotImplementedException($"Output format {_options.OutputFormat} not supported for get-channels");
+            }
 
-                var allChannels = await remote.GetChannelsAsync();
-                switch (_options.OutputFormat)
+            return Constants.SuccessCode;
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Error: Failed to retrieve channels");
+            return Constants.ErrorCode;
+        }
+    }
+
+    private void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+    {
+        var channelJson = new
+        {
+            channels = allChannels.OrderBy(c => c.Name).Select(channel =>
+                new
                 {
-                    case DarcOutputType.json:
-                        WriteJsonChannelList(allChannels);
-                        break;
-                    case DarcOutputType.text:
-                        WriteYamlChannelList(allChannels);
-                        break;
-                    default:
-                        throw new NotImplementedException($"Output format {_options.OutputFormat} not supported for get-channels");
-                }
+                    id = channel.Id,
+                    name = channel.Name
+                })
+        };
 
-                return Constants.SuccessCode;
-            }
-            catch (AuthenticationException e)
-            {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Error: Failed to retrieve channels");
-                return Constants.ErrorCode;
-            }
-        }
+        Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
+    }
 
-        private void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+    protected override bool IsOutputFormatSupported(DarcOutputType outputFormat)
+        => outputFormat switch
         {
-            var channelJson = new
-            {
-                channels = allChannels.OrderBy(c => c.Name).Select(channel =>
-                    new
-                    {
-                        id = channel.Id,
-                        name = channel.Name
-                    })
-            };
+            DarcOutputType.json => true,
+            _ => base.IsOutputFormatSupported(outputFormat),
+        };
 
-            Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
-        }
-
-        private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+    private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+    {
+        // Write out a simple list of each channel's name
+        foreach (var channel in allChannels.OrderBy(c => c.Name))
         {
-            // Write out a simple list of each channel's name
-            foreach (var channel in allChannels.OrderBy(c => c.Name))
-            {
-                // Pad so that id's up to 9999 will result in consistent
-                // listing
-                string idPrefix = $"({channel.Id})".PadRight(7);
-                Console.WriteLine($"{idPrefix}{channel.Name}");
-            }
+            // Pad so that id's up to 9999 will result in consistent
+            // listing
+            string idPrefix = $"({channel.Id})".PadRight(7);
+            Console.WriteLine($"{idPrefix}{channel.Name}");
         }
     }
 }

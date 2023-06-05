@@ -8,38 +8,37 @@ using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Maestro.Web
+namespace Maestro.Web;
+
+public class HandleDuplicateKeyRowsAttribute : ActionFilterAttribute
 {
-    public class HandleDuplicateKeyRowsAttribute : ActionFilterAttribute
+    public HandleDuplicateKeyRowsAttribute(string errorMessage)
     {
-        public HandleDuplicateKeyRowsAttribute(string errorMessage)
-        {
-            ErrorMessage = errorMessage;
-        }
+        ErrorMessage = errorMessage;
+    }
 
-        public string ErrorMessage { get; }
+    public string ErrorMessage { get; }
 
-        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        var executedContext = await next();
+        if (executedContext.Exception is DbUpdateException dbEx &&
+            // Note: From inspection this will throw Microsoft.Data.SqlClient.SqlException,
+            //       not System.Data.SqlClient.SqlException; we will explicitly handle both.
+            (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException ||
+             dbEx.InnerException is System.Data.SqlClient.SqlException) &&
+            dbEx.InnerException.Message.Contains("Cannot insert duplicate key"))
         {
-            var executedContext = await next();
-            if (executedContext.Exception is DbUpdateException dbEx &&
-                // Note: From inspection this will throw Microsoft.Data.SqlClient.SqlException,
-                //       not System.Data.SqlClient.SqlException; we will explicitly handle both.
-                (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException ||
-                 dbEx.InnerException is System.Data.SqlClient.SqlException) &&
-                dbEx.InnerException.Message.Contains("Cannot insert duplicate key"))
+            executedContext.Exception = null;
+
+            var message = ErrorMessage;
+            foreach (var argument in context.ActionArguments)
             {
-                executedContext.Exception = null;
-
-                var message = ErrorMessage;
-                foreach (var argument in context.ActionArguments)
-                {
-                    message = message.Replace("{" + argument.Key + "}", argument.Value.ToString());
-                }
-
-                executedContext.Result =
-                    new ObjectResult(new ApiError(message)) {StatusCode = (int) HttpStatusCode.Conflict};
+                message = message.Replace("{" + argument.Key + "}", argument.Value.ToString());
             }
+
+            executedContext.Result =
+                new ObjectResult(new ApiError(message)) {StatusCode = (int) HttpStatusCode.Conflict};
         }
     }
 }

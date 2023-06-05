@@ -48,7 +48,7 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          dotnet run -p src/Microsoft.DncEng.SecretManager -- synchronize .vault-config/dotnet-grafana-staging.yaml
+          dotnet run --project src/Microsoft.DncEng.SecretManager -- synchronize .vault-config/dotnet-grafana-staging.yaml
 
 - stage: deploy
   displayName: Deploy grafana server

@@ -2,87 +2,89 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Maestro.AzureDevOps;
-using Maestro.Data;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Kusto;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using Maestro.AzureDevOps;
+using Maestro.Data;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Kusto;
+using Microsoft.Extensions.Logging;
 
-namespace Maestro.DataProviders
+namespace Maestro.DataProviders;
+
+public class DarcRemoteFactory : IRemoteFactory
 {
-    public class DarcRemoteFactory : IRemoteFactory
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly OperationManager _operations;
+
+    public DarcRemoteFactory(
+        BuildAssetRegistryContext context,
+        IKustoClientProvider kustoClientProvider,
+        IGitHubTokenProvider gitHubTokenProvider,
+        IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
+        IVersionDetailsParser versionDetailsParser,
+        DarcRemoteMemoryCache memoryCache,
+        OperationManager operations)
     {
-        private readonly OperationManager _operations;
+        _operations = operations;
+        Context = context;
+        KustoClientProvider = (KustoClientProvider)kustoClientProvider;
+        GitHubTokenProvider = gitHubTokenProvider;
+        AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
+        _versionDetailsParser = versionDetailsParser;
+        Cache = memoryCache;
+    }
 
-        public DarcRemoteFactory(
-            BuildAssetRegistryContext context,
-            IKustoClientProvider kustoClientProvider,
-            IGitHubTokenProvider gitHubTokenProvider,
-            IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
-            DarcRemoteMemoryCache memoryCache,
-            OperationManager operations)
+    public BuildAssetRegistryContext Context { get; }
+
+    private readonly KustoClientProvider KustoClientProvider;
+
+    public DarcRemoteMemoryCache Cache { get; }
+
+    public IGitHubTokenProvider GitHubTokenProvider { get; }
+
+    public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
+
+    public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    {
+        return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger));
+    }
+
+    public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
+    {
+        using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
         {
-            _operations = operations;
-            Context = context;
-            KustoClientProvider = (KustoClientProvider)kustoClientProvider;
-            GitHubTokenProvider = gitHubTokenProvider;
-            AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
-            Cache = memoryCache;
-        }
+            // Normalize the url with the AzDO client prior to attempting to
+            // get a token. When we do coherency updates we build a repo graph and
+            // may end up traversing links to classic azdo uris.
+            string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
 
-        public BuildAssetRegistryContext Context { get; }
+            long installationId = await Context.GetInstallationId(normalizedUrl);
 
-        private readonly KustoClientProvider KustoClientProvider;
-
-        public DarcRemoteMemoryCache Cache { get; }
-
-        public IGitHubTokenProvider GitHubTokenProvider { get; }
-
-        public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
-
-        public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
-        {
-            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), logger));
-        }
-
-        public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
-        {
-            using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
+            IRemoteGitRepo gitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
             {
-                // Normalize the url with the AzDO client prior to attempting to
-                // get a token. When we do coherency updates we build a repo graph and
-                // may end up traversing links to classic azdo uris.
-                string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
-                Uri normalizedRepoUri = new Uri(normalizedUrl);
+                GitRepoType.GitHub => installationId == default
+                    ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
+                    : new GitHubClient(
+                        null,
+                        await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
+                        logger,
+                        null,
+                        Cache.Cache),
 
-                IGitRepo gitClient;
+                GitRepoType.AzureDevOps => new AzureDevOpsClient(
+                    null,
+                    await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
+                    logger,
+                    null),
 
-                long installationId = await Context.GetInstallationId(normalizedUrl);
+                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
+            };
 
-                switch (normalizedRepoUri.Host)
-                {
-                    case "github.com":
-                        if (installationId == default)
-                        {
-                            throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
-                        }
-                        gitClient = new GitHubClient(null, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
-                            logger, null, Cache.Cache);
-                        break;
-                    case "dev.azure.com":
-                        gitClient = new AzureDevOpsClient(null, await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
-                            logger, null);
-                        break;
-                    default:
-                        throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
-                };
-
-                return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), logger);
-            }
+            return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
         }
     }
 }

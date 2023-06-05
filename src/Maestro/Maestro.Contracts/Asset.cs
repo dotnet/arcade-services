@@ -4,18 +4,17 @@
 
 using System.Runtime.Serialization;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+[DataContract]
+public class Asset
 {
-    [DataContract]
-    public class Asset
-    {
-        [DataMember]
-        public string Name { get; set; }
+    [DataMember]
+    public string Name { get; set; }
 
-        [DataMember]
-        public string Version { get; set; }
+    [DataMember]
+    public string Version { get; set; }
 
-        [DataMember]
-        public string[] Locations { get; set; }
-    }
+    [DataMember]
+    public string[] Locations { get; set; }
 }

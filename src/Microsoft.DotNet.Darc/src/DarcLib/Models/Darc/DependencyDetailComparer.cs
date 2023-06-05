@@ -4,26 +4,25 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class DependencyDetailComparer : IEqualityComparer<DependencyDetail>
-    {
-        public bool Equals(DependencyDetail x, DependencyDetail y)
-        {
-            return x.Commit == y.Commit &&
-                x.Name == y.Name &&
-                x.RepoUri == y.RepoUri &&
-                x.Version == y.Version &&
-                x.Type == y.Type;
-        }
+namespace Microsoft.DotNet.DarcLib;
 
-        public int GetHashCode(DependencyDetail obj)
-        {
-            return (obj.Commit,
-                obj.Name,
-                obj.RepoUri,
-                obj.Version,
-                obj.Type).GetHashCode();
-        }
+public class DependencyDetailComparer : IEqualityComparer<DependencyDetail>
+{
+    public bool Equals(DependencyDetail x, DependencyDetail y)
+    {
+        return x.Commit == y.Commit &&
+               x.Name == y.Name &&
+               x.RepoUri == y.RepoUri &&
+               x.Version == y.Version &&
+               x.Type == y.Type;
+    }
+
+    public int GetHashCode(DependencyDetail obj)
+    {
+        return (obj.Commit,
+            obj.Name,
+            obj.RepoUri,
+            obj.Version,
+            obj.Type).GetHashCode();
     }
 }

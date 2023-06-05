@@ -15,143 +15,142 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
-namespace Maestro.Web.Pages.Account
+namespace Maestro.Web.Pages.Account;
+
+public class AccountController : Controller
 {
-    public class AccountController : Controller
+    public AccountController(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager,
+        BuildAssetRegistryContext context)
     {
-        public AccountController(
-            SignInManager<ApplicationUser> signInManager,
-            UserManager<ApplicationUser> userManager,
-            BuildAssetRegistryContext context)
+        SignInManager = signInManager;
+        UserManager = userManager;
+        Context = context;
+    }
+
+    public SignInManager<ApplicationUser> SignInManager { get; }
+    public UserManager<ApplicationUser> UserManager { get; }
+    public BuildAssetRegistryContext Context { get; }
+
+    [HttpGet("/Account/SignOut")]
+    [AllowAnonymous]
+    public new async Task<IActionResult> SignOut()
+    {
+        await SignInManager.SignOutAsync();
+        return RedirectToPage("/Index");
+    }
+
+    [HttpGet("/Account/SignIn")]
+    [AllowAnonymous]
+    public IActionResult SignIn(string returnUrl = null)
+    {
+        string redirectUrl = Url.Action(nameof(LogInCallback), "Account", new {returnUrl});
+        AuthenticationProperties properties =
+            SignInManager.ConfigureExternalAuthenticationProperties(Startup.GitHubScheme, redirectUrl);
+        return Challenge(properties, Startup.GitHubScheme);
+    }
+
+    [HttpGet("/Account/LogInCallback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> LogInCallback(string returnUrl = null, string remoteError = null)
+    {
+        if (remoteError != null)
         {
-            SignInManager = signInManager;
-            UserManager = userManager;
-            Context = context;
+            return StatusCode(400, $"Error loging in: {remoteError}");
         }
 
-        public SignInManager<ApplicationUser> SignInManager { get; }
-        public UserManager<ApplicationUser> UserManager { get; }
-        public BuildAssetRegistryContext Context { get; }
-
-        [HttpGet("/Account/SignOut")]
-        [AllowAnonymous]
-        public new async Task<IActionResult> SignOut()
+        ExternalLoginInfo info = await SignInManager.GetExternalLoginInfoAsync();
+        if (info == null)
         {
-            await SignInManager.SignOutAsync();
-            return RedirectToPage("/Index");
+            return StatusCode(400, "Unable to Sign In");
         }
 
-        [HttpGet("/Account/SignIn")]
-        [AllowAnonymous]
-        public IActionResult SignIn(string returnUrl = null)
+        SignInResult signInResult =
+            await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true); // lgtm [cs/user-controlled-bypass] Safe in this context, failure will block user from sign-in
+        if (signInResult.Succeeded)
         {
-            string redirectUrl = Url.Action(nameof(LogInCallback), "Account", new {returnUrl});
-            AuthenticationProperties properties =
-                SignInManager.ConfigureExternalAuthenticationProperties(Startup.GitHubScheme, redirectUrl);
-            return Challenge(properties, Startup.GitHubScheme);
+            return RedirectToLocal(returnUrl);
         }
 
-        [HttpGet("/Account/LogInCallback")]
-        [AllowAnonymous]
-        public async Task<IActionResult> LogInCallback(string returnUrl = null, string remoteError = null)
+        if (!signInResult.IsLockedOut)
         {
-            if (remoteError != null)
+            ApplicationUser user = await CreateUserAsync(info);
+            if (user != null)
             {
-                return StatusCode(400, $"Error loging in: {remoteError}");
-            }
-
-            ExternalLoginInfo info = await SignInManager.GetExternalLoginInfoAsync();
-            if (info == null)
-            {
-                return StatusCode(400, "Unable to Sign In");
-            }
-
-            SignInResult signInResult =
-                await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true); // lgtm [cs/user-controlled-bypass] Safe in this context, failure will block user from sign-in
-            if (signInResult.Succeeded)
-            {
+                await SignInManager.SignInAsync(user, true);
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
                 return RedirectToLocal(returnUrl);
             }
+        }
 
-            if (!signInResult.IsLockedOut)
+        return StatusCode(403);
+    }
+
+    private async Task<ApplicationUser> CreateUserAsync(ExternalLoginInfo info)
+    {
+        string id = info.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        string name = info.Principal.FindFirstValue(ClaimTypes.Name);
+        string fullName = info.Principal.FindFirstValue("urn:github:name") ?? name;
+        string accessToken = info.AuthenticationTokens.First(t => t.Name == "access_token").Value;
+
+        return await Context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            using (IDbContextTransaction txn = await Context.Database.BeginTransactionAsync())
             {
-                ApplicationUser user = await CreateUserAsync(info);
-                if (user != null)
+                var user = new ApplicationUser
                 {
-                    await SignInManager.SignInAsync(user, true);
-                    await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-                    return RedirectToLocal(returnUrl);
-                }
-            }
-
-            return StatusCode(403);
-        }
-
-        private async Task<ApplicationUser> CreateUserAsync(ExternalLoginInfo info)
-        {
-            string id = info.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
-            string name = info.Principal.FindFirstValue(ClaimTypes.Name);
-            string fullName = info.Principal.FindFirstValue("urn:github:name") ?? name;
-            string accessToken = info.AuthenticationTokens.First(t => t.Name == "access_token").Value;
-
-            return await Context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
-            {
-                using (IDbContextTransaction txn = await Context.Database.BeginTransactionAsync())
+                    UserName = name,
+                    FullName = fullName
+                };
+                IdentityResult result = await UserManager.CreateAsync(user);
+                if (!result.Succeeded)
                 {
-                    var user = new ApplicationUser
-                    {
-                        UserName = name,
-                        FullName = fullName
-                    };
-                    IdentityResult result = await UserManager.CreateAsync(user);
-                    if (!result.Succeeded)
-                    {
-                        return null;
-                    }
-
-                    result = await UserManager.SetAuthenticationTokenAsync(
-                        user,
-                        info.LoginProvider,
-                        "access_token",
-                        accessToken);
-                    if (!result.Succeeded)
-                    {
-                        return null;
-                    }
-
-                    IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
-
-                    result = await UserManager.AddClaimsAsync(user, claimsToAdd);
-                    if (!result.Succeeded)
-                    {
-                        return null;
-                    }
-
-                    result = await UserManager.AddLoginAsync(user, info);
-                    if (!result.Succeeded)
-                    {
-                        return null;
-                    }
-
-                    txn.Commit();
-                    return user;
+                    return null;
                 }
-            });
-        }
 
-        public static bool ShouldAddClaimToUser(Claim c)
-        {
-            return c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" || c.Type == ClaimTypes.Role;
-        }
+                result = await UserManager.SetAuthenticationTokenAsync(
+                    user,
+                    info.LoginProvider,
+                    "access_token",
+                    accessToken);
+                if (!result.Succeeded)
+                {
+                    return null;
+                }
 
-        private IActionResult RedirectToLocal(string returnUrl)
-        {
-            if (Url.IsLocalUrl(returnUrl))
-            {
-                return Redirect(returnUrl);
+                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
+
+                result = await UserManager.AddClaimsAsync(user, claimsToAdd);
+                if (!result.Succeeded)
+                {
+                    return null;
+                }
+
+                result = await UserManager.AddLoginAsync(user, info);
+                if (!result.Succeeded)
+                {
+                    return null;
+                }
+
+                txn.Commit();
+                return user;
             }
+        });
+    }
 
-            return Redirect("/");
+    public static bool ShouldAddClaimToUser(Claim c)
+    {
+        return c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" || c.Type == ClaimTypes.Role;
+    }
+
+    private IActionResult RedirectToLocal(string returnUrl)
+    {
+        if (Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
         }
+
+        return Redirect("/");
     }
 }

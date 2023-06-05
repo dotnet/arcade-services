@@ -4,14 +4,13 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public class GitHubCommit
 {
-    public class GitHubCommit
-    {
-        public string Message { get; set; }
+    public string Message { get; set; }
 
-        public string Tree { get; set; }
+    public string Tree { get; set; }
 
-        public List<string> Parents { get; set; }
-    }
+    public List<string> Parents { get; set; }
 }

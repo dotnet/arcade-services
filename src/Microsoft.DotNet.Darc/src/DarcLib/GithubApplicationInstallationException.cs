@@ -5,25 +5,24 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+[Serializable]
+public class GithubApplicationInstallationException : DarcException
 {
-    [Serializable]
-    public class GithubApplicationInstallationException : DarcException
+    public GithubApplicationInstallationException() : base()
     {
-        public GithubApplicationInstallationException() : base()
-        {
-        }
+    }
 
-        protected GithubApplicationInstallationException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
+    protected GithubApplicationInstallationException(SerializationInfo info, StreamingContext context) : base(info, context)
+    {
+    }
 
-        public GithubApplicationInstallationException(string message) : base(message)
-        {
-        }
+    public GithubApplicationInstallationException(string message) : base(message)
+    {
+    }
 
-        public GithubApplicationInstallationException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
+    public GithubApplicationInstallationException(string message, Exception innerException) : base(message, innerException)
+    {
     }
 }

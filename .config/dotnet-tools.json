@@ -9,7 +9,7 @@
       ]
     },
     "microsoft.dnceng.secretmanager": {
-      "version": "1.1.0-beta.22174.7",
+      "version": "1.1.0-beta.23301.1",
       "commands": [
         "secret-manager"
       ]
@@ -18,6 +18,12 @@
       "version": "6.0.4",
       "commands": [
         "dotnet-ef"
+      ]
+    },
+    "microsoft.dnceng.configuration.bootstrap": {
+      "version": "1.1.0-beta.23301.1",
+      "commands": [
+        "bootstrap-dnceng-configuration"
       ]
     }
   }

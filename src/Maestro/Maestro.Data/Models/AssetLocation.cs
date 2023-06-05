@@ -5,16 +5,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Maestro.Data.Models
+namespace Maestro.Data.Models;
+
+public class AssetLocation
 {
-    public class AssetLocation
-    {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
 
-        public string Location { get; set; }
+    public string Location { get; set; }
 
-        public LocationType Type { get; set; }
-    }
+    public LocationType Type { get; set; }
 }

@@ -6,27 +6,26 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Threading.Tasks;
 
-namespace Maestro.AzureDevOps
+namespace Maestro.AzureDevOps;
+
+public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
 {
-    public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
+    private readonly IOptionsMonitor<AzureDevOpsTokenProviderOptions> _options;
+
+    public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
     {
-        private readonly IOptionsMonitor<AzureDevOpsTokenProviderOptions> _options;
+        _options = options;
+    }
 
-        public AzureDevOpsTokenProvider(IOptionsMonitor<AzureDevOpsTokenProviderOptions> options)
+    public Task<string> GetTokenForAccount(string account)
+    {
+        var options = _options.CurrentValue;
+        if (!options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
         {
-            _options = options;
+            throw new ArgumentOutOfRangeException($"Azure DevOps account {account} does not have a configured PAT. " +
+                                                  $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
         }
 
-        public Task<string> GetTokenForAccount(string account)
-        {
-            var options = _options.CurrentValue;
-            if (!options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
-            {
-                throw new ArgumentOutOfRangeException($"Azure DevOps account {account} does not have a configured PAT. " +
-                    $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
-            }
-
-            return Task.FromResult<string>(pat);
-        }
+        return Task.FromResult<string>(pat);
     }
 }

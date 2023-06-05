@@ -6,15 +6,15 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data.Models;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+public interface IMergePolicyEvaluator
 {
-    public interface IMergePolicyEvaluator
-    {
-        Task<MergePolicyEvaluationResults> EvaluateAsync(
-            IPullRequest pr,
-            IRemote darc,
-            IReadOnlyList<MergePolicyDefinition> policyDefinitions);
-    }
+    Task<MergePolicyEvaluationResults> EvaluateAsync(
+        IPullRequest pr,
+        IRemote darc,
+        IReadOnlyList<MergePolicyDefinition> policyDefinitions);
 }

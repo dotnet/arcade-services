@@ -18,6 +18,18 @@ secrets:
       accountName: dn-bot
       description: The dn-bot account
 
+  dnb2-bot-account-redmond:
+    type: domain-account
+    parameters:
+      accountName: dnb2-bot
+      description: The dnb2-bot account
+  
+  dn-dependabot-account-redmond:
+    type: domain-account
+    parameters:
+      accountName: dn-dependabot
+      description: The dn-dependabot account
+
   dotnet-mc-bot-account:
     type: github-account
     parameters:

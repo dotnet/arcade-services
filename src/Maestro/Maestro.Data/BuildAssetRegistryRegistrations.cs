@@ -11,22 +11,21 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Maestro.Data
-{
-    public static class BuildAssetRegistryRegistrations
-    {
-        public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction = null)
-        {
-            services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
-            services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
-            return services;
-        }
+namespace Maestro.Data;
 
-        public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<DbContextOptionsBuilder> optionsAction = null)
-        {
-            services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
-            services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
-            return services;
-        }
+public static class BuildAssetRegistryRegistrations
+{
+    public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction = null)
+    {
+        services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
+        services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
+        return services;
+    }
+
+    public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<DbContextOptionsBuilder> optionsAction = null)
+    {
+        services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
+        services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
+        return services;
     }
 }

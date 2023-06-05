@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public enum MergePolicyCheckResult
 {
-    public enum MergePolicyCheckResult
-    {
-        NoPolicies = 0,
-        PendingPolicies = 1,
-        FailedPolicies = 2,
-        FailedToMerge = 3,
-        Merged = 4,
-    }
+    NoPolicies = 0,
+    PendingPolicies = 1,
+    FailedPolicies = 2,
+    FailedToMerge = 3,
+    Merged = 4,
 }

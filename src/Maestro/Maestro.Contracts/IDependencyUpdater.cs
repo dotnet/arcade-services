@@ -7,21 +7,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Remoting;
 
-namespace Maestro.Contracts
+namespace Maestro.Contracts;
+
+public interface IDependencyUpdater : IService
 {
-    public interface IDependencyUpdater : IService
-    {
-        Task StartUpdateDependenciesAsync(int buildId, int channelId);
+    Task StartUpdateDependenciesAsync(int buildId, int channelId);
 
-        Task StartSubscriptionUpdateAsync(Guid subscription);
+    Task StartSubscriptionUpdateAsync(Guid subscription);
 
-        Task StartSubscriptionUpdateForSpecificBuildAsync(Guid subscription, int buildId);
+    Task StartSubscriptionUpdateForSpecificBuildAsync(Guid subscription, int buildId);
 
-        /// <summary>
-        ///     Temporary method for debugging daily update issues
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken);
-    }
+    /// <summary>
+    ///     Temporary method for debugging daily update issues
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken);
 }

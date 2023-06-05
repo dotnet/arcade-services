@@ -17,178 +17,177 @@ using Newtonsoft.Json.Linq;
 using Octokit;
 using Octokit.Internal;
 
-namespace Maestro.Web.Controllers
+namespace Maestro.Web.Controllers;
+
+public class WebHooksController : Controller
 {
-    public class WebHooksController : Controller
+    private readonly Lazy<BuildAssetRegistryContext> _context;
+
+    public WebHooksController(
+        ILogger<WebHooksController> logger,
+        IGitHubTokenProvider gitHubTokenProvider,
+        Lazy<BuildAssetRegistryContext> context)
     {
-        private readonly Lazy<BuildAssetRegistryContext> _context;
+        _context = context;
+        Logger = logger;
+        GitHubTokenProvider = gitHubTokenProvider;
+    }
 
-        public WebHooksController(
-            ILogger<WebHooksController> logger,
-            IGitHubTokenProvider gitHubTokenProvider,
-            Lazy<BuildAssetRegistryContext> context)
+    public ILogger<WebHooksController> Logger { get; }
+    public IGitHubTokenProvider GitHubTokenProvider { get; }
+    public BuildAssetRegistryContext Context => _context.Value;
+
+    [GitHubWebHook(EventName = "installation")]
+    [ValidateModelState]
+    public async Task<IActionResult> InstallationHandler(JObject data)
+    {
+        var ser = new SimpleJsonSerializer();
+        var payload = ser.Deserialize<InstallationEvent>(data.ToString());
+        switch (payload.Action)
         {
-            _context = context;
-            Logger = logger;
-            GitHubTokenProvider = gitHubTokenProvider;
+            case "deleted":
+                await RemoveInstallationRepositoriesAsync(payload.Installation.Id);
+                break;
+            case "created": // installation was created
+            case "removed": // repository removed from installation
+            case "added":   // repository added to installation
+                await SynchronizeInstallationRepositoriesAsync(payload.Installation.Id);
+                break;
+            default:
+                Logger.LogError(
+                    "Received Unknown action '{action}' for installation event. Payload: {payload}",
+                    payload.Action,
+                    data.ToString());
+                break;
         }
 
-        public ILogger<WebHooksController> Logger { get; }
-        public IGitHubTokenProvider GitHubTokenProvider { get; }
-        public BuildAssetRegistryContext Context => _context.Value;
+        return Ok();
+    }
 
-        [GitHubWebHook(EventName = "installation")]
-        [ValidateModelState]
-        public async Task<IActionResult> InstallationHandler(JObject data)
+    private async Task RemoveInstallationRepositoriesAsync(long installationId)
+    {
+        foreach (Data.Models.Repository repo in await Context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync())
         {
-            var ser = new SimpleJsonSerializer();
-            var payload = ser.Deserialize<InstallationEvent>(data.ToString());
-            switch (payload.Action)
+            Context.Update(repo);
+            repo.InstallationId = 0;
+        }
+
+        await Context.SaveChangesAsync();
+    }
+
+    [GitHubWebHook(EventName = "installation_repositories")]
+    [ValidateModelState]
+    public async Task<IActionResult> InstallationRepositoriesHandler(JObject data)
+    {
+        var ser = new SimpleJsonSerializer();
+        var payload = ser.Deserialize<InstallationRepositoriesEvent>(data.ToString());
+        await SynchronizeInstallationRepositoriesAsync(payload.Installation.Id);
+        return Ok();
+    }
+
+    private async Task SynchronizeInstallationRepositoriesAsync(long installationId)
+    {
+        string token = await GitHubTokenProvider.GetTokenForInstallationAsync(installationId);
+        IReadOnlyList<Repository> gitHubRepos = await GetAllInstallationRepositories(token);
+
+        List<Data.Models.Repository> toRemove =
+            await Context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync();
+
+        foreach (Repository repo in gitHubRepos)
+        {
+            Data.Models.Repository existing = await Context.Repositories.FindAsync(repo.HtmlUrl);
+            if (existing == null)
             {
-                case "deleted":
-                    await RemoveInstallationRepositoriesAsync(payload.Installation.Id);
-                    break;
-                case "created": // installation was created
-                case "removed": // repository removed from installation
-                case "added":   // repository added to installation
-                    await SynchronizeInstallationRepositoriesAsync(payload.Installation.Id);
-                    break;
-                default:
-                    Logger.LogError(
-                        "Received Unknown action '{action}' for installation event. Payload: {payload}",
-                        payload.Action,
-                        data.ToString());
-                    break;
+                Context.Repositories.Add(
+                    new Data.Models.Repository
+                    {
+                        RepositoryName = repo.HtmlUrl,
+                        InstallationId = installationId
+                    });
             }
-
-            return Ok();
-        }
-
-        private async Task RemoveInstallationRepositoriesAsync(long installationId)
-        {
-            foreach (Data.Models.Repository repo in await Context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync())
+            else
             {
-                Context.Update(repo);
-                repo.InstallationId = 0;
+                toRemove.Remove(existing);
+                existing.InstallationId = installationId;
+                Context.Update(existing);
             }
-
-            await Context.SaveChangesAsync();
         }
 
-        [GitHubWebHook(EventName = "installation_repositories")]
-        [ValidateModelState]
-        public async Task<IActionResult> InstallationRepositoriesHandler(JObject data)
+        foreach (Data.Models.Repository repository in toRemove)
         {
-            var ser = new SimpleJsonSerializer();
-            var payload = ser.Deserialize<InstallationRepositoriesEvent>(data.ToString());
-            await SynchronizeInstallationRepositoriesAsync(payload.Installation.Id);
-            return Ok();
+            repository.InstallationId = 0;
+            Context.Update(repository);
         }
 
-        private async Task SynchronizeInstallationRepositoriesAsync(long installationId)
+        await Context.SaveChangesAsync();
+    }
+
+    private static Task<IReadOnlyList<Repository>> GetAllInstallationRepositories(string token)
+    {
+        var product = new ProductHeaderValue(
+            "Maestro",
+            Assembly.GetEntryAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                .InformationalVersion);
+        var client = new GitHubClient(product) {Credentials = new Credentials(token, AuthenticationType.Bearer)};
+        var pagination = new ApiPagination();
+        var uri = new Uri("installation/repositories", UriKind.Relative);
+
+        async Task<IApiResponse<List<Repository>>> GetInstallationRepositories(Uri u)
         {
-            string token = await GitHubTokenProvider.GetTokenForInstallationAsync(installationId);
-            IReadOnlyList<Repository> gitHubRepos = await GetAllInstallationRepositories(token);
-
-            List<Data.Models.Repository> toRemove =
-                await Context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync();
-
-            foreach (Repository repo in gitHubRepos)
-            {
-                Data.Models.Repository existing = await Context.Repositories.FindAsync(repo.HtmlUrl);
-                if (existing == null)
-                {
-                    Context.Repositories.Add(
-                        new Data.Models.Repository
-                        {
-                            RepositoryName = repo.HtmlUrl,
-                            InstallationId = installationId
-                        });
-                }
-                else
-                {
-                    toRemove.Remove(existing);
-                    existing.InstallationId = installationId;
-                    Context.Update(existing);
-                }
-            }
-
-            foreach (Data.Models.Repository repository in toRemove)
-            {
-                repository.InstallationId = 0;
-                Context.Update(repository);
-            }
-
-            await Context.SaveChangesAsync();
+            IApiResponse<InstallationRepositoriesResponse> response =
+                await client.Connection.Get<InstallationRepositoriesResponse>(
+                    u,
+                    null,
+                    AcceptHeaders.GitHubAppsPreview);
+            return new ApiResponse<List<Repository>>(response.HttpResponse, response.Body.Repositories);
         }
 
-        private static Task<IReadOnlyList<Repository>> GetAllInstallationRepositories(string token)
-        {
-            var product = new ProductHeaderValue(
-                "Maestro",
-                Assembly.GetEntryAssembly()
-                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                    .InformationalVersion);
-            var client = new GitHubClient(product) {Credentials = new Credentials(token, AuthenticationType.Bearer)};
-            var pagination = new ApiPagination();
-            var uri = new Uri("installation/repositories", UriKind.Relative);
+        return pagination.GetAllPages<Repository>(
+            async () => new ReadOnlyPagedCollection<Repository>(
+                await GetInstallationRepositories(uri),
+                GetInstallationRepositories),
+            uri);
+    }
 
-            async Task<IApiResponse<List<Repository>>> GetInstallationRepositories(Uri u)
-            {
-                IApiResponse<InstallationRepositoriesResponse> response =
-                    await client.Connection.Get<InstallationRepositoriesResponse>(
-                        u,
-                        null,
-                        AcceptHeaders.GitHubAppsPreview);
-                return new ApiResponse<List<Repository>>(response.HttpResponse, response.Body.Repositories);
-            }
+    [GitHubWebHook]
+    [ValidateModelState]
+    public IActionResult GitHubHandler(string id, string @event, JObject data)
+    {
+        Logger.LogWarning("Received unhandled event {eventName}", @event);
+        return NoContent();
+    }
 
-            return pagination.GetAllPages<Repository>(
-                async () => new ReadOnlyPagedCollection<Repository>(
-                    await GetInstallationRepositories(uri),
-                    GetInstallationRepositories),
-                uri);
-        }
+    public class InstallationEvent
+    {
+        public string Action { get; set; }
+        public Installation Installation { get; set; }
+        public List<InstallationRepository> Repositories { get; set; }
+        public User Sender { get; set; }
+    }
 
-        [GitHubWebHook]
-        [ValidateModelState]
-        public IActionResult GitHubHandler(string id, string @event, JObject data)
-        {
-            Logger.LogWarning("Received unhandled event {eventName}", @event);
-            return NoContent();
-        }
+    public class InstallationRepository
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string FullName { get; set; }
+        public bool Private { get; set; }
+    }
 
-        public class InstallationEvent
-        {
-            public string Action { get; set; }
-            public Installation Installation { get; set; }
-            public List<InstallationRepository> Repositories { get; set; }
-            public User Sender { get; set; }
-        }
+    public class InstallationRepositoriesEvent
+    {
+        public string Action { get; set; }
+        public Installation Installation { get; set; }
+        public StringEnum<InstallationRepositorySelection> RepositorySelection { get; set; }
+        public List<InstallationRepository> RepositoriesAdded { get; set; }
+        public List<InstallationRepository> RepositoriesRemoved { get; set; }
+        public User Sender { get; set; }
+    }
 
-        public class InstallationRepository
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public string FullName { get; set; }
-            public bool Private { get; set; }
-        }
-
-        public class InstallationRepositoriesEvent
-        {
-            public string Action { get; set; }
-            public Installation Installation { get; set; }
-            public StringEnum<InstallationRepositorySelection> RepositorySelection { get; set; }
-            public List<InstallationRepository> RepositoriesAdded { get; set; }
-            public List<InstallationRepository> RepositoriesRemoved { get; set; }
-            public User Sender { get; set; }
-        }
-
-        public class InstallationRepositoriesResponse
-        {
-            public int TotalCount { get; set; }
-            public StringEnum<InstallationRepositorySelection> RepositorySelection { get; set; }
-            public List<Repository> Repositories { get; set; }
-        }
+    public class InstallationRepositoriesResponse
+    {
+        public int TotalCount { get; set; }
+        public StringEnum<InstallationRepositorySelection> RepositorySelection { get; set; }
+        public List<Repository> Repositories { get; set; }
     }
 }

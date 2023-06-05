@@ -5,74 +5,76 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.MergePolicies
+namespace Maestro.MergePolicies;
+
+public class MergePolicyProperties
 {
-    public class MergePolicyProperties
+    public MergePolicyProperties(IReadOnlyDictionary<string, JToken> properties)
     {
-        public MergePolicyProperties(IReadOnlyDictionary<string, JToken> properties)
+        Properties = properties;
+    }
+
+    public IReadOnlyDictionary<string, JToken> Properties { get; }
+
+    public T Get<T>(string key)
+    {
+        T result = default;
+        if (Properties != null && Properties.TryGetValue(key, out JToken value))
         {
-            Properties = properties;
+            result = value.ToObject<T>();
         }
 
-        public IReadOnlyDictionary<string, JToken> Properties { get; }
+        return result;
+    }
+}
 
-        public T Get<T>(string key)
+public abstract class MergePolicy : IMergePolicy
+{
+    public string Name
+    {
+        get
         {
-            T result = default;
-            if (Properties != null && Properties.TryGetValue(key, out JToken value))
+            string name = GetType().Name;
+            if (name.EndsWith(nameof(MergePolicy)))
             {
-                result = value.ToObject<T>();
+                name = name.Substring(0, name.Length - nameof(MergePolicy).Length);
             }
 
-            return result;
+            return name;
         }
     }
 
-    public abstract class MergePolicy : IMergePolicy
-    {
-        public string Name
-        {
-            get
-            {
-                string name = GetType().Name;
-                if (name.EndsWith(nameof(MergePolicy)))
-                {
-                    name = name.Substring(0, name.Length - nameof(MergePolicy).Length);
-                }
+    public abstract string DisplayName { get; }
 
-                return name;
-            }
-        }
+    public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
 
-        public abstract string DisplayName { get; }
+    public MergePolicyEvaluationResult Pending(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, title, string.Empty, this);
 
-        public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+    public MergePolicyEvaluationResult Succeed(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, title, string.Empty, this);
 
-        public MergePolicyEvaluationResult Pending(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, message, this);
+    public MergePolicyEvaluationResult Fail(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, string.Empty, this);
 
-        public MergePolicyEvaluationResult Succeed(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, message, this);
+    public MergePolicyEvaluationResult Fail(string title, string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, message, this);
+}
 
-        public MergePolicyEvaluationResult Fail(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, message, this);
-    }
+public interface IMergePolicy : IMergePolicyInfo
+{
+    Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+}
 
-    public interface IMergePolicy : IMergePolicyInfo
-    {
-        Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
-    }
+public interface IMergePolicyBuilder
+{
+    string Name { get; }
 
-    public interface IMergePolicyBuilder
-    {
-        string Name { get; }
-
-        /// <summary>
-        /// Creates list of instances of concrete merge policies which shall be evaluated 
-        /// for particular merge policy definition
-        /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
-        /// it will return multiple pre-configured policies which that policies template consist of
-        /// </summary>
-        Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
-    }
+    /// <summary>
+    /// Creates list of instances of concrete merge policies which shall be evaluated 
+    /// for particular merge policy definition
+    /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
+    /// it will return multiple pre-configured policies which that policies template consist of
+    /// </summary>
+    Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
 }

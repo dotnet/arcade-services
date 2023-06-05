@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
-{
-    public class AzureDevOpsItem
-    {
-        public string Path { get; set; }
+namespace Microsoft.DotNet.DarcLib;
 
-        public bool IsFolder { get; set; }
-    }
+public class AzureDevOpsItem
+{
+    public string Path { get; set; }
+
+    public bool IsFolder { get; set; }
 }

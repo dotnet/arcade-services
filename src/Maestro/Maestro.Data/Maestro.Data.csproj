@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -15,12 +15,12 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
+    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>
 
 </Project>

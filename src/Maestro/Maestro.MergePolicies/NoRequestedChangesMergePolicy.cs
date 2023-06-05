@@ -3,40 +3,40 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Contracts;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Maestro.MergePolicies
+namespace Maestro.MergePolicies;
+
+public class NoRequestedChangesMergePolicy : MergePolicy
 {
-    public class NoRequestedChangesMergePolicy : MergePolicy
+    public override string DisplayName => "No Requested Changes";
+
+    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
     {
-        public override string DisplayName => "No Requested Changes";
+        IEnumerable<Review> reviews = await darc.GetPullRequestReviewsAsync(pr.Url);
 
-        public override async Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+        if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
         {
-            IEnumerable<Review> reviews = await darc.GetPullRequestReviewsAsync(pr.Url);
-
-            if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
-            {
-                return Fail("There are reviews that have requested changes.");
-            }
-            else
-            {
-                return Succeed("No reviews have requested changes.");
-            }
+            return Fail("There are reviews that have requested changes.");
+        }
+        else
+        {
+            return Succeed("No reviews have requested changes.");
         }
     }
+}
 
-    public class NoRequestedChangesMergePolicyBuilder : IMergePolicyBuilder
+public class NoRequestedChangesMergePolicyBuilder : IMergePolicyBuilder
+{
+    public string Name => MergePolicyConstants.NoRequestedChangesMergePolicyName;
+
+    public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
     {
-        public string Name => MergePolicyConstants.NoRequestedChangesMergePolicyName;
-
-        public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
-        {
-            IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new NoRequestedChangesMergePolicy() };
-            return Task.FromResult(policies);
-        }
+        IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new NoRequestedChangesMergePolicy() };
+        return Task.FromResult(policies);
     }
 }

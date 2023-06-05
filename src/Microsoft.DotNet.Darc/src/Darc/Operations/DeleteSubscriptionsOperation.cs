@@ -14,99 +14,98 @@ using Microsoft.DotNet.Maestro.Client;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.DotNet.Darc.Operations
+namespace Microsoft.DotNet.Darc.Operations;
+
+internal class DeleteSubscriptionsOperation : Operation
 {
-    internal class DeleteSubscriptionsOperation : Operation
+    DeleteSubscriptionsCommandLineOptions _options;
+    public DeleteSubscriptionsOperation(DeleteSubscriptionsCommandLineOptions options)
+        : base(options)
     {
-        DeleteSubscriptionsCommandLineOptions _options;
-        public DeleteSubscriptionsOperation(DeleteSubscriptionsCommandLineOptions options)
-            : base(options)
-        {
-            _options = options;
-        }
+        _options = options;
+    }
 
-        public override async Task<int> ExecuteAsync()
+    public override async Task<int> ExecuteAsync()
+    {
+        try
         {
-            try
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            bool noConfirm = _options.NoConfirmation;
+            List<Subscription> subscriptionsToDelete = new List<Subscription>();
+
+            if (!string.IsNullOrEmpty(_options.Id))
             {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-                bool noConfirm = _options.NoConfirmation;
-                List<Subscription> subscriptionsToDelete = new List<Subscription>();
-
-                if (!string.IsNullOrEmpty(_options.Id))
+                // Look up subscription so we can print it later.
+                try
                 {
-                    // Look up subscription so we can print it later.
-                    try
-                    {
-                        Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
-                        subscriptionsToDelete.Add(subscription);
-                    }
-                    catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
-                    {
-                        Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
-                        return Constants.ErrorCode;
-                    }
+                    Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+                    subscriptionsToDelete.Add(subscription);
                 }
-                else
+                catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
                 {
-                    if (!_options.HasAnyFilters())
-                    {
-                        Console.WriteLine($"Please specify one or more filters to select which subscriptions should be deleted (see help).");
-                        return Constants.ErrorCode;
-                    }
-
-                    IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
-
-                    if (!subscriptions.Any())
-                    {
-                        Console.WriteLine("No subscriptions found matching the specified criteria.");
-                        return Constants.ErrorCode;
-                    }
-
-                    subscriptionsToDelete.AddRange(subscriptions);
+                    Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
+                    return Constants.ErrorCode;
+                }
+            }
+            else
+            {
+                if (!_options.HasAnyFilters())
+                {
+                    Console.WriteLine($"Please specify one or more filters to select which subscriptions should be deleted (see help).");
+                    return Constants.ErrorCode;
                 }
 
-                if (!noConfirm)
-                {
-                    // Print out the list of subscriptions about to be triggered.
-                    Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
-                    foreach (var subscription in subscriptionsToDelete)
-                    {
-                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                    }
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
-                    if (!UxHelpers.PromptForYesNo("Continue?"))
-                    {
-                        Console.WriteLine($"No subscriptions deleted, exiting.");
-                        return Constants.ErrorCode;
-                    }
+                if (!subscriptions.Any())
+                {
+                    Console.WriteLine("No subscriptions found matching the specified criteria.");
+                    return Constants.ErrorCode;
                 }
 
-                Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+                subscriptionsToDelete.AddRange(subscriptions);
+            }
+
+            if (!noConfirm)
+            {
+                // Print out the list of subscriptions about to be triggered.
+                Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
                 foreach (var subscription in subscriptionsToDelete)
                 {
-                    // If noConfirm was passed, print out the subscriptions as we go
-                    if (noConfirm)
-                    {
-                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                    }
-                    await remote.DeleteSubscriptionAsync(subscription.Id.ToString());
+                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
-                Console.WriteLine("done");
 
-                return Constants.SuccessCode;
+                if (!UxHelpers.PromptForYesNo("Continue?"))
+                {
+                    Console.WriteLine($"No subscriptions deleted, exiting.");
+                    return Constants.ErrorCode;
+                }
             }
-            catch (AuthenticationException e)
+
+            Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+            foreach (var subscription in subscriptionsToDelete)
             {
-                Console.WriteLine(e.Message);
-                return Constants.ErrorCode;
+                // If noConfirm was passed, print out the subscriptions as we go
+                if (noConfirm)
+                {
+                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+                }
+                await remote.DeleteSubscriptionAsync(subscription.Id.ToString());
             }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Unexpected error while deleting subscriptions.");
-                return Constants.ErrorCode;
-            }
+            Console.WriteLine("done");
+
+            return Constants.SuccessCode;
+        }
+        catch (AuthenticationException e)
+        {
+            Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError(e, "Unexpected error while deleting subscriptions.");
+            return Constants.ErrorCode;
         }
     }
 }

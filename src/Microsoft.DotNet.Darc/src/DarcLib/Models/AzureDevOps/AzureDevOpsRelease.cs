@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.DarcLib;
+
+public partial class AzureDevOpsRelease
 {
-    public partial class AzureDevOpsRelease
-    {
-        public long Id { get; set; }
+    public long Id { get; set; }
 
-        public AzureDevOpsReleaseEnvironment[] Environments { get; set; }
+    public AzureDevOpsReleaseEnvironment[] Environments { get; set; }
 
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }

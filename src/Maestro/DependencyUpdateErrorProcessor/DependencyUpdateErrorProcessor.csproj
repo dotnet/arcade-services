@@ -22,13 +22,13 @@
     <PackageReference Include="Microsoft.ServiceFabric.Services" />
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" />
+    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
+    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 

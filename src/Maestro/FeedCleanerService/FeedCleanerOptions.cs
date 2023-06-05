@@ -4,14 +4,13 @@
 
 using System.Collections.Generic;
 
-namespace FeedCleanerService
+namespace FeedCleanerService;
+
+public class FeedCleanerOptions
 {
-    public class FeedCleanerOptions
-    {
-        public bool Enabled { get; set; }
+    public bool Enabled { get; set; }
 
-        public List<(string account, string project, string name)> ReleasePackageFeeds = new List<(string account, string project, string name)>();
+    public List<(string account, string project, string name)> ReleasePackageFeeds = new List<(string account, string project, string name)>();
 
-        public List<string> AzdoAccounts = new List<string>();
-    }
+    public List<string> AzdoAccounts = new List<string>();
 }

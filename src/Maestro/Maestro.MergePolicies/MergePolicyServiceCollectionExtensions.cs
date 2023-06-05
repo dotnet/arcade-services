@@ -4,16 +4,16 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Maestro.MergePolicies
+namespace Maestro.MergePolicies;
+
+public static class MergePolicyServiceCollectionExtensions
 {
-    public static class MergePolicyServiceCollectionExtensions
+    public static IServiceCollection AddMergePolicies(this IServiceCollection services)
     {
-        public static IServiceCollection AddMergePolicies(this IServiceCollection services)
-        {
-            services.AddTransient<IMergePolicyBuilder, AllChecksSuccessfulMergePolicyBuilder>();
-            services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
-            services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
-            return services;
-        }
+        services.AddTransient<IMergePolicyBuilder, AllChecksSuccessfulMergePolicyBuilder>();
+        services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
+        services.AddTransient<IMergePolicyBuilder, DontAutomergeDowngradesMergePolicyBuilder>();
+        services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
+        return services;
     }
 }

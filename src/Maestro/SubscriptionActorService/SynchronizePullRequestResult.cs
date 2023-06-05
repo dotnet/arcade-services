@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace SubscriptionActorService
+namespace SubscriptionActorService;
+
+public enum SynchronizePullRequestResult
 {
-    public enum SynchronizePullRequestResult
-    {
-        Invalid = 0,
-        UnknownPR = 1,
-        Completed = 2,
-        InProgressCanUpdate = 3,
-        InProgressCannotUpdate = 4,
-    }
+    Invalid = 0,
+    UnknownPR = 1,
+    Completed = 2,
+    InProgressCanUpdate = 3,
+    InProgressCannotUpdate = 4,
 }
