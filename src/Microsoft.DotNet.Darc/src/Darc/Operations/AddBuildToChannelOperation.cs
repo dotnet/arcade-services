@@ -219,6 +219,7 @@ internal class AddBuildToChannelOperation : Operation
         }
 
         var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
+        arcadeSDKSourceBranch = "dkurepa/PublishingWorkaround";
 
         // This condition can happen when for some reason we failed to determine the source branch/sha
         // of the build that produced the used Arcade SDK or when the user specify an invalid combination
