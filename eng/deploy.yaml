@@ -13,7 +13,6 @@ parameters:
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
   # dotnet-build-bot-dotnet-eng-status-token
-  # secret-manager-scenario-tests-client-secret
 
 stages:
 - stage: ValidateSecrets
@@ -30,8 +29,8 @@ stages:
       inputs:
         useGlobalJson: true
 
-    - script: dotnet build
-      workingDirectory: src/Microsoft.DncEng.SecretManager
+    - script: dotnet tool restore
+      displayName: Install Secret Manager
 
     - task: AzureCLI@2
       inputs:
@@ -39,7 +38,7 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Get-ChildItem .vault-config/*.yaml |% { dotnet run --project src/Microsoft.DncEng.SecretManager -- synchronize --verify-only $_}
+          Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize --verify-only $_}
 
 - stage: approval
   pool: server

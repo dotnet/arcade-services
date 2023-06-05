@@ -15,4 +15,5 @@ if (-not $?) {
 New-LocalGroup -Name "DncEngConfigurationUsers" -ErrorAction Continue
 Add-LocalGroupMember -Group "DncEngConfigurationUsers" -Member $(whoami) -ErrorAction Continue
 
-dotnet run --project "$PSScriptRoot\..\Microsoft.DncEng.Configuration.Bootstrap" -- -r "https://vault.azure.net" -r "https://management.azure.com"
+dotnet tool restore
+dotnet bootstrap-dnceng-configuration -r "https://vault.azure.net" -r "https://management.azure.com"
