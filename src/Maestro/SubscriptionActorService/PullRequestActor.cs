@@ -910,7 +910,7 @@ namespace SubscriptionActorService
             // we crate an empty commit that describes an issue.
             if (requiredUpdates.Count == 0)
             {
-                string message = "The Strict Coherency algorithm failed";
+                string message = "Failed to perform coherency update for one or more dependencies.";
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, new List<DependencyDetail>(), message);
                 return "This is a coherency update PR: " + message + ". Please review the GitHub checks for more information.";
             }
