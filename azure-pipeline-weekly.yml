@@ -28,8 +28,7 @@ stages:
         inputs:
           useGlobalJson: true
 
-      - script: dotnet build
-        workingDirectory: src/Microsoft.DncEng.SecretManager
+      - script: dotnet tool restore
 
       - task: AzureCLI@2
         inputs:
@@ -37,4 +36,4 @@ stages:
           scriptType: ps
           scriptLocation: inlineScript
           inlineScript: |
-            Get-ChildItem .vault-config/*.yaml |% { dotnet run --project src/Microsoft.DncEng.SecretManager -- synchronize $_}
+            Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize $_ }
