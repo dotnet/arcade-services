@@ -3,8 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
-    <IsPackable>true</IsPackable>
-    <PackAsTool>true</PackAsTool>
+    <IsPackable>false</IsPackable>
     <ToolCommandName>deploy-sf</ToolCommandName>
     <NoWarn>$(NoWarn);NU5111</NoWarn>
   </PropertyGroup>
