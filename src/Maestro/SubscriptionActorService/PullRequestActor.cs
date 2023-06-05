@@ -912,7 +912,7 @@ namespace SubscriptionActorService
             {
                 string message = "Failed to perform coherency update for one or more dependencies.";
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, new List<DependencyDetail>(), message);
-                return "This is a coherency update PR: " + message + ". Please review the GitHub checks for more information.";
+                return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
             }
 
             return pullRequestDescriptionBuilder.ToString();
