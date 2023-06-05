@@ -29,6 +29,7 @@ stages:
           useGlobalJson: true
 
       - script: dotnet tool restore
+        displayName: Install Secret Manager
 
       - task: AzureCLI@2
         inputs:
