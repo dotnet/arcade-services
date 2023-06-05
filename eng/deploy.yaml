@@ -39,7 +39,8 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Get-ChildItem .vault-config/*.yaml |% { dotnet run --project src/Microsoft.DncEng.SecretManager -- synchronize --verify-only $_}
+          dotnet tool restore
+          Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize --verify-only $_}
 
 - stage: approval
   pool: server
