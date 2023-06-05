@@ -148,14 +148,6 @@ stages:
             git diff
           displayName: Remove Service Fabric RunAsPolicy from MaestroApplication
 
-        - powershell: |
-            [xml]$manifest = Get-Content src\Telemetry\TelemetryApplication\ApplicationPackageRoot\ApplicationManifest.xml
-            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
-            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
-            $manifest.Save("src\Telemetry\TelemetryApplication\ApplicationPackageRoot\ApplicationManifest.xml")
-            git diff
-          displayName: Remove Service Fabric RunAsPolicy from TelemetryApplication
-
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
             -prepareMachine
@@ -168,11 +160,12 @@ stages:
           condition: succeeded()
         
         - powershell: |
+            dotnet tool restore
             $manifestArgs = @()
             Get-ChildItem .vault-config/*.yaml |% {
               $manifestArgs += @("-m", $_.FullName)
             }
-            dotnet run --project src/Microsoft.DncEng.SecretManager -- validate-all -b src @manifestArgs
+            dotnet secret-manager validate-all -b src @manifestArgs
           displayName: Verify Secret Usages
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
