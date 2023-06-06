@@ -13,6 +13,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Maestro.Web\Maestro.Web.csproj" />
+    <ProjectReference Include="..\..\src\Maestro\Maestro.Web\Maestro.Web.csproj" />
   </ItemGroup>
 </Project>
