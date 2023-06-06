@@ -3,7 +3,6 @@
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\FeedCleanerService\FeedCleanerService.csproj" />
+    <ProjectReference Include="..\..\src\Maestro\DependencyUpdater\DependencyUpdater.csproj" />
   </ItemGroup>
 
 </Project>
