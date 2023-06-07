@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <IsPackable>true</IsPackable>
+    <IsPackable>false</IsPackable>
     <PackAsTool>true</PackAsTool>
     <SignAssembly>false</SignAssembly>
     <ToolCommandName>bootstrap-dnceng-configuration</ToolCommandName>
