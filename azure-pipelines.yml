@@ -173,7 +173,8 @@ stages:
               # when scanning .csproj and package.json files.
               ignoreDirectories: '.packages'
 
-        - template: /eng/test.yaml
+        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
