@@ -86,23 +86,11 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.18.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.48.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.7" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.17.0" />
-    <PackageVersion Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.1.1" />
-    <PackageVersion Include="Microsoft.Rest.ClientRuntime.Azure" Version="3.3.19" />
     <PackageVersion Include="Microsoft.ServiceFabric" Version="8.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />
@@ -110,40 +98,23 @@
     <PackageVersion Include="Microsoft.ServiceFabric.Services" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="16.153.0" />
-    <PackageVersion Include="Microsoft.VisualStudio.Services.Client" Version="16.153.0" />
-    <PackageVersion Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.153.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.2.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.3" />
-    <PackageVersion Include="Mono.Options" Version="5.3.0.1" />
     <PackageVersion Include="Moq" Version="4.8.3" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageVersion Include="Newtonsoft.Json.Bson" Version="1.0.2" />
     <PackageVersion Include="NuGet.Configuration" Version="5.11.3" />
     <PackageVersion Include="NuGet.Packaging" Version="5.11.3" />
-    <PackageVersion Include="NuGet.Protocol" Version="5.11.3" />
-    <PackageVersion Include="NuGet.Versioning" Version="5.11.3" />
     <PackageVersion Include="NUnit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageVersion Include="Octokit" Version="0.49.0" />
-    <PackageVersion Include="Quartz" Version="3.0.6" />
     <PackageVersion Include="ServiceFabricMocks" Version="$(ServiceFabricMocksVersion)" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.Annotations" Version="5.2.1" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="5.2.1" />
-    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="5.2.1" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta1.21308.1" />
-    <PackageVersion Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="6.17.0" />
     <PackageVersion Include="System.Drawing.Common" Version="4.7.2" />
-    <PackageVersion Include="System.Data.SqlClient" Version="4.8.5" />
-    <PackageVersion Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
     <PackageVersion Include="System.IO.Hashing" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="4.7.1" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="6.0.0" />
     <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
     <PackageVersion Include="Verify.NUnit" Version="19.6" />
-    <PackageVersion Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageVersion Include="YamlDotNet" Version="9.1.4" />
     <PackageVersion Include="YamlDotNet.Signed" Version="5.3.0" />
   </ItemGroup>
