@@ -66,8 +66,7 @@ For any deployment changes, the only way to test would be to kick off the [build
 </Summary>
 
 Steps:
-- Execute the azurepipeline.yaml targeting dev branch by using run pipeline and selecting the branch
-![RunPipeline](Images/RunPipeline.PNG)
+- Run the `arcade-official-ci` pipeline (based on `azure-pipelines.yml`) from your dev branch.
 
 - Once the testing is done, rerun the pipeline for main branch to return the deployment to a last known good.
 
