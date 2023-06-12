@@ -206,8 +206,17 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
 
-            await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
-                testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks: true, false);
+            await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
+                testChannelName,
+                sourceRepoName,
+                targetRepoName,
+                targetBranch,
+                UpdateFrequency.None.ToString(),
+                "maestro-auth-test",
+                additionalOptions: new List<string> { "--validate-coherency" },
+                trigger: true,
+                sourceIsAzDo: false,
+                targetIsAzDo: false);
 
             TestContext.WriteLine("Set up build for intake into target repository");
             Build build1 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit,

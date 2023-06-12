@@ -60,7 +60,7 @@ class AddSubscriptionCommandLineOptions : CommandLineOptions
     [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags (GitHub login or GitHub team) to notify in the case of non-batched subscription pull-request policy failure.  Users must be publicly a member of the Microsoft org.", Default = "")]
     public string PullRequestFailureNotificationTags { get; set; }
 
-    [Option("validate-coherency", HelpText="PR is not merged if the coherency algorithg failed.")]
+    [Option("validate-coherency", HelpText="PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
 
     public override Operation GetOperation()
