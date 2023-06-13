@@ -314,7 +314,6 @@ namespace Maestro.ScenarioTests
                 string expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
                 Assert.AreEqual(expectedDependenciesString, actualDependencies, $"Expected: {expectedDependenciesString} \r\n Actual: {actualDependencies}");
-
             }
         }
 
