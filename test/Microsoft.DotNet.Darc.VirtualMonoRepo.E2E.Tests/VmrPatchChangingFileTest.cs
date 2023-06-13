@@ -86,6 +86,6 @@ public class VmrPatchChangingFileTest : VmrPatchesTestsBase
         await File.WriteAllTextAsync(ProductRepoPath / productRepoFileName, "New content");
         await GitOperations.CommitAll(ProductRepoPath, "Change file in product repo");
         var commit = await GitOperations.GetRepoLastCommit(ProductRepoPath);
-        await this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().ThrowAsync<Exception>();
+        this.Awaiting(_ => CallDarcUpdate(Constants.ProductRepoName, commit)).Should().Throw<Exception>();
     }
 }

@@ -7,7 +7,6 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 
@@ -23,7 +22,7 @@ public class AddAssetTests
 
         pushMetadata.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
         assetData.Count.Should().Be(1);
-        assetData.First().Should().BeEquivalentTo(expectedAssetData);
+        assetData.Should().BeEquivalentTo(expectedAssetData);
     }
 
     [Test]

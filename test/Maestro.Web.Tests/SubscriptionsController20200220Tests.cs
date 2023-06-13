@@ -410,7 +410,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             // Could also do a get after this; that more tests the underlying data context though.
             var updatedSubscription = (Subscription) objResult.Value;
             updatedSubscription.Id.Should().Be(createdSubscription1.Id);
-            updatedSubscription.Enabled.Should().Be(!subscription1.Enabled.Value);
+            updatedSubscription.Enabled.Should().IsSameOrEqualTo(!subscription1.Enabled);
             updatedSubscription.Policy.UpdateFrequency.Should().Be(Api.v2018_07_16.Models.UpdateFrequency.EveryDay);
             updatedSubscription.SourceRepository.Should().Be($"{subscription1.SourceRepository}-updated");
             updatedSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
