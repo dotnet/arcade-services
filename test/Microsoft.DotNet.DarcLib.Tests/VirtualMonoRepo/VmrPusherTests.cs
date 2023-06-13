@@ -39,7 +39,7 @@ public class VmrPusherTests
     }
 
     [Test]
-    public void PushingUnexistingCommitThrowsExceptionTest()
+    public async Task PushingUnexistingCommitThrowsExceptionTest()
     {
         var remoteConfiguration = new VmrRemoteConfiguration(null, null);
         var mockHttpClientFactory = new MockHttpClientFactory();
@@ -60,9 +60,9 @@ public class VmrPusherTests
             _localGitRepo.Object,
             remoteConfiguration);
 
-        vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
+        await vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
             .Should()
-            .Throw<Exception>()
+            .ThrowAsync<Exception>()
             .WithMessage("Not all pushed commits are publicly available");
     }
 
