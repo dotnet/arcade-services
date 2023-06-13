@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Maestro.Contracts;
-using Microsoft.DotNet.DarcLib;
 
 namespace SubscriptionActorService;
 
@@ -14,6 +13,12 @@ public class InProgressPullRequest : IPullRequest
 {
     [DataMember]
     public string Url { get; set; }
+
+    [DataMember]
+    public bool CoherencyCheckSuccessful { get; set; }
+
+    [DataMember]
+    public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
 
     [DataMember]
     public MergePolicyCheckResult MergePolicyResult { get; set; }

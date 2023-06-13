@@ -62,6 +62,15 @@ namespace Maestro.ScenarioTests.ObjectHelpers
                     });
             }
 
+            if (mergePolicyNames.Contains(MergePolicyConstants.ValidateCoherencyMergePolicyName))
+            {
+                mergePolicies.Add(
+                    new MergePolicy {
+                        Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                    });
+            }
+
             expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>();
             return expectedSubscription;
         }

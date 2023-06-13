@@ -87,6 +87,15 @@ class AddSubscriptionOperation : Operation
                 });
         }
 
+        if (_options.ValidateCoherencyCheckMergePolicy)
+        {
+            mergePolicies.Add(
+                new MergePolicy {
+                    Name = MergePolicyConstants.ValidateCoherencyMergePolicyName,
+                    Properties = ImmutableDictionary.Create<string, JToken>()
+                });
+        }
+
         if (_options.Batchable && mergePolicies.Count > 0)
         {
             Console.WriteLine("Batchable subscriptions cannot be combined with merge policies. " +
