@@ -62,7 +62,7 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         var updatedAssets = new List<List<Asset>>();
         PullRequestActors.Should()
             .ContainKey(forActor)
-            .WhichValue.Verify(
+            .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
         updatedAssets.Should()
             .BeEquivalentTo(
