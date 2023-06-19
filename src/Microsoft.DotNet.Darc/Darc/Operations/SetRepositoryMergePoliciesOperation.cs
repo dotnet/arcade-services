@@ -9,7 +9,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Common;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;

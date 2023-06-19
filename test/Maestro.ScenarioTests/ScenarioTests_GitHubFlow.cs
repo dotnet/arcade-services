@@ -21,12 +21,9 @@ namespace Maestro.ScenarioTests
         private readonly IImmutableList<AssetData> source1Assets;
         private readonly IImmutableList<AssetData> source2Assets;
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
-        private readonly IImmutableList<AssetData> childSourceBuildAssets;
-        private readonly IImmutableList<AssetData> childSourceAssets;
         private readonly List<DependencyDetail> expectedDependenciesSource1;
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
-        private readonly List<DependencyDetail> expectedCoherencyDependencies;
 
         public ScenarioTests_GitHubFlow()
         {
@@ -36,8 +33,6 @@ namespace Maestro.ScenarioTests
             source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
             source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
-            childSourceBuildAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
-            childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
 
             expectedDependenciesSource1 = new List<DependencyDetail>();
             string sourceRepoUri = GetRepoUrl(TestRepository.TestRepo1Name);
@@ -109,42 +104,6 @@ namespace Maestro.ScenarioTests
                 Pinned = false
             };
             expectedDependenciesSource1Updated.Add(barUpdated);
-
-            expectedCoherencyDependencies = new List<DependencyDetail>();
-            DependencyDetail baz = new DependencyDetail
-            {
-                Name = "Baz",
-                Version = "1.3.0",
-                RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
-                Commit = TestRepository.CoherencyTestRepo2Commit,
-                Type = DependencyType.Product,
-                Pinned = false,
-                CoherentParentDependencyName = "Foo"
-            };
-
-            DependencyDetail parentFoo = new DependencyDetail
-            {
-                Name = "Foo",
-                Version = "1.1.0",
-                RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
-                Commit = TestRepository.CoherencyTestRepo1Commit,
-                Type = DependencyType.Product,
-                Pinned = false
-            };
-
-            DependencyDetail parentBar = new DependencyDetail
-            {
-                Name = "Bar",
-                Version = "2.1.0",
-                RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
-                Commit = TestRepository.CoherencyTestRepo1Commit,
-                Type = DependencyType.Product,
-                Pinned = false
-            };
-
-            expectedCoherencyDependencies.Add(parentFoo);
-            expectedCoherencyDependencies.Add(parentBar);
-            expectedCoherencyDependencies.Add(baz);
         }
 
         [Test]
@@ -157,8 +116,8 @@ namespace Maestro.ScenarioTests
             List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
 
             await testLogic.DarcBatchedFlowTestBase(
-                $"GitHub_BatchedTestBranch_{Environment.MachineName}", 
-                $"GitHub Batched Channel {Environment.MachineName}", 
+                $"GitHub_BatchedTestBranch_{Environment.MachineName}",
+                $"GitHub Batched Channel {Environment.MachineName}",
                 source1Assets,
                 source2Assets,
                 expectedDependencies,
@@ -174,30 +133,192 @@ namespace Maestro.ScenarioTests
             EndToEndFlowLogic testLogic = new EndToEndFlowLogic(parameters);
 
             await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
-                $"GitHub_NonBatchedTestBranch_{Environment.MachineName}", 
-                $"GitHub Non-Batched Channel {Environment.MachineName}", 
-                source1Assets, 
+                $"GitHub_NonBatchedTestBranch_{Environment.MachineName}",
+                $"GitHub Non-Batched Channel {Environment.MachineName}",
+                source1Assets,
                 source1AssetsUpdated,
-                expectedDependenciesSource1, 
+                expectedDependenciesSource1,
                 expectedDependenciesSource1Updated).ConfigureAwait(false);
         }
 
         [Test]
-        public async Task Darc_GitHubFlow_NonBatched_WithCoherency()
+        public async Task Darc_GitHubFlow_NonBatched_StrictCoherency()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
 
             using TestParameters parameters = await TestParameters.GetAsync();
             EndToEndFlowLogic testLogic = new EndToEndFlowLogic(parameters);
 
+            List<DependencyDetail> expectedCoherencyDependencies = new List<DependencyDetail>
+            {
+                new DependencyDetail
+                {
+                    Name = "Foo",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "Bar",
+                    Version = "2.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                }
+            };
+
+            IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+
             await testLogic.NonBatchedGitHubFlowTestBase(
-                $"GitHub_NonBatchedTestCoherencyBranch_{Environment.MachineName}", 
-                $"GitHub Non-Batched Coherency Channel {Environment.MachineName}", 
-                source1Assets, 
-                expectedCoherencyDependencies,            
-                isCoherencyTest: true,
-                childSourceAssets : childSourceAssets,
-                childSourceBuildAssets: childSourceBuildAssets).ConfigureAwait(false);
+                $"GitHub_NonBatchedTestBranch_{Environment.MachineName}",
+                $"GitHub Non-Batched Channel {Environment.MachineName}",
+                sourceAssets,
+                expectedCoherencyDependencies,
+                allChecks: true).ConfigureAwait(false);
+        }
+
+        [Test]
+        public async Task Darc_GitHubFlow_NonBatched_FailingCoherencyUpdate()
+        {
+            using TestParameters parameters = await TestParameters.GetAsync();
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(parameters);
+
+            List<DependencyDetail> expectedCoherencyDependencies = new List<DependencyDetail>
+            {
+                new DependencyDetail
+                {
+                    Name = "Foo",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "Bar",
+                    Version = "2.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "Fzz",
+                    Version = "",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = "",
+                    Type = DependencyType.Product,
+                    CoherentParentDependencyName = "Foo"
+                },
+                new DependencyDetail
+                {
+                    Name = "ASD",
+                    Version = "",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = "",
+                    Type = DependencyType.Product,
+                    CoherentParentDependencyName = "Foo"
+                },
+            };
+
+            IImmutableList<AssetData> sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+            IImmutableList<AssetData> childSourceAssets = GetAssetData("Fzz", "1.1.0", "ASD", "1.1.1");
+
+            await testLogic.NonBatchedGitHubFlowCoherencyTestBase(
+                $"GitHub_NonBatchedTestBranch_FailingCoherencyUpdate_{Environment.MachineName}",
+                $"GitHub Non-Batched Channel FailingCoherencyUpdate {Environment.MachineName}",
+                sourceAssets,
+                childSourceAssets,
+                expectedCoherencyDependencies,
+                coherentParent: "Foo",
+                allChecks: false).ConfigureAwait(false);
+        }
+
+        [Test]
+        public async Task Darc_GitHubFlow_NonBatched_FailingCoherentOnlyUpdate()
+        {
+            using TestParameters parameters = await TestParameters.GetAsync();
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(parameters);
+
+            List<DependencyDetail> expectedNonCoherencyDependencies = new List<DependencyDetail>
+            {
+                new DependencyDetail
+                {
+                    Name = "A1",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "A2",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                }
+            };
+
+            List<DependencyDetail> expectedCoherencyDependencies = new List<DependencyDetail>
+            {
+                new DependencyDetail
+                {
+                    Name = "A1",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "A2",
+                    Version = "1.1.0",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "B1",
+                    Version = "",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = "",
+                    Type = DependencyType.Product,
+                    CoherentParentDependencyName = "A1"
+                },
+                new DependencyDetail
+                {
+                    Name = "B2",
+                    Version = "",
+                    RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
+                    Commit = "",
+                    Type = DependencyType.Product,
+                    CoherentParentDependencyName = "A1"
+                },
+            };
+
+            IImmutableList<AssetData> sourceAssets = GetAssetData("A1", "1.1.0", "A2", "1.1.0");
+            IImmutableList<AssetData> childSourceAssets = GetAssetData("B1", "2.1.0", "B2", "2.1.0");
+
+            await testLogic.NonBatchedGitHubFlowCoherencyOnlyTestBase(
+                $"GitHub_NonBatchedTestBranch_FailingCoherencyOnlyUpdate_{Environment.MachineName}",
+                $"GitHub Non-Batched Channel FailingCoherencyOnlyUpdate {Environment.MachineName}",
+                sourceAssets,
+                childSourceAssets,
+                expectedNonCoherencyDependencies,
+                expectedCoherencyDependencies,
+                coherentParent: "A1").ConfigureAwait(false);
         }
     }
 }
