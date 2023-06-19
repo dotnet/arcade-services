@@ -37,7 +37,6 @@ stages:
 - stage: build
   dependsOn: []
   displayName: Build
-  # Three phases for each of the three OSes we want to run on
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
@@ -81,12 +80,6 @@ stages:
               /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
               /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
               /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-        # In production, create stable package versions
-        # TODO: We depend on a prerelease version of Microsoft.TeamFoundationServer.Client
-        # https://github.com/dotnet/arcade-services/issues/59
-        # and so we can't stabilize for right now.
-        # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-            # - _ProductionArgs: /p:DotNetFinalVersionKind=release
 
         strategy:
           matrix:
@@ -170,9 +163,6 @@ stages:
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
-          - powershell: src\Monitoring\ComponentGovernance\generate-cgmanifest.ps1
-            displayName: Generate cgmanifest.json for Grafana
-
           - task: ComponentGovernanceComponentDetection@0
             inputs:
               # `.packages` directory is used by some tools running during build.
@@ -183,7 +173,8 @@ stages:
               # when scanning .csproj and package.json files.
               ignoreDirectories: '.packages'
 
-        - template: /eng/test.yaml
+        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
@@ -238,17 +229,10 @@ stages:
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-          # Reenable tagging when stable package versions can be generated.
-          # https://github.com/dotnet/arcade-services/issues/59
-          # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-            # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
-
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - template: eng\common\templates\post-build\post-build.yml
     parameters:
-      # Symbol validation isn't being very reliable lately. This should be enabled back
-      # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
-      enableSymbolValidation: false
+      enableSymbolValidation: true
       enableSigningValidation: false
       artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
       symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
@@ -274,7 +258,6 @@ stages:
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         PublishProfile: Int
-        RolloutScorerAppName: rollout-scorer-int
         ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
@@ -283,7 +266,6 @@ stages:
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
-        RolloutScorerAppName: rollout-scorer-prod
         ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault

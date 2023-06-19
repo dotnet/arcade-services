@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
   </ItemGroup>
 
 </Project>
