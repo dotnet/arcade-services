@@ -102,8 +102,8 @@
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.13" />
     <PackageVersion Include="Moq" Version="4.8.3" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageVersion Include="NuGet.Configuration" Version="6.3.1" />
-    <PackageVersion Include="NuGet.Packaging" Version="6.3.1" />
+    <PackageVersion Include="NuGet.Configuration" Version="6.6.1" />
+    <PackageVersion Include="NuGet.Packaging" Version="6.6.1" />
     <PackageVersion Include="NUnit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageVersion Include="Octokit" Version="0.49.0" />
