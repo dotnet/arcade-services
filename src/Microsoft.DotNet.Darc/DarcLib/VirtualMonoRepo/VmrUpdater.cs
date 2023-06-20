@@ -399,6 +399,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 {
                     TargetRevision = currentSha
                 });
+
+                LocalPath sourcesPath = _vmrInfo.GetRepoSourcesPath(update.Mapping);
+                if (!_fileSystem.DirectoryExists(sourcesPath))
+                {
+                    _fileSystem.CreateDirectory(sourcesPath);
+                }
             }
 
             if (currentSha == update.TargetRevision)
