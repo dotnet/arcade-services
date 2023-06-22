@@ -25,14 +25,14 @@ stages:
   displayName: GitHub Issue Verification
   condition: and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
   jobs:
-    - job: VerifyGitHubIssue
-      displayName: Verify GitHub Issue Link included in all PRs
-      pool: 
-        vmImage: 'windows-latest'
-      steps:
-        - checkout: self
-        - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
-          displayName: Enforce GitHub issue link presence
+  - job: VerifyGitHubIssue
+    displayName: Verify GitHub Issue Link included in all PRs
+    pool:
+      vmImage: windows-latest
+    steps:
+    - checkout: self
+    - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
+      displayName: Enforce GitHub issue link presence
 
 - stage: build
   dependsOn: []
@@ -106,10 +106,12 @@ stages:
           clean: true
 
         - task: NodeTool@0
+          displayName: Install node.js
           inputs:
             versionSpec: 12.x
 
         - task: NuGetToolInstaller@0
+          displayName: Install NuGet
           inputs:
             versionSpec: 6.1.x
 
@@ -121,7 +123,7 @@ stages:
             feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
-          displayName: Calculate release version variables
+          displayName: Calculate Release Versions
 
         - powershell: |
             [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
@@ -129,7 +131,7 @@ stages:
             $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
             $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
             git diff
-          displayName: Remove Service Fabric RunAsPolicy from MaestroApplication
+          displayName: Remove RunAsPolicy From MaestroApplication
 
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
@@ -143,6 +145,7 @@ stages:
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
           - task: ComponentGovernanceComponentDetection@0
+            displayName: Component Governance Detection
             inputs:
               # `.packages` directory is used by some tools running during build.
               # By default ComponentDetection scans this directory and sometimes reports
@@ -159,6 +162,7 @@ stages:
 
           ## Prepare service fabric artifact
           - task: ServiceFabricUpdateManifests@2
+            displayName: Update Service Fabric manifests
             inputs:
               applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
 
