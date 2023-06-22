@@ -1,11 +1,15 @@
 parameters:
-  Subscription: ''
-  ServiceFabricConnection: ''
-  PublishProfile: ''
-  DeploymentEnvironment: ''
-  VariableGroup: ''
-  MaestroPublishEndpoint: ''
-  MaestroTestEndpoint: ''
+- name: Subscription
+  type: string
+- name: PublishProfile
+  type: string
+  values: [ 'Int', 'Prod' ]
+- name: DeploymentEnvironment
+  type: string
+- name: VariableGroup
+  type: string
+- name: MaestroTestEndpoint
+  type: string
 
   # --- Secret Variable group requirements ---
   # build-asset-registry-admin-connection-string
@@ -38,8 +42,6 @@ stages:
   - approval
   variables:
   - group: ${{ parameters.VariableGroup }}
-  - name: PublishProfile
-    value: ${{ parameters.PublishProfile }}
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
@@ -107,7 +109,7 @@ stages:
           }
           eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
       env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
 - stage: validateDeployment
@@ -121,8 +123,7 @@ stages:
   - group: ${{ parameters.VariableGroup }}
   # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
   - group: Secret-Manager-Scenario-Tests
-  - name: MaestroTestEndpoint
-    value: ${{ parameters.MaestroTestEndpoint }}
+
   jobs:
   - job: scenario
     displayName: Scenario tests
@@ -151,7 +152,7 @@ stages:
           Maestro.ScenarioTests.dll
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
       env:
-        MAESTRO_BASEURI: $(MaestroTestEndpoint)
+        MAESTRO_BASEURI: ${{ parameters.MaestroTestEndpoint }}
         MAESTRO_TOKEN: $(scenario-test-maestro-token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
         AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
@@ -162,7 +163,7 @@ stages:
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
     - powershell: |
-        $versionEndpoint = "$(MaestroTestEndpoint)/api/assets/darc-version?api-version=2019-01-16"
+        $versionEndpoint = "${{ parameters.MaestroTestEndpoint }}/api/assets/darc-version?api-version=2019-01-16"
         $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
         Write-Host "Using Darc version $latestDarcVersion to run the tests"
