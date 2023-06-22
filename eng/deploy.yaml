@@ -118,7 +118,7 @@ stages:
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 90
+    timeoutInMinutes: 120
     steps:
     - download: current
       artifact: PackageArtifacts
