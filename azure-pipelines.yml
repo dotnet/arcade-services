@@ -20,6 +20,10 @@ pr:
 - main
 - production
 
+pool:
+  name: NetCore1ESPool-Internal-NoMSI
+  demands: ImageOverride -equals 1es-windows-2019
+
 stages:
 - ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production')) }}:
   - stage: GitHub_Issue_Verification

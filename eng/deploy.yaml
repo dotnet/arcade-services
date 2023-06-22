@@ -34,9 +34,6 @@ stages:
 
 - stage: deploy
   displayName: Deploy
-  pool:
-    name: NetCore1ESPool-Internal-NoMSI
-    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - build
   - approval
@@ -52,7 +49,7 @@ stages:
       artifact: Maestro.Data
 
     - task: UseDotNet@2
-      displayName: Install Correct .NET Version
+      displayName: Install .NET
       inputs:
         useGlobalJson: true
 
@@ -82,12 +79,9 @@ stages:
       condition: always()
 
   - job: deployMaestro
-    displayName: Deploy maestro service fabric application
+    displayName: Deploy Maestro
     dependsOn:
     - updateDatabase
-    pool:
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - download: current
       artifact: MaestroApplication
@@ -114,9 +108,6 @@ stages:
 
 - stage: validateDeployment
   displayName: Validate deployment
-  pool:
-    name: NetCore1ESPool-Internal
-    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   variables:
@@ -140,7 +131,7 @@ stages:
         versionSpec: 5.3.x
 
     - task: UseDotNet@2
-      displayName: Install Correct .NET Version
+      displayName: Install .NET
       inputs:
         useGlobalJson: true
 
