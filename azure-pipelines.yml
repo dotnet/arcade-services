@@ -105,10 +105,20 @@ stages:
         - checkout: self
           clean: true
 
-        - task: UseDotNet@2
-          displayName: Install .NET Version 3.1
+        - task: NodeTool@0
           inputs:
-            version: 3.1.x
+            versionSpec: 12.x
+
+        - task: NuGetToolInstaller@0
+          inputs:
+            versionSpec: 6.1.x
+
+        - task: NuGetCommand@2
+          displayName: Restore Packages
+          inputs:
+            command: restore
+            solution: "**/*.sln"
+            feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
@@ -225,17 +235,13 @@ stages:
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         PublishProfile: Int
-        ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Production
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
-        ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
