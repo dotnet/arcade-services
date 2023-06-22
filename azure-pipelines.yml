@@ -21,18 +21,18 @@ pr:
 - production
 
 stages:
-- stage: GitHub_Issue_Verification
-  displayName: GitHub Issue Verification
-  condition: and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
-  jobs:
-  - job: VerifyGitHubIssue
-    displayName: Verify GitHub Issue Link included in all PRs
-    pool:
-      vmImage: windows-latest
-    steps:
-    - checkout: self
-    - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
-      displayName: Enforce GitHub issue link presence
+- ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production')) }}:
+  - stage: GitHub_Issue_Verification
+    displayName: GitHub Issue Verification
+    jobs:
+    - job: VerifyGitHubIssue
+      displayName: Verify GitHub Issue Link included in all PRs
+      pool:
+        vmImage: windows-latest
+      steps:
+      - checkout: self
+      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
+        displayName: Enforce GitHub issue link presence
 
 - stage: build
   dependsOn: []
