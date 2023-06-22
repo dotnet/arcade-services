@@ -15,38 +15,14 @@ parameters:
   # dotnet-build-bot-dotnet-eng-status-token
 
 stages:
-- stage: ValidateSecrets
-  dependsOn:
-  - build
-  jobs:
-  - job: ValidateSecrets
-    pool: 
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
-    steps:
-    - task: UseDotNet@2
-      displayName: Install Correct .NET Version
-      inputs:
-        useGlobalJson: true
-
-    - script: dotnet tool restore
-      displayName: Install Secret Manager
-
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: DotNet Eng Services Secret Manager
-        scriptType: ps
-        scriptLocation: inlineScript
-        inlineScript: |
-          Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize --verify-only $_}
+- template: templates/stages/secret-validation.yml
+  parameters:
+    verifyOnly: true
 
 - stage: approval
   pool: server
   dependsOn:
   - build
-  - Validate
-  - ValidateSecrets
-  - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -59,7 +35,6 @@ stages:
     demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - build
-  - Validate
   - approval
   variables:
   - group: ${{ parameters.VariableGroup }}

@@ -1,13 +1,13 @@
 variables:
-  # Cannot use key:value syntax in root defined variables
-  - name: _TeamName
-    value: DotNetCore
-  - name: _PublishUsingPipelines
-    value: true
-  - name: _DotNetArtifactsCategory
-    value: .NETCore
-  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - group: SDL_Settings
+# Cannot use key:value syntax in root defined variables
+- name: _TeamName
+  value: DotNetCore
+- name: _PublishUsingPipelines
+  value: true
+- name: _DotNetArtifactsCategory
+  value: .NETCore
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - group: SDL_Settings
 
 # CI and PR triggers
 trigger:
@@ -55,7 +55,7 @@ stages:
             name: NetCore1ESPool-Internal
             demands: ImageOverride -equals 1es-windows-2019
           ${{ if eq(variables['System.TeamProject'], 'public')}}:
-            name: NetCore-Public          
+            name: NetCore-Public
             demands: ImageOverride -equals 1es-windows-2019-open
 
         variables:
@@ -105,31 +105,6 @@ stages:
         - checkout: self
           clean: true
 
-        - task: UseDotNet@2
-          displayName: Install Correct .NET Version
-          inputs:
-            useGlobalJson: true
-
-        - task: UseDotNet@2
-          displayName: Install .NET Version 3.1
-          inputs:
-            version: 3.1.x
-
-        - task: NuGetToolInstaller@0
-          inputs:
-            versionSpec: 6.1.x
-
-        - task: NodeTool@0
-          inputs:
-            versionSpec: 12.x
-
-        - task: NuGetCommand@2
-          displayName: Restore Packages
-          inputs:
-            command: restore
-            solution: "**/*.sln"
-            feedstoUse: config
-
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
 
@@ -149,17 +124,6 @@ stages:
             /p:Test=false
             /P:Sign=false
           name: Build
-          displayName: Build / Publish
-          condition: succeeded()
-        
-        - powershell: |
-            dotnet tool restore
-            $manifestArgs = @()
-            Get-ChildItem .vault-config/*.yaml |% {
-              $manifestArgs += @("-m", $_.FullName)
-            }
-            dotnet secret-manager validate-all -b src @manifestArgs
-          displayName: Verify Secret Usages
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
@@ -171,7 +135,7 @@ stages:
               # We can ignore this directory because actual vulnerabilities
               # that we are interested in will be found by the tool
               # when scanning .csproj and package.json files.
-              ignoreDirectories: '.packages'
+              ignoreDirectories: .packages
 
         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
           - template: /eng/test.yaml
@@ -229,7 +193,7 @@ stages:
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), ne(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
   - template: eng\common\templates\post-build\post-build.yml
     parameters:
       enableSymbolValidation: true
@@ -250,6 +214,7 @@ stages:
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
   - template: eng\deploy.yaml
     parameters:
