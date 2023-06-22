@@ -105,6 +105,11 @@ stages:
         - checkout: self
           clean: true
 
+        - task: UseDotNet@2
+          displayName: Install .NET Version 3.1
+          inputs:
+            version: 3.1.x
+
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
 
