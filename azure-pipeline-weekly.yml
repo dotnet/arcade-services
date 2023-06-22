@@ -1,3 +1,6 @@
+name: $(Date:yyy-MM-dd)$(Rev:.r)
+appendCommitMessageToRunName: false
+
 trigger: none
 
 schedules:
@@ -8,33 +11,27 @@ schedules:
     - main
   always: true
 
-name: $(Date:yyyMMdd)$(Rev:rr)
-resources:
-  pipelines:
-  - pipeline: arcadeServicesInternalCI
-    source: arcade-services-internal-ci
-    branch: main
-
 stages:
   - stage: SynchronizeSecrets
+    displayName: Synchronize Secrets
     jobs:
     - job: Synchronize
-      pool: 
+      displayName: Synchronize Secrets
+      pool:
         name: NetCore1ESPool-Internal-NoMSI
-        demands: ImageOverride -equals 1es-windows-2019
+        demands: ImageOverride -equals 1es-windows-2022
       steps:
-      - task: UseDotNet@2
-        displayName: Install Correct .NET Version
-        inputs:
-          useGlobalJson: true
-
-      - script: dotnet tool restore
+      - powershell: |
+          . .\eng\common\tools.ps1
+          InitializeDotNetCli -install $true
+          .\.dotnet\dotnet tool restore
         displayName: Install Secret Manager
 
       - task: AzureCLI@2
+        displayName: Synchronize Secrets
         inputs:
           azureSubscription: DotNet Eng Services Secret Manager
           scriptType: ps
           scriptLocation: inlineScript
           inlineScript: |
-            Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize $_ }
+            Get-ChildItem .vault-config/*.yaml |% { .\.dotnet\dotnet secret-manager synchronize $_ }
