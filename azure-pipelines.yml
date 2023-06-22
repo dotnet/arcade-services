@@ -44,10 +44,14 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
+      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+        enablePublishBuildArtifacts: true
+        enablePublishBuildAssets: true
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+        enablePublishBuildArtifacts: false
+        enablePublishBuildAssets: false
       enableMicrobuild: false
-      enablePublishBuildArtifacts: true
       enablePublishTestResults: false
-      enablePublishBuildAssets: true
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       enableTelemetry: true
       helixRepo: dotnet/arcade-services
