@@ -238,18 +238,18 @@ stages:
         -TsaPublish $True
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
-# - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
-- template: eng\deploy.yaml
-  parameters:
-    ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      DeploymentEnvironment: Staging
-      MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
-      PublishProfile: Int
-      Subscription: NetHelixStaging
-      VariableGroup: MaestroInt KeyVault
-    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      DeploymentEnvironment: Production
-      MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-      PublishProfile: Prod
-      Subscription: NetHelix
-      VariableGroup: MaestroProd KeyVault
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
+  - template: eng\deploy.yaml
+    parameters:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Staging
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        PublishProfile: Int
+        Subscription: NetHelixStaging
+        VariableGroup: MaestroInt KeyVault
+      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Production
+        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        PublishProfile: Prod
+        Subscription: NetHelix
+        VariableGroup: MaestroProd KeyVault
