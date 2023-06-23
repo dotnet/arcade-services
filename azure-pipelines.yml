@@ -27,6 +27,7 @@ pool:
 stages:
 - ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production')) }}:
   - stage: GitHub_Issue_Verification
+    dependsOn: []
     displayName: GitHub Issue Verification
     jobs:
     - job: VerifyGitHubIssue
