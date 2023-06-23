@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +14,6 @@ public static class MergePolicyServiceCollectionExtensions
         services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, DontAutomergeDowngradesMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, ValidateCoherencyMergePolicyBuilder>();
         return services;
     }
 }

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <FileUpgradeFlags>40</FileUpgradeFlags>
+    <SignAssembly>false</SignAssembly>
+    <OldToolsVersion>2.0</OldToolsVersion>
+  </PropertyGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />
+  </ItemGroup>
+</Project>

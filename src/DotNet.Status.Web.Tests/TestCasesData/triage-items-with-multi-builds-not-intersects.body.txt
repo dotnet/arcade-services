@@ -1,0 +1,27 @@
+Error message
+```
+.packages\microsoft.dotnet.helix.sdk\5.0.0-beta.20459.8\tools\Microsoft.DotNet.Helix.Sdk.MultiQueue.targets(76,5): error : (NETCORE_ENGINEERING_TELEMETRY=Test) Work item 7c820821-a3a3-4a00-9917-541de87a7ee6/Microsoft.Extensions.DependencyInjection.ExternalContainers.Tests in job 7c820821-a3a3-4a00-9
+```
+Builds affected
+
+[20200915.5](https://dev.azure.com/dnceng/public/_build/results?buildId=815555) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/815555/logs/1497)
+[20200921.45](https://dev.azure.com/dnceng/public/_build/results?buildId=823805) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/823805/logs/1915)
+
+---
+
+- [ ] What was the cause of the issue?
+- [ ] What can we do to harden our environment to prevent issues of this type from occurring in the future?
+
+---
+
+<details><summary>*Please do not modify this auto-generated section*</summary>
+
+[BuildId=815555,RecordId=1db2d2b1-dafb-5351-4caf-2dcd2154665f,Index=0]
+[Category=Test]
+
+[BuildId=823805,RecordId=8e14a3aa-fa02-558a-6865-a3e129dae68b,Index=0]
+[Category=Test]
+
+</details>
+
+See [documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md) for more information

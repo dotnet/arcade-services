@@ -1,0 +1,135 @@
+[
+  {
+    "Name": "dotnet-eng-appinsights-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/dotnet-eng-int-cluster/providers/Microsoft.Insights/components/dotnet-eng-int",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/dotnet-eng-cluster/providers/microsoft.insights/components/dotnet-eng"
+    }
+  },
+  {
+    "Name": "emptystring",
+    "Values": {
+      "Staging": "",
+      "Production": ""
+    }
+  },
+  {
+    "Name": "dotnet-eng-appinsights-resourcegroup",
+    "Values": {
+      "Staging": "dotnet-eng-int-cluster",
+      "Production": "dotnet-eng-cluster"
+    }
+  },
+  {
+    "Name": "grafana-appinsights-resourcegroup",
+    "Values": {
+      "Staging": "monitoring",
+      "Production": "monitoring"
+    }
+  },
+  {
+    "Name": "dotnet-eng-appinsights-resourcename",
+    "Values": {
+      "Staging": "dotnet-eng-int",
+      "Production": "dotnet-eng"
+    }
+  },
+  {
+    "Name": "helix-client-appinsights-resourcegroup",
+    "Values": {
+      "Staging": "helixstaginginfrarg",
+      "Production": "helixinfrarg"
+    }
+  },
+  {
+    "Name": "helix-client-appinsights-resourcename",
+    "Values": {
+      "Staging": "helix-client-staging",
+      "Production": "helix-client-prod"
+    }
+  },
+  {
+    "Name": "helixmonitoring-appinsights-resourcegroup",
+    "Values": {
+      "Staging": "helix-web",
+      "Production": "helixinfrarg"
+    }
+  },
+  {
+    "Name": "helix-appinsights-resourcename",
+    "Values": {
+      "Staging": "helixmonitoring-int",
+      "Production": "helix-prod"
+    }
+  },
+  {
+    "Name": "maestro-appinsights-resourcegroup",
+    "Values": {
+      "Staging": "maestro-int-cluster",
+      "Production": "maestro-prod-cluster"
+    }
+  },
+  {
+    "Name": "grafana-appinsights-resourcename",
+    "Values": {
+      "Staging": "grafana",
+      "Production": "grafana"
+    }
+  },
+  {
+    "Name": "maestro-appinsights-resourcename",
+    "Values": {
+      "Staging": "maestro-int",
+      "Production": "maestro-prod"
+    }
+  },
+  {
+    "Name": "maestro-appinsights-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro-int-cluster/providers/Microsoft.Insights/components/maestro-int",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/maestro-prod-cluster/providers/Microsoft.Insights/components/maestro-prod"
+    }
+  },
+  {
+    "Name": "dotneteng-status-appinsights-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/monitoring/providers/microsoft.insights/components/DotNetEng-Status-Staging",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/monitoring/providers/microsoft.insights/components/DotNetEng-Status-Prod"
+    }
+  },
+  {
+    "Name": "helix-client-appinsights-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/helixstaginginfrarg/providers/microsoft.insights/components/helix-client-staging",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/helixinfrarg/providers/microsoft.insights/components/helix-client-prod"
+    }
+  },
+  {
+    "Name": "helix-autoscale-appinsights-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/auto-scale-int/providers/microsoft.insights/components/helix-autoscale-int",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourceGroups/helix-autoscale-prod/providers/microsoft.insights/components/helix-autoscale-prod"
+    }
+  },
+  {
+    "Name": "default-workspace-resourcepath",
+    "Values": {
+      "Staging": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourcegroups/defaultresourcegroup-eus/providers/microsoft.operationalinsights/workspaces/defaultworkspace-cab65fc3-d077-467d-931f-3932eabf36d3-eus",
+      "Production": "/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/resourcegroups/defaultresourcegroup-eus/providers/microsoft.operationalinsights/workspaces/defaultworkspace-68672ab8-de0c-40f1-8d1b-ffb20bd62c0f-eus"
+    }
+  },
+  {
+    "Name": "dotnet-eng-appinsights-subscriptionid",
+    "Values": {
+      "Staging": "cab65fc3-d077-467d-931f-3932eabf36d3",
+      "Production": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f"
+    }
+  },
+  {
+    "Name": "grafana-appinsights-subscriptionid",
+    "Values": {
+      "Staging": "a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1",
+      "Production": "a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1"
+    }
+  }
+]

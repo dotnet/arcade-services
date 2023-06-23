@@ -1,0 +1,16 @@
+{
+  "HealthTableUri": "",
+  "KeyVaultUri": "https://DotNetEng-Status-Staging.vault.azure.net/",
+  "GitHub": {
+    "Organization": "dotnet",
+    "Repository": "arcade",
+    "NotificationTarget": "dotnet/dnceng",
+    "AlertLabels": [ "First Responder" ],
+    "EnvironmentLabels": [ "Staging" ],
+    "TitlePrefix": "Staging - "
+  },
+  "DataProtection": {
+    "KeyBlobUri": "https://dotnetengstatusstaging.blob.core.windows.net/site/keys.xml",
+    "DataProtectionKeyUri": "https://dotneteng-status-staging.vault.azure.net/keys/dotnet-status-data-protection/"
+  }
+}

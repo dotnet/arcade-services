@@ -27,7 +27,7 @@
       which half of the universe they are intended for/allowed in, so the streams get crossed a lot.
     -->   
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors>true</WarningsAsErrors>
     <LangVersion>preview</LangVersion>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
