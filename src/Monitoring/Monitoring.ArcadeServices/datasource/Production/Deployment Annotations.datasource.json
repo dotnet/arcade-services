@@ -1,0 +1,25 @@
+{
+  "uid": "VrkJ-7W7z",
+  "type": "grafana-simple-json-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "url": "https://dotneteng-status.azurewebsites.net/api/annotations",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "abcd",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "httpHeaderName1": "Authorization",
+    "tlsAuth": false,
+    "tlsSkipVerify": false
+  },
+  "readOnly": false,
+  "secureJsonData": {
+    "basicAuthPassword": "",
+    "httpHeaderValue1": "[vault(dotneteng-status-auth-header)]"
+  }
+}

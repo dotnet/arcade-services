@@ -16,7 +16,7 @@ steps:
     arguments: > 
       --configuration $(_BuildConfig)
       --collect:"Code Coverage"
-      --settings:eng\CodeCoverage.runsettings
+      --settings:CodeCoverage.runsettings
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"

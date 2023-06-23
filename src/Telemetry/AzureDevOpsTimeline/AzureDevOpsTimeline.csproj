@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+    <SignAssembly>false</SignAssembly>
+    <RootNamespace>Microsoft.DotNet.AzureDevOpsTimeline</RootNamespace>
+    <AssemblyName>Microsoft.DotNet.AzureDevOpsTimeline</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include=".config\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Kusto.Ingest" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.ServiceFabric" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
+    <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
+    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
+    <PackageReference Include="Microsoft.DotNet.Kusto" />
+    <PackageReference Include="Microsoft.DotNet.Services.Utility" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AzureDevOpsClient\AzureDevOpsClient.csproj" />
+  </ItemGroup>
+
+</Project>

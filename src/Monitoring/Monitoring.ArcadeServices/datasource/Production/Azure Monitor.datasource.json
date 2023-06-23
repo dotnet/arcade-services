@@ -1,0 +1,29 @@
+{
+  "uid": "F2XodEi7z",
+  "type": "grafana-azure-monitor-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "url": "/api/datasources/proxy/1",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "azureAuthType": "msi",
+    "clientId": "a2541735-8225-40af-9c8a-2ae233203739",
+    "cloudName": "azuremonitor",
+    "logAnalyticsClientId": "a2541735-8225-40af-9c8a-2ae233203739",
+    "logAnalyticsTenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "subscriptionId": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f",
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+  },
+  "readOnly": false,
+  "secureJsonData": {
+    "clientSecret": "",
+    "logAnalyticsClientSecret": ""
+  }
+}

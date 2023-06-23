@@ -1,0 +1,54 @@
+{
+  "$comment": "This is an example config",
+
+  "KeyVaultUri": "https://helixtest.vault.azure.net/",
+  "Name": "helix-test-1",
+  "Location": "westus2",
+  "ResourceGroup": "helix-test-cluster",
+  "SubscriptionId": "cab65fc3-d077-467d-931f-3932eabf36d3",
+  "ClusterIndex": 1,
+
+  "Gateway": {
+    "Name": "helix-test",
+    "ResourceGroup": "helix-test"
+  },
+  "VNet": {
+    "Name": "helix-test-vnet",
+    "ResourceGroup": "helix-test"
+  },
+  "CertificateSourceVault": {
+    "ResourceGroup": "helix-gateway-test",
+    "Name": "helixtest"
+  },
+  "SslCertificateCommonName": "helix-test-1.westus2.cloudapp.azure.com",
+  "Certificates": [
+    "helix-test-1-westus2-cloudapp-azure-com"
+  ],
+
+  "AdminClientCertificateCommonName": "helix-client.westus2.cloudapp.azure.com",
+  "AdminClientCertificateIssuerThumbprint": "417e225037fbfaa4f95761d5ae729e1aea7e3a42",
+
+  "AdminUsername": "dotnetbot",
+  "AdminPassword": "",
+
+  "NodeTypes": [
+    {
+      "Name": "Primary",
+      "InstanceCount": 5,
+      "UserAssignedIdentity": {
+        "Name": "HelixTest-Identity",
+        "ResourceGroup": "helix-gateway-test"
+      },
+      "Ports": [
+        8080
+      ],
+      "Sku": "Standard_D8s_v3",
+      "VmImage": {
+        "Publisher": "MicrosoftWindowsServer",
+        "Offer": "WindowsServer",
+        "Sku": "2019-Datacenter",
+        "Version": "latest"
+      }
+    }
+  ]
+}

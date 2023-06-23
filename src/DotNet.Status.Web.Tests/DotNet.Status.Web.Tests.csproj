@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <PropertyGroup>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+    <SignAssembly>false</SignAssembly>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="TestCasesData\IssueEventPayload.json" />
+    <None Remove="TestCasesData\triage-items-with-diff-cat.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-diff-cat.expected.json" />
+    <None Remove="TestCasesData\triage-items-with-invalid.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-invalid.expected.json" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-intersects.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-mangled.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-not-intersects.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-subset.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-updated.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds.expected.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-diff-cat.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-diff-cat.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-mangled.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-subset.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-updated.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-intersects.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-not-intersects.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds.body.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
+  </ItemGroup>
+</Project>

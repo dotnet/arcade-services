@@ -1,0 +1,14 @@
+{
+  "name": "Teams Alert",
+  "type": "teams",
+  "isDefault": false,
+  "sendReminder": false,
+  "disableResolveMessage": false,
+  "frequency": "",
+  "settings": {
+    "autoResolve": true,
+    "httpMethod": "POST",
+    "uploadImage": true,
+    "url": "[vault(fr-bot-notifications-teams-notification-url)]"
+  }
+}

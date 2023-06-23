@@ -1,0 +1,61 @@
+{
+  "HealthTableUri": "",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "System": "Information",
+      "Microsoft": "Information"
+    }
+  },
+  "ApplicationInsights": {
+    "DeveloperMode": true,
+    "InstrumentationKey": ""
+  },
+  "BuildMonitor": {
+    "Monitor": {
+      "Builds": [
+      ]
+    },
+    "Issues": {
+      "Owner": "maestro-auth-test",
+      "Name": "status-test"
+    }
+  },
+  "KeyVaultUri": "https://DotNetEng-Status-Local.vault.azure.net/",
+  "AzureTableTokenStore": {
+    "TableUri": ""
+  },
+  "GitHub": {
+    "TitlePrefix": "LOCAL DEV - "
+  },
+  "DataProtection": {
+    "StorageAccountConnectionString": "",
+    "KeyIdentifier": ""
+  },
+  "Grafana": {
+    "TableUri": ""
+  },
+  "Kusto": {
+    "QueryConnectionString": ""
+  },
+  "IssueMentionForwarding": {
+    "TeamsWebHookUri": ""
+  },
+  "AzureDevOps": {
+    "build-monitor/dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    },
+    "dnceng": {
+      "Organization": "dnceng",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    },
+    "dnceng-public": {
+      "Organization": "dnceng-public",
+      "AccessToken": "",
+      "MaxParallelRequests": 10
+    }
+  }
+}
