@@ -165,7 +165,7 @@ stages:
               ignoreDirectories: .packages
 
         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          - template: /eng/test.yaml
+          - template: /eng/templates/steps/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
@@ -187,7 +187,7 @@ stages:
             displayName: Publish MaestroApplication
 
           ## Generate SBOM manifest
-          - template: ../../../generate-sbom.yml
+          - template: /eng/templates/steps/generate-sbom.yml
 
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
@@ -222,7 +222,7 @@ stages:
             displayName: Publish Maestro Scenario Tests
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
-  - template: eng\common\templates\post-build\post-build.yml
+  - template: /eng/common/templates/post-build/post-build.yml
     parameters:
       enableSymbolValidation: true
       enableSigningValidation: false
@@ -244,7 +244,7 @@ stages:
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
-  - template: eng\deploy.yaml
+  - template: /eng/templates/stages/deploy.yaml
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging
