@@ -165,7 +165,7 @@ stages:
               ignoreDirectories: .packages
 
         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          - template: eng/templates/steps/test.yaml
+          - template: /eng/templates/steps/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
@@ -244,7 +244,7 @@ stages:
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
-  - template: eng/templates/stages/deploy.yaml
+  - template: /eng/templates/stages/deploy.yaml
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging
