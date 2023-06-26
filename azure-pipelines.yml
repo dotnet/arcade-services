@@ -165,7 +165,7 @@ stages:
               ignoreDirectories: .packages
 
         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          - template: /eng/templates/steps/test.yaml
+          - template: /eng/templates/steps/test.yml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
