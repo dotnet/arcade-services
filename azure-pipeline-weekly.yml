@@ -12,4 +12,4 @@ schedules:
   always: true
 
 stages:
-- template: templates/stages/secret-validation.yml
+- template: ./eng/templates/stages/secret-validation.yml
