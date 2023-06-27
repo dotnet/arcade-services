@@ -1,11 +1,15 @@
 parameters:
-  Subscription: ''
-  ServiceFabricConnection: ''
-  PublishProfile: ''
-  DeploymentEnvironment: ''
-  VariableGroup: ''
-  MaestroPublishEndpoint: ''
-  MaestroTestEndpoint: ''
+- name: Subscription
+  type: string
+- name: PublishProfile
+  type: string
+  values: [ 'Int', 'Prod' ]
+- name: DeploymentEnvironment
+  type: string
+- name: VariableGroup
+  type: string
+- name: MaestroTestEndpoint
+  type: string
 
   # --- Secret Variable group requirements ---
   # build-asset-registry-admin-connection-string
@@ -15,38 +19,14 @@ parameters:
   # dotnet-build-bot-dotnet-eng-status-token
 
 stages:
-- stage: ValidateSecrets
-  dependsOn:
-  - build
-  jobs:
-  - job: ValidateSecrets
-    pool: 
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
-    steps:
-    - task: UseDotNet@2
-      displayName: Install Correct .NET Version
-      inputs:
-        useGlobalJson: true
-
-    - script: dotnet tool restore
-      displayName: Install Secret Manager
-
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: DotNet Eng Services Secret Manager
-        scriptType: ps
-        scriptLocation: inlineScript
-        inlineScript: |
-          Get-ChildItem .vault-config/*.yaml |% { dotnet secret-manager synchronize --verify-only $_}
+- template: ./secret-validation.yml
+  parameters:
+    verifyOnly: true
 
 - stage: approval
   pool: server
   dependsOn:
   - build
-  - Validate
-  - ValidateSecrets
-  - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -54,17 +34,11 @@ stages:
 
 - stage: deploy
   displayName: Deploy
-  pool:
-    name: NetCore1ESPool-Internal-NoMSI
-    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - build
-  - Validate
   - approval
   variables:
   - group: ${{ parameters.VariableGroup }}
-  - name: PublishProfile
-    value: ${{ parameters.PublishProfile }}
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
@@ -75,12 +49,12 @@ stages:
       artifact: Maestro.Data
 
     - task: UseDotNet@2
-      displayName: Install Correct .NET Version
+      displayName: Install .NET
       inputs:
         useGlobalJson: true
 
     - task: AzurePowerShell@3
-      displayName: eng\firewall.ps1 -Add
+      displayName: Add firewall rule
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
@@ -96,7 +70,7 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
     - task: AzurePowerShell@3
-      displayName: eng\firewall.ps1 -Remove
+      displayName: Remove firewall rule
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
@@ -105,12 +79,9 @@ stages:
       condition: always()
 
   - job: deployMaestro
-    displayName: Deploy maestro service fabric application
+    displayName: Deploy Maestro
     dependsOn:
     - updateDatabase
-    pool:
-      name: NetCore1ESPool-Internal-NoMSI
-      demands: ImageOverride -equals 1es-windows-2019
     steps:
     - download: current
       artifact: MaestroApplication
@@ -132,26 +103,22 @@ stages:
           }
           eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
       env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
 - stage: validateDeployment
   displayName: Validate deployment
-  pool:
-    name: NetCore1ESPool-Internal
-    demands: ImageOverride -equals 1es-windows-2019
   dependsOn:
   - deploy
   variables:
   - group: ${{ parameters.VariableGroup }}
   # Secret-Manager-Scenario-Tests provides: secret-manager-scenario-tests-client-secret
   - group: Secret-Manager-Scenario-Tests
-  - name: MaestroTestEndpoint
-    value: ${{ parameters.MaestroTestEndpoint }}
+
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 90
+    timeoutInMinutes: 120
     steps:
     - download: current
       artifact: PackageArtifacts
@@ -164,7 +131,7 @@ stages:
         versionSpec: 5.3.x
 
     - task: UseDotNet@2
-      displayName: Install Correct .NET Version
+      displayName: Install .NET
       inputs:
         useGlobalJson: true
 
@@ -176,7 +143,7 @@ stages:
           Maestro.ScenarioTests.dll
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
       env:
-        MAESTRO_BASEURI: $(MaestroTestEndpoint)
+        MAESTRO_BASEURI: ${{ parameters.MaestroTestEndpoint }}
         MAESTRO_TOKEN: $(scenario-test-maestro-token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
         AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
@@ -187,7 +154,7 @@ stages:
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
     - powershell: |
-        $versionEndpoint = "$(MaestroTestEndpoint)/api/assets/darc-version?api-version=2019-01-16"
+        $versionEndpoint = "${{ parameters.MaestroTestEndpoint }}/api/assets/darc-version?api-version=2019-01-16"
         $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
         Write-Host "Using Darc version $latestDarcVersion to run the tests"

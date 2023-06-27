@@ -13,7 +13,6 @@ public static class MergePolicyServiceCollectionExtensions
         services.AddTransient<IMergePolicyBuilder, NoRequestedChangesMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, DontAutomergeDowngradesMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
-        services.AddTransient<IMergePolicyBuilder, ValidateCoherencyMergePolicyBuilder>();
         return services;
     }
 }

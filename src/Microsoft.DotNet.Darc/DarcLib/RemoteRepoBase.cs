@@ -99,7 +99,7 @@ public class RemoteRepoBase : GitRepoCloner
                 LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", logger, clonedRepo);
             }
 
-            LocalHelpers.ExecuteCommand(GitExecutable, $"commit --allow-empty -m \"{commitMessage}\"", logger, clonedRepo);
+            LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", logger, clonedRepo);
             LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", logger, clonedRepo);
         }
         catch (Exception exc)
