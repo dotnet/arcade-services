@@ -31,7 +31,7 @@ public class Constants
 
     /// <summary>
     /// This maybe should be implemented in the API in the future, help info for the available merge policies.  For now,
-    /// this is just generic help for available merge policies
+    /// this is just generic help for availabel merge policies
     /// </summary>
     public static readonly List<string> AvailableMergePolicyYamlHelp = new List<string>
     {
@@ -50,7 +50,6 @@ public class Constants
         $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'WIP' and 'license/cla' checks ignored.",
         $"- {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
         $"- {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
-        $"- {MergePolicyConstants.ValidateCoherencyMergePolicyName}",
         "The standard Azure DevOps merge policy is:",
         $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
         "  and 'Work item linking' checks ignored.",
@@ -77,10 +76,5 @@ public class Constants
         $"{MergePolicyConstants.DontAutomergeDowngradesPolicyName} - If any version change is a downgrade, it will not be merged.",
         "YAML format:",
         $"- Name: {MergePolicyConstants.DontAutomergeDowngradesPolicyName}",
-        "",
-        $"{MergePolicyConstants.ValidateCoherencyMergePolicyName} - If coherency check failed for the PR, it will not be merged.",
-        "YAML format:",
-        $"- Name: {MergePolicyConstants.ValidateCoherencyMergePolicyName}",
-
     };
 }
