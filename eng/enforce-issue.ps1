@@ -1,12 +1,18 @@
 [CmdletBinding()]
 param (
 	[Parameter(Mandatory = $True)]
-	$PullRequestNumber
+	$PullRequestNumber,
+	[Parameter(Mandatory = $True)]
+	$RepositoryName
 )
+
+function HasReleaseNotes($description) {
+	return $description -Match "### Release Note Description(?:\r?\n)+([^\s]+)"
+}
 
 $prDetail = Invoke-WebRequest `
 	-UseBasicParsing `
-	-Uri "https://api.github.com/repos/dotnet/arcade-services/pulls/$PullRequestNumber" `
+	-Uri "https://api.github.com/repos/$RepositoryName/pulls/$PullRequestNumber" `
 | ConvertFrom-Json
 
 if ($prDetail.draft) {
@@ -19,6 +25,11 @@ elseif ($prDetail.title -match "\[\w+\] Update dependencies from") {
 }
 elseif ($prDetail.title -match "\[automated\]") {
 	Write-Host "Automated PRs don't need release notes. Check passed."
+	exit 0
+}
+
+if (HasReleaseNotes $prDetail.body) {
+	Write-Host "PR has release notes in the description. Check passed."
 	exit 0
 }
 
@@ -39,16 +50,18 @@ catch {
 	exit 1
 }
 
-$issueHasReleaseNotes = $issueDetail.body -Match "### Release Note Description(?:\r?\n)+([^\s]+)"
-$issueIsAzdoMirror = $issueDetail.title -like "AzDO Issue*"
-if (-not $issueHasReleaseNotes -and -not $issueIsAzdoMirror) {
-	Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
-	Write-Host "Ensure your issue has release notes. They should be in the following format:`n`n### Release Note Description`n<Stick your notes here>`n"
-	Write-Host "For more information, see https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/983/ReleaseNotesGuidance?anchor=mechanics"
-	exit 1
-}
-elseif ($issueIsAzdoMirror) {
-	Write-Host "##vso[task.LogIssue type=warning;]Linked GitHub issue is a mirrored Azure DevOps workitem. Please ensure the workitem has release notes in it."
+if (HasReleaseNotes $issueDetail.body) {
+	Write-Host "PR links a GitHub issue with release notes. Check passed."
+	exit 0
 }
 
-Write-Host "PR links a GitHub issue. Check passed."
+$issueIsAzdoMirror = $issueDetail.title -like "AzDO Issue*"
+if ($issueIsAzdoMirror) {
+	Write-Host "##vso[task.LogIssue type=warning;]Linked GitHub issue is a mirrored Azure DevOps workitem. Please ensure the workitem has release notes in it."
+	exit 0
+}
+
+Write-Host "##vso[task.LogIssue type=error;]Linked GitHub issue does not have release notes. Check failed."
+Write-Host "Ensure your issue has release notes. They should be in the following format:`n`n### Release Note Description`n<Stick your notes here>`n"
+Write-Host "For more information, see https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/983/ReleaseNotesGuidance?anchor=mechanics"
+exit 1
