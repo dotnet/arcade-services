@@ -47,10 +47,10 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
-      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
         enablePublishBuildArtifacts: true
         enablePublishBuildAssets: true
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      ${{ else }}:
         enablePublishBuildArtifacts: false
         enablePublishBuildAssets: false
       enableMicrobuild: false
