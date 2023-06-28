@@ -471,7 +471,11 @@ public interface IRemote
     /// <param name="buildId">ID of build producing the asset</param>
     /// <param name="nonShipping">Only non-shipping</param>
     /// <returns>List of assets.</returns>
-    Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
+    Task<IEnumerable<Asset>> GetAssetsAsync(
+        string name = null,
+        string version = null,
+        int? buildId = null,
+        bool? nonShipping = null);
 
     /// <summary>
     ///     Update a list of dependencies with asset locations.

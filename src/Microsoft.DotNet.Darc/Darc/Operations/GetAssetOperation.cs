@@ -46,11 +46,14 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version)).ToList();
+                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
             string queryDescriptionString =
-                $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : "")}" +
-                $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
+                $"name '{_options.Name}'" +
+                $"{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : string.Empty)}" +
+                $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : string.Empty)}" +
+                $"{(_options.Build != null ? $" from build '{_options.Build}'" : string.Empty)}" +
+                $" in the last {_options.MaxAgeInDays} days";
 
             // Only print the lookup string if the output type is text.
             if (_options.OutputFormat == DarcOutputType.text)

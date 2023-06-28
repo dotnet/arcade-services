@@ -3,8 +3,6 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
-using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -19,6 +17,9 @@ internal class GetAssetCommandLineOptions : CommandLineOptions
 
     [Option("channel", HelpText = "Look up the asset produced from builds applied to this channel.")]
     public string Channel { get; set; }
+
+    [Option("build", HelpText = "If specified, scopes the search to a specific BAR build ID")]
+    public int? Build { get; set; }
 
     [Option("max-age", Default = 30, HelpText = "Show builds with a max age of this many days.")]
     public int MaxAgeInDays { get; set; }
