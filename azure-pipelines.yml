@@ -25,10 +25,12 @@ pool:
   demands: ImageOverride -equals 1es-windows-2019
 
 stages:
-- ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production')) }}:
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
   - stage: GitHub_Issue_Verification
-    dependsOn: []
     displayName: GitHub Issue Verification
+    dependsOn: []
+    # System.PullRequest.TargetBranch only evaulates during runtime conditions
+    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
     jobs:
     - job: VerifyGitHubIssue
       displayName: Verify GitHub Issue Link included in all PRs
