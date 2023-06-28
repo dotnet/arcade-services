@@ -1486,9 +1486,10 @@ public sealed class Remote : IRemote
     /// <returns>Async task</returns>
     public async Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
     {
+        var buildCache = new Dictionary<int, Build>();
+
         foreach (var dependency in dependencies)
         {
-            Dictionary<int, Build> buildCache = new Dictionary<int, Build>();
             IEnumerable<Asset> matchingAssets = await GetAssetsAsync(dependency.Name, dependency.Version);
             List<Asset> matchingAssetsFromSameSha = new List<Asset>();
 
