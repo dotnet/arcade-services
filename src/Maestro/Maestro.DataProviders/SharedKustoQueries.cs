@@ -34,7 +34,7 @@ public static class SharedKustoQueries
         // from the given repository. We summarize duration of the builds over the last specified
         // number of days.
         string commonQueryFilters = @"| where FinishTime > ago(_Days)
-                | where Result != 'failed' and Result != 'canceled'";
+                | where Result !in('failed', 'canceled')";
 
         // There are multiple different definitions that run in parallel, so we
         // summarize on the definition id and ultimately choose the definition that took the longest.
