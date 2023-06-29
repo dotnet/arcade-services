@@ -46,6 +46,11 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
+    <!--
+      NuGet.Protocol is not directly used but it's a transitive dependency of Microsoft.VisualStudio.Web.CodeGeneration.Design.
+      We are adding it here and pinning it to a higher version that is not being flagged by CG.
+    -->
+    <PackageReference Include="NuGet.Protocol" />
     <PackageReferenceWithConfiguration Include="Microsoft.AspNetCore.ApiVersioning.Analyzers">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>Analyzer</OutputItemType>
@@ -54,7 +59,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />

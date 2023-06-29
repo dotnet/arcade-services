@@ -1,13 +1,13 @@
 variables:
-  # Cannot use key:value syntax in root defined variables
-  - name: _TeamName
-    value: DotNetCore
-  - name: _PublishUsingPipelines
-    value: true
-  - name: _DotNetArtifactsCategory
-    value: .NETCore
-  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    - group: SDL_Settings
+# Cannot use key:value syntax in root defined variables
+- name: _TeamName
+  value: DotNetCore
+- name: _PublishUsingPipelines
+  value: true
+- name: _DotNetArtifactsCategory
+  value: .NETCore
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - group: SDL_Settings
 
 # CI and PR triggers
 trigger:
@@ -20,31 +20,41 @@ pr:
 - main
 - production
 
+pool:
+  name: NetCore1ESPool-Internal-NoMSI
+  demands: ImageOverride -equals 1es-windows-2019
+
 stages:
-- stage: GitHub_Issue_Verification
-  displayName: GitHub Issue Verification
-  condition: and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
-  jobs:
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+  - stage: GitHub_Issue_Verification
+    displayName: GitHub Issue Verification
+    dependsOn: []
+    # System.PullRequest.TargetBranch only evaulates during runtime conditions
+    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
+    jobs:
     - job: VerifyGitHubIssue
       displayName: Verify GitHub Issue Link included in all PRs
-      pool: 
-        vmImage: 'windows-latest'
+      pool:
+        vmImage: windows-latest
       steps:
-        - checkout: self
-        - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
-          displayName: Enforce GitHub issue link presence
+      - checkout: self
+      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
+        displayName: Enforce GitHub issue link presence
 
 - stage: build
   dependsOn: []
   displayName: Build
-  # Three phases for each of the three OSes we want to run on
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
+      ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+        enablePublishBuildArtifacts: true
+        enablePublishBuildAssets: true
+      ${{ else }}:
+        enablePublishBuildArtifacts: false
+        enablePublishBuildAssets: false
       enableMicrobuild: false
-      enablePublishBuildArtifacts: true
       enablePublishTestResults: false
-      enablePublishBuildAssets: true
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       enableTelemetry: true
       helixRepo: dotnet/arcade-services
@@ -56,7 +66,7 @@ stages:
             name: NetCore1ESPool-Internal
             demands: ImageOverride -equals 1es-windows-2019
           ${{ if eq(variables['System.TeamProject'], 'public')}}:
-            name: NetCore-Public          
+            name: NetCore-Public
             demands: ImageOverride -equals 1es-windows-2019-open
 
         variables:
@@ -81,12 +91,6 @@ stages:
               /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
               /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
               /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-        # In production, create stable package versions
-        # TODO: We depend on a prerelease version of Microsoft.TeamFoundationServer.Client
-        # https://github.com/dotnet/arcade-services/issues/59
-        # and so we can't stabilize for right now.
-        # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-            # - _ProductionArgs: /p:DotNetFinalVersionKind=release
 
         strategy:
           matrix:
@@ -112,23 +116,15 @@ stages:
         - checkout: self
           clean: true
 
-        - task: UseDotNet@2
-          displayName: Install Correct .NET Version
-          inputs:
-            useGlobalJson: true
-
-        - task: UseDotNet@2
-          displayName: Install .NET Version 3.1
-          inputs:
-            version: 3.1.x
-
-        - task: NuGetToolInstaller@0
-          inputs:
-            versionSpec: 6.1.x
-
         - task: NodeTool@0
+          displayName: Install node.js
           inputs:
             versionSpec: 12.x
+
+        - task: NuGetToolInstaller@0
+          displayName: Install NuGet
+          inputs:
+            versionSpec: 6.1.x
 
         - task: NuGetCommand@2
           displayName: Restore Packages
@@ -138,7 +134,7 @@ stages:
             feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
-          displayName: Calculate release version variables
+          displayName: Calculate Release Versions
 
         - powershell: |
             [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
@@ -146,7 +142,7 @@ stages:
             $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
             $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
             git diff
-          displayName: Remove Service Fabric RunAsPolicy from MaestroApplication
+          displayName: Remove RunAsPolicy From MaestroApplication
 
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
@@ -156,24 +152,11 @@ stages:
             /p:Test=false
             /P:Sign=false
           name: Build
-          displayName: Build / Publish
-          condition: succeeded()
-        
-        - powershell: |
-            dotnet tool restore
-            $manifestArgs = @()
-            Get-ChildItem .vault-config/*.yaml |% {
-              $manifestArgs += @("-m", $_.FullName)
-            }
-            dotnet secret-manager validate-all -b src @manifestArgs
-          displayName: Verify Secret Usages
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
-          - powershell: src\Monitoring\ComponentGovernance\generate-cgmanifest.ps1
-            displayName: Generate cgmanifest.json for Grafana
-
           - task: ComponentGovernanceComponentDetection@0
+            displayName: Component Governance Detection
             inputs:
               # `.packages` directory is used by some tools running during build.
               # By default ComponentDetection scans this directory and sometimes reports
@@ -181,14 +164,16 @@ stages:
               # We can ignore this directory because actual vulnerabilities
               # that we are interested in will be found by the tool
               # when scanning .csproj and package.json files.
-              ignoreDirectories: '.packages'
+              ignoreDirectories: .packages
 
-        - template: /eng/test.yaml
+        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/templates/steps/test.yml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
           ## Prepare service fabric artifact
           - task: ServiceFabricUpdateManifests@2
+            displayName: Update Service Fabric manifests
             inputs:
               applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
 
@@ -204,7 +189,7 @@ stages:
             displayName: Publish MaestroApplication
 
           ## Generate SBOM manifest
-          - template: ../../../generate-sbom.yml
+          - template: /eng/templates/steps/generate-sbom.yml
 
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
@@ -238,17 +223,10 @@ stages:
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-          # Reenable tagging when stable package versions can be generated.
-          # https://github.com/dotnet/arcade-services/issues/59
-          # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-            # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
-
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - template: eng\common\templates\post-build\post-build.yml
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
+  - template: /eng/common/templates/post-build/post-build.yml
     parameters:
-      # Symbol validation isn't being very reliable lately. This should be enabled back
-      # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
-      enableSymbolValidation: false
+      enableSymbolValidation: true
       enableSigningValidation: false
       artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
       symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
@@ -266,24 +244,18 @@ stages:
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
-  - template: eng\deploy.yaml
+
+  - template: /eng/templates/stages/deploy.yaml
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         PublishProfile: Int
-        RolloutScorerAppName: rollout-scorer-int
-        ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Production
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
-        RolloutScorerAppName: rollout-scorer-prod
-        ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
