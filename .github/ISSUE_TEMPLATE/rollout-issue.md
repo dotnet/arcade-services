@@ -1,6 +1,6 @@
 ---
 name: Rollout issue
-about: 'Create issue for arcade-services rollout '
+about: 'Create issue for arcade-services rollout'
 title: Rollout DD-MM-YYYY
 labels: Rollout
 assignees: ''
