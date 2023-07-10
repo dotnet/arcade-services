@@ -1,7 +1,7 @@
 ---
 name: Rollout issue
-about: 'Create issue for arcade-services rollout'
-title: Rollout DD-MM-YYYY
+about: Create issue for arcade-services rollout
+title: Rollout YYYY-MM-DD
 labels: Rollout
 assignees: ''
 
@@ -9,7 +9,7 @@ assignees: ''
 
 # Purpose
 
-This issue tracks the `arcade-services` repository rollout. On top of the [Rollout](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/831/Rollout) instructions described on the wiki, it provides the person responsible for the rollout checklist of the steps that should to be performed to rollout services in this repository. All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep full audit trail of changes rolled out to production.
+This issue tracks the `arcade-services` repository rollout. On top of the [Rollout](https://dev.azure.com/dnceng/internal/_wiki/wikis/DNCEng%20Services%20Wiki/831/Rollout) instructions described on the wiki, it provides the person responsible for the rollout checklist of the steps that need to be performed to rollout services in this repository. All relevant information, including the rollout PR, issues encountered during the rollout and steps taken to resolve them should be linked or added to this issue to keep full audit trail of changes rolled out to production.
 
 # Process
 
@@ -19,19 +19,23 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 - [ ] In case there is a problem with the CI build, notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
 
 ## Rollout preparation (Tuesday)
-- [ ] Wait for the vendor to prepare the rollout. This includes a thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47), rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/) and the rollout PR
-- [ ] Link the rollout PR to the "Rollout data" section of this issue
+- [ ] Wait for vendors to prepare the rollout: 
+    - Thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
+    - Rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
+    - Rollout PR in `arcade-services`
+- [ ] Link the rollout PR to the [Rollout data](#rollout-data) section of this issue
 - [ ] Double-check that the release notes contain all information
-- [ ] Merge the already prepard rollout PR
-- [ ] Ensure the build is green and stops on the "Approval" phase
+- [ ] Merge the already prepared rollout PR
+- [ ] Ensure the build is green and stops at the "Approval" phase
 
 ## Rollout day (Wednesday)
-- [ ] Approve the rollout build (that has been already started the day before)
-- [ ] Monitor the rollout build for failures. The [Maestro exceptions](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) query might help in diagnosing issues.
+- [ ] Approve the `Approval` stage of the rollout build (that has been already started the day before)
+- [ ] Monitor the rollout build for failures.
+    > Note: The [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
-- [ ] Update the rollout stats in the "Stats" section below
+- [ ] Update the rollout stats in the [Stats](#stats) section below
 - [ ] Notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-- [ ]  Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
+- [ ] Close this issue with closing comment describing a high-level summary of issues encountered during the rollout
 
 ## Rollback
 
