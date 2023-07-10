@@ -15,14 +15,15 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 
 ## Build status check (Monday)
 - [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
-- [ ] Ensure the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline is green
-- [ ] In case there is a problem with the CI build, notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
+- [ ] Rotate any secrets that need manual rotation
+- [ ] In case the build is failing, try to fix it and ensure the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline is green
 
 ## Rollout preparation (Tuesday)
-- [ ] Wait for vendors to prepare the rollout: 
-    - Thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
-    - Rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
-    - Rollout PR in `arcade-services`
+- [ ] Check the vendor prepared the rollout:
+  - Thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
+  - Rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
+  - Rollout PR in `arcade-services`
+- [ ] In case there is a problem with the CI build, notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
 - [ ] Link the rollout PR to the [Rollout data](#rollout-data) section of this issue
 - [ ] Double-check that the release notes contain all information
 - [ ] Merge the already prepared rollout PR
@@ -31,7 +32,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 ## Rollout day (Wednesday)
 - [ ] Approve the `Approval` stage of the rollout build (that has been already started the day before)
 - [ ] Monitor the rollout build for failures.
-    > Note: The [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
+  - Note: this [Maestro exceptions query](https://ms.portal.azure.com/#view/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2F68672ab8-de0c-40f1-8d1b-ffb20bd62c0f%2FresourceGroups%2Fmaestro-prod-cluster%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fmaestro-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D) might help in diagnosing issues.
 - [ ] Keep track of any issues encountered during the rollout either directly in this issue, or in a dedicated issue linked to this issue
 - [ ] Update the rollout stats in the [Stats](#stats) section below
 - [ ] Notify the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
@@ -53,14 +54,14 @@ In case the services don't work as expected after the rollout, it's necessary to
 ## Rollout PRs
 
 * The main PR: `<TO BE FILLED>`
-* Rollback PRs: `<TO BE FILLED, IF APPICABLE>`
+* Rollback PRs: `<TO BE FILLED (IF APPICABLE) OR DELETED>`
 
 ## Rollout times
 
 Use the following [Kusto query](https://dataexplorer.azure.com/clusters/engsrvprod/databases/engineeringdata?query=H4sIAAAAAAAAA51Ry07DQAy85yusXEiq0EIPIBr1QJWqVEJQtcAFoWpJ3GbRPqJdhzf/jhMKChzZkzX2zHi8CgmWVilb07yAMQx6k+v5eQbzDGaX0xWcTZfTBLC/7cNweHhwcnTcG6SBYtYMKaudIGkN86K1LEagrNkmsN5I52lFYosj8ORkCyrxB4vhLQB+V1KjkgaXmFtX+BZ7h6cSHcKklqpoFhsDG/xqXQiNIE3Uceu6xLthX2stnHxFdhWOeFXNpFVTN8YxhzNNcC2eO+iOXDn7gDlBJ+jGOi1oTTzlK2Gihr3/pZ1AWJYjrcM4DT7SoOKQ1Ard7i0cnlas9igURO1QvHfHamR9LpRwUeea0c9/sGB7gJCLRX2vpC+h9nw6yITLwzhOvuWtp//pZ1gp+9IY3AglC0EIRQtpNMQO6SfbzDU/IQIAAA==) to gather data about rollout times:
 
-Pre-Approval run time: `<TO BE FILLED>`
-Post-Approval run time: `<TO BE FILLED>`
+* Pre-Approval run time: `<TO BE FILLED>`
+* Post-Approval run time: `<TO BE FILLED>`
 
 # Useful links
 
