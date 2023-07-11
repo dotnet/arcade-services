@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -46,16 +47,31 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version)).ToList();
+                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
-            string queryDescriptionString =
-                $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : "")}" +
-                $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
+            var queryDescription = new StringBuilder($"name '{_options.Name}'");
+
+            if (!string.IsNullOrEmpty(_options.Version))
+            {
+                queryDescription.Append($" and version '{_options.Version}'");
+            }
+
+            if (targetChannel != null)
+            {
+                queryDescription.Append($" on channel '{targetChannel.Name}'");
+            }
+
+            if (_options.Build != null)
+            {
+                queryDescription.Append($" from build '{_options.Build}'");
+            }
+
+            queryDescription.Append($" in the last {_options.MaxAgeInDays} days");
 
             // Only print the lookup string if the output type is text.
             if (_options.OutputFormat == DarcOutputType.text)
             {
-                Console.WriteLine($"Looking up assets with {queryDescriptionString}");
+                Console.WriteLine($"Looking up assets with {queryDescription}");
             }
 
             // Walk the assets and look up the corresponding builds, potentially filtering based on channel
@@ -88,7 +104,7 @@ internal class GetAssetOperation : Operation
 
             if (!matchingAssetsAfterDate.Any())
             {
-                Console.WriteLine($"No assets found with {queryDescriptionString}");
+                Console.WriteLine($"No assets found with {queryDescription}");
                 int remaining = matchingAssets.Count - checkedAssets;
                 if (remaining > 0)
                 {
