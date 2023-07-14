@@ -23,6 +23,9 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrPatchHandler : IVmrPatchHandler
 {
+    // New git versions have a limit on the size of a patch file that can be applied (1GB)
+    private const uint MaxPatchSize = 1_000_000_000;
+
     /// <summary>
     /// Matches output of `git apply --numstat` which lists files contained in a patch file.
     /// Example output:
@@ -103,10 +106,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
-        var patches = new List<VmrIngestionPatch>
-        {
-            new(patchName, VmrInfo.RelativeSourcesDir / relativePath)
-        };
 
         List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
 
@@ -124,52 +123,27 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
         }
 
-        var args = new List<string>
-        {
-            "diff",
-            "--patch",
-            "--binary", // Include binary contents as base64
-            "--output", // Store the diff in a .patch file
-            patchName,
-            $"{sha1}..{sha2}",
-            "--",
-        };
-
-        args.AddRange(mapping.Include.Select(p => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){p}"));
-        args.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}"));
+        var filters = new List<string>();
+        filters.AddRange(mapping.Include.Select(p => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){p}"));
+        filters.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}"));
 
         // Ignore submodules in the diff, they will be inlined via their own diffs
         if (submoduleChanges.Any())
         {
-            args.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
+            filters.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
         }
 
-        // Other git commands are executed from whichever folder and use `-C [path to repo]` 
-        // However, here we must execute in repo's dir because attribute filters work against the working tree
-        // We also need to do call this from the repo root and not from repo/.git
-        var result = await _processManager.ExecuteGit(
-            repoPath,
-            args,
-            cancellationToken: cancellationToken);
-
-        result.ThrowIfFailed($"Failed to create an initial diff for {mapping.Name}");
-
-        _logger.LogDebug("{output}", result.ToString());
-
-        var countArgs = new[]
-        {
-            "rev-list",
-            "--count",
-            $"{sha1}..{sha2}",
-        };
-
-        var distance = (await _processManager.ExecuteGit(repoPath, countArgs, cancellationToken)).StandardOutput.Trim();
-
-        _logger.LogInformation("Diff created at {path} - {distance} commit{s}, {size}",
+        var patches = new List<VmrIngestionPatch>();
+        patches.AddRange(await CreatePatchesSafely(
             patchName,
-            distance == "0" ? "?" : distance,
-            distance == "1" ? string.Empty : "s",
-            StringUtils.GetHumanReadableFileSize(patchName));
+            sha1,
+            sha2,
+            path: null,
+            filters,
+            relativePatch: false,
+            repoPath,
+            VmrInfo.RelativeSourcesDir / relativePath,
+            cancellationToken));
 
         // If current mapping hosts VMR's non-src/ content, synchronize it too
         // We only do it when processing the root mapping, not its submodules
@@ -206,26 +180,16 @@ public class VmrPatchHandler : IVmrPatchHandler
                 continue;
             }
 
-            args = new List<string>
-            {
-                "diff",
-                "--patch",
-                "--relative", // Relative paths so that we can apply the patch on VMR's root dir
-                "--binary", // Include binary contents as base64
-                "--output", // Store the diff in a .patch file
+            patches.AddRange(await CreatePatchesSafely(
                 patchName,
-                $"{sha1}..{sha2}",
-                "--",
+                sha1,
+                sha2,
                 path, // Apply for a given file or directory (we will call this from the content dir)
-            };
-
-            result = await _processManager.Execute(
-                _processManager.GitExecutable,
-                args,
-                workingDir: contentDir,
-                cancellationToken: cancellationToken);
-
-            patches.Add(new VmrIngestionPatch(patchName, destination));
+                filters: null,
+                relativePatch: true, // Relative paths so that we can apply the patch on VMR's root dir
+                contentDir,
+                destination != null ? new UnixPath(destination) : null,
+                cancellationToken));
         }
 
         if (!submoduleChanges.Any())
@@ -361,6 +325,127 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         return files;
+    }
+
+    /// <summary>
+    /// Creates patches and if any is > 1GB, splits it into smaller ones.
+    /// </summary>
+    private async Task<List<VmrIngestionPatch>> CreatePatchesSafely(
+        string patchName,
+        string sha1,
+        string sha2,
+        string? path,
+        IReadOnlyCollection<string>? filters,
+        bool relativePatch,
+        LocalPath workingDir,
+        UnixPath? applicationPath,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogError($"Starting patches for {workingDir}\\{path}"); // TODO: Remove
+
+        var args = new List<string>
+        {
+            "diff",
+            "--patch",
+            "--binary", // Include binary contents as base64
+            "--output", // Store the diff in a .patch file
+            patchName,
+        };
+
+        if (relativePatch)
+        {
+            args.Add("--relative");
+        }
+
+        args.Add($"{sha1}..{sha2}");
+        args.Add("--");
+
+        if (path != null)
+        {
+            args.Add(path);
+        }
+
+        if (filters?.Count > 0)
+        {
+            args.AddRange(filters);
+        }
+
+        // TODO: Remove if
+        if (patchName != "D:\\tmp\\llvm-project-4b825dc-0dc0f72.patch")
+        {
+            var result = await _processManager.Execute(
+                _processManager.GitExecutable,
+                args,
+                workingDir: workingDir,
+                cancellationToken: cancellationToken);
+
+            result.ThrowIfFailed($"Failed to create a patch {patchName}");
+        }
+
+        var patches = new List<VmrIngestionPatch>();
+
+        if (_fileSystem.GetFileInfo(patchName).Length < MaxPatchSize)
+        {
+            patches.Add(new VmrIngestionPatch(patchName, applicationPath?.Path));
+            return patches;
+        }
+
+        _logger.LogWarning("Patch {name} targeting {path} is too large (>1GB). Repo will be split into smaller patches." +
+            "Please note that there might be mismatches in non-global cloaking rules.", patchName, applicationPath);
+
+        // If the patch is more than 1GB, new must start over and break it down into smaller patches
+        var files = _fileSystem.GetFiles(workingDir);
+        var directories = _fileSystem.GetDirectories(workingDir);
+
+        if (files.Length == 1 && directories.Length == 0)
+        {
+            throw new Exception($"File {files[0]} is too big to be ingested into VMR - git has a patch size limit of 1GB. " +
+                "Please add the file into the VMR manually.");
+        }
+
+        // Add a patch for each directory
+        for (var i = 0; i < directories.Length; i++)
+        {
+            var dirName = directories[i].Substring(workingDir.Length + 1);
+            if (Path.GetFileName(dirName) == ".git")
+            {
+                continue;
+            }
+
+            var newPatchname = $"{patchName}.{i + 1}";
+
+            patches.AddRange(await CreatePatchesSafely(
+                newPatchname,
+                sha1,
+                sha2,
+                ".",
+                filters,
+                relativePatch,
+                workingDir / dirName,
+                applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
+                cancellationToken));
+        }
+
+        // Add a patch for each file
+        for (var i = 0; i < files.Length; i++)
+        {
+            var fileName = files[i].Substring(workingDir.Length + 1);
+            var newPatchname = $"{patchName}.{i + directories.Length + 1}";
+
+            patches.AddRange(await CreatePatchesSafely(
+                newPatchname,
+                sha1,
+                sha2,
+                fileName,
+                // Ignore all files except the one we're currently processing
+                filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }).ToArray(),
+                relativePatch,
+                workingDir,
+                applicationPath,
+                cancellationToken));
+        }
+
+        return patches;
     }
 
     /// <summary>

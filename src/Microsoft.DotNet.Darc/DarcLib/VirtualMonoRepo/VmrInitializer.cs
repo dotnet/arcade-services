@@ -90,7 +90,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
+        // var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}"); TODO
+        var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{Guid.NewGuid()}" : string.Empty)}");
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,

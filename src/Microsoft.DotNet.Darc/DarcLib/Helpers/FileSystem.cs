@@ -25,6 +25,8 @@ public class FileSystem : IFileSystem
 
     public string[] GetFiles(string path) => Directory.GetFiles(path);
 
+    public string[] GetDirectories(string path) => Directory.GetDirectories(path);
+
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
     public string PathCombine(string path1, string path2) => Path.Combine(path1, path2);

@@ -23,6 +23,8 @@ public interface IFileSystem
 
     string[] GetFiles(string path);
 
+    public string[] GetDirectories(string path);
+
     string? GetFileName(string? path);
 
     string? GetDirectoryName(string? path);
