@@ -29,7 +29,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 - [ ] Double-check that the release notes contain all information
 - [ ] Merge the already prepared rollout PR
 - [ ] Link the rollout build to the [Rollout build](#rollout-build) section of this issue
-- [ ] Verify that Maestro opened a production => main PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). The commit in question should be empty
+- [ ] Verify that Maestro opened a production => main PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). The commit in question should be empty. Do not merge the PR yet
 - [ ] Ensure the build is green and stops at the "Approval" phase
 
 ## Rollout day (Wednesday)
