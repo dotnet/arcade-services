@@ -140,7 +140,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             sha2,
             path: null,
             filters,
-            relativePatch: false,
+            relativePaths: false,
             repoPath,
             VmrInfo.RelativeSourcesDir / relativePath,
             cancellationToken));
@@ -186,7 +186,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 path, // Apply for a given file or directory (we will call this from the content dir)
                 filters: null,
-                relativePatch: true, // Relative paths so that we can apply the patch on VMR's root dir
+                relativePaths: true, // Relative paths so that we can apply the patch on VMR's root dir
                 contentDir,
                 destination != null ? new UnixPath(destination) : null,
                 cancellationToken));
@@ -336,52 +336,16 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         string? path,
         IReadOnlyCollection<string>? filters,
-        bool relativePatch,
+        bool relativePaths,
         LocalPath workingDir,
         UnixPath? applicationPath,
         CancellationToken cancellationToken)
     {
-        var args = new List<string>
+        var patch = await CreatePatch(patchName, sha1, sha2, path, filters, relativePaths, workingDir, applicationPath, cancellationToken);
+
+        if (_fileSystem.GetFileInfo(patch.Path).Length < MaxPatchSize)
         {
-            "diff",
-            "--patch",
-            "--binary", // Include binary contents as base64
-            "--output", // Store the diff in a .patch file
-            patchName,
-        };
-
-        if (relativePatch)
-        {
-            args.Add("--relative");
-        }
-
-        args.Add($"{sha1}..{sha2}");
-        args.Add("--");
-
-        if (path != null)
-        {
-            args.Add(path);
-        }
-
-        if (filters?.Count > 0)
-        {
-            args.AddRange(filters);
-        }
-
-        var result = await _processManager.Execute(
-            _processManager.GitExecutable,
-            args,
-            workingDir: workingDir,
-            cancellationToken: cancellationToken);
-
-        result.ThrowIfFailed($"Failed to create a patch {patchName}");
-
-        var patches = new List<VmrIngestionPatch>();
-
-        if (_fileSystem.GetFileInfo(patchName).Length < MaxPatchSize)
-        {
-            patches.Add(new VmrIngestionPatch(patchName, applicationPath?.Path));
-            return patches;
+            return new() { patch };
         }
 
         _logger.LogWarning("Patch {name} targeting {path} is too large (>1GB). Repo will be split into smaller patches." +
@@ -391,11 +355,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var files = _fileSystem.GetFiles(workingDir);
         var directories = _fileSystem.GetDirectories(workingDir);
 
-        if (files.Length == 1 && directories.Length == 0)
-        {
-            throw new Exception($"File {files[0]} is too big to be ingested into VMR - git has a patch size limit of 1GB. " +
-                "Please add the file into the VMR manually.");
-        }
+        var patches = new List<VmrIngestionPatch>();
 
         // Add a patch for each directory
         for (var i = 0; i < directories.Length; i++)
@@ -426,7 +386,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             var fileName = files[i].Substring(workingDir.Length + 1);
             var newPatchname = $"{patchName}.{i + directories.Length + 1}";
 
-            patches.AddRange(await CreatePatchesSafely(
+            patch = await CreatePatch(
                 newPatchname,
                 sha1,
                 sha2,
@@ -436,10 +396,70 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir,
                 applicationPath,
-                cancellationToken));
+                cancellationToken);
+
+            if (_fileSystem.GetFileInfo(patch.Path).Length > MaxPatchSize)
+            {
+                throw new Exception($"File {files[i]} is too big (>1GB) to be ingested into VMR via git patches. " +
+                    "Please add the file into the VMR manually.");
+            }
+
+            patches.Add(patch);
         }
 
         return patches;
+    }
+
+    /// <summary>
+    /// Creates patches and if any is > 1GB, splits it into smaller ones.
+    /// </summary>
+    private async Task<VmrIngestionPatch> CreatePatch(
+        string patchName,
+        string sha1,
+        string sha2,
+        string? path,
+        IReadOnlyCollection<string>? filters,
+        bool relativePaths,
+        LocalPath workingDir,
+        UnixPath? applicationPath,
+        CancellationToken cancellationToken)
+    {
+        var args = new List<string>
+        {
+            "diff",
+            "--patch",
+            "--binary", // Include binary contents as base64
+            "--output", // Store the diff in a .patch file
+            patchName,
+        };
+
+        if (relativePaths)
+        {
+            args.Add("--relative");
+        }
+
+        args.Add($"{sha1}..{sha2}");
+        args.Add("--");
+
+        if (path != null)
+        {
+            args.Add(path);
+        }
+
+        if (filters?.Count > 0)
+        {
+            args.AddRange(filters);
+        }
+
+        var result = await _processManager.Execute(
+            _processManager.GitExecutable,
+            args,
+            workingDir: workingDir,
+            cancellationToken: cancellationToken);
+
+        result.ThrowIfFailed($"Failed to create a patch {patchName}");
+
+        return new VmrIngestionPatch(patchName, applicationPath?.Path);
     }
 
     /// <summary>

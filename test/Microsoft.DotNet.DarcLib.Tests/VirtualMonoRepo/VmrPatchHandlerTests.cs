@@ -942,9 +942,9 @@ public class VmrPatchHandlerTests
             .Setup(x => x.GetFileInfo(expectedPatchName))
             .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
 
-        // Patch for large-dir-1
+        // Patch for big-file
         _fileSystem
-            .Setup(x => x.GetFileInfo(_clonePath / "big-file"))
+            .Setup(x => x.GetFileInfo(expectedPatchName + ".2"))
             .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
 
         _fileSystem
@@ -953,7 +953,7 @@ public class VmrPatchHandlerTests
 
         _fileSystem
             .Setup(x => x.GetFiles(_clonePath))
-            .Returns(new string[] { _clonePath / "big-file" });
+            .Returns(new string[] { _clonePath / "small-file", _clonePath / "big-file" });
 
         // Act
         var action = async () => await _patchHandler.CreatePatches(
@@ -966,7 +966,7 @@ public class VmrPatchHandlerTests
             CancellationToken.None);
 
         // Verify
-        await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clonePath / "big-file"} is too big to be ingested into VMR*");
+        await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clonePath / "big-file"} is too big (>1GB) to be ingested into VMR*");
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
