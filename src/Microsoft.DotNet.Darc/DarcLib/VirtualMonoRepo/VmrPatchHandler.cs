@@ -414,7 +414,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 ".",
                 filters,
-                relativePatch,
+                true,
                 workingDir / dirName,
                 applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
                 cancellationToken));
@@ -433,7 +433,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 fileName,
                 // Ignore all files except the one we're currently processing
                 filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }).ToArray(),
-                relativePatch,
+                true,
                 workingDir,
                 applicationPath,
                 cancellationToken));
