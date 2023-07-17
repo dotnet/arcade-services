@@ -341,8 +341,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         UnixPath? applicationPath,
         CancellationToken cancellationToken)
     {
-        _logger.LogError($"Starting patches for {workingDir}\\{path}"); // TODO: Remove
-
         var args = new List<string>
         {
             "diff",
@@ -370,17 +368,13 @@ public class VmrPatchHandler : IVmrPatchHandler
             args.AddRange(filters);
         }
 
-        // TODO: Remove if
-        if (patchName != "D:\\tmp\\llvm-project-4b825dc-0dc0f72.patch")
-        {
-            var result = await _processManager.Execute(
-                _processManager.GitExecutable,
-                args,
-                workingDir: workingDir,
-                cancellationToken: cancellationToken);
+        var result = await _processManager.Execute(
+            _processManager.GitExecutable,
+            args,
+            workingDir: workingDir,
+            cancellationToken: cancellationToken);
 
-            result.ThrowIfFailed($"Failed to create a patch {patchName}");
-        }
+        result.ThrowIfFailed($"Failed to create a patch {patchName}");
 
         var patches = new List<VmrIngestionPatch>();
 
