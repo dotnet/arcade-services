@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -132,7 +132,7 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task PatchIsAppliedTest()
+    public async Task CreatePatchesTest()
     {
         // Setup
         var patch = new VmrIngestionPatch($"{_patchDir}/test-repo.patch", "src/" + IndividualRepoName);
@@ -846,6 +846,127 @@ public class VmrPatchHandlerTests
             $"src/{IndividualRepoName}",
         },
         _vmrPath + "/");
+    }
+
+    [Test]
+    public async Task CreatePatchesWithSplittingWhenOverSizeLimitTest()
+    {
+        /*
+         * This test verifies that if a patch is larger than the maximum allowed size, it is split into multiple patches.
+         * The fake repo layout is as follows:
+         *  ├── large-dir-1       >1GB
+         *  │   ├── large-dir-2   >1GB
+         *  │   │   ├── a.txt
+         *  │   │   └── b.txt
+         *  │   └── small-dir
+         *  │       └── c.txt
+         *  └── root-file
+         */
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+
+        var largeDir1 = _clonePath / "large-dir-1";
+        var largeDir2 = largeDir1 / "large-dir-2";
+        var smallDir = _clonePath / "large-dir-1" / "small-dir";
+
+        // Patch for the whole repo
+        _fileSystem
+            .Setup(x => x.GetFileInfo(expectedPatchName))
+            .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
+
+        // Patch for large-dir-1
+        _fileSystem
+            .Setup(x => x.GetFileInfo(expectedPatchName + ".1"))
+            .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
+
+        _fileSystem
+            .Setup(x => x.GetDirectories(_clonePath))
+            .Returns(new string[] { largeDir1 });
+
+        _fileSystem
+            .Setup(x => x.GetDirectories(largeDir1))
+            .Returns(new string[] { largeDir2, smallDir
+            });
+
+        _fileSystem
+            .Setup(x => x.GetFiles(_clonePath))
+            .Returns(new string[] { _clonePath / "root-file" });
+
+        _fileSystem
+            .Setup(x => x.GetFiles(largeDir2))
+            .Returns(new string[] { largeDir2 / "a.txt", largeDir2 / "b.txt" });
+
+        _fileSystem
+            .Setup(x => x.GetFiles(smallDir))
+            .Returns(new string[] { smallDir / "c.txt" });
+
+        // Act
+        var patches = await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            _clonePath,
+            Sha1,
+            Sha2,
+            _patchDir,
+            new UnixPath("/tmp"),
+            CancellationToken.None);
+
+        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
+
+        // Verify
+        _processManager
+            .Verify(x => x.Execute("git",
+                expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+
+        patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
+        {
+            new VmrIngestionPatch(expectedPatchName + ".2", "src/" + IndividualRepoName),
+            new VmrIngestionPatch(expectedPatchName + ".1.1", "src/" + IndividualRepoName + "/" + "large-dir-1" + "/" + "large-dir-2"),
+            new VmrIngestionPatch(expectedPatchName + ".1.2", "src/" + IndividualRepoName + "/" + "large-dir-1" + "/" + "small-dir"),
+        });
+    }
+
+    [Test]
+    public async Task CreatePatchesWithAFileTooLargeTest()
+    {
+        // This test verifies that we cannot ingest files over 1GB in size with a reasonable error
+        string expectedPatchName = $"{_patchDir}/{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+
+        // Patch for the whole repo
+        _fileSystem
+            .Setup(x => x.GetFileInfo(expectedPatchName))
+            .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
+
+        // Patch for large-dir-1
+        _fileSystem
+            .Setup(x => x.GetFileInfo(_clonePath / "big-file"))
+            .Returns(Mock.Of<IFileInfo>(x => x.Length == 1_500_000_000));
+
+        _fileSystem
+            .Setup(x => x.GetDirectories(_clonePath))
+            .Returns(Array.Empty<string>());
+
+        _fileSystem
+            .Setup(x => x.GetFiles(_clonePath))
+            .Returns(new string[] { _clonePath / "big-file" });
+
+        // Act
+        var action = async () => await _patchHandler.CreatePatches(
+            _testRepoMapping,
+            _clonePath,
+            Sha1,
+            Sha2,
+            _patchDir,
+            new UnixPath("/tmp"),
+            CancellationToken.None);
+
+        // Verify
+        await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clonePath / "big-file"} is too big to be ingested into VMR*");
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
