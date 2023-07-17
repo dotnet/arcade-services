@@ -107,6 +107,7 @@ public class VmrPatchHandlerTests
         }));
 
         _fileSystem.Reset();
+        _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists && x.Length == 895));
         _fileSystem
             .SetupGet(x => x.DirectorySeparatorChar)
             .Returns('/');
@@ -178,9 +179,10 @@ public class VmrPatchHandlerTests
 
         // Verify
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -241,9 +243,10 @@ public class VmrPatchHandlerTests
 
         // Verify
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -251,18 +254,17 @@ public class VmrPatchHandlerTests
         {
             "diff",
             "--patch",
-            "--relative",
             "--binary",
             "--output",
             expectedPatchName2,
+            "--relative",
             $"{Sha1}..{Sha2}",
             "--",
             "."
         };
 
         _processManager
-            .Verify(x => x.Execute(
-                "git",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/SourceBuild/tarball/content",
@@ -273,18 +275,17 @@ public class VmrPatchHandlerTests
         {
             "diff",
             "--patch",
-            "--relative",
             "--binary",
             "--output",
             expectedPatchName3,
+            "--relative",
             $"{Sha1}..{Sha2}",
             "--",
             "."
         };
 
         _processManager
-            .Verify(x => x.Execute(
-                "git",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/eng/common",
@@ -329,9 +330,10 @@ public class VmrPatchHandlerTests
 
         // Verify
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -382,9 +384,10 @@ public class VmrPatchHandlerTests
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -396,9 +399,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-1",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -470,9 +474,10 @@ public class VmrPatchHandlerTests
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -485,9 +490,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude)external-2");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-1",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -501,9 +507,10 @@ public class VmrPatchHandlerTests
             .Append(":(glob,attr:!vmr-ignore)**/*");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-2",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-2",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -572,9 +579,10 @@ public class VmrPatchHandlerTests
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -586,9 +594,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-1",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -646,9 +655,10 @@ public class VmrPatchHandlerTests
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -660,9 +670,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-1",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -721,9 +732,10 @@ public class VmrPatchHandlerTests
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                _clonePath,
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                _clonePath,
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -735,9 +747,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-1",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-1",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -748,9 +761,10 @@ public class VmrPatchHandlerTests
             .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
 
         _processManager
-            .Verify(x => x.ExecuteGit(
-                "/tmp/external-2",
+            .Verify(x => x.Execute("git",
                 expectedArgs,
+                It.IsAny<TimeSpan?>(),
+                "/tmp/external-2",
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -832,13 +846,6 @@ public class VmrPatchHandlerTests
             $"src/{IndividualRepoName}",
         },
         _vmrPath + "/");
-    }
-
-    private void SetupGitCall(string[] expectedArguments, ProcessExecutionResult result, string repoDir)
-    {
-        _processManager
-            .Setup(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
