@@ -66,7 +66,7 @@ public abstract class VmrManagerBase
         VmrDependencyUpdate update,
         LocalPath clonePath,
         string fromRevision,
-        Signature author,
+        LibGit2Sharp.Identity author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
@@ -156,16 +156,15 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected void Commit(string commitMessage, Signature author)
+    protected async void Commit(string commitMessage, LibGit2Sharp.Identity author)
     {
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new Repository(_vmrInfo.VmrPath);
-        var options = new CommitOptions { AllowEmptyCommit = true };
-        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature, options);
 
-        _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
+        await _localGitClient.Commit(_vmrInfo.VmrPath, commitMessage, true, author);
+
+        _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -285,7 +284,7 @@ public abstract class VmrManagerBase
         if (isTpnUpdated)
         {
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            await _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
@@ -345,7 +344,7 @@ public abstract class VmrManagerBase
         return commit?.Id.Sha ?? throw new InvalidOperationException($"Failed to find commit {gitRef} in {repository.Info.Path}");
     }
 
-    protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
+    protected static LibGit2Sharp.Identity DotnetBotIdentity => new(Constants.DarcBotName, Constants.DarcBotEmail);
 
     /// <summary>
     /// Helper method that creates a new git branch that we can make changes to.
@@ -409,14 +408,18 @@ public abstract class VmrManagerBase
         {
             using var repo = new Repository(_repoPath);
             _logger.LogInformation("Merging {branchName} into {mainBranch}", _workBranch, _currentBranch);
+
             Commands.Checkout(repo, _currentBranch);
-            repo.Merge(repo.Branches[_workBranch], DotnetBotCommitSignature, new MergeOptions
+
+            var signature = new Signature(DotnetBotIdentity, DateTimeOffset.Now);
+
+            repo.Merge(repo.Branches[_workBranch], signature, new MergeOptions
             {
                 FastForwardStrategy = FastForwardStrategy.NoFastForward,
                 CommitOnSuccess = false,
             });
 
-            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
+            repo.Commit(commitMessage, signature, signature);
         }
     }
 }

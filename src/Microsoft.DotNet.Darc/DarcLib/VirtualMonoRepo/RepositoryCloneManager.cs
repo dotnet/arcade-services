@@ -115,7 +115,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
             var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
-            repoCloner.Clone(remoteUri, clonePath, null);
+            await repoCloner.Clone(remoteUri, clonePath, null);
         }
         else
         {

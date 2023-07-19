@@ -6,12 +6,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -19,16 +18,16 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class LocalGitClient : ILocalGitRepo
 {
+    private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
-    private readonly string _gitExecutable;
 
     /// <summary>
     ///     Construct a new local git client
     /// </summary>
     /// <param name="path">Current path</param>
-    public LocalGitClient(string gitExecutable, ILogger logger)
+    public LocalGitClient(IProcessManager processManager, ILogger logger)
     {
-        _gitExecutable = gitExecutable;
+        _processManager = processManager;
         _logger = logger;
     }
 
@@ -68,7 +67,7 @@ public class LocalGitClient : ILocalGitRepo
     /// <param name="commitMessage">Unused</param>
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
-        string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
+        string repoDir = await GetRootDir();
         try
         {
             using (Repository localRepo = new Repository(repoDir))
@@ -105,7 +104,7 @@ public class LocalGitClient : ILocalGitRepo
                                     default:
                                         throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
                                 }
-                                finalContent = NormalizeLineEndings(fullPath, finalContent);
+                                finalContent = await NormalizeLineEndings(fullPath, finalContent);
                                 await streamWriter.WriteAsync(finalContent);
 
                                 LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
@@ -140,42 +139,49 @@ public class LocalGitClient : ILocalGitRepo
     ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
     ///       OS setting, and replace if needed.
     /// </remarks>
-    private string NormalizeLineEndings(string filePath, string content)
+    private async Task<string> NormalizeLineEndings(string filePath, string content)
     {
         const string crlf = "\r\n";
         const string lf = "\n";
+
         // Check gitAttributes to determine whether the file has eof handling set.
-        string eofAttr = LocalHelpers.ExecuteCommand(_gitExecutable, $"check-attr eol -- {filePath}", _logger);
-        if (string.IsNullOrEmpty(eofAttr) ||
-            eofAttr.Contains("eol: unspecified") ||
-            eofAttr.Contains("eol: auto"))
+        var result = await _processManager.Execute(_processManager.GitExecutable, new[] { "check-attr", "eol", "--", filePath });
+        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
+
+        string eofAttr = result.StandardOutput.Trim();
+
+        switch (eofAttr)
         {
-            if (Environment.NewLine != crlf)
-            {
-                return content.Replace(crlf, Environment.NewLine);
-            }
-            else if (Environment.NewLine == crlf && !content.Contains(crlf))
-            {
-                return content.Replace(lf, Environment.NewLine);
-            }
+            case null:
+            case string n when string.IsNullOrEmpty(n):
+            case string s when s.Contains("eol: unspecified") || s.Contains("eol: auto"):
+                if (Environment.NewLine != crlf)
+                {
+                    return content.Replace(crlf, Environment.NewLine);
+                }
+
+                if (Environment.NewLine == crlf && !content.Contains(crlf))
+                {
+                    return content.Replace(lf, Environment.NewLine);
+                }
+
+                return content;
+
+            case string s when s.Contains("eol: crlf"):
+                // Test to avoid adding extra \r.
+                if (!content.Contains(crlf))
+                {
+                    return content.Replace(lf, crlf);
+                }
+
+                return content;
+
+            case string s when s.Contains("eol: lf"):
+                return content.Replace(crlf, lf);
+
+            default:
+                throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath}'");
         }
-        else if (eofAttr.Contains("eol: crlf"))
-        {
-            // Test to avoid adding extra \r.
-            if (!content.Contains(crlf))
-            {
-                return content.Replace(lf, crlf);
-            }
-        }
-        else if (eofAttr.Contains("eol: lf"))
-        {
-            return content.Replace(crlf, lf);
-        }
-        else
-        {
-            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
-        }
-        return content;
     }
 
     /// <summary>
@@ -247,11 +253,41 @@ public class LocalGitClient : ILocalGitRepo
             throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
         }
     }
-        
-    public void Stage(string repoDir, string pathToStage)
+
+    public async Task Commit(
+        string repoPath,
+        string message,
+        bool allowEmpty,
+        LibGit2Sharp.Identity? identity = null,
+        CancellationToken cancellationToken = default)
     {
-        using var repository = new Repository(repoDir);
-        Commands.Stage(repository, pathToStage);
+        IEnumerable<string> args = new[] { "commit", "-m", message };
+
+        if (allowEmpty)
+        {
+            args = args.Append("--allow-empty");
+        }
+
+        if (identity != null)
+        {
+            args = args.Append("--author").Append($"{identity.Name} <{identity.Email}>");
+        }
+
+        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken);
+        result.ThrowIfFailed($"Failed to commit {repoPath}");
+    }
+
+    public async Task Stage(string repoDir, string pathToStage, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoDir, new[] { "add", pathToStage }, cancellationToken);
+        result.ThrowIfFailed($"Failed to stage {pathToStage} in {repoDir}");
+    }
+
+    public async Task<string> GetRootDir(string? repoPath = null, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken);
+        result.ThrowIfFailed("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
+        return result.StandardOutput.Trim();
     }
 
     private static void CleanRepoAndSubmodules(Repository repo, ILogger log)
@@ -435,7 +471,7 @@ public class LocalGitClient : ILocalGitRepo
         string repoPath,
         string branchName,
         string remoteUrl, 
-        string token,
+        string? token,
         LibGit2Sharp.Identity? identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);

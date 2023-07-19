@@ -177,7 +177,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             update,
             clonePath,
             Constants.EmptyGitObject,
-            DotnetBotCommitSignature,
+            DotnetBotIdentity,
             commitMessage,
             reapplyVmrPatches: true,
             readmeTemplatePath,

@@ -51,7 +51,7 @@ public class GitFileManagerFactory : IGitFileManagerFactory
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalGitClient(_processManager.GitExecutable, _loggerFactory.CreateLogger<LocalGitClient>()),
+        GitRepoType.Local => new LocalGitClient(_processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };
 }

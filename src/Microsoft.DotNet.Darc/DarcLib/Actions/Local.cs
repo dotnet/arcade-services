@@ -30,10 +30,12 @@ public class Local : ILocal
 
     public Local(ILogger logger, string overrideRootPath = null)
     {
+        var processManager = new ProcessManager(logger, GitExecutable);
+
         _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalGitClient(GitExecutable, _logger);
+        _gitClient = new LocalGitClient(processManager, _logger);
         _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
     }
 

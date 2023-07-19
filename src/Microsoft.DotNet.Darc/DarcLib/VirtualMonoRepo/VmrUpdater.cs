@@ -294,7 +294,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                DotnetBotCommitSignature,
+                DotnetBotIdentity,
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,
@@ -322,7 +322,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                commitToCopy.Author,
+                new LibGit2Sharp.Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,
@@ -479,7 +479,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
+            Commit("[VMR patches] Re-apply VMR patches", DotnetBotIdentity);
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -723,7 +723,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         Commands.Stage(vmrRepository, "*");
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        Commit(commitMessage, DotnetBotCommitSignature);
+        Commit(commitMessage, DotnetBotIdentity);
     }
 
     private void DeleteRepository(string repo)

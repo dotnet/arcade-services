@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface ILocalGitRepo : IGitRepo
@@ -26,11 +28,32 @@ public interface ILocalGitRepo : IGitRepo
     void Checkout(string repoDir, string commit, bool force = false);
 
     /// <summary>
+    ///     Commits files by calling git commit (not through Libgit2sharp)
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <param name="message">Commit message</param>
+    /// <param name="allowEmpty">Allow empty commits?</param>
+    /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
+    Task Commit(
+        string repoPath,
+        string message,
+        bool allowEmpty,
+        LibGit2Sharp.Identity? identity = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Stages files from the given path.
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="pathToStage">Path that will be staged to index</param>
-    void Stage(string repoDir, string pathToStage);
+    Task Stage(string repoDir, string pathToStage, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Gets the root directory of a git repo.
+    /// </summary>
+    /// <param name="path">Path inside of a git repository</param>
+    /// <returns>Path where the .git folder resides</returns>
+    Task<string> GetRootDir(string? path = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Returns a list of git submodules registered in a given repository.
@@ -52,12 +75,12 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoPath">Path of the local repository</param>
     /// <param name="branchName">Name of branch to push</param>
     /// <param name="remoteUrl">URL to push to</param>
-    /// <param name="pat">Token for authenticating for pushing</param>
+    /// <param name="token">Token for authenticating for pushing</param>
     /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
     void Push(
         string repoPath,
         string branchName,
         string remoteUrl,
-        string token,
-        LibGit2Sharp.Identity identity = null);
+        string? token,
+        LibGit2Sharp.Identity? identity = null);
 }

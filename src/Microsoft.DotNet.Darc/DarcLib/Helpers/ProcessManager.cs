@@ -45,7 +45,7 @@ public class ProcessManager : IProcessManager
 
     public string GitExecutable { get; }
 
-    public ProcessManager(ILogger<IProcessManager> logger, string gitExecutable)
+    public ProcessManager(ILogger logger, string gitExecutable)
     {
         _logger = logger;
         GitExecutable = gitExecutable;
