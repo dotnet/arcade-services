@@ -549,7 +549,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             // Error out for any duplicated packages based on the top level properties of the package.
-            var distinctPackages = manifest.Packages.Distinct();
+            var distinctPackages = manifest.Packages.Distinct(new PackageIdComparer());
             if (distinctPackages.Count() < manifest.Packages.Count())
             {
                 var dupes = manifest.Packages.GroupBy(x => new { x.Id, x.Version })
@@ -567,7 +567,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             // Error out for any duplicated blob based on the top level properties of the blob.
-            var distinctBlobs = manifest.Blobs.Distinct();
+            var distinctBlobs = manifest.Blobs.Distinct(new BlobIdComparer());
             if (distinctBlobs.Count() < manifest.Blobs.Count())
             {
                 var dupes = manifest.Blobs.GroupBy(x => new { x.Id })
@@ -812,5 +812,23 @@ namespace Microsoft.DotNet.Maestro.Tasks
             Log.LogMessage(MessageImportance.High,
                         $"##vso[artifact.upload containerfolder=BlobArtifacts;artifactname=BlobArtifacts]{mergedManifestPath}");
         }
+    }
+
+    /// <summary>
+    /// Comparer used to Distinct packages.
+    /// </summary>
+    class PackageIdComparer : IEqualityComparer<Package>
+    {
+        public bool Equals(Package x, Package y) => x.Id.Equals(y.Id, StringComparison.OrdinalIgnoreCase);
+        public int GetHashCode([DisallowNull] Package obj) => obj.Id.GetHashCode();
+    }
+
+    /// <summary>
+    /// Comparer used to Distinct blobs.
+    /// </summary>
+    class BlobIdComparer : IEqualityComparer<Blob>
+    {
+        public bool Equals(Blob x, Blob y) => x.Id.Equals(y.Id, StringComparison.OrdinalIgnoreCase);
+        public int GetHashCode([DisallowNull] Blob obj) => throw new NotImplementedException();
     }
 }

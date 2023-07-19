@@ -23,12 +23,13 @@ internal class MergedManifestTests
         public const string AzureDevOpsProject1 = "internal";
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
         public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
-        public const string Id = "Id";
+        public const string PackageId = "PackageId";
+        public const string BlobId = "BlobId";
         public const string version = "version";
 
         Package package1 = new Package()
         {
-            Id = Id,
+            Id = PackageId,
             Version = version,
             NonShipping = true,
         };
@@ -42,7 +43,7 @@ internal class MergedManifestTests
 
         private Blob blob1 = new Blob()
         {
-            Id = Id,
+            Id = BlobId,
             Category = "None",
             NonShipping = true
         };
@@ -189,6 +190,28 @@ internal class MergedManifestTests
         {
             string actualRepo = pushMetadata.GetGithubRepoName(azdoRepoUrl);
             Assert.AreEqual(expectedRepo, actualRepo);
+        }
+
+        [Test]
+        public void MergingShouldNotAllowDuplicatedPackages()
+        {
+            manifest1.Packages = new List<Package>() { package1 };
+            manifest3.Packages = new List<Package>() { package1 };
+
+            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            Action act = () => pushMetadata.MergeManifests(manifests);
+            act.Should().Throw<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+        }
+
+        [Test]
+        public void MergingShouldNotAllowDuplicatedBlobs()
+        {
+            manifest1.Blobs = new List<Blob>() { blob1 };
+            manifest3.Blobs = new List<Blob>() { blob1 };
+
+            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            Action act = () => pushMetadata.MergeManifests(manifests);
+            act.Should().Throw<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
         }
     }
 }
