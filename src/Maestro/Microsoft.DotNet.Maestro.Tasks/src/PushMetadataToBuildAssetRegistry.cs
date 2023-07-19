@@ -820,7 +820,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
     class PackageIdComparer : IEqualityComparer<Package>
     {
         public bool Equals(Package x, Package y) => x.Id.Equals(y.Id, StringComparison.OrdinalIgnoreCase);
-        public int GetHashCode([DisallowNull] Package obj) => obj.Id.GetHashCode();
+        public int GetHashCode(Package obj) => obj.Id.GetHashCode();
     }
 
     /// <summary>
@@ -829,6 +829,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
     class BlobIdComparer : IEqualityComparer<Blob>
     {
         public bool Equals(Blob x, Blob y) => x.Id.Equals(y.Id, StringComparison.OrdinalIgnoreCase);
-        public int GetHashCode([DisallowNull] Blob obj) => throw new NotImplementedException();
+        public int GetHashCode(Blob obj) => throw new NotImplementedException();
     }
 }
