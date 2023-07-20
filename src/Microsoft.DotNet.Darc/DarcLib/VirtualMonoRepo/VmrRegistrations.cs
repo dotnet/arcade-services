@@ -60,6 +60,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
+        services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();

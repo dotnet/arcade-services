@@ -73,6 +73,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitRepo _localGitClient;
+    private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -83,6 +84,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
+        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
@@ -99,6 +101,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
+        _workBranchFactory = workBranchFactory;
     }
 
     public async Task UpdateRepository(
@@ -296,7 +299,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                DotnetBotIdentity,
+                Constants.DotnetBotIdentity,
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,
@@ -372,9 +375,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        var workBranch = CreateWorkBranch("sync" +
+
+        var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +
-            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}");
+            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranch(_vmrInfo.VmrPath, workBranchName);
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<VmrIngestionPatch>();
@@ -481,7 +486,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            Commit("[VMR patches] Re-apply VMR patches", DotnetBotIdentity);
+            await Commit("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -494,7 +499,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             finalRootSha,
             summaryMessage.ToString());
         
-        workBranch.MergeBack(commitMessage);
+        await workBranch.MergeBack(commitMessage);
 
         _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
             rootUpdate.Mapping.Name,
@@ -719,7 +724,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await _localGitClient.Stage(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        Commit(commitMessage, DotnetBotIdentity);
+        await Commit(commitMessage, Constants.DotnetBotIdentity);
     }
 
     private void DeleteRepository(string repo)

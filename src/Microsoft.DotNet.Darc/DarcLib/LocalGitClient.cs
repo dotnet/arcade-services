@@ -255,6 +255,19 @@ public class LocalGitClient : ILocalGitRepo
         }
     }
 
+    public async Task CheckoutNative(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false)
+    {
+        IEnumerable<string> args = new[] { "checkout", refToCheckout };
+
+        if (createBranch)
+        {
+            args = overwriteExistingBranch ? args.Append("-B") : args.Append("-b");
+        }
+
+        var result = await _processManager.ExecuteGit(repoDir, args);
+        result.ThrowIfFailed($"Failed to {(createBranch ? "create" : "check out")} {refToCheckout} in {repoDir}");
+    }
+
     public async Task Commit(
         string repoPath,
         string message,

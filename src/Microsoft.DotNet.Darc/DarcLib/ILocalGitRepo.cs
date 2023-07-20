@@ -23,9 +23,18 @@ public interface ILocalGitRepo : IGitRepo
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
-    /// <param name="commit">Tag, branch, or commit to checkout</param>
+    /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
     /// <param name="force">Force clean of the repo/submodules</param>
-    void Checkout(string repoDir, string commit, bool force = false);
+    void Checkout(string repoDir, string refToCheckout, bool force = false);
+
+    /// <summary>
+    ///    Checkout the repo to the specified state but do not use LibGit2Sharp.
+    /// </summary>
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
+    /// <param name="createBranch">Create a new branch</param>
+    /// <param name="overwriteExistingBranch">Overwrite an existing branch</param>
+    Task CheckoutNative(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false);
 
     /// <summary>
     ///     Commits files by calling git commit (not through Libgit2sharp)

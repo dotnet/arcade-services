@@ -43,6 +43,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
 
@@ -55,6 +56,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
+        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
@@ -65,6 +67,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -90,7 +93,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw new EmptySyncException($"Repository {mapping.Name} already exists");
         }
 
-        var workBranch = CreateWorkBranch($"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}");
+        var workBranchName = $"init/{mapping.Name}{(targetRevision != null ? $"/{targetRevision}" : string.Empty)}";
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranch(_vmrInfo.VmrPath, workBranchName);
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,
@@ -138,7 +142,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                                     "Please make sure the sources folder is empty!");
 
         var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping.Name, mapping.DefaultRemote, oldSha: null, newSha);
-        workBranch.MergeBack(commitMessage);
+        await workBranch.MergeBack(commitMessage);
 
         _logger.LogInformation("Recursive initialization for {repo} / {sha} finished", mapping.Name, newSha);
     }
@@ -177,7 +181,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             update,
             clonePath,
             Constants.EmptyGitObject,
-            DotnetBotIdentity,
+            Constants.DotnetBotIdentity,
             commitMessage,
             reapplyVmrPatches: true,
             readmeTemplatePath,
