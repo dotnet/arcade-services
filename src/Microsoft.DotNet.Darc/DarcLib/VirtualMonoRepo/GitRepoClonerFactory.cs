@@ -16,19 +16,19 @@ public interface IGitRepoClonerFactory
 public class GitRepoClonerFactory : IGitRepoClonerFactory
 {
     private readonly VmrRemoteConfiguration _vmrRemoteConfig;
+    private readonly IProcessManager _processManager;
 
-    public GitRepoClonerFactory(VmrRemoteConfiguration vmrRemoteConfig)
+    public GitRepoClonerFactory(VmrRemoteConfiguration vmrRemoteConfig, IProcessManager processManager)
     {
         _vmrRemoteConfig = vmrRemoteConfig;
+        _processManager = processManager;
     }
 
     public IGitRepoCloner GetCloner(string repoUri, ILogger logger) => GitRepoTypeParser.ParseFromUri(repoUri) switch
     {
-        GitRepoType.GitHub => new GitRepoCloner(_vmrRemoteConfig.GitHubToken, logger),
-        GitRepoType.AzureDevOps => new GitRepoCloner(_vmrRemoteConfig.AzureDevOpsToken, logger),
-        GitRepoType.Local => new GitRepoCloner(string.Empty, logger),
+        GitRepoType.GitHub => new GitNativeRepoCloner(_processManager, logger),
+        GitRepoType.AzureDevOps => new GitNativeRepoCloner(_processManager, logger),
+        GitRepoType.Local => new GitNativeRepoCloner(_processManager, logger),
         _ => throw new NotImplementedException($"Unsupported repository remote {repoUri}"),
     };
 }
-
-
