@@ -100,13 +100,16 @@ public abstract class VmrManagerBase
         {
             await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
         }
-        
-        Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
-        {
-            VmrInfo.ReadmeFileName,
-            VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath()
-        });
+
+        await _localGitClient.Stage(
+            _vmrInfo.VmrPath,
+            new string[]
+            {
+                VmrInfo.ReadmeFileName,
+                VmrInfo.GitInfoSourcesDir,
+                _vmrInfo.GetSourceManifestPath()
+            },
+            cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -284,7 +287,7 @@ public abstract class VmrManagerBase
         if (isTpnUpdated)
         {
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-            await _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            await _localGitClient.Stage(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName });
             cancellationToken.ThrowIfCancellationRequested();
         }
     }

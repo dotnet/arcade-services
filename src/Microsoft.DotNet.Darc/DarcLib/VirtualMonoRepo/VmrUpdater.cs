@@ -72,6 +72,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly ILocalGitRepo _localGitClient;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -97,6 +98,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _fileSystem = fileSystem;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
+        _localGitClient = localGitClient;
     }
 
     public async Task UpdateRepository(
@@ -570,8 +572,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Found {count} files affected by VMR patches. Restoring original files...",
             affectedFiles.Count);
 
-        using var repository = new Repository(_vmrInfo.VmrPath);
-
         // We will group files by where they come from (remote URI + SHA) so that we do as few clones as possible
         var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RepoPath, x.VmrPath));
         foreach (var group in groups)
@@ -596,16 +596,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     // Copy old revision to VMR
                     _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
                     _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-
-                    Commands.Stage(repository, pathInVmr);
+                    await _localGitClient.Stage(_vmrInfo.VmrPath, new string[] { pathInVmr }, cancellationToken);
                 }
                 else if (_fileSystem.FileExists(destination))
                 {
                     // File is being added by the patch - we need to remove it
                     _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
                     _fileSystem.DeleteFile(destination);
-
-                    Commands.Stage(repository, pathInVmr);
+                    await _localGitClient.Stage(_vmrInfo.VmrPath, new string[] { pathInVmr }, cancellationToken);
                 }
                 // else file is being added together with a patch at the same time
             }
@@ -700,8 +698,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return;
         }
 
-        using var vmrRepository = new Repository(_vmrInfo.VmrPath);
-
         foreach (var repo in deletedRepos)
         {
             _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
@@ -721,7 +717,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
         }
 
-        Commands.Stage(vmrRepository, "*");
+        await _localGitClient.Stage(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
         Commit(commitMessage, DotnetBotIdentity);
     }

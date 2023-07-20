@@ -278,10 +278,10 @@ public class LocalGitClient : ILocalGitRepo
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
-    public async Task Stage(string repoDir, string pathToStage, CancellationToken cancellationToken = default)
+    public async Task Stage(string repoDir, string[] pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoDir, new[] { "add", pathToStage }, cancellationToken);
-        result.ThrowIfFailed($"Failed to stage {pathToStage} in {repoDir}");
+        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken);
+        result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
     }
 
     public async Task<string> GetRootDir(string? repoPath = null, CancellationToken cancellationToken = default)
