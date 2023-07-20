@@ -81,7 +81,8 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
-        _localGitRepo.Checkout(path, checkoutRef);
+        var result = await _processManager.ExecuteGit(path, "checkout", checkoutRef);
+        result.ThrowIfFailed($"Failed to check out {checkoutRef} in {path}");
 
         return path;
     }
