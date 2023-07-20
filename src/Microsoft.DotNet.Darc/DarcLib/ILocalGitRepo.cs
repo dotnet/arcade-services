@@ -60,7 +60,7 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="commit">Which commit the info is retrieved for</param>
-    List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit);
+    Task<List<GitSubmoduleInfo>> GetGitSubmodules(string repoDir, string commit);
 
     /// <summary>
     ///     Returns a list of modified staged files.
@@ -68,6 +68,16 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoDir">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
     IEnumerable<string> GetStagedFiles(string repoDir);
+
+    /// <summary>
+    /// Retrieves a file's content from git index (works with bare repositories).
+    /// </summary>
+    /// <param name="repoPath">Absolute or relative path to the repo</param>
+    /// <param name="relativeFilePath">Relative path to the file inside of the repo</param>
+    /// <param name="revision">Revision to get the file from</param>
+    /// <param name="outputPath">Optional path to write the contents to</param>
+    /// <returns>File contents</returns>
+    Task<string?> GetFileFromGit(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null);
 
     /// <summary>
     /// Pushes a branch to a remote

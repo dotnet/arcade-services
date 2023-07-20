@@ -313,11 +313,11 @@ public class VmrPatchHandlerTests
         // Return the same info for both
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -366,11 +366,11 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo>());
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -452,15 +452,15 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo>());
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules("/tmp/external-1", SubmoduleSha1))
-            .Returns(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -561,11 +561,11 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo>());
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -637,11 +637,11 @@ public class VmrPatchHandlerTests
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -714,11 +714,11 @@ public class VmrPatchHandlerTests
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
