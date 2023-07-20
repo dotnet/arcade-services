@@ -55,7 +55,7 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="pathsToStage">Paths that will be staged to index</param>
-    Task Stage(string repoDir, string[] pathsToStage, CancellationToken cancellationToken = default);
+    Task Stage(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Gets the root directory of a git repo.

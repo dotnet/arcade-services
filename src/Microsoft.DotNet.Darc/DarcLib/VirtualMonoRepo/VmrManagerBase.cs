@@ -101,15 +101,18 @@ public abstract class VmrManagerBase
             await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
         }
 
-        await _localGitClient.Stage(
-            _vmrInfo.VmrPath,
-            new string[]
-            {
-                VmrInfo.ReadmeFileName,
-                VmrInfo.GitInfoSourcesDir,
-                _vmrInfo.GetSourceManifestPath()
-            },
-            cancellationToken);
+        var filesToAdd = new List<string>
+        {
+            VmrInfo.GitInfoSourcesDir,
+            _vmrInfo.GetSourceManifestPath()
+        };
+
+        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
+        {
+            filesToAdd.Add(VmrInfo.ReadmeFileName);
+        }
+
+        await _localGitClient.Stage(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -125,7 +128,7 @@ public abstract class VmrManagerBase
         }
 
         // Commit without adding files as they were added to index directly
-        Commit(commitMessage, author);
+        await Commit(commitMessage, author);
 
         return vmrPatchesToRestore;
     }
@@ -159,7 +162,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected async void Commit(string commitMessage, LibGit2Sharp.Identity author)
+    protected async Task Commit(string commitMessage, LibGit2Sharp.Identity author)
     {
         _logger.LogInformation("Committing..");
 

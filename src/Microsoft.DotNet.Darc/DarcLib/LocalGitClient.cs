@@ -79,9 +79,9 @@ public class LocalGitClient : ILocalGitRepo
                     switch (file.Operation)
                     {
                         case GitFileOperation.Add:
-                            var parentDirectoryInfo = Directory.GetParent(file.FilePath) 
+                            var parentDirectoryInfo = Directory.GetParent(file.FilePath)
                                 ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
-                            
+
                             string parentDirectory = parentDirectoryInfo.FullName;
 
                             if (!Directory.Exists(parentDirectory))
@@ -257,14 +257,14 @@ public class LocalGitClient : ILocalGitRepo
 
     public async Task CheckoutNative(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false)
     {
-        IEnumerable<string> args = new[] { "checkout", refToCheckout };
+        IEnumerable<string> args = new[] { "checkout" };
 
         if (createBranch)
         {
             args = overwriteExistingBranch ? args.Append("-B") : args.Append("-b");
         }
 
-        var result = await _processManager.ExecuteGit(repoDir, args);
+        var result = await _processManager.ExecuteGit(repoDir, args.Append(refToCheckout));
         result.ThrowIfFailed($"Failed to {(createBranch ? "create" : "check out")} {refToCheckout} in {repoDir}");
     }
 
@@ -291,7 +291,7 @@ public class LocalGitClient : ILocalGitRepo
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
-    public async Task Stage(string repoDir, string[] pathsToStage, CancellationToken cancellationToken = default)
+    public async Task Stage(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
@@ -479,6 +479,30 @@ public class LocalGitClient : ILocalGitRepo
         var submoduleUrlRegex = new Regex("^\\s*url\\s*=\\s*(?<url>.+)$");
         var submodulePathRegex = new Regex("^\\s*path\\s*=\\s*(?<path>.+)$");
 
+        async Task FinalizeSubmodule(GitSubmoduleInfo submodule)
+        {
+            if (submodule.Url == null)
+            {
+                throw new Exception($"Submodule {submodule.Name} has no URL");
+            }
+
+            if (submodule.Path == null)
+            {
+                throw new Exception($"Submodule {submodule.Name} has no path");
+            }
+
+            // Read SHA that the submodule points to
+            var result = await _processManager.ExecuteGit(repoDir, "rev-parse", $"{commit}:{submodule.Path}");
+            result.ThrowIfFailed($"Failed to find SHA of commit where submodule {submodule.Path} points to");
+
+            submodule = submodule with
+            {
+                Commit = result.StandardOutput.Trim(),
+            };
+
+            submodules.Add(submodule);
+        }
+
         foreach (var line in lines)
         {
             var match = submoduleRegex.Match(line);
@@ -486,26 +510,7 @@ public class LocalGitClient : ILocalGitRepo
             {
                 if (currentSubmodule != null)
                 {
-                    if (currentSubmodule.Url == null)
-                    {
-                        throw new Exception($"Submodule {currentSubmodule.Name} has no URL");
-                    }
-
-                    if (currentSubmodule.Path == null)
-                    {
-                        throw new Exception($"Submodule {currentSubmodule.Name} has no path");
-                    }
-
-                    // Read SHA that the submodule points to
-                    var result = await _processManager.ExecuteGit(repoDir, "rev-parse", $"{commit}:{currentSubmodule.Path}");
-                    result.ThrowIfFailed($"Failed to find SHA of commit where submodule {currentSubmodule.Path} points to");
-
-                    currentSubmodule = currentSubmodule with
-                    {   
-                        Commit = result.StandardOutput.Trim(),
-                    };
-
-                    submodules.Add(currentSubmodule);
+                    await FinalizeSubmodule(currentSubmodule);
                 }
 
                 currentSubmodule = new GitSubmoduleInfo(match.Groups["name"].Value, null!, null!, null!);
@@ -527,6 +532,11 @@ public class LocalGitClient : ILocalGitRepo
             }
         }
 
+        if (currentSubmodule != null)
+        {
+            await FinalizeSubmodule(currentSubmodule);
+        }
+
         return submodules;
     }
 
@@ -542,11 +552,16 @@ public class LocalGitClient : ILocalGitRepo
 
     public async Task<string?> GetFileFromGit(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
     {
-        var args = $"show {revision}:{relativeFilePath}";
+        var args = new List<string>
+        {
+            "show",
+            $"{revision}:{relativeFilePath}"
+        };
 
         if (outputPath != null)
         {
-            args += $" --output {outputPath}";
+            args.Add("--output");
+            args.Add(outputPath);
         }
 
         var result = await _processManager.ExecuteGit(repoPath, args);
@@ -562,14 +577,14 @@ public class LocalGitClient : ILocalGitRepo
     public void Push(
         string repoPath,
         string branchName,
-        string remoteUrl, 
+        string remoteUrl,
         string? token,
         LibGit2Sharp.Identity? identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
         using var repo = new Repository(
-            repoPath, 
+            repoPath,
             new RepositoryOptions { Identity = identity });
 
         var remoteName = AddRemoteIfMissing(repo, remoteUrl, true);
@@ -580,7 +595,7 @@ public class LocalGitClient : ILocalGitRepo
         {
             throw new Exception($"No branch {branchName} found in repo. {repo.Info.Path}");
         }
-        
+
         var pushOptions = new PushOptions
         {
             CredentialsProvider = (url, user, cred) =>

@@ -93,7 +93,7 @@ public class VmrPatchHandlerTests
         _dependencyTracker.Reset();
 
         _localGitRepo.Reset();
-        _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
+        _localGitRepo.SetReturnsDefault(Task.FromResult(new List<GitSubmoduleInfo>()));
 
         _cloneManager.Reset();
         _cloneManager
