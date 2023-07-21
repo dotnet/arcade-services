@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -17,11 +18,13 @@ public class GitNativeRepoCloner : IGitRepoCloner
 {
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
+    private readonly string? _token;
 
-    public GitNativeRepoCloner(IProcessManager processManager, ILogger logger)
+    public GitNativeRepoCloner(IProcessManager processManager, ILogger logger, string? token)
     {
         _processManager = processManager;
         _logger = logger;
+        _token = token;
     }
 
     public Task Clone(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
@@ -65,7 +68,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
         }
 
         args.Add("--");
-        args.Add(repoUri);
+        args.Add(AddToken(repoUri));
         args.Add(targetDirectory);
 
         var result = await _processManager.Execute(_processManager.GitExecutable, args);
@@ -76,5 +79,20 @@ public class GitNativeRepoCloner : IGitRepoCloner
             result = await _processManager.ExecuteGit(targetDirectory, "checkout", commit);
             result.ThrowIfFailed($"Failed to check out {commit} in {targetDirectory}");
         }
+    }
+
+    private string AddToken(string repoUri)
+    {
+        if (string.IsNullOrEmpty(_token))
+        {
+            return repoUri;
+        }
+
+        var uri = new UriBuilder(repoUri)
+        {
+            UserName = "dn-bot",
+            Password = _token
+        };
+        return uri.ToString();
     }
 }
