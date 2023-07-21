@@ -186,6 +186,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -250,6 +251,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -271,6 +273,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/SourceBuild/tarball/content",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -292,6 +295,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/eng/common",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -337,6 +341,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -391,6 +396,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -406,6 +412,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -481,6 +488,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -497,6 +505,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -514,6 +523,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-2",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -586,6 +596,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -601,6 +612,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -662,6 +674,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -677,6 +690,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -739,6 +753,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -754,6 +769,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -768,6 +784,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-2",
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -920,6 +937,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<string[]?>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 

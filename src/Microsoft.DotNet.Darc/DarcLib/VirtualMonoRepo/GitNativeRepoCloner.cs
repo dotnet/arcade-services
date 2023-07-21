@@ -16,6 +16,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class GitNativeRepoCloner : IGitRepoCloner
 {
+    private const string GitAuthUser = "dn-bot";
+
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
     private readonly string? _token;
@@ -71,7 +73,13 @@ public class GitNativeRepoCloner : IGitRepoCloner
         args.Add(AddToken(repoUri));
         args.Add(targetDirectory);
 
-        var result = await _processManager.Execute(_processManager.GitExecutable, args);
+        string[]? redactedValues = null;
+        if (_token != null)
+        {
+            redactedValues = new string[] { GitAuthUser, _token };
+        }
+
+        var result = await _processManager.Execute(_processManager.GitExecutable, args, redactedStrings: redactedValues);
         result.ThrowIfFailed($"Failed to clone {repoUri} to {targetDirectory}");
 
         if (commit != null)

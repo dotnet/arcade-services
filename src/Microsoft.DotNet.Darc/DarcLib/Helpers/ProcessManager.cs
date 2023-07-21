@@ -21,6 +21,7 @@ public interface IProcessManager
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken);
@@ -52,13 +53,14 @@ public class ProcessManager : IProcessManager
     }
 
     public Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken)
-        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), cancellationToken: cancellationToken);
+        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), null, cancellationToken: cancellationToken);
 
     public async Task<ProcessExecutionResult> Execute(
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
     {
         var processStartInfo = new ProcessStartInfo()
@@ -76,10 +78,18 @@ public class ProcessManager : IProcessManager
             processStartInfo.ArgumentList.Add(arg);
         }
 
-        _logger.LogDebug("Executing command: '{executable} {arguments}'{workingDir}",
-            executable,
-            string.Join(' ', processStartInfo.ArgumentList),
-            workingDir is null ? string.Empty : " in " + workingDir);
+        var logMessage = $"Executing command: '{executable} {string.Join(' ', processStartInfo.ArgumentList)}'" +
+            $"{(workingDir is null ? string.Empty : " in " + workingDir)}";
+
+        if (redactedStrings != null)
+        {
+            foreach (var redacted in redactedStrings)
+            {
+                logMessage = logMessage.Replace(redacted, "[REDACTED]");
+            }
+        }
+
+        _logger.LogDebug(logMessage);
 
         var p = new Process() { StartInfo = processStartInfo };
 
