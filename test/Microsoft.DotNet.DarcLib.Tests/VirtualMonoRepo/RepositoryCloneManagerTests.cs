@@ -78,7 +78,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Once);
+        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<bool>()), Times.Once);
         _remote.Verify(x => x.Clone(RepoUri, _clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, Ref, false), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, "main", false), Times.Exactly(2));
@@ -96,7 +96,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<bool>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, _clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, Ref, false), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(_clonePath, "main", false), Times.Once);
@@ -144,7 +144,7 @@ public class RepositoryCloneManagerTests
         var path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, "main", default);
         path.Should().Be(clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(mapping.DefaultRemote, It.IsAny<ILogger>()), Times.Once);
+        _remoteFactory.Verify(x => x.GetCloner(mapping.DefaultRemote, It.IsAny<bool>()), Times.Once);
         _remote.Verify(x => x.Clone(mapping.DefaultRemote, clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(clonePath, "main", false), Times.Once);
 
@@ -162,7 +162,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<bool>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Once);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref, false), Times.Once);
@@ -173,7 +173,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<bool>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "3", false), Times.Once);
@@ -184,7 +184,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, Ref + "4", default);
 
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<bool>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, RepoUri, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "4", false), Times.Once);
@@ -195,7 +195,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(newRemote, Ref + "5", default);
 
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<ILogger>()), Times.Never);
+        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<bool>()), Times.Never);
         _remote.Verify(x => x.Clone(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.Checkout(clonePath, Ref + "5", false), Times.Once);
