@@ -26,11 +26,11 @@ public class DarcManifestHelperTests
         JObject testManifest;
         if (includeExtraAssets)
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, false);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), null, FakeOutputPath, false);
         }
         else
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, false);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), null, FakeOutputPath, false);
         }
 
         var builds = testManifest["builds"].ToList();
@@ -80,11 +80,11 @@ public class DarcManifestHelperTests
         JObject testManifest;
         if (includeExtraAssets)
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, true);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), null, FakeOutputPath, true);
         }
         else
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, true);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), null, FakeOutputPath, true);
         }
 
         var builds = testManifest["builds"].ToList();
@@ -176,7 +176,7 @@ public class DarcManifestHelperTests
     public void NoDownloadedBuildsProvided()
     {
         List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
-        JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
+        JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, null, FakeOutputPath, false);
         var builds = emptyManifest["builds"].ToList();
         builds.Count.Should().Be(0);
         emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
@@ -189,7 +189,7 @@ public class DarcManifestHelperTests
         {
             Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
             LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
+            SeparatedLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
             UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
             SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
         });
@@ -197,7 +197,7 @@ public class DarcManifestHelperTests
         {
             Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
             LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
+            SeparatedLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
             UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
             SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
         });
@@ -218,7 +218,6 @@ public class DarcManifestHelperTests
         {
             var buildToAdd = new DownloadedBuild()
             {
-                ReleaseLayoutOutputDirectory = @"F:\A",
                 AnyShippingAssets = true,
                 Build = new Build(i, DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(i)), i, true, true, "fakehash",
                     ImmutableList<Channel>.Empty.AddRange(channels),
@@ -237,7 +236,7 @@ public class DarcManifestHelperTests
                     {
                         Asset = new Asset(i, i + 10000, i % 2 == 0, $"DownloadedAsset{i}", $"{i}.0.0", ImmutableList<AssetLocation>.Empty),
                         SourceLocation = "https://github.com/dotnet/fakerepository",
-                        ReleaseLayoutTargetLocation = @$"F:\A\K\E\Path\SomeAsset.{i}.zip",
+                        SeparatedLayoutTargetLocation = @$"F:\A\K\E\Path\SomeAsset.{i}.zip",
                         UnifiedLayoutTargetLocation = @$"F:\A\KE\Other\Path\SomeAsset.{i}.zip",
                     }
                 },

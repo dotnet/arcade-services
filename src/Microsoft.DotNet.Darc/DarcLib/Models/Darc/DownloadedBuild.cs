@@ -16,10 +16,6 @@ public class DownloadedBuild
     /// </summary>
     public IEnumerable<DownloadedAsset> ExtraDownloadedAssets { get; set; }
     /// <summary>
-    ///     Root output directory for this build.
-    /// </summary>
-    public string ReleaseLayoutOutputDirectory { get; set; }
-    /// <summary>
     ///     True if the output has any shipping assets.
     /// </summary>
     public bool AnyShippingAssets { get; set; }

@@ -13,13 +13,13 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class ManifestHelper
 {
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, DropSizeReport dropSizeReport, string outputPath, bool makeAssetsRelativePaths)
     {
         return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths);
     }
 
 
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,  string outputPath, bool makeAssetsRelativePaths)
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets, DropSizeReport dropSizeReport, string outputPath, bool makeAssetsRelativePaths)
     {
 
         // Construct an ad-hoc object with the necessary fields and use the json
@@ -35,6 +35,10 @@ public class ManifestHelper
         var manifestObject = new
         {
             outputPath = outputPath,
+            downloadSize = dropSizeReport?.DownloadSize,
+            sizeOnDisk = dropSizeReport?.SizeOnDisk,
+            sizeOfDuplicatedFilesBeforeUnpack = dropSizeReport?.SizeOfDuplicatedFilesBeforeUnpack,
+            sizeOfDuplicatedFilesAfterUnpack = dropSizeReport?.SizeOfDuplicatedFilesAfterUnpack,
             builds = downloadedBuilds.Select(build =>
                 new
                 {
@@ -58,7 +62,8 @@ public class ManifestHelper
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
                             targets = GetTargetPaths(asset),
-                            barAssetId = asset.Asset.Id
+                            barAssetId = asset.Asset.Id,
+                            size = asset.SizeInBytes
                         }),
                     dependencies = build.Dependencies?.Select(dependency =>
                         new
@@ -77,7 +82,37 @@ public class ManifestHelper
                     nonShipping = extraAsset.Asset.NonShipping,
                     source = extraAsset.SourceLocation,
                     targets = GetTargetPaths(extraAsset),
-                    barAssetId = extraAsset.Asset.Id
+                    barAssetId = extraAsset.Asset.Id,
+                    size = extraAsset.SizeInBytes
+                }),
+            topLevelDuplicates = dropSizeReport?.DuplicatedAssets.Where(d => d.Locations.Any(l => l.optionalSubAssetPath == null))
+                                                        .OrderByDescending(d => d.TotalSize)
+                                                        .ThenBy(d => d.TotalCopies).Select(d =>
+                new
+                {
+                    totalSize = d.TotalSize,
+                    totalCopies = d.TotalCopies,
+                    originalSize = d.OriginalSize,
+                    locations = d.Locations.Select(l =>
+                        new
+                        {
+                            path = l.location,
+                            subpathInContainer = l.optionalSubAssetPath
+                        })
+                }),
+            duplicates = dropSizeReport?.DuplicatedAssets.OrderByDescending(d => d.TotalSize)
+                                                        .ThenBy(d => d.TotalCopies).Select(d =>
+                new
+                {
+                    totalSize = d.TotalSize,
+                    totalCopies = d.TotalCopies,
+                    originalSize = d.OriginalSize,
+                    locations = d.Locations.Select(l =>
+                        new
+                        {
+                            path = l.location,
+                            subpathInContainer = l.optionalSubAssetPath
+                        })
                 })
         };
 
@@ -86,19 +121,39 @@ public class ManifestHelper
         {
             if (makeAssetsRelativePaths)
             {
-                return new List<string>
+                var list = new List<string>()
                 {
-                    Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
                     Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
                 };
+
+                if (asset.SeparatedLayoutTargetLocation != null)
+                {
+                    list.Add(Path.GetRelativePath(outputPath, asset.SeparatedLayoutTargetLocation));
+                }
+
+                if (asset.ReleasePackageLayoutTargetLocation != null)
+                {
+                    list.Add(Path.GetRelativePath(outputPath, asset.ReleasePackageLayoutTargetLocation));
+                }
+                return list;
             }
             else
             {
-                return new List<string>
+                var list = new List<string>()
                 {
-                    asset.ReleaseLayoutTargetLocation,
                     asset.UnifiedLayoutTargetLocation
                 };
+
+                if (asset.SeparatedLayoutTargetLocation != null)
+                {
+                    list.Add(asset.SeparatedLayoutTargetLocation);
+                }
+
+                if (asset.ReleasePackageLayoutTargetLocation != null)
+                {
+                    list.Add(asset.ReleasePackageLayoutTargetLocation);
+                }
+                return list;
             }
         }
         return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));

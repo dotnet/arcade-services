@@ -16,13 +16,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using ICSharpCode.SharpZipLib.Tar;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -118,15 +121,19 @@ internal class GatherDropOperation : Operation
                 downloadedBuilds.Add(downloadedBuild);
             }
 
-            // Write the unified drop manifest
-            await WriteDropManifestAsync(downloadedBuilds, extraDownloadedAssets, _options.OutputDirectory);
-
-            // Write the release json
-            await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
-
             // Create the release nupkg layout
             string nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
             CreateReleasePackageLayout(downloadedBuilds, nugetPublishFilesReleaseLocation);
+
+            DropSizeReport dropReport = null;
+            // Generate the accounting info for the build
+            if (_options.Accounting)
+            {
+                dropReport = GenerateDropSizeReports(downloadedBuilds);
+            }
+
+            // Write the unified drop manifest
+            await WriteDropManifestAsync(downloadedBuilds, extraDownloadedAssets, dropReport, _options.OutputDirectory);
 
             Console.WriteLine();
             if (!success)
@@ -149,6 +156,99 @@ internal class GatherDropOperation : Operation
         {
             Logger.LogError(e, "Error: Failed to gather drop.");
             return Constants.ErrorCode;
+        }
+    }
+
+    private static DropSizeReport GenerateDropSizeReports(List<DownloadedBuild> downloadedBuilds)
+    {
+        Dictionary<string, DuplicatedAsset> assetsAndDupes = new Dictionary<string, DuplicatedAsset>();
+        DropSizeReport dropReport = new DropSizeReport();
+
+        // First we need to find all duplicates.
+        foreach (var downloadedBuild in downloadedBuilds)
+        {
+            foreach (var downloadedAsset in downloadedBuild.DownloadedAssets.Concat(downloadedBuild.ExtraDownloadedAssets))
+            {
+                // Add the asset to the duplicate map
+                var assetDupe = AddAssetToDupeMap(assetsAndDupes, downloadedAsset.FileHash, downloadedAsset.SizeInBytes);
+                RecordDuplicates(assetDupe, downloadedAsset, subAssetPath: null);
+
+                foreach (var subAsset in downloadedAsset.SubAssets)
+                {
+                    var subAssetDupe = AddAssetToDupeMap(assetsAndDupes, subAsset.FileHash, subAsset.SizeInBytes);
+                    RecordDuplicates(subAssetDupe, downloadedAsset, subAssetPath: subAsset.RelativePath);
+                }
+            }
+        }
+
+        // Now, walk all the unique files in the drop and determine the total size, download size, etc.
+        foreach (var asset in assetsAndDupes.Values)
+        {
+            var topLevelCopies = asset.Locations.Where(location => location.optionalSubAssetPath == null).Count();
+            var onDiskSize = topLevelCopies * asset.OriginalSize;
+            dropReport.SizeOnDisk += onDiskSize;
+
+            // Download size and size on disk should not include unpacked assets
+            if (topLevelCopies > 0)
+            {
+                dropReport.DownloadSize += asset.OriginalSize;
+            }
+
+            // If the asset is duplicated, include it in a total duplicated size metric. Include only the "extras".
+            // We assume that at least one copy is necessary.
+            if (topLevelCopies > 1)
+            {
+                dropReport.SizeOfDuplicatedFilesBeforeUnpack += (topLevelCopies - 1) * asset.OriginalSize;
+            }
+
+            // Unpacked size includes the top level assets too, since in some cases they appear there too.
+            // Again, only count "extras".
+            if (asset.TotalCopies > 1)
+            {
+                dropReport.SizeOfDuplicatedFilesAfterUnpack += (asset.TotalCopies - 1) * asset.OriginalSize;
+            }
+        }
+
+        dropReport.DuplicatedAssets = assetsAndDupes.Values.Where(d => d.TotalCopies > 1).ToList();
+
+        return dropReport;
+
+        // Adds the asset or sub-asset to the duplicate map
+        static DuplicatedAsset AddAssetToDupeMap(Dictionary<string, DuplicatedAsset> assetsAndDupes, string fileHash, long sizeInBytes)
+        {
+            DuplicatedAsset asset = null;
+            if (!assetsAndDupes.TryGetValue(fileHash, out asset))
+            {
+                asset = new DuplicatedAsset()
+                {
+                    OriginalSize = sizeInBytes
+                };
+                assetsAndDupes.Add(fileHash, asset);
+            }
+            return asset;
+        }
+
+        // Given a duplicated asset, record all the locations it appears in the drop, and the total size.
+        static void RecordDuplicates(DuplicatedAsset asset, DownloadedAsset downloadedAssetOrParent, string subAssetPath)
+        {
+            // total size with dupes includes the separated locations, unified locations, and release locations.
+            asset.TotalSize += asset.OriginalSize;
+            asset.Locations.Add((downloadedAssetOrParent.UnifiedLayoutTargetLocation, subAssetPath));
+            asset.TotalCopies++;
+
+            if (downloadedAssetOrParent.SeparatedLayoutTargetLocation != null)
+            {
+                asset.Locations.Add((downloadedAssetOrParent.SeparatedLayoutTargetLocation, subAssetPath));
+                asset.TotalCopies++;
+                asset.TotalSize += asset.OriginalSize;
+            }
+
+            if (downloadedAssetOrParent.ReleasePackageLayoutTargetLocation != null)
+            {
+                asset.Locations.Add((downloadedAssetOrParent.ReleasePackageLayoutTargetLocation, subAssetPath));
+                asset.TotalCopies++;
+                asset.TotalSize += asset.OriginalSize;
+            }
         }
     }
 
@@ -286,44 +386,6 @@ internal class GatherDropOperation : Operation
         {
             return obj.Id;
         }
-    }
-
-    /// <summary>
-    ///     Given a downloaded build, determine what the product name should be
-    ///     for the release json
-    /// </summary>
-    /// <param name="build">Downloaded build</param>
-    /// <returns>Product name</returns>
-    private string GetProductNameForReleaseJson(DownloadedBuild build)
-    {
-        // Preference the github repo name over the azure devops repo name.
-        if (!string.IsNullOrEmpty(build.Build.GitHubRepository))
-        {
-            // Split off the github.com+org name and just use the repo name, all lower case.
-            (string owner, string repo) = GitHubClient.ParseRepoUri(build.Build.GitHubRepository);
-            return repo.ToLowerInvariant();
-        }
-        else if (!string.IsNullOrEmpty(build.Build.AzureDevOpsRepository))
-        {
-            // Use the full repo name without project/account
-            (string accountName, string projectName, string repoName) = AzureDevOpsClient.ParseRepoUri(build.Build.AzureDevOpsRepository);
-            return repoName.ToLowerInvariant();
-        }
-        else
-        {
-            throw new NotImplementedException("Unknown repository name.");
-        }
-    }
-
-    /// <summary>
-    ///     Given a downloaded build, determine what the fileshare location should be.
-    /// </summary>
-    /// <param name="build">Downloaded build</param>
-    /// <returns>File share location</returns>
-    public string GetFileShareLocationForReleaseJson(DownloadedBuild build)
-    {
-        // We only want to have shipping assets in the release json, so append that path
-        return Path.Combine(build.ReleaseLayoutOutputDirectory, shippingSubPath);
     }
 
     private const string githubRepoPrefix = "https://github.com/";
@@ -482,9 +544,15 @@ internal class GatherDropOperation : Operation
                     // Create the target directory
                     string targetFile = Path.Combine(sympkgsDirectory, shortName,
                         symPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                    File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
+                    asset.ReleasePackageLayoutTargetLocation = targetFile;
+
+                    // If we deleted after accounting, the source file doesn't exist.
+                    if (!_options.DeleteAfterAccounting)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
+                    }
 
                     // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
                     string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
@@ -496,9 +564,14 @@ internal class GatherDropOperation : Operation
                     // Create the target directory
                     string targetFile = Path.Combine(nupkgDirectory, shortName,
                         packagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                    File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
+                    asset.ReleasePackageLayoutTargetLocation = targetFile;
+
+                    if (!_options.DeleteAfterAccounting)
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+                        File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
+                    }
 
                     // Add the relative path to the various spots. Choose paths are relative to the root output dir
                     string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
@@ -540,44 +613,10 @@ internal class GatherDropOperation : Operation
     }
 
     /// <summary>
-    ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
-    /// </summary>
-    /// <param name="downloadedBuilds">List of downloaded builds</param>
-    /// <param name="outputDirectory">Output directory for the release json</param>
-    /// <returns>Async task</returns>
-    private async Task WriteReleaseJson(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
-    {
-        if (_options.DryRun)
-        {
-            return;
-        }
-
-        Directory.CreateDirectory(outputDirectory);
-        string outputPath = Path.Combine(outputDirectory, "release.json");
-
-        var releaseJson = new[]
-        {
-            new
-            {
-                release = _options.ReleaseName,
-                products = downloadedBuilds
-                    .Where(b => b.AnyShippingAssets)
-                    .Select(b =>
-                        new {
-                            name = GetProductNameForReleaseJson(b),
-                            fileshare = GetFileShareLocationForReleaseJson(b),
-                        }
-                    )
-            }
-        };
-        await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
-    }
-
-    /// <summary>
     ///     Write out a manifest of the items in the drop in json format.
     /// </summary>
     /// <returns></returns>
-    private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> extraAssets, string specificOutputDirectory)
+    private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> extraAssets, DropSizeReport dropSizeReport, string specificOutputDirectory)
     {
         if (_options.DryRun)
         {
@@ -593,6 +632,7 @@ internal class GatherDropOperation : Operation
 
         var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds,
             extraAssets,
+            dropSizeReport,
             _options.OutputDirectory,
             _options.UseRelativePathsInManifest);
 
@@ -793,22 +833,22 @@ internal class GatherDropOperation : Operation
 
         // Calculate the release directory name based on the last element of the build
         // repo uri plus the build number (to disambiguate overlapping builds)
-        string releaseOutputDirectory = null;
+        string separatedOutputDirectory = null;
         string repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
         int lastSlash = repoUri.LastIndexOf("/");
         if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
         {
-            releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
+            separatedOutputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
         }
         else
         {
             // Might contain invalid path chars, this is currently unhandled.
-            releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
+            separatedOutputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
         }
 
         if (_options.Separated)
         {
-            Directory.CreateDirectory(releaseOutputDirectory);
+            Directory.CreateDirectory(separatedOutputDirectory);
         }
 
         ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
@@ -831,7 +871,7 @@ internal class GatherDropOperation : Operation
             mustDownloadAssets.AddRange(assets.Where(asset => Regex.IsMatch(Path.GetFileName(asset.Name), nameMatchRegex)));
         }
 
-        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, releaseOutputDirectory, unifiedOutputDirectory);
+        (bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedMainAssets) primaryAssetDownloadResult = await DownloadAssetsToDirectories(assets, build, separatedOutputDirectory, unifiedOutputDirectory);
         success &= primaryAssetDownloadResult.success;
         anyShipping |= primaryAssetDownloadResult.anyShipping;
         downloadedAssets = primaryAssetDownloadResult.downloadedMainAssets;
@@ -861,13 +901,12 @@ internal class GatherDropOperation : Operation
             Build = build,
             DownloadedAssets = downloadedAssets,
             ExtraDownloadedAssets = extraDownloadedAssets,
-            ReleaseLayoutOutputDirectory = releaseOutputDirectory,
             AnyShippingAssets = anyShipping
         };
 
         if (_options.Separated)
         {
-            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
+            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, null, separatedOutputDirectory);
         }
 
         return newBuild;
@@ -908,6 +947,23 @@ internal class GatherDropOperation : Operation
                         {
                             anyShipping |= !asset.NonShipping;
                             downloaded.Add(downloadedAsset);
+
+                            // If we're doing accounting, unpack the asset if need be, account for it, and then delete it if desired.
+                            if (_options.Accounting)
+                            {
+                                await AccountForAssetAsync(downloadedAsset);
+                            }
+                            if (_options.DeleteAfterAccounting)
+                            {
+                                if (File.Exists(downloadedAsset.UnifiedLayoutTargetLocation))
+                                {
+                                    File.Delete(downloadedAsset.UnifiedLayoutTargetLocation);
+                                }
+                                if (File.Exists(downloadedAsset.SeparatedLayoutTargetLocation))
+                                {
+                                    File.Delete(downloadedAsset.SeparatedLayoutTargetLocation);
+                                }
+                            }
                         }
                     }
                     finally
@@ -920,12 +976,84 @@ internal class GatherDropOperation : Operation
         return (success, anyShipping, downloaded);
     }
 
+    private async Task AccountForAssetAsync(DownloadedAsset downloadedAsset)
+    {
+        // First record the file size in bytes and file hash.
+        // Then examine the file type and unpack the file if we support the type.
+        FileInfo fileInfo = new FileInfo(downloadedAsset.UnifiedLayoutTargetLocation);
+        downloadedAsset.SizeInBytes = fileInfo.Length;
+        using (Stream reader = File.OpenRead(downloadedAsset.UnifiedLayoutTargetLocation))
+        using (SHA256 fileHasher = SHA256.Create())
+        {
+            downloadedAsset.FileHash = Convert.ToBase64String(await fileHasher.ComputeHashAsync(reader));
+        }
+
+        // Examine the file type
+        if (fileInfo.Name.EndsWith(".nupkg") || fileInfo.Name.EndsWith(".zip"))
+        {
+            using (Stream reader = File.OpenRead(downloadedAsset.UnifiedLayoutTargetLocation))
+            using (ZipArchive archive = new ZipArchive(reader))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    DownloadedSubAsset subAsset = new DownloadedSubAsset()
+                    {
+                        SizeInBytes = entry.Length,
+                        RelativePath = entry.FullName,
+                    };
+                    using (SHA256 entryHasher = SHA256.Create())
+                    using (Stream entryStream = entry.Open())
+                    {
+                        subAsset.FileHash = Convert.ToBase64String(await entryHasher.ComputeHashAsync(entryStream));
+                    }
+
+                    downloadedAsset.SubAssets.Add(subAsset);
+                }
+            }
+        }
+        else if (fileInfo.Name.EndsWith(".tar.gz"))
+        {
+            using (Stream reader = File.OpenRead(downloadedAsset.UnifiedLayoutTargetLocation))
+            using (GZipStream gzipStream = new GZipStream(reader, CompressionMode.Decompress))
+            using (TarArchive tarArchive = TarArchive.CreateInputTarArchive(gzipStream, Encoding.ASCII))
+            {
+                var extractTarget = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()));
+                tarArchive.ExtractContents(extractTarget.FullName);
+
+                var enumerationOptions = new EnumerationOptions()
+                {
+                    ReturnSpecialDirectories = false,
+                    RecurseSubdirectories = true,
+                };
+                var tarEntries = Directory.GetFiles(extractTarget.FullName, "*", enumerationOptions);
+                foreach (var tarEntry in tarEntries)
+                {
+                    var tarEntryInfo = new FileInfo(tarEntry);
+                    DownloadedSubAsset subAsset = new DownloadedSubAsset()
+                    {
+                        SizeInBytes = tarEntryInfo.Length,
+                        RelativePath = Path.GetRelativePath(extractTarget.FullName, tarEntry)
+                    };
+                    using (SHA256 entryHasher = SHA256.Create())
+                    using (Stream entryStream = File.OpenRead(tarEntry))
+                    {
+                        subAsset.FileHash = Convert.ToBase64String(await entryHasher.ComputeHashAsync(entryStream));
+                    }
+
+                    downloadedAsset.SubAssets.Add(subAsset);
+                }
+
+                Directory.Delete(extractTarget.FullName, true);
+            }
+        }
+    }
+
     /// <summary>
     ///     Download a single asset
     /// </summary>
     /// <param name="client">Http client for use when downloading assets</param>
     /// <param name="asset">Asset to download</param>
-    /// <param name="releaseOutputDirectory">Root output directory for the release layout</param>
+    /// <param name="separatedOutputDirectory">Root output directory for the release layout</param>
     /// <param name="unifiedOutputDirectory">Root output directory for the unified layout</param>
     /// <returns></returns>
     /// <remarks>
@@ -943,7 +1071,7 @@ internal class GatherDropOperation : Operation
     private async Task<DownloadedAsset> DownloadAssetAsync(HttpClient client,
         Build build,
         Asset asset,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory)
     {
         string assetNameAndVersion = GetAssetNameForLogging(asset);
@@ -1010,11 +1138,11 @@ internal class GatherDropOperation : Operation
         {
             if (_options.LatestLocation)
             {
-                downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, separatedOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
             else
             {
-                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
+                downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, separatedOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
             }
 
             if (downloadedAsset.Successful)
@@ -1044,7 +1172,7 @@ internal class GatherDropOperation : Operation
         Build build,
         Asset asset,
         List<AssetLocation> assetLocations,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory,
         List<string> errors,
         StringBuilder downloadOutput)
@@ -1057,7 +1185,7 @@ internal class GatherDropOperation : Operation
                 build,
                 asset,
                 location,
-                releaseOutputDirectory,
+                separatedOutputDirectory,
                 unifiedOutputDirectory,
                 errors,
                 downloadOutput);
@@ -1082,7 +1210,7 @@ internal class GatherDropOperation : Operation
         Build build,
         Asset asset,
         List<AssetLocation> assetLocations,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory,
         List<string> errors,
         StringBuilder downloadOutput)
@@ -1093,7 +1221,7 @@ internal class GatherDropOperation : Operation
             build,
             asset,
             latestLocation,
-            releaseOutputDirectory,
+            separatedOutputDirectory,
             unifiedOutputDirectory,
             errors,
             downloadOutput);
@@ -1106,12 +1234,12 @@ internal class GatherDropOperation : Operation
         Build build,
         Asset asset,
         AssetLocation location,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory,
         List<string> errors,
         StringBuilder downloadOutput)
     {
-        var releaseSubPath = Path.Combine(releaseOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+        var separatedSubPath = Path.Combine(separatedOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
         var unifiedSubPath = Path.Combine(unifiedOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
 
         var locationType = location.Type;
@@ -1136,9 +1264,9 @@ internal class GatherDropOperation : Operation
         switch (locationType)
         {
             case LocationType.NugetFeed:
-                return await DownloadNugetPackageAsync(client, build, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
+                return await DownloadNugetPackageAsync(client, build, asset, location, separatedSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.Container:
-                return await DownloadBlobAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
+                return await DownloadBlobAsync(client, asset, location, separatedSubPath, unifiedSubPath, errors, downloadOutput);
             case LocationType.None:
             default:
                 errors.Add($"Unexpected location type {locationType}");
@@ -1159,14 +1287,14 @@ internal class GatherDropOperation : Operation
     /// <param name="client">Http client for use in downloading</param>
     /// <param name="asset">Asset to download</param>
     /// <param name="assetLocation">Asset location</param>
-    /// <param name="releaseOutputDirectory">Directory in the release layout to download to</param>
+    /// <param name="separatedOutputDirectory">Directory in the separated layout to download to</param>
     /// <param name="unifiedOutputDirectory">Directory in the unified layout to download to</param>
     /// <returns>True if package could be downloaded, false otherwise.</returns>
     private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
         Build build,
         Asset asset,
         AssetLocation assetLocation,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory,
         List<string> errors,
         StringBuilder downloadOutput)
@@ -1175,18 +1303,19 @@ internal class GatherDropOperation : Operation
         // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
         // then {asset name}.{version}.nupkg
 
-        string releaseFullSubPath = Path.Combine(releaseOutputDirectory, packagesSubPath);
+        string separatedFullSubPath = Path.Combine(separatedOutputDirectory, packagesSubPath);
         string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, packagesSubPath);
         string targetFileName = $"{asset.Name}.{asset.Version}.nupkg";
         // Construct the final path, using the correct casing rather than the blob feed casing.
-        string releaseFullTargetPath = Path.Combine(releaseFullSubPath, targetFileName);
+        string separatedFullTargetPath = null;
         string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, targetFileName);
 
         List<string> targetFilePaths = new List<string>();
 
         if (_options.Separated)
         {
-            targetFilePaths.Add(releaseFullTargetPath);
+            separatedFullTargetPath = Path.Combine(separatedFullSubPath, targetFileName);
+            targetFilePaths.Add(separatedFullTargetPath);
         }
 
         targetFilePaths.Add(unifiedFullTargetPath);
@@ -1195,7 +1324,7 @@ internal class GatherDropOperation : Operation
         {
             Successful = false,
             Asset = asset,
-            ReleaseLayoutTargetLocation = releaseFullTargetPath,
+            SeparatedLayoutTargetLocation = separatedFullTargetPath,
             UnifiedLayoutTargetLocation = unifiedFullTargetPath,
             LocationType = assetLocation.Type
         };
@@ -1382,7 +1511,7 @@ internal class GatherDropOperation : Operation
     private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
         Asset asset,
         AssetLocation assetLocation,
-        string releaseOutputDirectory,
+        string separatedOutputDirectory,
         string unifiedOutputDirectory,
         List<string> errors,
         StringBuilder downloadOutput)
@@ -1396,17 +1525,18 @@ internal class GatherDropOperation : Operation
             normalizedAssetName = asset.Name.Substring("assets/".Length);
         }
 
-        string releaseFullSubPath = Path.Combine(releaseOutputDirectory, assetsSubPath);
+        string separatedFullSubPath = Path.Combine(separatedOutputDirectory, assetsSubPath);
         string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, assetsSubPath);
         // Construct the final path, using the correct casing rather than the blob feed casing.
-        string releaseFullTargetPath = Path.Combine(releaseFullSubPath, normalizedAssetName);
+        string separatedFullTargetPath = null;
         string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
 
         List<string> targetFilePaths = new List<string>();
             
         if (_options.Separated)
         {
-            targetFilePaths.Add(releaseFullTargetPath);
+            separatedFullTargetPath = Path.Combine(separatedFullSubPath, normalizedAssetName);
+            targetFilePaths.Add(separatedFullTargetPath);
         }
             
         targetFilePaths.Add(unifiedFullTargetPath);
@@ -1415,7 +1545,7 @@ internal class GatherDropOperation : Operation
         {
             Successful = false,
             Asset = asset,
-            ReleaseLayoutTargetLocation = releaseFullTargetPath,
+            SeparatedLayoutTargetLocation = separatedFullTargetPath,
             UnifiedLayoutTargetLocation = unifiedFullTargetPath,
             LocationType = assetLocation.Type
         };

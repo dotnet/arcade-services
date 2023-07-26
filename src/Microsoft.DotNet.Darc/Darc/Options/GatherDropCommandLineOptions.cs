@@ -84,6 +84,12 @@ internal class GatherDropCommandLineOptions : CommandLineOptions
     [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
     public string AssetFilter { get; set; }
 
+    [Option("accounting", HelpText = "Generate information in the manifest about the artifact size.")]
+    public bool Accounting { get; set; }
+
+    [Option("delete-after-accounting", HelpText = "Delete an asset after accounting for it.")]
+    public bool DeleteAfterAccounting { get; set; }
+
     public override Operation GetOperation()
     {
         return new GatherDropOperation(this);
