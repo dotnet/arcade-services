@@ -539,7 +539,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             vmrPatchesToRestore.Count);
 
         // First we collect all files that are affected + their origin (repo or submodule)
-        var affectedFiles = new List<(UnixPath RelativePath, UnixPath VmrPath, ISourceComponent Origin)>();
+        var affectedFiles = new List<(UnixPath RepoPath, UnixPath VmrPath, ISourceComponent Origin)>();
         foreach (VmrIngestionPatch patch in vmrPatchesToRestore)
         {
             if (!_fileSystem.FileExists(patch.Path))
@@ -555,9 +555,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
 
-            affectedFiles.AddRange(patchedFiles
-               .Select(path => (RelativePath: path, VmrPath: patch.ApplicationPath != null ? patch.ApplicationPath / path : new UnixPath("")))
-               .Select(p => (p.RelativePath, p.VmrPath, FindComponentForFile(p.VmrPath))));
+            foreach (UnixPath patchedFile in patchedFiles)
+            {
+                UnixPath vmrPath = patch.ApplicationPath != null ? patch.ApplicationPath / patchedFile : new UnixPath("");
+                ISourceComponent parentComponent = FindComponentForFile(vmrPath);
+                UnixPath repoPath = new(vmrPath.Path.Replace(VmrInfo.SourcesDir / parentComponent.Path + '/', null));
+
+                affectedFiles.Add((repoPath, vmrPath, parentComponent));
+            }
 
             _logger.LogDebug("{count} files restored from a VMR patch `{patch}`..", patchedFiles.Count, patch.Path);
         }
@@ -568,7 +573,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         using var repository = new Repository(_vmrInfo.VmrPath);
 
         // We will group files by where they come from (remote URI + SHA) so that we do as few clones as possible
-        var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RelativePath, x.VmrPath));
+        var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RepoPath, x.VmrPath));
         foreach (var group in groups)
         {
             var source = group.Key;
@@ -579,11 +584,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
 
-            foreach ((UnixPath relativePath, UnixPath pathInVmr) in group)
+            foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                LocalPath originalFile = clonePath / relativePath;
+                LocalPath originalFile = clonePath / repoPath;
                 LocalPath destination = _vmrInfo.VmrPath / pathInVmr;
 
                 if (_fileSystem.FileExists(originalFile))
