@@ -25,10 +25,12 @@ pool:
   demands: ImageOverride -equals 1es-windows-2019
 
 stages:
-- ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production')) }}:
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
   - stage: GitHub_Issue_Verification
-    dependsOn: []
     displayName: GitHub Issue Verification
+    dependsOn: []
+    # System.PullRequest.TargetBranch only evaulates during runtime conditions
+    condition: and(notIn(variables['System.PullRequest.TargetBranch'], 'refs/heads/production', 'production'), notIn(variables['System.PullRequest.SourceBranch'], 'refs/heads/production', 'production'))
     jobs:
     - job: VerifyGitHubIssue
       displayName: Verify GitHub Issue Link included in all PRs
@@ -36,7 +38,7 @@ stages:
         vmImage: windows-latest
       steps:
       - checkout: self
-      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber)
+      - powershell: eng/enforce-issue.ps1 -PullRequestNumber $(System.PullRequest.PullRequestNumber) -RepositoryName $(Build.Repository.Name)
         displayName: Enforce GitHub issue link presence
 
 - stage: build
@@ -45,10 +47,10 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
-      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
         enablePublishBuildArtifacts: true
         enablePublishBuildAssets: true
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+      ${{ else }}:
         enablePublishBuildArtifacts: false
         enablePublishBuildAssets: false
       enableMicrobuild: false
@@ -165,7 +167,7 @@ stages:
               ignoreDirectories: .packages
 
         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          - template: /eng/test.yaml
+          - template: /eng/templates/steps/test.yml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
@@ -187,7 +189,7 @@ stages:
             displayName: Publish MaestroApplication
 
           ## Generate SBOM manifest
-          - template: ../../../generate-sbom.yml
+          - template: /eng/templates/steps/generate-sbom.yml
 
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
@@ -221,8 +223,8 @@ stages:
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
-  - template: eng\common\templates\post-build\post-build.yml
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
+  - template: /eng/common/templates/post-build/post-build.yml
     parameters:
       enableSymbolValidation: true
       enableSigningValidation: false
@@ -243,8 +245,7 @@ stages:
         -TsaPublish $True
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
-  - template: eng\deploy.yaml
+  - template: /eng/templates/stages/deploy.yaml
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging

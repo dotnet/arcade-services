@@ -4,7 +4,7 @@ appendCommitMessageToRunName: false
 trigger: none
 
 schedules:
-- cron: 0 12 * * 1
+- cron: 0 6 * * 1
   displayName: Weekly Monday build
   branches:
     include:
@@ -12,4 +12,4 @@ schedules:
   always: true
 
 stages:
-- template: templates/stages/secret-validation.yml
+- template: /eng/templates/stages/secret-validation.yml

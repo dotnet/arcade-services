@@ -107,8 +107,16 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
             foreach (var update in updates)
             {
-                if (_fileSystem.DirectoryExists(_vmrInfo.GetRepoSourcesPath(update.Mapping)))
+                var sourcesPath = _vmrInfo.GetRepoSourcesPath(update.Mapping);
+                if (_fileSystem.DirectoryExists(sourcesPath) && _fileSystem.GetFiles(sourcesPath).Length > 1)
                 {
+                    if (_dependencyTracker.GetDependencyVersion(update.Mapping) == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Sources for {update.Mapping.Name} already exists but repository is not initialized properly. " +
+                             "Please investigate!");
+                    }
+
                     // Repository has already been initialized
                     continue;
                 }
@@ -125,7 +133,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             throw;
         }
 
-        string newSha = _dependencyTracker.GetDependencyVersion(mapping)!.Sha;
+        string newSha = _dependencyTracker.GetDependencyVersion(mapping)?.Sha
+            ?? throw new Exception($"Repository {mapping.Name} was supposed to be but has not been initialized! " +
+                                    "Please make sure the sources folder is empty!");
 
         var commitMessage = PrepareCommitMessage(MergeCommitMessage, mapping.Name, mapping.DefaultRemote, oldSha: null, newSha);
         workBranch.MergeBack(commitMessage);

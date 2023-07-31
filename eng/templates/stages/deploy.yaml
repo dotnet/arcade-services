@@ -19,7 +19,7 @@ parameters:
   # dotnet-build-bot-dotnet-eng-status-token
 
 stages:
-- template: templates/stages/secret-validation.yml
+- template: ./secret-validation.yml
   parameters:
     verifyOnly: true
 
@@ -27,6 +27,8 @@ stages:
   pool: server
   dependsOn:
   - build
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+    - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -54,7 +56,7 @@ stages:
         useGlobalJson: true
 
     - task: AzurePowerShell@3
-      displayName: eng\firewall.ps1 -Add
+      displayName: Add firewall rule
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
@@ -70,7 +72,7 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
     - task: AzurePowerShell@3
-      displayName: eng\firewall.ps1 -Remove
+      displayName: Remove firewall rule
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
