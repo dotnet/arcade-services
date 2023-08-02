@@ -58,7 +58,7 @@ public interface IVmrInfo
 
 public class VmrInfo : IVmrInfo
 {
-    public const string SourcesDir = "src";
+    public static readonly UnixPath SourcesDir = new("src");
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
