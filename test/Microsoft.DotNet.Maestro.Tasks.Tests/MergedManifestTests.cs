@@ -23,38 +23,40 @@ internal class MergedManifestTests
         public const string AzureDevOpsProject1 = "internal";
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
         public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
-        public const string Id = "Id";
+        public const string PackageId = "PackageId";
+        public const string BlobId = "BlobId";
         public const string version = "version";
 
-        Package package1 = new Package()
+        readonly Package package1 = new Package()
         {
-            Id = Id,
+            Id = PackageId,
             Version = version,
             NonShipping = true,
         };
 
-        Package package2 = new Package()
+        readonly Package package2 = new Package()
         {
             Id = "123",
             Version = "version1",
             NonShipping = false
         };
 
-        private Blob blob1 = new Blob()
+        readonly Blob blob1 = new Blob()
         {
-            Id = Id,
+            Id = BlobId,
             Category = "None",
             NonShipping = true
         };
 
-        private Blob blob2 = new Blob()
+        readonly Blob blob2 = new Blob()
         {
             Id = "1",
             Category = "Other",
             NonShipping = false
         };
 
-        Manifest manifest1 = new Manifest() {
+        Manifest Manifest1() => new Manifest()
+        {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
             AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
@@ -66,7 +68,8 @@ internal class MergedManifestTests
             Blobs = new List<Blob>()
         };
 
-        Manifest manifest2 = new Manifest() {
+        Manifest Manifest2() => new Manifest()
+        {
             AzureDevOpsAccount = "devdiv",
             AzureDevOpsBranch = "refs/heads/test",
             AzureDevOpsBuildDefinitionId = 9,
@@ -78,7 +81,7 @@ internal class MergedManifestTests
             Blobs = new List<Blob>()
         };
 
-        Manifest manifest3 = new Manifest()
+        Manifest Manifest3() => new Manifest()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -91,7 +94,7 @@ internal class MergedManifestTests
             Blobs = new List<Blob>()
         };
 
-        Manifest manifest4 = new Manifest()
+        Manifest Manifest4() => new Manifest()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -104,7 +107,7 @@ internal class MergedManifestTests
             Blobs = new List<Blob>()
         };
 
-        Manifest manifest = new Manifest()
+        Manifest OutputManifest() => new Manifest()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -120,60 +123,71 @@ internal class MergedManifestTests
         [SetUp]
         public void SetupMergeBuildManifestsTests()
         {
-            pushMetadata = new PushMetadataToBuildAssetRegistry();
+            var buildEngine = new Mocks.MockBuildEngine();
+            pushMetadata = new PushMetadataToBuildAssetRegistry()
+            {
+                BuildEngine = buildEngine,
+            };
         }
 
         [Test]
         public void ErrorWhenManifestDoesNotMatch()
         {
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest2 };
+            List<Manifest> manifests = new List<Manifest>() { Manifest1(), Manifest2() };
 
             Action act = () => pushMetadata.MergeManifests(manifests);
             act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
-
         }
 
         [Test]
         public void TwoCompatibleManifest()
         {
+            var manifest1 = Manifest1();
+            var manifest3 = Manifest3();
             manifest1.Packages = new List<Package>() { package1 };
             manifest3.Packages = new List<Package>() { package2 };
             manifest1.Blobs = new List<Blob>() { blob1 };
             manifest3.Blobs = new List<Blob>() { blob2 };
 
-            manifest.Packages = new List<Package>() { package1, package2 };
-            manifest.Blobs = new List<Blob>() { blob1, blob2 };
+            var outputManifest = OutputManifest();
+
+            outputManifest.Packages = new List<Package>() { package1, package2 };
+            outputManifest.Blobs = new List<Blob>() { blob1, blob2 };
             List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
             Manifest expectedManifest =  pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(manifest);
+            expectedManifest.Should().BeEquivalentTo(outputManifest);
         }
 
         [Test]
         public void ThreeCompatibleBuildData()
         {
+            var manifest1 = Manifest1();
+            var manifest3 = Manifest3();
+            var manifest4 = Manifest4();
 
             manifest1.Packages.Add(package1);
             manifest3.Packages.Add(package2);
             manifest4.Blobs.Add(blob1);
             manifest3.Blobs.Add(blob2);
 
-            manifest.Packages.Add(package1);
-            manifest.Packages.Add(package2);
-            manifest.Blobs.Add(blob1);
-            manifest.Blobs.Add(blob2);
+            var outputManifest = OutputManifest();
+
+            outputManifest.Packages.Add(package1);
+            outputManifest.Packages.Add(package2);
+            outputManifest.Blobs.Add(blob1);
+            outputManifest.Blobs.Add(blob2);
 
             List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3, manifest4 };
             Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(manifest);
+            expectedManifest.Should().BeEquivalentTo(outputManifest);
         }
 
         [Test]
         public void ManifestWithPartiallyEmptyAssets()
         {
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            List<Manifest> manifests = new List<Manifest>() { Manifest1(), Manifest3() };
             Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
-            expectedManifest.Should().BeEquivalentTo(manifest);
-
+            expectedManifest.Should().BeEquivalentTo(OutputManifest());
         }
 
         [TestCase("https://github.com/dotnet/trusted-packages", "trusted/packages")]
@@ -189,6 +203,36 @@ internal class MergedManifestTests
         {
             string actualRepo = pushMetadata.GetGithubRepoName(azdoRepoUrl);
             Assert.AreEqual(expectedRepo, actualRepo);
+        }
+
+        [Test]
+        public void MergingShouldNotAllowDuplicatedPackages()
+        {
+            var manifest1 = Manifest1();
+            var manifest3 = Manifest3();
+
+            manifest1.Packages = new List<Package>() { package1 };
+            manifest3.Packages = new List<Package>() { package1 };
+
+            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            Action act = () => pushMetadata.MergeManifests(manifests);
+            act.Should().Throw<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            pushMetadata.Log.HasLoggedErrors.Should().BeTrue();
+        }
+
+        [Test]
+        public void MergingShouldNotAllowDuplicatedBlobs()
+        {
+            var manifest1 = Manifest1();
+            var manifest3 = Manifest3();
+
+            manifest1.Blobs = new List<Blob>() { blob1 };
+            manifest3.Blobs = new List<Blob>() { blob1 };
+
+            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            Action act = () => pushMetadata.MergeManifests(manifests);
+            act.Should().Throw<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            pushMetadata.Log.HasLoggedErrors.Should().BeTrue();
         }
     }
 }
