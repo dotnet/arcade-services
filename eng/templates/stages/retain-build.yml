@@ -16,7 +16,7 @@ stages:
       value: internal
 
     steps:
-    - template: eng\common\templates\steps\retain-build.yml
+    - template: $(Build.SourcesDirectory)\eng\common\templates\steps\retain-build.yml
       parameters:
         AzdoOrgUri: $(AzdoOrgUri)
         AzdoProject: $(AzdoProject)
