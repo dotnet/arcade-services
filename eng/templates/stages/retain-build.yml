@@ -17,7 +17,7 @@ stages:
 
     steps:
     - template: eng\common\templates\steps\retain-build.yml
-      paremeters:
+      parameters:
         AzdoOrgUri: $(AzdoOrgUri)
         AzdoProject: $(AzdoProject)
         BuildId: $(Build.BuildId)
