@@ -21,12 +21,12 @@ public class IndexModel : PageModel
     public IndexModel(IWebHostEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
     {
         Environment = environment;
-        InstrumentationKey = applicationInsightsOptions.Value.InstrumentationKey;
+        ConnectionString = applicationInsightsOptions.Value.ConnectionString;
     }
 
     public IReadOnlyList<(string name, string file)> Themes { get; private set; }
     public string CurrentThemeFile { get; private set; }
-    public string InstrumentationKey { get; }
+    public string ConnectionString { get; }
 
     public PageResult OnGet()
     {
