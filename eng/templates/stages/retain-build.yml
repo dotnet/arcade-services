@@ -1,0 +1,23 @@
+stages:
+- stage: RetainProductionBuild
+  displayName: Retain Production Build
+  dependsOn: []
+  jobs:
+  - job: RetainBuild
+    displayName: Retain Production Build
+    pool:
+      name: NetCore1ESPool-Internal-NoMSI
+      demands: ImageOverride -equals 1es-windows-2022
+
+    variables:
+    - name: AzdoOrgUri
+      value: https://dev.azure.com/dnceng
+    - name: AzdoProject
+      value: internal
+
+    steps:
+    - template: eng\common\templates\steps\retain-build.yml
+      paremeters:
+        AzdoOrgUri: $(AzdoOrgUri)
+        AzdoProject: $(AzdoProject)
+        BuildId: $(Build.BuildId)

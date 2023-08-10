@@ -23,6 +23,9 @@ stages:
   parameters:
     verifyOnly: true
 
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+  - template: ./retain-build.yml
+
 - stage: approval
   pool: server
   dependsOn:
