@@ -7,12 +7,12 @@ import { Router, Event, NavigationEnd, ActivatedRouteSnapshot } from '@angular/r
 })
 export class ApplicationInsightsService extends ApplicationInsights {
   constructor() {
-    const ikey = (window as any).applicationData.aiKey;
-    if (ikey) {
+    const aiConnectionString = (window as any).applicationData.aiConnectionString;
+    if (aiConnectionString) {
       super({
         config: {
-          instrumentationKey: ikey,
-          disableTelemetry: ikey == '00000000-0000-0000-0000-000000000000',
+          connectionString: aiConnectionString,
+          disableTelemetry: aiConnectionString == 'InstrumentationKey=00000000-0000-0000-0000-000000000000',
           disableFetchTracking: false,
         },
       });
