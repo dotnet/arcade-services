@@ -23,7 +23,7 @@ stages:
   parameters:
     verifyOnly: true
 
-- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/dkurepa/RetainProductionBuilds')}}:
   - template: ./retain-build.yml
 
 - stage: approval
