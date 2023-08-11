@@ -33,8 +33,8 @@ public class Local : ILocal
         _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalGitClient(GitExecutable, _logger);
-        _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
+        _gitClient = new LocalGitClient(new ProcessManager(logger, GitExecutable), logger);
+        _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, logger);
     }
 
     /// <summary>

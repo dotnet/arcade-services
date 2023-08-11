@@ -873,7 +873,7 @@ public class DependencyGraph
                 if (!string.IsNullOrEmpty(repoPath))
                 {
                     Local local = new Local(logger);
-                    string fileContents = LocalHelpers.GitShow(
+                    string fileContents = GitShow(
                         gitExecutable,
                         repoPath,
                         commit,
@@ -909,6 +909,18 @@ public class DependencyGraph
                                  $"'{commit}'");
             throw;
         }
+    }
+
+    private static string GitShow(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
+    {
+        string fileContents = LocalHelpers.ExecuteCommand(gitLocation, $"show {commit}:{fileName}", logger, repoFolderPath);
+
+        if (string.IsNullOrEmpty(fileContents))
+        {
+            throw new Exception($"Could not show the contents of '{fileName}' at '{commit}' in '{repoFolderPath}'...");
+        }
+
+        return fileContents;
     }
 
     private static Dictionary<string, string> CreateRemotesMapping(IEnumerable<string> remotesMap)

@@ -285,7 +285,7 @@ public abstract class VmrManagerBase
         if (isTpnUpdated)
         {
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-            _localGitClient.Stage(_vmrInfo.VmrPath, VmrInfo.ThirdPartyNoticesFileName);
+            await _localGitClient.Stage(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName });
             cancellationToken.ThrowIfCancellationRequested();
         }
     }

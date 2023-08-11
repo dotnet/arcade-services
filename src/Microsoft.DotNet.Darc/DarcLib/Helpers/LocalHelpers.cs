@@ -3,43 +3,13 @@
 
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class LocalHelpers
 {
-    public static string GetEditorPath(string gitLocation, ILogger logger)
-    {
-        string editor = ExecuteCommand(gitLocation, "config --get core.editor", logger);
-
-        // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
-        // vim
-        if (string.IsNullOrEmpty(editor))
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                editor = ExecuteCommand("where", "notepad", logger);
-            }
-            else
-            {
-                editor = ExecuteCommand("which", "vim", logger);
-            }
-        }
-
-        // Split this by newline in case where are multiple paths;
-        int newlineIndex = editor.IndexOf(System.Environment.NewLine);
-        if (newlineIndex != -1)
-        {
-            editor = editor.Substring(0, newlineIndex);
-        }
-
-        return editor;
-    }
-
     public static string GetRootDir(string gitLocation, ILogger logger)
     {
         string dir = ExecuteCommand(gitLocation, "rev-parse --show-toplevel", logger);
@@ -67,18 +37,6 @@ public static class LocalHelpers
         }
 
         return commit;
-    }
-
-    public static string GitShow(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
-    {
-        string fileContents = ExecuteCommand(gitLocation, $"show {commit}:{fileName}", logger, repoFolderPath);
-
-        if (string.IsNullOrEmpty(fileContents))
-        {
-            throw new Exception($"Could not show the contents of '{fileName}' at '{commit}' in '{repoFolderPath}'...");
-        }
-
-        return fileContents;
     }
 
     /// <summary>
@@ -149,22 +107,6 @@ public static class LocalHelpers
         ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
 
         return workingDirectory;
-    }
-
-    /// <summary>
-    /// Check that the git installation is valid by running git version --build-options
-    /// and checking the outputs to confirm that it is well-formed
-    /// </summary>
-    /// <param name="gitLocation">The location of git.exe</param>
-    /// <param name="logger">The logger</param>
-    public static void CheckGitInstallation(string gitLocation, ILogger logger)
-    {
-        string versionInfo = LocalHelpers.ExecuteCommand(gitLocation, "version --build-options", logger);
-
-        if (!versionInfo.StartsWith("git version") || !versionInfo.Contains("cpu:"))
-        {
-            throw new Exception($"Something failed when validating the git installation {gitLocation}");
-        }
     }
 
     public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)

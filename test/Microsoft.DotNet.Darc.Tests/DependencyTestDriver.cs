@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using NuGet.Versioning;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
@@ -66,7 +67,7 @@ internal class DependencyTestDriver
         }
 
         // Set up a git file manager
-        _gitClient = new LocalGitClient("git", NullLogger.Instance);
+        _gitClient = new LocalGitClient(new ProcessManager(NullLogger.Instance, "git"), NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
     }

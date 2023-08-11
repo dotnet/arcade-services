@@ -45,13 +45,13 @@ public class ProcessManager : IProcessManager
 
     public string GitExecutable { get; }
 
-    public ProcessManager(ILogger<IProcessManager> logger, string gitExecutable)
+    public ProcessManager(ILogger logger, string gitExecutable)
     {
         _logger = logger;
         GitExecutable = gitExecutable;
     }
 
-    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken)
+    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken = default)
         => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), cancellationToken: cancellationToken);
 
     public async Task<ProcessExecutionResult> Execute(

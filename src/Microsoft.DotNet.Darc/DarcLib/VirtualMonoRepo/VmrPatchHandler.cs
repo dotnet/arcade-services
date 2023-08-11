@@ -107,7 +107,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
 
-        List<SubmoduleChange> submoduleChanges = GetSubmoduleChanges(repoPath, sha1, sha2);
+        List<SubmoduleChange> submoduleChanges = await GetSubmoduleChanges(repoPath, sha1, sha2);
 
         var changedRecords = submoduleChanges
             .Select(c => new SubmoduleRecord(relativePath / c.Path, c.Url, c.After))
@@ -467,10 +467,10 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// </summary>
     /// <param name="repoPath">Path to the local git repository</param>
     /// <returns>A pair of submodules (state in SHA1, state in SHA2) where additions/removals are marked by EmptyGitObject</returns>
-    private List<SubmoduleChange> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
+    private async Task<List<SubmoduleChange>> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
     {
-        List<GitSubmoduleInfo> submodulesBefore = _localGitRepo.GetGitSubmodules(repoPath, sha1);
-        List<GitSubmoduleInfo> submodulesAfter = _localGitRepo.GetGitSubmodules(repoPath, sha2);
+        List<GitSubmoduleInfo> submodulesBefore = await _localGitRepo.GetGitSubmodules(repoPath, sha1);
+        List<GitSubmoduleInfo> submodulesAfter = await _localGitRepo.GetGitSubmodules(repoPath, sha2);
 
         var submodulePaths = submodulesBefore
             .Concat(submodulesAfter)
