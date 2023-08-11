@@ -120,7 +120,7 @@ stages:
         - checkout: self
           clean: true
 
-        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/dkurepa/RetainProductionBuilds')}}:
+        - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
           - template: .\eng\common\templates\steps\retain-build.yml
             parameters:
               AzdoOrgUri: $(AzdoOrgUri)
