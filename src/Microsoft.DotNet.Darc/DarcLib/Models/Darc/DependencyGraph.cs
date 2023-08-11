@@ -817,7 +817,7 @@ public class DependencyGraph
                 folder = Directory.GetParent(parent).FullName;
             }
 
-            repoPath = LocalHelpers.GetRepoPathFromFolder(gitExecutable, folder, commit, logger);
+            repoPath = GetRepoPathFromFolder(gitExecutable, folder, commit, logger);
 
             if (string.IsNullOrEmpty(repoPath))
             {
@@ -911,18 +911,6 @@ public class DependencyGraph
         }
     }
 
-    private static string GitShow(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
-    {
-        string fileContents = LocalHelpers.ExecuteCommand(gitLocation, $"show {commit}:{fileName}", logger, repoFolderPath);
-
-        if (string.IsNullOrEmpty(fileContents))
-        {
-            throw new Exception($"Could not show the contents of '{fileName}' at '{commit}' in '{repoFolderPath}'...");
-        }
-
-        return fileContents;
-    }
-
     private static Dictionary<string, string> CreateRemotesMapping(IEnumerable<string> remotesMap)
     {
         Dictionary<string, string> remotesMapping = new Dictionary<string, string>();
@@ -939,6 +927,38 @@ public class DependencyGraph
         }
 
         return remotesMapping;
+    }
+
+    private static string GitShow(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
+    {
+        string fileContents = LocalHelpers.ExecuteCommand(gitLocation, $"show {commit}:{fileName}", logger, repoFolderPath);
+
+        if (string.IsNullOrEmpty(fileContents))
+        {
+            throw new Exception($"Could not show the contents of '{fileName}' at '{commit}' in '{repoFolderPath}'...");
+        }
+
+        return fileContents;
+    }
+
+
+    /// <summary>
+    /// For each child folder in the provided "source" folder we check for the existance of a given commit. Each folder in "source"
+    /// represent a different repo.
+    /// </summary>
+    private static string GetRepoPathFromFolder(string gitLocation, string sourceFolder, string commit, ILogger logger)
+    {
+        foreach (string directory in Directory.GetDirectories(sourceFolder))
+        {
+            string containsCommand = LocalHelpers.ExecuteCommand(gitLocation, $"branch --contains {commit}", logger, directory);
+
+            if (!string.IsNullOrEmpty(containsCommand))
+            {
+                return directory;
+            }
+        }
+
+        return null;
     }
 }
 

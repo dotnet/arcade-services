@@ -15,12 +15,15 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class RemoteRepoBase : GitRepoCloner
 {
+    private readonly ILogger _logger;
+
     protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache, ILogger logger, string accessToken)
         : base(accessToken, logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
         Cache = cache;
+        _logger = logger;
     }
 
     /// <summary>
@@ -50,7 +53,6 @@ public class RemoteRepoBase : GitRepoCloner
     /// <param name="repoUri">The repository to push the files to.</param>
     /// <param name="branch">The branch to push the files to.</param>
     /// <param name="commitMessage">The commmit message.</param>
-    /// <returns></returns>
     protected async Task CommitFilesAsync(
         List<GitFile> filesToCommit,
         string repoUri,
@@ -63,13 +65,13 @@ public class RemoteRepoBase : GitRepoCloner
     {
         logger.LogInformation("Pushing files to {branch}", branch);
         string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
-        string remote = "origin";
+        const string remote = "origin";
         try
         {
             string clonedRepo = null;
 
             logger.LogInformation("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri);
-            clonedRepo = LocalHelpers.SparseAndShallowCheckout(GitExecutable, repoUri, branch, tempRepoFolder, logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
+            clonedRepo = SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
 
             foreach (GitFile file in filesToCommit)
             {
@@ -128,16 +130,74 @@ public class RemoteRepoBase : GitRepoCloner
         }
     }
 
-    private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
+    /// <summary>
+    /// Since LibGit2Sharp doesn't support neither sparse checkout not shallow clone
+    /// we implement the flow ourselves.
+    /// </summary>
+    /// <param name="repoUri">The repo to clone Uri</param>
+    /// <param name="branch">The branch to checkout</param>
+    /// <param name="workingDirectory">The working directory</param>
+    /// <param name="remote">The name of the remote</param>
+    /// <param name="user">User name</param>
+    /// <param name="email">User's email</param>
+    /// <param name="pat">User's personal access token</param>
+    /// <param name="repoFolderName">The name of the folder where the repo is located</param>
+    /// <returns>The full path of the cloned repo</returns>
+    private string SparseAndShallowCheckout(
+        string repoUri,
+        string branch,
+        string workingDirectory,
+        string remote,
+        string user,
+        string email,
+        string pat,
+        string repoFolderName = "clonedRepo")
     {
-        switch (encoding)
+        Directory.CreateDirectory(workingDirectory);
+
+        ExecuteGitCommand($"init {repoFolderName}", _logger, workingDirectory);
+
+        workingDirectory = Path.Combine(workingDirectory, repoFolderName);
+        repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
+
+        ExecuteGitCommand($"remote add {remote} {repoUri}", _logger, workingDirectory, secretToMask: pat);
+        ExecuteGitCommand("config core.sparsecheckout true", _logger, workingDirectory);
+        ExecuteGitCommand("config core.longpaths true", _logger, workingDirectory);
+        ExecuteGitCommand($"config user.name {user}", _logger, workingDirectory);
+        ExecuteGitCommand($"config user.email {email}", _logger, workingDirectory);
+
+        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+
+        ExecuteGitCommand($"-c core.askpass= -c credential.helper= pull --depth=1 {remote} {branch}", _logger, workingDirectory, secretToMask: pat);
+        ExecuteGitCommand($"checkout {branch}", _logger, workingDirectory);
+
+        return workingDirectory;
+    }
+
+    /// <summary>
+    ///     Execute a git command
+    /// </summary>
+    /// <param name="arguments">Arguments to git</param>
+    /// <param name="logger">Logger</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <param name="secretToMask">Mask this secret when calling the logger.</param>
+    private void ExecuteGitCommand(string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
+    {
+        string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
+        logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory);
+        string result = LocalHelpers.ExecuteCommand(GitExecutable, arguments, logger, workingDirectory);
+
+        if (result == null)
         {
-            case ContentEncoding.Base64:
-                return Convert.FromBase64String(content);
-            case ContentEncoding.Utf8:
-                return Encoding.UTF8.GetBytes(content);
-            default:
-                throw new NotImplementedException("Unexpected content encoding.");
+            throw new DarcException(
+                $"Something failed when executing command git {maskedArguments} in {workingDirectory}");
         }
     }
+
+    private static byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding) => encoding switch
+    {
+        ContentEncoding.Base64 => Convert.FromBase64String(content),
+        ContentEncoding.Utf8 => Encoding.UTF8.GetBytes(content),
+        _ => throw new NotImplementedException("Unexpected content encoding."),
+    };
 }
