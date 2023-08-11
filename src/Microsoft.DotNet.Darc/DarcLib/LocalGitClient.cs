@@ -253,19 +253,6 @@ public class LocalGitClient : ILocalGitRepo
         }
     }
 
-    public async Task CheckoutNative(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false)
-    {
-        IEnumerable<string> args = new[] { "checkout" };
-
-        if (createBranch)
-        {
-            args = overwriteExistingBranch ? args.Append("-B") : args.Append("-b");
-        }
-
-        var result = await _processManager.ExecuteGit(repoDir, args.Append(refToCheckout));
-        result.ThrowIfFailed($"Failed to {(createBranch ? "create" : "check out")} {refToCheckout} in {repoDir}");
-    }
-
     public async Task Commit(
         string repoPath,
         string message,
@@ -464,90 +451,21 @@ public class LocalGitClient : ILocalGitRepo
         return remoteName;
     }
 
-    public async Task<List<GitSubmoduleInfo>> GetGitSubmodules(string repoDir, string commit)
+    public List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit)
     {
-        var submodules = new List<GitSubmoduleInfo>();
-
         if (commit == Constants.EmptyGitObject)
         {
-            return submodules;
+            return new();
         }
 
-        var submoduleFile = await GetFileFromGit(repoDir, ".gitmodules", commit);
-        if (submoduleFile == null)
-        {
-            return submodules;
-        }
+        var repository = new Repository(repoDir);
 
-        GitSubmoduleInfo? currentSubmodule = null;
+        // I haven't found a way to do this with LibGit2Sharp without checking out the commit
+        Commands.Checkout(repository, commit);
 
-        var lines = submoduleFile
-            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim());
-
-        var submoduleRegex = new Regex("^\\[submodule \"(?<name>.+)\"\\]$");
-        var submoduleUrlRegex = new Regex("^\\s*url\\s*=\\s*(?<url>.+)$");
-        var submodulePathRegex = new Regex("^\\s*path\\s*=\\s*(?<path>.+)$");
-
-        async Task FinalizeSubmodule(GitSubmoduleInfo submodule)
-        {
-            if (submodule.Url == null)
-            {
-                throw new Exception($"Submodule {submodule.Name} has no URL");
-            }
-
-            if (submodule.Path == null)
-            {
-                throw new Exception($"Submodule {submodule.Name} has no path");
-            }
-
-            // Read SHA that the submodule points to
-            var result = await _processManager.ExecuteGit(repoDir, "rev-parse", $"{commit}:{submodule.Path}");
-            result.ThrowIfFailed($"Failed to find SHA of commit where submodule {submodule.Path} points to");
-
-            submodule = submodule with
-            {
-                Commit = result.StandardOutput.Trim(),
-            };
-
-            submodules.Add(submodule);
-        }
-
-        foreach (var line in lines)
-        {
-            var match = submoduleRegex.Match(line);
-            if (match.Success)
-            {
-                if (currentSubmodule != null)
-                {
-                    await FinalizeSubmodule(currentSubmodule);
-                }
-
-                currentSubmodule = new GitSubmoduleInfo(match.Groups["name"].Value, null!, null!, null!);
-                continue;
-            }
-
-            match = submoduleUrlRegex.Match(line);
-            if (match.Success)
-            {
-                currentSubmodule = currentSubmodule! with { Url = match.Groups["url"].Value };
-                continue;
-            }
-
-            match = submodulePathRegex.Match(line);
-            if (match.Success)
-            {
-                currentSubmodule = currentSubmodule! with { Path = match.Groups["path"].Value };
-                continue;
-            }
-        }
-
-        if (currentSubmodule != null)
-        {
-            await FinalizeSubmodule(currentSubmodule);
-        }
-
-        return submodules;
+        return repository.Submodules
+            .Select(s => new GitSubmoduleInfo(s.Name, s.Path, s.Url, s.IndexCommitId.Sha))
+            .ToList();
     }
 
     public IEnumerable<string> GetStagedFiles(string repoDir)
@@ -558,30 +476,6 @@ public class LocalGitClient : ILocalGitRepo
             .Concat(repositoryStatus.Removed)
             .Concat(repositoryStatus.Staged)
             .Select(file => file.FilePath);
-    }
-
-    public async Task<string?> GetFileFromGit(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
-    {
-        var args = new List<string>
-        {
-            "show",
-            $"{revision}:{relativeFilePath}"
-        };
-
-        if (outputPath != null)
-        {
-            args.Add("--output");
-            args.Add(outputPath);
-        }
-
-        var result = await _processManager.ExecuteGit(repoPath, args);
-
-        if (!result.Succeeded)
-        {
-            return null;
-        }
-
-        return result.StandardOutput;
     }
 
     public void Push(
