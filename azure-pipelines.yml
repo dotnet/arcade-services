@@ -6,6 +6,10 @@ variables:
   value: true
 - name: _DotNetArtifactsCategory
   value: .NETCore
+- name: AzdoOrgUri
+  value: https://dev.azure.com/dnceng
+- name: AzdoProject
+  value: internal
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - group: SDL_Settings
 
@@ -115,6 +119,13 @@ stages:
         steps:
         - checkout: self
           clean: true
+
+        - ${{ if eq(variables['Build.SourceBranch'], 'dkurepa/RetainProductionBuilds')}}:
+          - template: .\eng\common\templates\steps\retain-build.yml
+            parameters:
+              AzdoOrgUri: $(AzdoOrgUri)
+              AzdoProject: $(AzdoProject)
+              BuildId: $(Build.BuildId)
 
         - task: NodeTool@0
           displayName: Install node.js
