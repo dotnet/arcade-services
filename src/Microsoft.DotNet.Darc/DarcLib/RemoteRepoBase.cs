@@ -101,11 +101,11 @@ public class RemoteRepoBase : GitRepoCloner
                     File.Delete(filePath);
                 }
 
-                LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", logger, clonedRepo);
+                await _processManager.ExecuteGit(clonedRepo, new[] { "add", filePath });
             }
 
-            LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", logger, clonedRepo);
-            LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", logger, clonedRepo);
+            await _processManager.ExecuteGit(clonedRepo, new[] { "commit", "-m", commitMessage });
+            await _processManager.ExecuteGit(clonedRepo, new[] { "-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch });
         }
         catch (Exception exc)
         {
