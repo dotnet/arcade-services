@@ -63,67 +63,65 @@ public class LocalGitClient : ILocalGitRepo
     ///     Updates local copies of the files.
     /// </summary>
     /// <param name="filesToCommit">Files to update locally</param>
-    /// <param name="repoUri">Base path of the repo</param>
+    /// <param name="repoPath">Base path of the repo</param>
     /// <param name="branch">Unused</param>
     /// <param name="commitMessage">Unused</param>
-    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
         string repoDir = await GetRootDir();
         try
         {
-            using (Repository localRepo = new Repository(repoDir))
+            using (var localRepo = new Repository(repoDir))
+            foreach (GitFile file in filesToCommit)
             {
-                foreach (GitFile file in filesToCommit)
+                Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
+                switch (file.Operation)
                 {
-                    Debug.Assert(file != null, "Passed in a null GitFile in filesToCommit");
-                    switch (file.Operation)
-                    {
-                        case GitFileOperation.Add:
-                            var parentDirectoryInfo = Directory.GetParent(file.FilePath)
-                                ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
+                    case GitFileOperation.Add:
+                        var parentDirectoryInfo = Directory.GetParent(file.FilePath)
+                            ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
 
-                            string parentDirectory = parentDirectoryInfo.FullName;
+                        string parentDirectory = parentDirectoryInfo.FullName;
 
-                            if (!Directory.Exists(parentDirectory))
+                        if (!Directory.Exists(parentDirectory))
+                        {
+                            Directory.CreateDirectory(parentDirectory);
+                        }
+
+                        string fullPath = Path.Combine(repoPath, file.FilePath);
+                        using (var streamWriter = new StreamWriter(fullPath))
+                        {
+                            string finalContent;
+                            switch (file.ContentEncoding)
                             {
-                                Directory.CreateDirectory(parentDirectory);
+                                case ContentEncoding.Utf8:
+                                    finalContent = file.Content;
+                                    break;
+                                case ContentEncoding.Base64:
+                                    byte[] bytes = Convert.FromBase64String(file.Content);
+                                    finalContent = Encoding.UTF8.GetString(bytes);
+                                    break;
+                                default:
+                                    throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
                             }
+                            finalContent = await NormalizeLineEndings(repoPath, fullPath, finalContent);
+                            await streamWriter.WriteAsync(finalContent);
 
-                            string fullPath = Path.Combine(repoUri, file.FilePath);
-                            using (var streamWriter = new StreamWriter(fullPath))
-                            {
-                                string finalContent;
-                                switch (file.ContentEncoding)
-                                {
-                                    case ContentEncoding.Utf8:
-                                        finalContent = file.Content;
-                                        break;
-                                    case ContentEncoding.Base64:
-                                        byte[] bytes = Convert.FromBase64String(file.Content);
-                                        finalContent = Encoding.UTF8.GetString(bytes);
-                                        break;
-                                    default:
-                                        throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                                }
-                                finalContent = await NormalizeLineEndings(fullPath, finalContent);
-                                await streamWriter.WriteAsync(finalContent);
-
-                                LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
-                            }
-                            break;
-                        case GitFileOperation.Delete:
-                            if (File.Exists(file.FilePath))
-                            {
-                                File.Delete(file.FilePath);
-                            }
-                            break;
-                    }
+                            LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
+                        }
+                        break;
+                    case GitFileOperation.Delete:
+                        if (File.Exists(file.FilePath))
+                        {
+                            File.Delete(file.FilePath);
+                        }
+                        break;
                 }
             }
         }
         catch (Exception exc)
         {
-            throw new DarcException($"Something went wrong when checking out {repoUri} in {repoDir}", exc);
+            throw new DarcException($"Something went wrong when checking out {repoPath} in {repoDir}", exc);
         }
     }
 
@@ -140,13 +138,13 @@ public class LocalGitClient : ILocalGitRepo
     ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
     ///       OS setting, and replace if needed.
     /// </remarks>
-    private async Task<string> NormalizeLineEndings(string filePath, string content)
+    private async Task<string> NormalizeLineEndings(string repoPath, string filePath, string content)
     {
         const string crlf = "\r\n";
         const string lf = "\n";
 
         // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.Execute(_processManager.GitExecutable, new[] { "check-attr", "eol", "--", filePath });
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
         result.ThrowIfFailed($"Failed to determine eol for {filePath}");
 
         string eofAttr = result.StandardOutput.Trim();
