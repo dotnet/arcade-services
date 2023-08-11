@@ -73,6 +73,8 @@ internal class DependencyTestDriver
         _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
         await _gitClient.Stage(TemporaryRepositoryPath, new[] { "*" });
         await _gitClient.Commit(TemporaryRepositoryPath, "Initial commit", false);
     }
