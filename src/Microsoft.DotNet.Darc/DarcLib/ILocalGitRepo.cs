@@ -65,6 +65,12 @@ public interface ILocalGitRepo : IGitRepo
     Task<string> GetRootDir(string? path = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Get the current git commit sha.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository (cwd used when null)</param>
+    Task<string> GetGitCommit(string? repoPath = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Returns a list of git submodules registered in a given repository.
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>

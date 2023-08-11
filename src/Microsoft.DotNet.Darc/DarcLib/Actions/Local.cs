@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -21,7 +22,7 @@ public class Local : ILocal
     private readonly ILogger _logger;
 
     // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
-    private readonly string _repo;
+    private readonly Lazy<string> _repoRootDir;
 
     /// <summary>
     ///     Passed to the local helpers, causing git to be chosen from the path
@@ -30,11 +31,12 @@ public class Local : ILocal
 
     public Local(ILogger logger, string overrideRootPath = null)
     {
-        _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
         _gitClient = new LocalGitClient(new ProcessManager(logger, GitExecutable), logger);
         _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, logger);
+
+        _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDir().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
     }
 
     /// <summary>
@@ -45,7 +47,7 @@ public class Local : ILocal
     {
         // TODO: https://github.com/dotnet/arcade/issues/1095
         // This should be getting back a container and writing the files from here.
-        await _fileManager.AddDependencyAsync(dependency, _repo, null);
+        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null);
     }
 
     /// <summary>
@@ -76,7 +78,7 @@ public class Local : ILocal
             targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
-        var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repo, null, oldDependencies, targetDotNetVersion);
+        var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
         List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
         if (arcadeItem != null)
@@ -116,7 +118,7 @@ public class Local : ILocal
         }
 
         // Push on local does not commit.
-        await _gitClient.CommitFilesAsync(filesToUpdate, _repo, null, null);
+        await _gitClient.CommitFilesAsync(filesToUpdate, _repoRootDir.Value, null, null);
     }
 
     /// <summary>
@@ -125,7 +127,7 @@ public class Local : ILocal
     /// <returns></returns>
     public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
     {
-        return (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null, includePinned)).Where(
+        return (await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned)).Where(
             dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -135,7 +137,7 @@ public class Local : ILocal
     /// <returns>True if verification succeeds, false otherwise.</returns>
     public Task<bool> Verify()
     {
-        return _fileManager.Verify(_repo, null);
+        return _fileManager.Verify(_repoRootDir.Value, null);
     }
 
     /// <summary>
@@ -153,7 +155,7 @@ public class Local : ILocal
     /// <param name="commit">Tag, branch, or commit to checkout</param>
     public void Checkout(string commit, bool force = false)
     {
-        _gitClient.Checkout(_repo, commit, force);
+        _gitClient.Checkout(_repoRootDir.Value, commit, force);
     }
 
     /// <summary>
@@ -168,12 +170,11 @@ public class Local : ILocal
 
     private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path)
     {
-        string repoDir = LocalHelpers.GetRootDir(GitExecutable, _logger);
-        string sourceFolder = Path.Combine(repoDir, path);
+        string sourceFolder = Path.Combine(_repoRootDir.Value, path);
         var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
         return files
             .Select(file => new GitFile(
-                file.Remove(0, repoDir.Length + 1).Replace("\\", "/"),
+                file.Remove(0, _repoRootDir.Value.Length + 1).Replace("\\", "/"),
                 File.ReadAllText(file)))
             .ToList();
     }

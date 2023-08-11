@@ -776,7 +776,7 @@ public class DependencyGraph
         return allCyclesRootedAtNode;
     }
 
-    private static string GetRepoPath(
+    private static async Task<string> GetRepoPath(
         string repoUri,
         string commit,
         IEnumerable<string> remotesMap,
@@ -813,7 +813,8 @@ public class DependencyGraph
             {
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
-                string parent = LocalHelpers.GetRootDir(gitExecutable, logger);
+                var gitClient = new LocalGitClient(new ProcessManager(logger, gitExecutable), logger);
+                string parent = await gitClient.GetRootDir();
                 folder = Directory.GetParent(parent).FullName;
             }
 
@@ -868,7 +869,7 @@ public class DependencyGraph
             }
             else
             {
-                string repoPath = GetRepoPath(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
+                string repoPath = await GetRepoPath(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
 
                 if (!string.IsNullOrEmpty(repoPath))
                 {

@@ -19,13 +19,15 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetDependencyGraphOperation : Operation
 {
-    private GetDependencyGraphCommandLineOptions _options;
-    private readonly HashSet<string> _flatList = new HashSet<string>();
+    private readonly GetDependencyGraphCommandLineOptions _options;
+    private readonly LocalGitClient _gitClient;
+    private readonly HashSet<string> _flatList = new();
 
     public GetDependencyGraphOperation(GetDependencyGraphCommandLineOptions options)
         : base(options)
     {
         _options = options;
+        _gitClient = new LocalGitClient(new ProcessManager(Logger, _options.GitLocation), Logger);
     }
 
     public override async Task<int> ExecuteAsync()
@@ -115,8 +117,8 @@ internal class GetDependencyGraphOperation : Operation
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
                     rootDependencies,
-                    _options.RepoUri ?? LocalHelpers.GetRootDir(_options.GitLocation, Logger),
-                    _options.Version ?? GetGitCommit(),
+                    _options.RepoUri ?? await _gitClient.GetRootDir(),
+                    _options.Version ?? await _gitClient.GetGitCommit(),
                     graphBuildOptions,
                     Logger);
             }
@@ -150,8 +152,8 @@ internal class GetDependencyGraphOperation : Operation
                     rootDependencies,
                     graphBuildOptions,
                     Logger,
-                    LocalHelpers.GetRootDir(_options.GitLocation, Logger),
-                    GetGitCommit(),
+                    await _gitClient.GetRootDir(),
+                    await _gitClient.GetGitCommit(),
                     _options.ReposFolder,
                     _options.RemotesMap);
             }
@@ -459,14 +461,5 @@ internal class GetDependencyGraphOperation : Operation
                 await LogDependencyGraphNode(writer, childNode, $"{indent}  ");
             }
         }
-    }
-
-    /// <summary>
-    ///     Get the current git commit sha.
-    /// </summary>
-    private string GetGitCommit()
-    {
-        return LocalHelpers.ExecuteCommand(_options.GitLocation, "rev-parse HEAD", Logger)
-            ?? throw new Exception("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
     }
 }

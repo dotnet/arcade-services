@@ -10,12 +10,6 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class LocalHelpers
 {
-    public static string GetRootDir(string gitLocation, ILogger logger)
-    {
-        return ExecuteCommand(gitLocation, "rev-parse --show-toplevel", logger)
-            ?? throw new Exception("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
-    }
-
     public static string? ExecuteCommand(string command, string arguments, ILogger logger, string? workingDirectory = null)
     {
         try

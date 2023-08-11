@@ -302,6 +302,18 @@ public class LocalGitClient : ILocalGitRepo
         return result.StandardOutput.Trim();
     }
 
+    /// <summary>
+    ///     Get the current git commit sha.
+    /// </summary>
+    public async Task<string> GetGitCommit(string? repoPath = null, CancellationToken cancellationToken = default)
+    {
+        repoPath ??= Environment.CurrentDirectory;
+
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken);
+        result.ThrowIfFailed("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
+        return result.StandardOutput.Trim();
+    }
+
     private static void CleanRepoAndSubmodules(Repository repo, ILogger log)
     {
         using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))
