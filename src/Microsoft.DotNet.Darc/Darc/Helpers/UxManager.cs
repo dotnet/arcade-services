@@ -208,7 +208,7 @@ public class UxManager
         string editor = result.StandardOutput;
 
         // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
-        // vim
+        // vi
         if (!result.Succeeded || string.IsNullOrEmpty(editor))
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
