@@ -149,38 +149,37 @@ public class LocalGitClient : ILocalGitRepo
 
         string eofAttr = result.StandardOutput.Trim();
 
-        switch (eofAttr)
+        if (string.IsNullOrEmpty(eofAttr) ||
+            eofAttr.Contains("eol: unspecified") ||
+            eofAttr.Contains("eol: auto"))
         {
-            case null:
-            case string n when string.IsNullOrEmpty(n):
-            case string s when s.Contains("eol: unspecified") || s.Contains("eol: auto"):
-                if (Environment.NewLine != crlf)
-                {
-                    return content.Replace(crlf, Environment.NewLine);
-                }
-
-                if (Environment.NewLine == crlf && !content.Contains(crlf))
-                {
-                    return content.Replace(lf, Environment.NewLine);
-                }
-
-                return content;
-
-            case string s when s.Contains("eol: crlf"):
-                // Test to avoid adding extra \r.
-                if (!content.Contains(crlf))
-                {
-                    return content.Replace(lf, crlf);
-                }
-
-                return content;
-
-            case string s when s.Contains("eol: lf"):
-                return content.Replace(crlf, lf);
-
-            default:
-                throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath}'");
+            if (Environment.NewLine != crlf)
+            {
+                return content.Replace(crlf, Environment.NewLine);
+            }
+            else if (Environment.NewLine == crlf && !content.Contains(crlf))
+            {
+                return content.Replace(lf, Environment.NewLine);
+            }
         }
+        else if (eofAttr.Contains("eol: crlf"))
+        {
+            // Test to avoid adding extra \r.
+            if (!content.Contains(crlf))
+            {
+                return content.Replace(lf, crlf);
+            }
+        }
+        else if (eofAttr.Contains("eol: lf"))
+        {
+            return content.Replace(crlf, lf);
+        }
+        else
+        {
+            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
+        }
+
+        return content;
     }
 
     /// <summary>
