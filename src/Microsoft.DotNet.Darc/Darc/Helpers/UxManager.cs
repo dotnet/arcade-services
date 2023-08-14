@@ -218,7 +218,7 @@ public class UxManager
             }
             else
             {
-                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "which", "vim" });
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "which", "vi" });
                 editor = result.StandardOutput;
             }
         }
