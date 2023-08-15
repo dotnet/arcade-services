@@ -12,19 +12,22 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
 public class UxManager
 {
-    private readonly string _editorPath;
+    private readonly Lazy<string> _editorPath;
     private readonly ILogger _logger;
+    private readonly ProcessManager _processManager;
     private bool _popUpClosed = false;
 
     public UxManager(string gitLocation, ILogger logger)
     {
-        _editorPath = LocalHelpers.GetEditorPath(gitLocation, logger);
+        _editorPath = new(() => GetEditorPathAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
         _logger = logger;
+        _processManager = new ProcessManager(logger, gitLocation);
     }
 
     /// <summary>
@@ -80,7 +83,7 @@ public class UxManager
     /// <returns>Success or error code</returns>
     public int PopUp(EditorPopUp popUp)
     {
-        if (string.IsNullOrEmpty(_editorPath))
+        if (string.IsNullOrEmpty(_editorPath.Value))
         {
             _logger.LogError("Failed to define an editor for the pop ups. Please verify that your git settings (`git config core.editor`) specify the path correctly.");
             return Constants.ErrorCode;
@@ -89,7 +92,7 @@ public class UxManager
         int result = Constants.ErrorCode;
         int tries = Constants.MaxPopupTries;
 
-        ParsedCommand parsedCommand = GetParsedCommand(_editorPath);
+        ParsedCommand parsedCommand = GetParsedCommand(_editorPath.Value);
 
         try
         {
@@ -197,6 +200,37 @@ public class UxManager
             }
             return parsedCommand;
         }
+    }
+
+    private async Task<string> GetEditorPathAsync()
+    {
+        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "config", "--get", "core.editor" });
+        string editor = result.StandardOutput;
+
+        // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
+        // vi
+        if (!result.Succeeded || string.IsNullOrEmpty(editor))
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "where", "notepad" });
+                editor = result.StandardOutput;
+            }
+            else
+            {
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "which", "vi" });
+                editor = result.StandardOutput;
+            }
+        }
+
+        // Split this by newline in case where are multiple paths;
+        int newlineIndex = editor.IndexOf(System.Environment.NewLine);
+        if (newlineIndex != -1)
+        {
+            editor = editor.Substring(0, newlineIndex);
+        }
+
+        return editor;
     }
 }
 

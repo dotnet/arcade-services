@@ -776,7 +776,7 @@ public class DependencyGraph
         return allCyclesRootedAtNode;
     }
 
-    private static string GetRepoPath(
+    private static async Task<string> GetRepoPathAsync(
         string repoUri,
         string commit,
         IEnumerable<string> remotesMap,
@@ -813,11 +813,12 @@ public class DependencyGraph
             {
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
-                string parent = LocalHelpers.GetRootDir(gitExecutable, logger);
+                var gitClient = new LocalGitClient(new ProcessManager(logger, gitExecutable), logger);
+                string parent = await gitClient.GetRootDirAsync();
                 folder = Directory.GetParent(parent).FullName;
             }
 
-            repoPath = LocalHelpers.GetRepoPathFromFolder(gitExecutable, folder, commit, logger);
+            repoPath = await GetRepoPathFromFolderAsync(gitExecutable, folder, commit, logger);
 
             if (string.IsNullOrEmpty(repoPath))
             {
@@ -868,12 +869,12 @@ public class DependencyGraph
             }
             else
             {
-                string repoPath = GetRepoPath(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
+                string repoPath = await GetRepoPathAsync(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
 
                 if (!string.IsNullOrEmpty(repoPath))
                 {
                     Local local = new Local(logger);
-                    string fileContents = LocalHelpers.GitShow(
+                    string fileContents = await GitShowAsync(
                         gitExecutable,
                         repoPath,
                         commit,
@@ -927,6 +928,40 @@ public class DependencyGraph
         }
 
         return remotesMapping;
+    }
+
+    private static async Task<string> GitShowAsync(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
+    {
+        var processManager = new ProcessManager(logger, gitLocation);
+        var result = await processManager.ExecuteGit(repoFolderPath, new[] { "show", $"{commit}:{fileName}" });
+
+        if (!result.Succeeded || string.IsNullOrEmpty(result.StandardOutput))
+        {
+            throw new Exception($"Could not show the contents of '{fileName}' at '{commit}' in '{repoFolderPath}'...");
+        }
+
+        return result.StandardOutput;
+    }
+
+
+    /// <summary>
+    /// For each child folder in the provided "source" folder we check for the existance of a given commit. Each folder in "source"
+    /// represent a different repo.
+    /// </summary>
+    private static async Task<string> GetRepoPathFromFolderAsync(string gitLocation, string sourceFolder, string commit, ILogger logger)
+    {
+        var processManager = new ProcessManager(logger, gitLocation);
+
+        foreach (string directory in Directory.GetDirectories(sourceFolder))
+        {
+            var result = await processManager.Execute(gitLocation, new[] { "branch", "--contains", commit }, workingDir: directory);
+            if (!string.IsNullOrEmpty(result.StandardOutput))
+            {
+                return directory;
+            }
+        }
+
+        return null;
     }
 }
 
