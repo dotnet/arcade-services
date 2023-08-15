@@ -25,7 +25,7 @@ public class UxManager
 
     public UxManager(string gitLocation, ILogger logger)
     {
-        _editorPath = new(() => GetEditorPath().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
+        _editorPath = new(() => GetEditorPathAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
         _logger = logger;
         _processManager = new ProcessManager(logger, gitLocation);
     }
@@ -202,7 +202,7 @@ public class UxManager
         }
     }
 
-    private async Task<string> GetEditorPath()
+    private async Task<string> GetEditorPathAsync()
     {
         var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "config", "--get", "core.editor" });
         string editor = result.StandardOutput;

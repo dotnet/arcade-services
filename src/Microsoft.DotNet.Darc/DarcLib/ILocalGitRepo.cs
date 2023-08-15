@@ -34,7 +34,7 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="message">Commit message</param>
     /// <param name="allowEmpty">Allow empty commits?</param>
     /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
-    Task Commit(
+    Task CommitAsync(
         string repoPath,
         string message,
         bool allowEmpty,
@@ -46,20 +46,20 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="pathsToStage">Paths that will be staged to index</param>
-    Task Stage(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
+    Task StageAsync(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Gets the root directory of a git repo.
     /// </summary>
     /// <param name="path">Path inside of a git repository</param>
     /// <returns>Path where the .git folder resides</returns>
-    Task<string> GetRootDir(string? path = null, CancellationToken cancellationToken = default);
+    Task<string> GetRootDirAsync(string? path = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Get the current git commit sha.
     /// </summary>
     /// <param name="repoPath">Path to a git repository (cwd used when null)</param>
-    Task<string> GetGitCommit(string? repoPath = null, CancellationToken cancellationToken = default);
+    Task<string> GetGitCommitAsync(string? repoPath = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Returns a list of git submodules registered in a given repository.

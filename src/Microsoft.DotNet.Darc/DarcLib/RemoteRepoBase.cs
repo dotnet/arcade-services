@@ -74,7 +74,7 @@ public class RemoteRepoBase : GitRepoCloner
             string clonedRepo = null;
 
             logger.LogInformation("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri);
-            clonedRepo = await SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
+            clonedRepo = await SparseAndShallowCheckoutAsync(repoUri, branch, tempRepoFolder, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
 
             foreach (GitFile file in filesToCommit)
             {
@@ -146,7 +146,7 @@ public class RemoteRepoBase : GitRepoCloner
     /// <param name="pat">User's personal access token</param>
     /// <param name="repoFolderName">The name of the folder where the repo is located</param>
     /// <returns>The full path of the cloned repo</returns>
-    private async Task<string> SparseAndShallowCheckout(
+    private async Task<string> SparseAndShallowCheckoutAsync(
         string repoUri,
         string branch,
         string workingDirectory,

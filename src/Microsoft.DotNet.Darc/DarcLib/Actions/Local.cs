@@ -36,7 +36,7 @@ public class Local : ILocal
         _gitClient = new LocalGitClient(new ProcessManager(logger, GitExecutable), logger);
         _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, logger);
 
-        _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDir().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
+        _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
     }
 
     /// <summary>

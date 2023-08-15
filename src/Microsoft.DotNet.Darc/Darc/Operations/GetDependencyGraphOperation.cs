@@ -117,8 +117,8 @@ internal class GetDependencyGraphOperation : Operation
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
                     rootDependencies,
-                    _options.RepoUri ?? await _gitClient.GetRootDir(),
-                    _options.Version ?? await _gitClient.GetGitCommit(),
+                    _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
+                    _options.Version ?? await _gitClient.GetGitCommitAsync(),
                     graphBuildOptions,
                     Logger);
             }
@@ -152,8 +152,8 @@ internal class GetDependencyGraphOperation : Operation
                     rootDependencies,
                     graphBuildOptions,
                     Logger,
-                    await _gitClient.GetRootDir(),
-                    await _gitClient.GetGitCommit(),
+                    await _gitClient.GetRootDirAsync(),
+                    await _gitClient.GetGitCommitAsync(),
                     _options.ReposFolder,
                     _options.RemotesMap);
             }

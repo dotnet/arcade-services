@@ -68,7 +68,7 @@ public class LocalGitClient : ILocalGitRepo
     /// <param name="commitMessage">Unused</param>
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
-        string repoDir = await GetRootDir();
+        string repoDir = await GetRootDirAsync();
         try
         {
             using (var localRepo = new Repository(repoDir))
@@ -104,7 +104,7 @@ public class LocalGitClient : ILocalGitRepo
                                 default:
                                     throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
                             }
-                            finalContent = await NormalizeLineEndings(repoPath, fullPath, finalContent);
+                            finalContent = await NormalizeLineEndingsAsync(repoPath, fullPath, finalContent);
                             await streamWriter.WriteAsync(finalContent);
 
                             LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
@@ -138,7 +138,7 @@ public class LocalGitClient : ILocalGitRepo
     ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
     ///       OS setting, and replace if needed.
     /// </remarks>
-    private async Task<string> NormalizeLineEndings(string repoPath, string filePath, string content)
+    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
     {
         const string crlf = "\r\n";
         const string lf = "\n";
@@ -252,7 +252,7 @@ public class LocalGitClient : ILocalGitRepo
         }
     }
 
-    public async Task Commit(
+    public async Task CommitAsync(
         string repoPath,
         string message,
         bool allowEmpty,
@@ -275,13 +275,13 @@ public class LocalGitClient : ILocalGitRepo
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
-    public async Task Stage(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
+    public async Task StageAsync(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
     }
 
-    public async Task<string> GetRootDir(string? repoPath = null, CancellationToken cancellationToken = default)
+    public async Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken);
         result.ThrowIfFailed("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
@@ -291,7 +291,7 @@ public class LocalGitClient : ILocalGitRepo
     /// <summary>
     ///     Get the current git commit sha.
     /// </summary>
-    public async Task<string> GetGitCommit(string? repoPath = null, CancellationToken cancellationToken = default)
+    public async Task<string> GetGitCommitAsync(string? repoPath = null, CancellationToken cancellationToken = default)
     {
         repoPath ??= Environment.CurrentDirectory;
 
