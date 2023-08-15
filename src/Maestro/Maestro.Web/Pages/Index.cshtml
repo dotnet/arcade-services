@@ -91,7 +91,7 @@
             @:{ name: "@theme.name", file: "@theme.file" },
             }
           ],
-          aiKey: '@Html.Raw(Model.InstrumentationKey)',
+          aiConnectionString: '@Html.Raw(Model.ConnectionString)',
           isApiRedirecting: @(DoApiRedirect ? "true" : "false"),
         };
     </script>
