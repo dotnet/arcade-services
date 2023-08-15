@@ -1388,7 +1388,7 @@ public sealed class Remote : IRemote
     public void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
         CheckForValidGitClient();
-        _gitClient.Clone(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
+        _gitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
     }
 
     /// <summary>

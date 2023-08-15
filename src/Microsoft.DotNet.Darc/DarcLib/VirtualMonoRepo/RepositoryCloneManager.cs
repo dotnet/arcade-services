@@ -81,7 +81,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
-        _localGitRepo.Checkout(path, checkoutRef);
+        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
 
         return path;
     }
@@ -94,7 +94,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
-        _localGitRepo.Checkout(path, checkoutRef);
+        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
         return path;
     }
 
@@ -114,8 +114,8 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
-            var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
-            repoCloner.Clone(remoteUri, clonePath, null);
+            var repoCloner = _remoteFactory.GetCloner(remoteUri);
+            await repoCloner.CloneAsync(remoteUri, clonePath, null);
         }
         else
         {

@@ -10,25 +10,42 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IGitRepoClonerFactory
 {
-    IGitRepoCloner GetCloner(string repoUrl, ILogger logger);
+    /// <summary>
+    /// Create a cloner for the given repo URL.
+    /// </summary>
+    /// <param name="repoUri">URI of the repo</param>
+    /// <param name="libgit2sharpCloner"></param>
+    /// <returns></returns>
+    IGitRepoCloner GetCloner(string repoUri, bool libgit2sharpCloner = false);
 }
 
 public class GitRepoClonerFactory : IGitRepoClonerFactory
 {
     private readonly VmrRemoteConfiguration _vmrRemoteConfig;
+    private readonly IProcessManager _processManager;
+    private readonly ILogger _logger;
 
-    public GitRepoClonerFactory(VmrRemoteConfiguration vmrRemoteConfig)
+    public GitRepoClonerFactory(VmrRemoteConfiguration vmrRemoteConfig, IProcessManager processManager, ILogger logger)
     {
         _vmrRemoteConfig = vmrRemoteConfig;
+        _processManager = processManager;
+        _logger = logger;
     }
 
-    public IGitRepoCloner GetCloner(string repoUri, ILogger logger) => GitRepoTypeParser.ParseFromUri(repoUri) switch
+    public IGitRepoCloner GetCloner(string repoUri, bool libgit2sharpCloner = false)
     {
-        GitRepoType.GitHub => new GitRepoCloner(_vmrRemoteConfig.GitHubToken, logger),
-        GitRepoType.AzureDevOps => new GitRepoCloner(_vmrRemoteConfig.AzureDevOpsToken, logger),
-        GitRepoType.Local => new GitRepoCloner(string.Empty, logger),
-        _ => throw new NotImplementedException($"Unsupported repository remote {repoUri}"),
-    };
+        var repoType = GitRepoTypeParser.ParseFromUri(repoUri);
+
+        string? token = repoType switch
+        {
+            GitRepoType.GitHub => _vmrRemoteConfig.GitHubToken,
+            GitRepoType.AzureDevOps => _vmrRemoteConfig.AzureDevOpsToken,
+            GitRepoType.Local => null,
+            _ => throw new NotImplementedException($"Unsupported repository remote {repoUri}"),
+        };
+
+        return libgit2sharpCloner
+            ? new GitRepoCloner(token, _logger)
+            : new GitNativeRepoCloner(_processManager, _logger, token);
+    }
 }
-
-

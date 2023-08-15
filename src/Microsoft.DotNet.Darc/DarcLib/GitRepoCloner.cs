@@ -7,6 +7,7 @@ using System.Linq;
 using System;
 using Microsoft.Extensions.Logging;
 using LibGit2Sharp;
+using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -30,8 +31,8 @@ public class GitRepoCloner : IGitRepoCloner
     /// <param name="targetDirectory">Target directory to clone to</param>
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public void Clone(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
-        => Clone(
+    public Task CloneAsync(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
+        => CloneAsync(
             repoUri,
             commit,
             targetDirectory,
@@ -44,10 +45,10 @@ public class GitRepoCloner : IGitRepoCloner
     /// <param name="repoUri">Repository uri to clone</param>
     /// <param name="targetDirectory">Target directory to clone to</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public void Clone(string repoUri, string targetDirectory, string? gitDirectory)
-        => Clone(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
+    public Task CloneAsync(string repoUri, string targetDirectory, string? gitDirectory)
+        => CloneAsync(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
 
-    private void Clone(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory)
+    private Task CloneAsync(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory)
     {
         string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
         CloneOptions cloneOptions = new()
@@ -75,7 +76,7 @@ public class GitRepoCloner : IGitRepoCloner
 
             if (checkoutType == CheckoutType.NoCheckout)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             CheckoutOptions checkoutOptions = new()
@@ -110,6 +111,8 @@ public class GitRepoCloner : IGitRepoCloner
                 using var localRepo = new Repository(targetDirectory);
                 CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
             }
+
+            return Task.CompletedTask;
         }
         catch (Exception exc)
         {
@@ -192,12 +195,5 @@ public class GitRepoCloner : IGitRepoCloner
                 log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
             }
         }
-    }
-
-    private enum CheckoutType
-    {
-        CheckoutWithoutSubmodules,
-        CheckoutWithSubmodules,
-        NoCheckout,
     }
 }

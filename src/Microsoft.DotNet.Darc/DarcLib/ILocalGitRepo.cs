@@ -28,6 +28,15 @@ public interface ILocalGitRepo : IGitRepo
     void Checkout(string repoDir, string refToCheckout, bool force = false);
 
     /// <summary>
+    ///    Checkout the repo to the specified state but do not use LibGit2Sharp.
+    /// </summary>
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
+    /// <param name="createBranch">Create a new branch</param>
+    /// <param name="overwriteExistingBranch">Overwrite an existing branch</param>
+    Task CheckoutNativeAsync(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false);
+
+    /// <summary>
     ///     Commits files by calling git commit (not through Libgit2sharp)
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
@@ -66,7 +75,7 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="commit">Which commit the info is retrieved for</param>
-    List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit);
+    Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoDir, string commit);
 
     /// <summary>
     ///     Returns a list of modified staged files.
@@ -74,6 +83,16 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoDir">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
     IEnumerable<string> GetStagedFiles(string repoDir);
+
+    /// <summary>
+    /// Retrieves a file's content from git index (works with bare repositories).
+    /// </summary>
+    /// <param name="repoPath">Absolute or relative path to the repo</param>
+    /// <param name="relativeFilePath">Relative path to the file inside of the repo</param>
+    /// <param name="revision">Revision to get the file from</param>
+    /// <param name="outputPath">Optional path to write the contents to</param>
+    /// <returns>File contents</returns>
+    Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null);
 
     /// <summary>
     /// Pushes a branch to a remote

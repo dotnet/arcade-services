@@ -13,4 +13,6 @@ public class Constants
 
     public const string GitHubUrlPrefix = "https://github.com/";
     public const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
+
+    public static readonly LibGit2Sharp.Identity DotnetBotIdentity = new(DarcBotName, DarcBotEmail);
 }

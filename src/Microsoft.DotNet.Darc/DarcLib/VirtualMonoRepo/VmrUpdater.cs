@@ -72,6 +72,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly ILocalGitRepo _localGitClient;
+    private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -82,6 +84,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
+        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
@@ -97,6 +100,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _fileSystem = fileSystem;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
+        _localGitClient = localGitClient;
+        _workBranchFactory = workBranchFactory;
     }
 
     public async Task UpdateRepository(
@@ -294,7 +299,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                DotnetBotCommitSignature,
+                Constants.DotnetBotIdentity,
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,
@@ -322,7 +327,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                commitToCopy.Author,
+                new LibGit2Sharp.Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,
@@ -370,9 +375,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
-        var workBranch = CreateWorkBranch("sync" +
+
+        var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +
-            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}");
+            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, workBranchName);
 
         // Collection of all affected VMR patches we will need to restore after the sync
         var vmrPatchesToReapply = new List<VmrIngestionPatch>();
@@ -479,7 +486,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            Commit("[VMR patches] Re-apply VMR patches", DotnetBotCommitSignature);
+            await Commit("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -492,7 +499,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             finalRootSha,
             summaryMessage.ToString());
         
-        workBranch.MergeBack(commitMessage);
+        await workBranch.MergeBackAsync(commitMessage);
 
         _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
             rootUpdate.Mapping.Name,
@@ -570,8 +577,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _logger.LogInformation("Found {count} files affected by VMR patches. Restoring original files...",
             affectedFiles.Count);
 
-        using var repository = new Repository(_vmrInfo.VmrPath);
-
         // We will group files by where they come from (remote URI + SHA) so that we do as few clones as possible
         var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RepoPath, x.VmrPath));
         foreach (var group in groups)
@@ -596,16 +601,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     // Copy old revision to VMR
                     _logger.LogDebug("Restoring file `{destination}` from original at `{originalFile}`..", destination, originalFile);
                     _fileSystem.CopyFile(originalFile, destination, overwrite: true);
-
-                    Commands.Stage(repository, pathInVmr);
+                    await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { pathInVmr }, cancellationToken);
                 }
                 else if (_fileSystem.FileExists(destination))
                 {
                     // File is being added by the patch - we need to remove it
                     _logger.LogDebug("Removing file `{destination}` which is added by a patch..", destination);
                     _fileSystem.DeleteFile(destination);
-
-                    Commands.Stage(repository, pathInVmr);
+                    await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { pathInVmr }, cancellationToken);
                 }
                 // else file is being added together with a patch at the same time
             }
@@ -700,8 +703,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return;
         }
 
-        using var vmrRepository = new Repository(_vmrInfo.VmrPath);
-
         foreach (var repo in deletedRepos)
         {
             _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
@@ -721,9 +722,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
         }
 
-        Commands.Stage(vmrRepository, "*");
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        Commit(commitMessage, DotnetBotCommitSignature);
+        await Commit(commitMessage, Constants.DotnetBotIdentity);
     }
 
     private void DeleteRepository(string repo)

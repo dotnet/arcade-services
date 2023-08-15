@@ -66,7 +66,7 @@ public abstract class VmrManagerBase
         VmrDependencyUpdate update,
         LocalPath clonePath,
         string fromRevision,
-        Signature author,
+        LibGit2Sharp.Identity author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
@@ -100,13 +100,19 @@ public abstract class VmrManagerBase
         {
             await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
         }
-        
-        Commands.Stage(new Repository(_vmrInfo.VmrPath), new string[]
+
+        var filesToAdd = new List<string>
         {
-            VmrInfo.ReadmeFileName,
             VmrInfo.GitInfoSourcesDir,
             _vmrInfo.GetSourceManifestPath()
-        });
+        };
+
+        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
+        {
+            filesToAdd.Add(VmrInfo.ReadmeFileName);
+        }
+
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -122,7 +128,7 @@ public abstract class VmrManagerBase
         }
 
         // Commit without adding files as they were added to index directly
-        Commit(commitMessage, author);
+        await Commit(commitMessage, author);
 
         return vmrPatchesToRestore;
     }
@@ -156,16 +162,15 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected void Commit(string commitMessage, Signature author)
+    protected async Task Commit(string commitMessage, LibGit2Sharp.Identity author)
     {
         _logger.LogInformation("Committing..");
 
         var watch = Stopwatch.StartNew();
-        using var repository = new Repository(_vmrInfo.VmrPath);
-        var options = new CommitOptions { AllowEmptyCommit = true };
-        var commit = repository.Commit(commitMessage, author, DotnetBotCommitSignature, options);
 
-        _logger.LogInformation("Created {sha} in {duration} seconds", DarcLib.Commit.GetShortSha(commit.Id.Sha), (int) watch.Elapsed.TotalSeconds);
+        await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, true, author);
+
+        _logger.LogInformation("Committed in {duration} seconds", (int) watch.Elapsed.TotalSeconds);
     }
 
     /// <summary>
@@ -343,80 +348,5 @@ public abstract class VmrManagerBase
             : repository.Lookup<LibGit2Sharp.Commit>(gitRef);
 
         return commit?.Id.Sha ?? throw new InvalidOperationException($"Failed to find commit {gitRef} in {repository.Info.Path}");
-    }
-
-    protected static Signature DotnetBotCommitSignature => new(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.Now);
-
-    /// <summary>
-    /// Helper method that creates a new git branch that we can make changes to.
-    /// After we're done, the branch can be merged into the original branch.
-    /// </summary>
-    protected IWorkBranch CreateWorkBranch(string branchName) => WorkBranch.CreateWorkBranch(_vmrInfo.VmrPath, branchName, _logger);
-
-    protected interface IWorkBranch
-    {
-        void MergeBack(string commitMessage);
-        string OriginalBranch { get; }
-    }
-    
-    /// <summary>
-    /// Helper class that creates a new git branch when initialized and can merge this branch back into the original branch.
-    /// </summary>
-    private class WorkBranch : IWorkBranch
-    {
-        private readonly string _repoPath;
-        private readonly string _currentBranch;
-        private readonly string _workBranch;
-        private readonly ILogger _logger;
-
-        public string OriginalBranch => _currentBranch;
-
-        private WorkBranch(string repoPath, string currentBranch, string workBranch, ILogger logger)
-        {
-            _repoPath = repoPath;
-            _currentBranch = currentBranch;
-            _workBranch = workBranch;
-            _logger = logger;
-        }
-
-        public static WorkBranch CreateWorkBranch(string repoPath, string branchName, ILogger logger)
-        {
-            string originalBranch;
-
-            using (var repo = new Repository(repoPath))
-            {
-                originalBranch = repo.Head.FriendlyName;
-
-                if (originalBranch == branchName)
-                {
-                    var message = $"You are already on branch {branchName}. " +
-                                    "Previous sync probably failed and left the branch unmerged. " +
-                                    "To complete the sync checkout the original branch and try again.";
-
-                    throw new Exception(message);
-                }
-
-                logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
-                
-                Branch branch = repo.Branches.Add(branchName, HEAD, allowOverwrite: true);
-                Commands.Checkout(repo, branch);
-            }
-
-            return new WorkBranch(repoPath, originalBranch, branchName, logger);
-        }
-
-        public void MergeBack(string commitMessage)
-        {
-            using var repo = new Repository(_repoPath);
-            _logger.LogInformation("Merging {branchName} into {mainBranch}", _workBranch, _currentBranch);
-            Commands.Checkout(repo, _currentBranch);
-            repo.Merge(repo.Branches[_workBranch], DotnetBotCommitSignature, new MergeOptions
-            {
-                FastForwardStrategy = FastForwardStrategy.NoFastForward,
-                CommitOnSuccess = false,
-            });
-
-            repo.Commit(commitMessage, DotnetBotCommitSignature, DotnetBotCommitSignature);
-        }
     }
 }
