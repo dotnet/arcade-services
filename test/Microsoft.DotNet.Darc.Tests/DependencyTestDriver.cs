@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using NuGet.Versioning;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
@@ -49,7 +50,7 @@ internal class DependencyTestDriver
     ///     Set up the test, copying inputs to the temp repo
     ///     and creating a git file manager for that repo
     /// </summary>
-    public void Setup()
+    public async Task Setup()
     {
         // Create the temp repo and output dirs
         TemporaryRepositoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -66,9 +67,16 @@ internal class DependencyTestDriver
         }
 
         // Set up a git file manager
-        _gitClient = new LocalGitClient("git", NullLogger.Instance);
+        var processManager = new ProcessManager(NullLogger.Instance, "git");
+        _gitClient = new LocalGitClient(processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
+
+        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
+        await _gitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
+        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", false);
     }
 
     public async Task AddDependencyAsync(DependencyDetail dependency)
@@ -140,7 +148,7 @@ internal class DependencyTestDriver
         DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
         try
         {
-            dependencyTestDriver.Setup();
+            await dependencyTestDriver.Setup();
             await testFunc(dependencyTestDriver);
             if (compareOutput)
             {
@@ -173,7 +181,7 @@ internal class DependencyTestDriver
 
         try
         {
-            dependencyTestDriver.Setup();
+            await dependencyTestDriver.Setup();
             DependencyGraph dependencyGraph = await testFunc(dependencyTestDriver);
 
             // Load in the expected graph and validate against the dependencyGraph
@@ -307,6 +315,9 @@ internal class DependencyTestDriver
         catch (DirectoryNotFoundException)
         {
             // Good, it's already gone
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
