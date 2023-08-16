@@ -98,7 +98,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
 
         var uri = new UriBuilder(repoUri)
         {
-            UserName = "dn-bot",
+            UserName = GitAuthUser,
             Password = _token
         };
         return uri.ToString();
