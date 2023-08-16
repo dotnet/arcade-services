@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -87,9 +88,26 @@ public abstract class VmrScanner : IVmrScanner
     /// </summary>
     protected async Task<IEnumerable<string>> GetExclusionFilters(string? repoName, string baselineFilePath)
     {
+        bool IsApplicableRule(string line)
+        {
+            if (line.StartsWith('*'))
+            {
+                return true;
+            }
+
+            // Rule for non-src location
+            if (repoName is null)
+            {
+                return !line.StartsWith("src/");
+            }
+
+            return line.StartsWith($"src/{repoName}");
+        }
+
         var text = await _fileSystem.ReadAllTextAsync(baselineFilePath);
-        return text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(line => (repoName is null ? false : line.StartsWith($"src/{repoName}")) || line.StartsWith('*'))
+        return text
+            .Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(IsApplicableRule)
             .Select(line =>
             {
                 // Ignore comments
