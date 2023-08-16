@@ -22,6 +22,9 @@ variables:
   value: ''
 - name: _ProductionArgs
   value: ''
+  # CG is run as a part of the CI pipeline, and doesn't need to be run here
+- name: skipComponentGovernanceDetection
+  value: true
 
 trigger: none
 
