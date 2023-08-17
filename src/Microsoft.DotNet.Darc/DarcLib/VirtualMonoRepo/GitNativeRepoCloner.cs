@@ -30,7 +30,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
     }
 
     public Task CloneAsync(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
-        => Clone(
+        => CloneAsync(
             repoUri,
             commit,
             targetDirectory,
@@ -38,9 +38,9 @@ public class GitNativeRepoCloner : IGitRepoCloner
             gitDirectory);
 
     public Task CloneAsync(string repoUri, string targetDirectory, string? gitDirectory)
-        => Clone(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
+        => CloneAsync(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
 
-    private async Task Clone(
+    private async Task CloneAsync(
         string repoUri,
         string? commit,
         string targetDirectory,

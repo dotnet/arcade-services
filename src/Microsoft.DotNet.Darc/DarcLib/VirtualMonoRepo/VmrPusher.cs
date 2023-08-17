@@ -154,7 +154,7 @@ public class VmrPusher : IVmrPusher
 
         using var response = await httpRequestManager.ExecuteAsync(retryCount: 3);
 
-        var content = response.Content.ReadAsStringAsync(cancellationToken).Result;
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
         var settings = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
