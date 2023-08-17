@@ -1385,7 +1385,7 @@ public sealed class Remote : IRemote
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory</param>
     /// <returns></returns>
-    public async Task Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
+    public async Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
         CheckForValidGitClient();
         await _gitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
