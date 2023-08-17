@@ -272,7 +272,7 @@ internal class CloneOperation : Operation
         {
             log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
             IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-            repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
+            await repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
         }
         // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
         else
@@ -313,7 +313,7 @@ internal class CloneOperation : Operation
         {
             log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
             IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-            repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
+            await repoRemote.Clone(repoUrl, null, masterGitRepoPath, checkoutSubmodules: true, masterRepoGitDirPath);
         }
         // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
         else

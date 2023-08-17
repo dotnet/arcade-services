@@ -395,8 +395,7 @@ public interface IRemote
     /// <param name="targetDirectory">Directory to clone the repo to</param>
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirParent">Location for the .git directory, or null for default</param>
-    /// <returns></returns>
-    void Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory);
+    Task Clone(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory);
 
     /// <summary>
     ///   Gets dependency flow graph for given channel.
