@@ -14,9 +14,14 @@ public interface IGitRepoClonerFactory
     /// Create a cloner for the given repo URL.
     /// </summary>
     /// <param name="repoUri">URI of the repo</param>
-    /// <param name="libgit2sharpCloner"></param>
-    /// <returns></returns>
-    IGitRepoCloner GetCloner(string repoUri, bool libgit2sharpCloner = false);
+    /// <param name="type">Cloner type</param>
+    IGitRepoCloner GetCloner(string repoUri, GitClonerType type);
+}
+
+public enum GitClonerType
+{
+    Native,
+    LibGit2Sharp,
 }
 
 public class GitRepoClonerFactory : IGitRepoClonerFactory
@@ -32,7 +37,7 @@ public class GitRepoClonerFactory : IGitRepoClonerFactory
         _logger = logger;
     }
 
-    public IGitRepoCloner GetCloner(string repoUri, bool libgit2sharpCloner = false)
+    public IGitRepoCloner GetCloner(string repoUri, GitClonerType type)
     {
         var repoType = GitRepoTypeParser.ParseFromUri(repoUri);
 
@@ -44,8 +49,11 @@ public class GitRepoClonerFactory : IGitRepoClonerFactory
             _ => throw new NotImplementedException($"Unsupported repository remote {repoUri}"),
         };
 
-        return libgit2sharpCloner
-            ? new GitRepoCloner(token, _logger)
-            : new GitNativeRepoCloner(_processManager, _logger, token);
+        return type switch
+        {
+            GitClonerType.LibGit2Sharp => new GitRepoCloner(token, _logger),
+            GitClonerType.Native => new GitNativeRepoCloner(_processManager, _logger, token),
+            _ => throw new ArgumentException($"Unknown cloner type {type}"),
+        };
     }
 }

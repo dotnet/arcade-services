@@ -114,7 +114,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
-            var repoCloner = _remoteFactory.GetCloner(remoteUri);
+            var repoCloner = _remoteFactory.GetCloner(remoteUri, GitClonerType.Native);
             await repoCloner.CloneAsync(remoteUri, clonePath, null);
         }
         else
