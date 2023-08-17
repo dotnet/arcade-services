@@ -78,8 +78,13 @@ public class ProcessManager : IProcessManager
             processStartInfo.ArgumentList.Add(arg);
         }
 
-        var logMessage = $"Executing command: '{executable} {string.Join(' ', processStartInfo.ArgumentList)}'" +
-            $"{(workingDir is null ? string.Empty : " in " + workingDir)}";
+        var logMessage = $"Executing command: '{executable} "
+            + string.Join(' ', processStartInfo.ArgumentList) + '\'';
+
+        if (workingDir != null)
+        {
+            logMessage = $"{logMessage} in {workingDir}";
+        }
 
         if (redactedStrings != null)
         {
