@@ -172,7 +172,7 @@ public class RemoteRepoBase : GitRepoCloner
         File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
         await ExecuteGitCommand(new[] { $"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch }, workingDirectory, secretToMask: pat);
-        await ExecuteGitCommand(new[] { $"checkout {branch}" }, workingDirectory);
+        await ExecuteGitCommand(new[] { $"checkout", branch }, workingDirectory);
 
         return workingDirectory;
     }
