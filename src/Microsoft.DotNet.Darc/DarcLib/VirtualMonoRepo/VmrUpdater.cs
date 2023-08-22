@@ -295,7 +295,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update.TargetRevision,
                 commitMessages.ToString());
 
-            return await UpdateRepoToRevision(
+            return await UpdateRepoToRevisionAsync(
                 update,
                 clonePath,
                 currentSha,
@@ -323,7 +323,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 commitToCopy.Id.Sha,
                 commitToCopy.Message);
 
-            var patches = await UpdateRepoToRevision(
+            var patches = await UpdateRepoToRevisionAsync(
                 update,
                 clonePath,
                 currentSha,
@@ -361,7 +361,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependencies(rootUpdate, additionalRemotes, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping))
@@ -474,7 +474,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                await ReapplyVmrPatches(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
             }
             catch (Exception)
             {
@@ -486,7 +486,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            await Commit("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
+            await CommitAsync("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -514,7 +514,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// </summary>
     /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
     /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
-    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFiles(
+    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping updatedMapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
@@ -724,7 +724,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        await Commit(commitMessage, Constants.DotnetBotIdentity);
+        await CommitAsync(commitMessage, Constants.DotnetBotIdentity);
     }
 
     private void DeleteRepository(string repo)

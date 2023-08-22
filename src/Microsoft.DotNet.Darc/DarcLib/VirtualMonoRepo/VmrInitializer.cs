@@ -111,7 +111,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-            ? await GetAllDependencies(rootUpdate, additionalRemotes, cancellationToken)
+            ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
             : new[] { rootUpdate };
 
             foreach (var update in updates)
@@ -182,7 +182,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
 
-        await UpdateRepoToRevision(
+        await UpdateRepoToRevisionAsync(
             update,
             clonePath,
             Constants.EmptyGitObject,
@@ -196,7 +196,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
 
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFiles(
+    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping mapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
         CancellationToken cancellationToken)
