@@ -55,10 +55,10 @@ public class GitNativeRepoCloner : IGitRepoCloner
 
         if (!string.IsNullOrEmpty(_token))
         {
-            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($":{_token}"));
+            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GitAuthUser}:{_token}"));
             args.Add("-c");
             args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
-            redactedValues = new string[] { GitAuthUser, encodedToken };
+            redactedValues = new string[] { encodedToken };
         }
 
         if (gitDirectory != null)
