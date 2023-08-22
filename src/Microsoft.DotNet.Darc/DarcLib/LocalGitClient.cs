@@ -252,17 +252,17 @@ public class LocalGitClient : ILocalGitRepo
         }
     }
 
-    public async Task CheckoutNativeAsync(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false)
+    public async Task CheckoutNativeAsync(string repoDir, string refToCheckout)
     {
-        IEnumerable<string> args = new[] { "checkout" };
+        var result = await _processManager.ExecuteGit(repoDir, new[] { "checkout", refToCheckout });
+        result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoDir}");
+    }
 
-        if (createBranch)
-        {
-            args = overwriteExistingBranch ? args.Append("-B") : args.Append("-b");
-        }
-
-        var result = await _processManager.ExecuteGit(repoDir, args.Append(refToCheckout));
-        result.ThrowIfFailed($"Failed to {(createBranch ? "create" : "check out")} {refToCheckout} in {repoDir}");
+    public async Task CreateBranchAsync(string repoDir, string branchName, bool overwriteExistingBranch = false)
+    {
+        var args = new[] { "checkout", overwriteExistingBranch ? "-B" : "-b", branchName };
+        var result = await _processManager.ExecuteGit(repoDir, args);
+        result.ThrowIfFailed($"Failed to create {branchName} in {repoDir}");
     }
 
     public async Task CommitAsync(

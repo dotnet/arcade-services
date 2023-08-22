@@ -45,7 +45,7 @@ public class WorkBranchFactory : IWorkBranchFactory
 
         _logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
 
-        await _localGitClient.CheckoutNativeAsync(repoDir, branchName, createBranch: true, overwriteExistingBranch: true);
+        await _localGitClient.CreateBranchAsync(repoDir, branchName, overwriteExistingBranch: true);
 
         return new WorkBranch(_localGitClient, _processManager, _logger, repoDir, originalBranch, branchName);
     }

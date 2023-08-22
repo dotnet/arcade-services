@@ -32,9 +32,15 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
-    /// <param name="createBranch">Create a new branch</param>
-    /// <param name="overwriteExistingBranch">Overwrite an existing branch</param>
-    Task CheckoutNativeAsync(string repoDir, string refToCheckout, bool createBranch = false, bool overwriteExistingBranch = false);
+    Task CheckoutNativeAsync(string repoDir, string refToCheckout);
+
+    /// <summary>
+    /// Creates a local branch.
+    /// </summary>
+    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="overwriteExistingBranch">Whether to overwrite an already existing branch</param>
+    Task CreateBranchAsync(string repoDir, string branchName, bool overwriteExistingBranch = false);
 
     /// <summary>
     ///     Commits files by calling git commit (not through Libgit2sharp)
