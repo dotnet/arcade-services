@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,15 @@ public class GitNativeRepoCloner : IGitRepoCloner
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         var args = new List<string>();
+        string[]? redactedValues = null;
+
+        if (!string.IsNullOrEmpty(_token))
+        {
+            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($":{_token}"));
+            args.Add("-c");
+            args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
+            redactedValues = new string[] { GitAuthUser, encodedToken };
+        }
 
         if (gitDirectory != null)
         {
@@ -69,15 +79,8 @@ public class GitNativeRepoCloner : IGitRepoCloner
             args.Add("--recurse-submodules");
         }
 
-        args.Add("--");
-        args.Add(AddToken(repoUri));
+        args.Add(repoUri);
         args.Add(targetDirectory);
-
-        string[]? redactedValues = null;
-        if (_token != null)
-        {
-            redactedValues = new string[] { GitAuthUser, _token };
-        }
 
         var result = await _processManager.Execute(_processManager.GitExecutable, args, redactedStrings: redactedValues);
         result.ThrowIfFailed($"Failed to clone {repoUri} to {targetDirectory}");
@@ -87,20 +90,5 @@ public class GitNativeRepoCloner : IGitRepoCloner
             result = await _processManager.ExecuteGit(targetDirectory, "checkout", commit);
             result.ThrowIfFailed($"Failed to check out {commit} in {targetDirectory}");
         }
-    }
-
-    private string AddToken(string repoUri)
-    {
-        if (string.IsNullOrEmpty(_token))
-        {
-            return repoUri;
-        }
-
-        var uri = new UriBuilder(repoUri)
-        {
-            UserName = GitAuthUser,
-            Password = _token
-        };
-        return uri.ToString();
     }
 }
