@@ -37,7 +37,7 @@ internal static class Program
             options = GetOptions();
         }
 
-        return Parser.Default.ParseArguments(args, GetOptions())
+        return Parser.Default.ParseArguments(args, options)
                 .MapResult(
                     (CommandLineOptions opts) => RunOperation(opts),
                     (errs => 1));

@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,12 +16,17 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class RemoteRepoBase : GitRepoCloner
 {
+    private readonly ILogger _logger;
+    private readonly ProcessManager _processManager;
+
     protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache, ILogger logger, string accessToken)
         : base(accessToken, logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
         Cache = cache;
+        _logger = logger;
+        _processManager = new ProcessManager(logger, GitExecutable);
     }
 
     /// <summary>
@@ -50,7 +56,6 @@ public class RemoteRepoBase : GitRepoCloner
     /// <param name="repoUri">The repository to push the files to.</param>
     /// <param name="branch">The branch to push the files to.</param>
     /// <param name="commitMessage">The commmit message.</param>
-    /// <returns></returns>
     protected async Task CommitFilesAsync(
         List<GitFile> filesToCommit,
         string repoUri,
@@ -63,13 +68,13 @@ public class RemoteRepoBase : GitRepoCloner
     {
         logger.LogInformation("Pushing files to {branch}", branch);
         string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
-        string remote = "origin";
+        const string remote = "origin";
         try
         {
             string clonedRepo = null;
 
             logger.LogInformation("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri);
-            clonedRepo = LocalHelpers.SparseAndShallowCheckout(GitExecutable, repoUri, branch, tempRepoFolder, logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
+            clonedRepo = await SparseAndShallowCheckoutAsync(repoUri, branch, tempRepoFolder, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
 
             foreach (GitFile file in filesToCommit)
             {
@@ -96,11 +101,11 @@ public class RemoteRepoBase : GitRepoCloner
                     File.Delete(filePath);
                 }
 
-                LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", logger, clonedRepo);
+                await _processManager.ExecuteGit(clonedRepo, new[] { "add", filePath });
             }
 
-            LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", logger, clonedRepo);
-            LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", logger, clonedRepo);
+            await _processManager.ExecuteGit(clonedRepo, new[] { "commit", "-m", commitMessage });
+            await _processManager.ExecuteGit(clonedRepo, new[] { "-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch });
         }
         catch (Exception exc)
         {
@@ -128,16 +133,69 @@ public class RemoteRepoBase : GitRepoCloner
         }
     }
 
-    private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
+    /// <summary>
+    /// Since LibGit2Sharp doesn't support neither sparse checkout not shallow clone
+    /// we implement the flow ourselves.
+    /// </summary>
+    /// <param name="repoUri">The repo to clone Uri</param>
+    /// <param name="branch">The branch to checkout</param>
+    /// <param name="workingDirectory">The working directory</param>
+    /// <param name="remote">The name of the remote</param>
+    /// <param name="user">User name</param>
+    /// <param name="email">User's email</param>
+    /// <param name="pat">User's personal access token</param>
+    /// <param name="repoFolderName">The name of the folder where the repo is located</param>
+    /// <returns>The full path of the cloned repo</returns>
+    private async Task<string> SparseAndShallowCheckoutAsync(
+        string repoUri,
+        string branch,
+        string workingDirectory,
+        string remote,
+        string user,
+        string email,
+        string pat,
+        string repoFolderName = "clonedRepo")
     {
-        switch (encoding)
-        {
-            case ContentEncoding.Base64:
-                return Convert.FromBase64String(content);
-            case ContentEncoding.Utf8:
-                return Encoding.UTF8.GetBytes(content);
-            default:
-                throw new NotImplementedException("Unexpected content encoding.");
-        }
+        Directory.CreateDirectory(workingDirectory);
+
+        await ExecuteGitCommand(new[] { "init", repoFolderName }, workingDirectory);
+
+        workingDirectory = Path.Combine(workingDirectory, repoFolderName);
+        repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
+
+        await ExecuteGitCommand(new[] { "remote", "add", remote, repoUri }, workingDirectory, secretToMask: pat);
+        await ExecuteGitCommand(new[] { "config", "core.sparsecheckout", "true" }, workingDirectory);
+        await ExecuteGitCommand(new[] { "config", "core.longpaths", "true" }, workingDirectory);
+        await ExecuteGitCommand(new[] { "config", "user.name", user }, workingDirectory);
+        await ExecuteGitCommand(new[] { "config", "user.email", email }, workingDirectory);
+
+        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+
+        await ExecuteGitCommand(new[] { $"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch }, workingDirectory, secretToMask: pat);
+        await ExecuteGitCommand(new[] { $"checkout", branch }, workingDirectory);
+
+        return workingDirectory;
     }
+
+    /// <summary>
+    ///     Execute a git command
+    /// </summary>
+    /// <param name="arguments">Arguments to git</param>
+    /// <param name="logger">Logger</param>
+    /// <param name="workingDirectory">Working directory</param>
+    /// <param name="secretToMask">Mask this secret when calling the logger.</param>
+    private async Task ExecuteGitCommand(string[] arguments, string workingDirectory, string secretToMask = null)
+    {
+        IEnumerable<string> maskedArguments = secretToMask == null ? arguments : arguments.Select(a => a.Replace(secretToMask, "***"));
+        _logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", string.Join(' ', maskedArguments), workingDirectory);
+        var result = await _processManager.ExecuteGit(workingDirectory, arguments);
+        result.ThrowIfFailed("Failed to execute git command");
+    }
+
+    private static byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding) => encoding switch
+    {
+        ContentEncoding.Base64 => Convert.FromBase64String(content),
+        ContentEncoding.Utf8 => Encoding.UTF8.GetBytes(content),
+        _ => throw new NotImplementedException("Unexpected content encoding."),
+    };
 }

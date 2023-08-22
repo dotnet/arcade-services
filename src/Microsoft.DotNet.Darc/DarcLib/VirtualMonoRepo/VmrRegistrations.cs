@@ -50,9 +50,9 @@ public static class VmrRegistrations
 
     private static void RegisterCommonServices(IServiceCollection services, string gitLocation)
     {
-        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
-        services.TryAddTransient<ILocalGitRepo>(sp => ActivatorUtilities.CreateInstance<LocalGitClient>(sp, gitLocation));
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
+        services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
+        services.TryAddTransient<ILocalGitRepo, LocalGitClient>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
