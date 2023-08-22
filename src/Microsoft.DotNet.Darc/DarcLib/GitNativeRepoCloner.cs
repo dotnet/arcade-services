@@ -8,7 +8,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib;
 
 /// <summary>
 /// Class that clones repos by calling out to the native git executable.

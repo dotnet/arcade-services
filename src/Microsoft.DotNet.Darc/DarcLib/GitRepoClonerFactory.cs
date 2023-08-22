@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using System;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib;
 
 public interface IGitRepoClonerFactory
 {
@@ -41,7 +42,7 @@ public class GitRepoClonerFactory : IGitRepoClonerFactory
     {
         var repoType = GitRepoTypeParser.ParseFromUri(repoUri);
 
-        string? token = repoType switch
+        var token = repoType switch
         {
             GitRepoType.GitHub => _vmrRemoteConfig.GitHubToken,
             GitRepoType.AzureDevOps => _vmrRemoteConfig.AzureDevOpsToken,
