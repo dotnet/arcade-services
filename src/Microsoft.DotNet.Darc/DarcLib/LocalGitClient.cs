@@ -284,19 +284,19 @@ public class LocalGitClient : ILocalGitRepo
             args = args.Append("--author").Append($"{identity.Name} <{identity.Email}>");
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
     public async Task StageAsync(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken);
+        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
     }
 
     public async Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken: cancellationToken);
         result.ThrowIfFailed("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
         return result.StandardOutput.Trim();
     }
@@ -308,7 +308,7 @@ public class LocalGitClient : ILocalGitRepo
     {
         repoPath ??= Environment.CurrentDirectory;
 
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken: cancellationToken);
         result.ThrowIfFailed("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
         return result.StandardOutput.Trim();
     }
@@ -618,5 +618,26 @@ public class LocalGitClient : ILocalGitRepo
         repo.Network.Push(remote, branch.CanonicalName, pushOptions);
 
         _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
+    }
+
+    public async Task<string> FetchAsync(string repoPath, string remoteUri, string? token = null, CancellationToken cancellationToken = default)
+    {
+        var args = new List<string>();
+        string[]? redactedValues = null;
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"));
+            args.Add("-c");
+            args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
+            redactedValues = new string[] { encodedToken };
+        }
+
+        args.Add("fetch");
+        args.Add(remoteUri);
+
+        var result = await _processManager.ExecuteGit(repoPath, args, redactedValues, cancellationToken);
+        result.ThrowIfFailed($"Failed to fetch from {remoteUri} in {repoPath}");
+        return result.StandardOutput.Trim();
     }
 }

@@ -997,13 +997,13 @@ public class VmrPatchHandlerTests
     private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<string[]?>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<string[]?>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
     private static IEnumerable<string> GetExpectedGitDiffArguments(

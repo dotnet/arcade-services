@@ -34,6 +34,7 @@ public interface IRepositoryCloneManager
 public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
+    private readonly VmrRemoteConfiguration _remoteConfig;
     private readonly ILocalGitRepo _localGitRepo;
     private readonly IGitRepoClonerFactory _remoteFactory;
     private readonly IProcessManager _processManager;
@@ -48,6 +49,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
+        VmrRemoteConfiguration remoteConfig,
         ILocalGitRepo localGitRepo,
         IGitRepoClonerFactory remoteFactory,
         IProcessManager processManager,
@@ -55,6 +57,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
+        _remoteConfig = remoteConfig;
         _localGitRepo = localGitRepo;
         _remoteFactory = remoteFactory;
         _processManager = processManager;
@@ -123,8 +126,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, skipFetch: true);
 
             // We need to perform a full fetch and not the one provided by localGitRepo as we want all commits
-            var result = await _processManager.ExecuteGit(clonePath, new[] { "fetch", remoteUri }, cancellationToken);
-            result.ThrowIfFailed($"Failed to fetch changes from {remoteUri} into {clonePath}");
+            await _localGitRepo.FetchAsync(clonePath, remoteUri, _remoteConfig.GetTokenForUri(remoteUri), cancellationToken);
         }
 
         _upToDateRepos.Add(remoteUri);

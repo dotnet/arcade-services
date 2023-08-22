@@ -17,8 +17,6 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class GitNativeRepoCloner : IGitRepoCloner
 {
-    private const string GitAuthUser = "dn-bot";
-
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
     private readonly string? _token;
@@ -55,7 +53,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
 
         if (!string.IsNullOrEmpty(_token))
         {
-            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GitAuthUser}:{_token}"));
+            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{_token}"));
             args.Add("-c");
             args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
             redactedValues = new string[] { encodedToken };

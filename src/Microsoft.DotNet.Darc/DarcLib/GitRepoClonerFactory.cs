@@ -40,15 +40,7 @@ public class GitRepoClonerFactory : IGitRepoClonerFactory
 
     public IGitRepoCloner GetCloner(string repoUri, GitClonerType type)
     {
-        var repoType = GitRepoTypeParser.ParseFromUri(repoUri);
-
-        var token = repoType switch
-        {
-            GitRepoType.GitHub => _vmrRemoteConfig.GitHubToken,
-            GitRepoType.AzureDevOps => _vmrRemoteConfig.AzureDevOpsToken,
-            GitRepoType.Local => null,
-            _ => throw new NotImplementedException($"Unsupported repository remote {repoUri}"),
-        };
+        var token = _vmrRemoteConfig.GetTokenForUri(repoUri);
 
         return type switch
         {

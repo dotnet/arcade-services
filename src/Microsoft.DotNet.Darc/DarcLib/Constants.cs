@@ -5,6 +5,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class Constants
 {
+    public const string GitHubBotUserName = "dn-bot";
     public const string DarcBotName = "dotnet-maestro[bot]";
     public const string DarcBotEmail = "dotnet-maestro[bot]@users.noreply.github.com";
 

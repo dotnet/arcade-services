@@ -114,4 +114,16 @@ public interface ILocalGitRepo : IGitRepo
         string remoteUrl,
         string? token,
         LibGit2Sharp.Identity? identity = null);
+
+    /// <summary>
+    /// Fetches from a given remote URI.
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <param name="remoteUri">Remote git repository</param>
+    /// <param name="token">Token to use (if any)</param>
+    Task<string> FetchAsync(
+        string repoPath,
+        string remoteUri,
+        string? token = null,
+        CancellationToken cancellationToken = default);
 }
