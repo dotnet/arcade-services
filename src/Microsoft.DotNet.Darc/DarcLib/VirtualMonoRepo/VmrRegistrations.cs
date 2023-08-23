@@ -28,7 +28,7 @@ public static class VmrRegistrations
     {
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
-        services.TryAddSingleton(new VmrRemoteConfiguration(gitHubToken, azureDevOpsToken));
+        services.TryAddSingleton(new RemoteConfiguration(gitHubToken, azureDevOpsToken));
         services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
@@ -39,7 +39,7 @@ public static class VmrRegistrations
         string gitLocation,
         string vmrPath,
         string tmpPath,
-        Func<IServiceProvider, VmrRemoteConfiguration> configure)
+        Func<IServiceProvider, RemoteConfiguration> configure)
     {
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton(configure);
@@ -65,7 +65,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
-        services.TryAddTransient<IGitRepoClonerFactory, GitRepoClonerFactory>();
+        services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
         services.TryAddTransient<VmrBinaryFileScanner>();
         services.AddHttpClient("GraphQL", httpClient =>

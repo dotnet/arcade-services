@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetDependenciesOperation : Operation
 {
-    private GetDependenciesCommandLineOptions _options;
+    private readonly GetDependenciesCommandLineOptions _options;
 
     public GetDependenciesOperation(GetDependenciesCommandLineOptions options)
         : base(options)
@@ -23,7 +23,7 @@ internal class GetDependenciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        Local local = new Local(Logger);
+        Local local = new Local(_options.GetRemoteConfiguration(), Logger);
 
         try
         {

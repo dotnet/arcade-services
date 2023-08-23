@@ -14,13 +14,13 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class GitRepoCloner : IGitRepoCloner
 {
+    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly ILogger _logger;
-    private readonly string? _personalAccessToken;
 
-    public GitRepoCloner(string? personalAccessToken, ILogger logger)
+    public GitRepoCloner(RemoteConfiguration remoteConfiguration, ILogger logger)
     {
+        _remoteConfiguration = remoteConfiguration;
         _logger = logger;
-        _personalAccessToken = personalAccessToken;
     }
 
     /// <summary>
@@ -50,7 +50,6 @@ public class GitRepoCloner : IGitRepoCloner
 
     private Task CloneAsync(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory)
     {
-        string dotnetMaestro = "dotnet-maestro"; // lgtm [cs/hardcoded-credentials] Value is correct for this service
         CloneOptions cloneOptions = new()
         {
             Checkout = false,
@@ -59,8 +58,8 @@ public class GitRepoCloner : IGitRepoCloner
                 {
                     // The PAT is actually the only thing that matters here, the username
                     // will be ignored.
-                    Username = dotnetMaestro,
-                    Password = _personalAccessToken
+                    Username = _remoteConfiguration.GitRemoteUser,
+                    Password = _remoteConfiguration.GetTokenForUri(repoUri),
                 },
         };
         

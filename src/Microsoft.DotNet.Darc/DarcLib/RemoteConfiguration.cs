@@ -2,18 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
-using Microsoft.DotNet.DarcLib.Helpers;
 using System;
+using Microsoft.DotNet.DarcLib.Helpers;
 
-namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+namespace Microsoft.DotNet.DarcLib;
 
-public class VmrRemoteConfiguration
+public class RemoteConfiguration
 {
-    public VmrRemoteConfiguration(string? gitHubToken, string? azureDevOpsToken)
+    public RemoteConfiguration(string? gitHubToken = null, string? azureDevOpsToken = null)
     {
         GitHubToken = gitHubToken;
         AzureDevOpsToken = azureDevOpsToken;
     }
+
+    public string GitRemoteUser => Constants.GitHubBotUserName;
 
     public string? GitHubToken { get; }
 

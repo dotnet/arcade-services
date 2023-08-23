@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -17,15 +18,15 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class GitNativeRepoCloner : IGitRepoCloner
 {
+    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
-    private readonly string? _token;
 
-    public GitNativeRepoCloner(IProcessManager processManager, ILogger logger, string? token)
+    public GitNativeRepoCloner(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
     {
+        _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
         _logger = logger;
-        _token = token;
     }
 
     public Task CloneAsync(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
@@ -50,13 +51,13 @@ public class GitNativeRepoCloner : IGitRepoCloner
 
         var args = new List<string>();
         string[]? redactedValues = null;
+        string? token = _remoteConfiguration.GetTokenForUri(repoUri);
 
-        if (!string.IsNullOrEmpty(_token))
+        if (!string.IsNullOrEmpty(token))
         {
-            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{_token}"));
             args.Add("-c");
-            args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
-            redactedValues = new string[] { encodedToken };
+            args.Add(GetAuthorizationHeaderArgument(token));
+            redactedValues = new string[] { args.Last() };
         }
 
         if (gitDirectory != null)
@@ -88,5 +89,11 @@ public class GitNativeRepoCloner : IGitRepoCloner
             result = await _processManager.ExecuteGit(targetDirectory, "checkout", commit);
             result.ThrowIfFailed($"Failed to check out {commit} in {targetDirectory}");
         }
+    }
+
+    public static string GetAuthorizationHeaderArgument(string token)
+    {
+        var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"));
+        return $"http.extraheader=Authorization: Basic {encodedToken}";
     }
 }

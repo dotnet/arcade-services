@@ -1,19 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class VerifyOperation : Operation
 {
-    VerifyCommandLineOptions _options;
+    private readonly VerifyCommandLineOptions _options;
+
     public VerifyOperation(VerifyCommandLineOptions options)
         : base(options)
     {
@@ -27,7 +26,7 @@ internal class VerifyOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        Local local = new Local(Logger);
+        var local = new Local(_options.GetRemoteConfiguration(), Logger);
 
         try
         {

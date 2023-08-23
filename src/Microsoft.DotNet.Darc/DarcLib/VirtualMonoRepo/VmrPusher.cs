@@ -12,14 +12,21 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Octokit;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPusher
 {
-    Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubApiPat, CancellationToken cancellationToken);
+    /// <summary>
+    /// Pushes the specified branch to the specified remote. If verifyCommits is true, checks that each commit is present in a public repo 
+    /// before pushing
+    /// </summary>
+    /// <param name="remoteUrl">URL to push to</param>
+    /// <param name="branch">Name of an already existing branch to push</param>
+    /// <param name="skipCommitVerification">Push without verifying that all commits are found in public repos</param>
+    /// <param name="gitHubNoScopePat">Token with no scopes for authenticating to GitHub GraphQL API.</param>
+    Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubNoScopePat, CancellationToken cancellationToken);
 }
 
 public class VmrPusher : IVmrPusher
@@ -29,7 +36,6 @@ public class VmrPusher : IVmrPusher
     private readonly ISourceManifest _sourceManifest;
     private readonly ILocalGitRepo _localGitRepo;
     private readonly HttpClient _httpClient;
-    private readonly VmrRemoteConfiguration _vmrRemoteConfiguration;
     private const string GraphQLUrl = "https://api.github.com/graphql";
 
     public VmrPusher( 
@@ -37,57 +43,34 @@ public class VmrPusher : IVmrPusher
         ILogger logger,
         ISourceManifest sourceManifest,
         IHttpClientFactory httpClientFactory,
-        ILocalGitRepo localGitRepo,
-        VmrRemoteConfiguration config)
+        ILocalGitRepo localGitRepo)
     {
         _vmrInfo = vmrInfo;
         _logger = logger;
         _sourceManifest = sourceManifest;
-        _vmrRemoteConfiguration = config;
         _localGitRepo = localGitRepo;
         _httpClient = httpClientFactory.CreateClient("GraphQL");
     }
 
-    /// <summary>
-    /// Pushes the specified branch to the specified remote. If verifyCommits is true, checks that each commit is present in a public repo 
-    /// before pushing
-    /// </summary>
-    /// <param name="remoteUrl">URL to push to</param>
-    /// <param name="branch">Name of an already existing branch to push</param>
-    /// <param name="skipCommitVerification">Push without verifying that all commits are found in public repos</param>
-    /// <param name="gitHubApiPat">Token with no scopes for authenticating to GitHub GraphQL API.</param>
-    public async Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubApiPat, CancellationToken cancellationToken)
+    public async Task Push(string remoteUrl, string branch, bool skipCommitVerification, string? gitHubNoScopePat, CancellationToken cancellationToken)
     {
         if (!skipCommitVerification)
         {
-            if(gitHubApiPat == null)
+            if(gitHubNoScopePat == null)
             {
                 throw new Exception("Please specify a GitHub token with basic scope to be used for authenticating to GitHub GraphQL API.");
             }
 
-            if(!await CheckCommitAvailability(gitHubApiPat, cancellationToken))
+            if(!await CheckCommitAvailability(gitHubNoScopePat, cancellationToken))
             {
                 throw new Exception("Not all pushed commits are publicly available");
             }
-        }
-
-        var repoType = GitRepoTypeParser.ParseFromUri(remoteUrl);
-
-        string? pat = string.Empty;
-        if (repoType == GitRepoType.GitHub)
-        {
-            pat = _vmrRemoteConfiguration.GitHubToken;
-        }
-        if (repoType == GitRepoType.AzureDevOps)
-        {
-            pat = _vmrRemoteConfiguration.AzureDevOpsToken;
         }
 
         _localGitRepo.Push(
             _vmrInfo.VmrPath,
             branch,
             remoteUrl,
-            pat,
             new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail));
     }
 

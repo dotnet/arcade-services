@@ -112,7 +112,6 @@ public interface ILocalGitRepo : IGitRepo
         string repoPath,
         string branchName,
         string remoteUrl,
-        string? token,
         LibGit2Sharp.Identity? identity = null);
 
     /// <summary>
@@ -124,6 +123,5 @@ public interface ILocalGitRepo : IGitRepo
     Task<string> FetchAsync(
         string repoPath,
         string remoteUri,
-        string? token = null,
         CancellationToken cancellationToken = default);
 }

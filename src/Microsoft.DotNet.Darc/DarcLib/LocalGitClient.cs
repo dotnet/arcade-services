@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class LocalGitClient : ILocalGitRepo
 {
+    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
@@ -26,8 +27,9 @@ public class LocalGitClient : ILocalGitRepo
     ///     Construct a new local git client
     /// </summary>
     /// <param name="path">Current path</param>
-    public LocalGitClient(IProcessManager processManager, ILogger logger)
+    public LocalGitClient(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
     {
+        _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
         _logger = logger;
     }
@@ -587,7 +589,6 @@ public class LocalGitClient : ILocalGitRepo
         string repoPath,
         string branchName,
         string remoteUrl,
-        string? token,
         LibGit2Sharp.Identity? identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
@@ -610,7 +611,7 @@ public class LocalGitClient : ILocalGitRepo
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = token,
+                    Username = _remoteConfiguration.GetTokenForUri(remoteUrl),
                     Password = string.Empty
                 }
         };
@@ -620,17 +621,17 @@ public class LocalGitClient : ILocalGitRepo
         _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
     }
 
-    public async Task<string> FetchAsync(string repoPath, string remoteUri, string? token = null, CancellationToken cancellationToken = default)
+    public async Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default)
     {
         var args = new List<string>();
         string[]? redactedValues = null;
+        string? token = _remoteConfiguration.GetTokenForUri(remoteUri);
 
         if (!string.IsNullOrEmpty(token))
         {
-            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"));
             args.Add("-c");
-            args.Add($"http.extraheader=Authorization: Basic {encodedToken}");
-            redactedValues = new string[] { encodedToken };
+            args.Add(GitNativeRepoCloner.GetAuthorizationHeaderArgument(token));
+            redactedValues = new string[] { args.Last() };
         }
 
         args.Add("fetch");

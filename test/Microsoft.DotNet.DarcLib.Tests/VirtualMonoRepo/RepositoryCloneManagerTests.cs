@@ -19,14 +19,13 @@ public class RepositoryCloneManagerTests
     private const string RepoUri = "https://github.com/dotnet/test-repo";
     private const string Ref = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
 
-    private readonly VmrRemoteConfiguration _remoteConfiguration = new(null, null);
+    private readonly RemoteConfiguration _remoteConfiguration = new(null, null);
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
-    private readonly Mock<IGitRepoClonerFactory> _remoteFactory = new();
-    private readonly Mock<IGitRepoCloner> _remote = new();
+    private readonly Mock<IGitRepoCloner> _repoCloner = new();
     private RepositoryCloneManager _manager = null!;
 
     private readonly LocalPath _tmpDir;
@@ -56,15 +55,13 @@ public class RepositoryCloneManagerTests
             .Setup(x => x.PathCombine(It.IsAny<string>(), It.IsAny<string>()))
             .Returns((string first, string second) => (first + "/" + second).Replace("//", null));
 
-        _remote.Reset();
-        _remoteFactory.Reset();
-        _remoteFactory.SetReturnsDefault(_remote.Object);
+        _repoCloner.Reset();
 
         _manager = new RepositoryCloneManager(
             _vmrInfo.Object,
             _remoteConfiguration,
+            _repoCloner.Object,
             _localGitRepo.Object,
-            _remoteFactory.Object,
             _processManager.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
@@ -80,8 +77,7 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<GitClonerType>()), Times.Once);
-        _remote.Verify(x => x.CloneAsync(RepoUri, _clonePath, null), Times.Once);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, _clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(_clonePath, Ref), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(_clonePath, "main"), Times.Exactly(2));
     }
@@ -98,34 +94,9 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<GitClonerType>()), Times.Never);
-        _remote.Verify(x => x.CloneAsync(RepoUri, _clonePath, null), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, _clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(_clonePath, Ref), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(_clonePath, "main"), Times.Once);
-    }
-
-    [Test]
-    public async Task TokensAreUsedTest()
-    {
-        _fileSystem
-            .Setup(x => x.DirectoryExists(_clonePath))
-            .Returns(true);
-
-        var manager = new RepositoryCloneManager(
-            _vmrInfo.Object,
-            new VmrRemoteConfiguration("github_pat", "azdo_pat"),
-            _localGitRepo.Object,
-            _remoteFactory.Object,
-            _processManager.Object,
-            _fileSystem.Object,
-            new NullLogger<VmrPatchHandler>());
-
-        var path = await manager.PrepareClone(RepoUri, Ref, default);
-        path.Should().Be(_clonePath);
-        path = await manager.PrepareClone(RepoUri, "main", default);
-        path.Should().Be(_clonePath);
-
-        _localGitRepo.Verify(x => x.FetchAsync(_clonePath, RepoUri, "github_pat", default), Times.Once);
     }
 
     [Test]
@@ -161,17 +132,15 @@ public class RepositoryCloneManagerTests
         void ResetCalls()
         {
             _processManager.ResetCalls();
-            _remoteFactory.ResetCalls();
+            _repoCloner.ResetCalls();
             _localGitRepo.ResetCalls();
-            _remote.ResetCalls();
         }
 
         // Clone for the first time
         var path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, "main", default);
         path.Should().Be(clonePath);
 
-        _remoteFactory.Verify(x => x.GetCloner(mapping.DefaultRemote, It.IsAny<GitClonerType>()), Times.Once);
-        _remote.Verify(x => x.CloneAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
+        _repoCloner.Verify(x => x.CloneAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, "main"), Times.Once);
 
         // A second clone of the same
@@ -179,8 +148,8 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, Ref, default);
         
         path.Should().Be(clonePath);
-        _remote.Verify(x => x.CloneAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, null, default), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
+        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, Ref), Times.Once);
 
         // A third clone with a new remote
@@ -188,43 +157,39 @@ public class RepositoryCloneManagerTests
         path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<GitClonerType>()), Times.Never);
-        _remote.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, newRemote, null, default), Times.Once);
+        _localGitRepo.Verify(x => x.FetchAsync(clonePath, newRemote, default), Times.Once);
 
         // Same again, should be cached
         ResetCalls();
         path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<GitClonerType>()), Times.Never);
-        _remote.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, Ref + "3"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, null, default), Times.Never);
+        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
 
         // Call with URI directly
         ResetCalls();
         path = await _manager.PrepareClone(RepoUri, Ref + "4", default);
 
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(RepoUri, It.IsAny<GitClonerType>()), Times.Never);
-        _remote.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, RepoUri, true), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, Ref + "4"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, null, default), Times.Never);
+        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
 
         // Call with the second URI directly
         ResetCalls();
         path = await _manager.PrepareClone(newRemote, Ref + "5", default);
 
         path.Should().Be(clonePath);
-        _remoteFactory.Verify(x => x.GetCloner(newRemote, It.IsAny<GitClonerType>()), Times.Never);
-        _remote.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
+        _repoCloner.Verify(x => x.CloneAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissing(clonePath, newRemote, true), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutNativeAsync(clonePath, Ref + "5"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, null, default), Times.Never);
+        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
     }
 }
