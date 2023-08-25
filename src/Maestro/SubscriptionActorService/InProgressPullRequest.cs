@@ -15,7 +15,7 @@ public class InProgressPullRequest : IPullRequest
     public string Url { get; set; }
 
     [DataMember]
-    public bool CoherencyCheckSuccessful { get; set; }
+    public bool? CoherencyCheckSuccessful { get; set; }
 
     [DataMember]
     public List<CoherencyErrorDetails> CoherencyErrors { get; set; }

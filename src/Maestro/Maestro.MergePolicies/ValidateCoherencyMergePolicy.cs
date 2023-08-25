@@ -18,11 +18,11 @@ public class ValidateCoherencyMergePolicy : MergePolicy
 
     public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
     {
-        if (pr.CoherencyCheckSuccessful)
+        if (pr.CoherencyCheckSuccessful.GetValueOrDefault(true))
             return Task.FromResult(Succeed("Coherency check successful."));
 
         StringBuilder description = new StringBuilder("Coherency update failed for the following dependencies:");
-        foreach (CoherencyErrorDetails error in pr.CoherencyErrors)
+        foreach (CoherencyErrorDetails error in pr.CoherencyErrors ?? Enumerable.Empty<CoherencyErrorDetails>())
         {
             description.Append("\n * ").Append(error.Error);
 

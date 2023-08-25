@@ -12,7 +12,7 @@ public interface IPullRequest
     /// <summary>
     /// Indicates whether the last coherency update is successful.
     /// </summary>
-    bool CoherencyCheckSuccessful { get; set; }
+    bool? CoherencyCheckSuccessful { get; set; }
 
     /// <summary>
     /// In case of coherency algorithm failure,
