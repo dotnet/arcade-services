@@ -29,7 +29,18 @@ public class GitNativeRepoCloner : IGitRepoCloner
         _logger = logger;
     }
 
-    public async Task CloneAsync(
+    public Task CloneAsync(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
+        => CloneAsync(
+            repoUri,
+            commit,
+            targetDirectory,
+            checkoutSubmodules ? CheckoutType.CheckoutWithSubmodules : CheckoutType.CheckoutWithoutSubmodules,
+            gitDirectory);
+
+    public Task CloneNoCheckoutAsync(string repoUri, string targetDirectory, string? gitDirectory)
+        => CloneAsync(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
+
+    private async Task CloneAsync(
         string repoUri,
         string? commit,
         string targetDirectory,

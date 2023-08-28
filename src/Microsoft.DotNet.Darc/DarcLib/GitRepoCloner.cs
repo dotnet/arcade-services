@@ -31,7 +31,24 @@ public class GitRepoCloner : IGitRepoCloner
     /// <param name="targetDirectory">Target directory to clone to</param>
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public Task CloneAsync(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory = null)
+    public Task CloneAsync(string repoUri, string? commit, string targetDirectory, bool checkoutSubmodules, string? gitDirectory)
+        => CloneAsync(
+            repoUri,
+            commit,
+            targetDirectory,
+            checkoutSubmodules ? CheckoutType.CheckoutWithSubmodules : CheckoutType.CheckoutWithoutSubmodules,
+            gitDirectory);
+
+    /// <summary>
+    ///     Clone a remote git repo without checking out the working tree.
+    /// </summary>
+    /// <param name="repoUri">Repository uri to clone</param>
+    /// <param name="targetDirectory">Target directory to clone to</param>
+    /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
+    public Task CloneNoCheckoutAsync(string repoUri, string targetDirectory, string? gitDirectory)
+        => CloneAsync(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
+
+    private Task CloneAsync(string repoUri, string? commit, string targetDirectory, CheckoutType checkoutType, string? gitDirectory)
     {
         CloneOptions cloneOptions = new()
         {
