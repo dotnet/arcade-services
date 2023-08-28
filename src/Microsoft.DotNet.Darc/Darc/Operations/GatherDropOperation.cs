@@ -410,6 +410,7 @@ internal class GatherDropOperation : Operation
     private const string sympkgsFileName = "sympkgs-all.txt";
     private const string packagesSubDir = "packages";
     private const string symPackagesSubDir = "assets/symbols";
+    private const string manifestCategory = "manifest";
 
     /// <summary>
     ///     Create the nupkg layout required for the final release.
@@ -432,6 +433,7 @@ internal class GatherDropOperation : Operation
     ///     nupkgs-all-just-for-reference.txt - file list of all packages, 
     ///     nupkgs-aspnet.txt - file list of all packages that aspnetcore owns on nuget.org
     ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
+    ///     nupkgs-core-manifest.txt - file list of all packages that are workload manifests owned by dotnet core on nuget.org
     ///     sympkgs-all.txt - file list of all symbol packages
     /// </remarks>
     private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
@@ -495,9 +497,11 @@ internal class GatherDropOperation : Operation
                 // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
                 else if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
                 {
+                    var packageFileName = Path.GetFileName(asset.UnifiedLayoutTargetLocation);
+
                     // Create the target directory
                     string targetFile = Path.Combine(nupkgDirectory, shortName,
-                        packagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
+                        packagesSubDir, packageFileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                     File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
@@ -505,6 +509,13 @@ internal class GatherDropOperation : Operation
                     // Add the relative path to the various spots. Choose paths are relative to the root output dir
                     string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                     allNupkgsFileContent.AppendLine(relativePackagePath);
+
+                    if(category == coreRepoCategory
+                        && packageFileName.Contains("Workload")
+                        && packageFileName.Contains("Manifest"))
+                    {
+                        category = manifestCategory;
+                    } 
 
                     StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category,
                         () => new StringBuilder());
