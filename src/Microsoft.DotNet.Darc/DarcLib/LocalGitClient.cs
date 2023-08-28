@@ -624,20 +624,24 @@ public class LocalGitClient : ILocalGitRepo
     public async Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default)
     {
         var args = new List<string>();
-        string[]? redactedValues = null;
+        var envVars = new Dictionary<string, string>
+        {
+            { "GIT_TERMINAL_PROMPT", "0" }
+        };
+
         string? token = _remoteConfiguration.GetTokenForUri(remoteUri);
 
         if (!string.IsNullOrEmpty(token))
         {
-            args.Add("-c");
-            args.Add(GitNativeRepoCloner.GetAuthorizationHeaderArgument(token));
-            redactedValues = new string[] { args.Last() };
+            const string ENV_VAR_NAME = "GIT_REMOTE_PAT";
+            args.Add($"--config-env=http.extraheader={ENV_VAR_NAME}");
+            envVars[ENV_VAR_NAME] = GitNativeRepoCloner.GetAuthorizationHeaderArgument(token);
         }
 
         args.Add("fetch");
         args.Add(remoteUri);
 
-        var result = await _processManager.ExecuteGit(repoPath, args, redactedValues, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken);
         result.ThrowIfFailed($"Failed to fetch from {remoteUri} in {repoPath}");
         return result.StandardOutput.Trim();
     }
