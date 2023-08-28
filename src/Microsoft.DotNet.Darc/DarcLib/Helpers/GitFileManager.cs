@@ -1363,7 +1363,7 @@ public class GitFileManager : IGitFileManager
             }
             catch (Exception e)
             {
-                _logger.LogError("Unable to use regex to determine repo information from feed", e);
+                _logger.LogError("Unable to use regex to determine repo information from feed {exception}", e);
                 repoNameFromFeed = unableToResolveName;
             }
 
