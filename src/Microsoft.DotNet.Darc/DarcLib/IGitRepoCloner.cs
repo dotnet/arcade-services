@@ -29,7 +29,7 @@ public interface IGitRepoCloner
     /// <param name="repoUri">Repository uri to clone</param>
     /// <param name="targetDirectory">Target directory to clone to</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public Task CloneAsync(string repoUri, string targetDirectory, string? gitDirectory);
+    public Task CloneNoCheckoutAsync(string repoUri, string targetDirectory, string? gitDirectory);
 }
 
 public enum CheckoutType

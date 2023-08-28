@@ -37,7 +37,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
             checkoutSubmodules ? CheckoutType.CheckoutWithSubmodules : CheckoutType.CheckoutWithoutSubmodules,
             gitDirectory);
 
-    public Task CloneAsync(string repoUri, string targetDirectory, string? gitDirectory)
+    public Task CloneNoCheckoutAsync(string repoUri, string targetDirectory, string? gitDirectory)
         => CloneAsync(repoUri, null, targetDirectory, CheckoutType.NoCheckout, gitDirectory);
 
     private async Task CloneAsync(
