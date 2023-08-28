@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class LocalGitClient : ILocalGitRepo
 {
+    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
@@ -26,8 +27,9 @@ public class LocalGitClient : ILocalGitRepo
     ///     Construct a new local git client
     /// </summary>
     /// <param name="path">Current path</param>
-    public LocalGitClient(IProcessManager processManager, ILogger logger)
+    public LocalGitClient(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
     {
+        _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
         _logger = logger;
     }
@@ -252,6 +254,19 @@ public class LocalGitClient : ILocalGitRepo
         }
     }
 
+    public async Task CheckoutNativeAsync(string repoDir, string refToCheckout)
+    {
+        var result = await _processManager.ExecuteGit(repoDir, new[] { "checkout", refToCheckout });
+        result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoDir}");
+    }
+
+    public async Task CreateBranchAsync(string repoDir, string branchName, bool overwriteExistingBranch = false)
+    {
+        var args = new[] { "checkout", overwriteExistingBranch ? "-B" : "-b", branchName };
+        var result = await _processManager.ExecuteGit(repoDir, args);
+        result.ThrowIfFailed($"Failed to create {branchName} in {repoDir}");
+    }
+
     public async Task CommitAsync(
         string repoPath,
         string message,
@@ -271,19 +286,19 @@ public class LocalGitClient : ILocalGitRepo
             args = args.Append("--author").Append($"{identity.Name} <{identity.Email}>");
         }
 
-        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
     public async Task StageAsync(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken);
+        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
     }
 
     public async Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken: cancellationToken);
         result.ThrowIfFailed("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
         return result.StandardOutput.Trim();
     }
@@ -295,7 +310,7 @@ public class LocalGitClient : ILocalGitRepo
     {
         repoPath ??= Environment.CurrentDirectory;
 
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken: cancellationToken);
         result.ThrowIfFailed("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
         return result.StandardOutput.Trim();
     }
@@ -450,21 +465,90 @@ public class LocalGitClient : ILocalGitRepo
         return remoteName;
     }
 
-    public List<GitSubmoduleInfo> GetGitSubmodules(string repoDir, string commit)
+    public async Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoDir, string commit)
     {
+        var submodules = new List<GitSubmoduleInfo>();
+
         if (commit == Constants.EmptyGitObject)
         {
-            return new();
+            return submodules;
         }
 
-        var repository = new Repository(repoDir);
+        var submoduleFile = await GetFileFromGitAsync(repoDir, ".gitmodules", commit);
+        if (submoduleFile == null)
+        {
+            return submodules;
+        }
 
-        // I haven't found a way to do this with LibGit2Sharp without checking out the commit
-        Commands.Checkout(repository, commit);
+        GitSubmoduleInfo? currentSubmodule = null;
 
-        return repository.Submodules
-            .Select(s => new GitSubmoduleInfo(s.Name, s.Path, s.Url, s.IndexCommitId.Sha))
-            .ToList();
+        var lines = submoduleFile
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim());
+
+        var submoduleRegex = new Regex("^\\[submodule \"(?<name>.+)\"\\]$");
+        var submoduleUrlRegex = new Regex("^\\s*url\\s*=\\s*(?<url>.+)$");
+        var submodulePathRegex = new Regex("^\\s*path\\s*=\\s*(?<path>.+)$");
+
+        async Task FinalizeSubmodule(GitSubmoduleInfo submodule)
+        {
+            if (submodule.Url == null)
+            {
+                throw new Exception($"Submodule {submodule.Name} has no URL");
+            }
+
+            if (submodule.Path == null)
+            {
+                throw new Exception($"Submodule {submodule.Name} has no path");
+            }
+
+            // Read SHA that the submodule points to
+            var result = await _processManager.ExecuteGit(repoDir, "rev-parse", $"{commit}:{submodule.Path}");
+            result.ThrowIfFailed($"Failed to find SHA of commit where submodule {submodule.Path} points to");
+
+            submodule = submodule with
+            {
+                Commit = result.StandardOutput.Trim(),
+            };
+
+            submodules.Add(submodule);
+        }
+
+        foreach (var line in lines)
+        {
+            var match = submoduleRegex.Match(line);
+            if (match.Success)
+            {
+                if (currentSubmodule != null)
+                {
+                    await FinalizeSubmodule(currentSubmodule);
+                }
+
+                currentSubmodule = new GitSubmoduleInfo(match.Groups["name"].Value, null!, null!, null!);
+                continue;
+            }
+
+            match = submoduleUrlRegex.Match(line);
+            if (match.Success)
+            {
+                currentSubmodule = currentSubmodule! with { Url = match.Groups["url"].Value };
+                continue;
+            }
+
+            match = submodulePathRegex.Match(line);
+            if (match.Success)
+            {
+                currentSubmodule = currentSubmodule! with { Path = match.Groups["path"].Value };
+                continue;
+            }
+        }
+
+        if (currentSubmodule != null)
+        {
+            await FinalizeSubmodule(currentSubmodule);
+        }
+
+        return submodules;
     }
 
     public IEnumerable<string> GetStagedFiles(string repoDir)
@@ -477,11 +561,34 @@ public class LocalGitClient : ILocalGitRepo
             .Select(file => file.FilePath);
     }
 
+    public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
+    {
+        var args = new List<string>
+        {
+            "show",
+            $"{revision}:{relativeFilePath}"
+        };
+
+        if (outputPath != null)
+        {
+            args.Add("--output");
+            args.Add(outputPath);
+        }
+
+        var result = await _processManager.ExecuteGit(repoPath, args);
+
+        if (!result.Succeeded)
+        {
+            return null;
+        }
+
+        return result.StandardOutput;
+    }
+
     public void Push(
         string repoPath,
         string branchName,
         string remoteUrl,
-        string? token,
         LibGit2Sharp.Identity? identity = null)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
@@ -504,7 +611,7 @@ public class LocalGitClient : ILocalGitRepo
             CredentialsProvider = (url, user, cred) =>
                 new UsernamePasswordCredentials
                 {
-                    Username = token,
+                    Username = _remoteConfiguration.GetTokenForUri(remoteUrl),
                     Password = string.Empty
                 }
         };
@@ -512,5 +619,26 @@ public class LocalGitClient : ILocalGitRepo
         repo.Network.Push(remote, branch.CanonicalName, pushOptions);
 
         _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
+    }
+
+    public async Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default)
+    {
+        var args = new List<string>();
+        string[]? redactedValues = null;
+        string? token = _remoteConfiguration.GetTokenForUri(remoteUri);
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            args.Add("-c");
+            args.Add(GitNativeRepoCloner.GetAuthorizationHeaderArgument(token));
+            redactedValues = new string[] { args.Last() };
+        }
+
+        args.Add("fetch");
+        args.Add(remoteUri);
+
+        var result = await _processManager.ExecuteGit(repoPath, args, redactedValues, cancellationToken);
+        result.ThrowIfFailed($"Failed to fetch from {remoteUri} in {repoPath}");
+        return result.StandardOutput.Trim();
     }
 }

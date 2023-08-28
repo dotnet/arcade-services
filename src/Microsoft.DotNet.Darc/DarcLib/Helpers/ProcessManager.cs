@@ -21,18 +21,24 @@ public interface IProcessManager
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default);
 
-    Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken);
+    Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        string[] arguments,
+        string[]? redactedStrings = null,
+        CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
-        => ExecuteGit(repoPath, arguments.ToArray(), default);
+        => ExecuteGit(repoPath, arguments.ToArray(), null, default);
 
     Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         IEnumerable<string> arguments,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
-        => ExecuteGit(repoPath, arguments.ToArray(), cancellationToken);
+        => ExecuteGit(repoPath, arguments.ToArray(), redactedStrings, cancellationToken);
 
     string FindGitRoot(string path);
 
@@ -51,14 +57,19 @@ public class ProcessManager : IProcessManager
         GitExecutable = gitExecutable;
     }
 
-    public Task<ProcessExecutionResult> ExecuteGit(string repoPath, string[] arguments, CancellationToken cancellationToken = default)
-        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), cancellationToken: cancellationToken);
+    public Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        string[] arguments,
+        string[]? redactedStrings = null,
+        CancellationToken cancellationToken = default)
+        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), redactedStrings: redactedStrings, cancellationToken: cancellationToken);
 
     public async Task<ProcessExecutionResult> Execute(
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
     {
         var processStartInfo = new ProcessStartInfo()
@@ -76,10 +87,23 @@ public class ProcessManager : IProcessManager
             processStartInfo.ArgumentList.Add(arg);
         }
 
-        _logger.LogDebug("Executing command: '{executable} {arguments}'{workingDir}",
-            executable,
-            string.Join(' ', processStartInfo.ArgumentList),
-            workingDir is null ? string.Empty : " in " + workingDir);
+        var logMessage = $"Executing command: '{executable} "
+            + string.Join(' ', processStartInfo.ArgumentList) + '\'';
+
+        if (workingDir != null)
+        {
+            logMessage = $"{logMessage} in {workingDir}";
+        }
+
+        if (redactedStrings != null)
+        {
+            foreach (var redacted in redactedStrings)
+            {
+                logMessage = logMessage.Replace(redacted, "[REDACTED]");
+            }
+        }
+
+        _logger.LogDebug(logMessage);
 
         var p = new Process() { StartInfo = processStartInfo };
 

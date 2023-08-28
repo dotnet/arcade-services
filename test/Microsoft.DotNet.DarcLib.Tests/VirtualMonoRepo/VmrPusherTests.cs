@@ -41,7 +41,6 @@ public class VmrPusherTests
     [Test]
     public async Task PushingUnexistingCommitThrowsExceptionTest()
     {
-        var remoteConfiguration = new VmrRemoteConfiguration(null, null);
         var mockHttpClientFactory = new MockHttpClientFactory();
 
         var responseMsg = "{\"data\":{\"somerepo\":{\"object\":null}}}";
@@ -57,8 +56,7 @@ public class VmrPusherTests
             new NullLogger<VmrPusher>(), 
             _sourceManifest.Object, 
             mockHttpClientFactory,
-            _localGitRepo.Object,
-            remoteConfiguration);
+            _localGitRepo.Object);
 
         await vmrPusher.Awaiting(p => p.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None))
             .Should()
@@ -74,7 +72,6 @@ public class VmrPusherTests
         _vmrInfo.Reset();
         _vmrInfo.SetupGet(i => i.VmrPath).Returns(vmrPath);
 
-        var remoteConfiguration = new VmrRemoteConfiguration("git-hub-pat", "az-do-pat");
         var mockHttpClientFactory = new MockHttpClientFactory();
 
         var responseMsg = "{\"data\":{\"somerepo\":{\"object\": {\"id\": \"C_kwDOBjr6NNoAKGNjYjQ2YWU5M2E4MjhkYjE4MWIzMTBkZTBkMmIwNTI1MWQ0ZDcxNDA\"}}}}";
@@ -90,8 +87,7 @@ public class VmrPusherTests
             new NullLogger<VmrPusher>(),
             _sourceManifest.Object,
             mockHttpClientFactory,
-            _localGitRepo.Object,
-            remoteConfiguration);
+            _localGitRepo.Object);
 
         await vmrPusher.Push(VmrUrl, "branch", false, "public-github-pat", CancellationToken.None);
 
@@ -100,7 +96,6 @@ public class VmrPusherTests
                 vmrPath,  
                 "branch", 
                 VmrUrl,
-                "git-hub-pat",
                 It.Is<LibGit2Sharp.Identity>(x => x.Name == Constants.DarcBotName && x.Email == Constants.DarcBotEmail)), 
             Times.Once());
     }

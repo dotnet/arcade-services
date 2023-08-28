@@ -1,6 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -9,12 +15,6 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -49,7 +49,7 @@ class UpdateDependenciesOperation : Operation
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
             IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
-            Local local = new Local(Logger);
+            var local = new Local(_options.GetRemoteConfiguration(), Logger);
             List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
             bool someUpToDate = false;
             string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";
@@ -251,9 +251,9 @@ class UpdateDependenciesOperation : Operation
     }
 
     private async Task<int> NonCoherencyUpdatesForBuildAsync(
-        Build build, 
-        IRemote barOnlyRemote, 
-        List<DependencyDetail> currentDependencies, 
+        Build build,
+        IRemote barOnlyRemote,
+        List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)
     {
         IEnumerable<AssetData> assetData = build.Assets.Select(
@@ -290,7 +290,7 @@ class UpdateDependenciesOperation : Operation
     }
 
     private async Task<int> CoherencyUpdatesAsync(
-        IRemote barOnlyRemote, 
+        IRemote barOnlyRemote,
         IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)
