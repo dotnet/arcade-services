@@ -50,14 +50,14 @@ public class GitNativeRepoCloner : IGitRepoCloner
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         var args = new List<string>();
-        string[]? redactedValues = null;
+        var envVars = new Dictionary<string, string>();
         string? token = _remoteConfiguration.GetTokenForUri(repoUri);
 
         if (!string.IsNullOrEmpty(token))
         {
-            args.Add("-c");
-            args.Add(GetAuthorizationHeaderArgument(token));
-            redactedValues = new string[] { args.Last() };
+            const string ENV_VAR_NAME = "GIT_REMOTE_PAT";
+            args.Add($"--config-env=http.extraheader={ENV_VAR_NAME}");
+            envVars[ENV_VAR_NAME] = GetAuthorizationHeaderArgument(token);
         }
 
         if (gitDirectory != null)
@@ -81,7 +81,7 @@ public class GitNativeRepoCloner : IGitRepoCloner
         args.Add(repoUri);
         args.Add(targetDirectory);
 
-        var result = await _processManager.Execute(_processManager.GitExecutable, args, redactedStrings: redactedValues);
+        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, args, envVariables: envVars);
         result.ThrowIfFailed($"Failed to clone {repoUri} to {targetDirectory}");
 
         if (commit != null)
@@ -94,6 +94,6 @@ public class GitNativeRepoCloner : IGitRepoCloner
     public static string GetAuthorizationHeaderArgument(string token)
     {
         var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"));
-        return $"http.extraheader=Authorization: Basic {encodedToken}";
+        return $"Authorization: Basic {encodedToken}";
     }
 }
