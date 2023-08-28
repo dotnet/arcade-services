@@ -50,7 +50,11 @@ public class GitNativeRepoCloner : IGitRepoCloner
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         var args = new List<string>();
-        var envVars = new Dictionary<string, string>();
+        var envVars = new Dictionary<string, string>
+        {
+            { "GIT_TERMINAL_PROMPT", "0" }
+        };
+
         string? token = _remoteConfiguration.GetTokenForUri(repoUri);
 
         if (!string.IsNullOrEmpty(token))

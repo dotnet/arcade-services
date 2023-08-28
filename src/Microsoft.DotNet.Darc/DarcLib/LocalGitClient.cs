@@ -624,7 +624,11 @@ public class LocalGitClient : ILocalGitRepo
     public async Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default)
     {
         var args = new List<string>();
-        var envVars = new Dictionary<string, string>();
+        var envVars = new Dictionary<string, string>
+        {
+            { "GIT_TERMINAL_PROMPT", "0" }
+        };
+
         string? token = _remoteConfiguration.GetTokenForUri(remoteUri);
 
         if (!string.IsNullOrEmpty(token))
