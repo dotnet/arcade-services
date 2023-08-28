@@ -14,22 +14,14 @@ public interface IGitRepoCloner
     /// <param name="repoUri">Repository uri to clone</param>
     /// <param name="commit">Branch, commit, or tag to checkout</param>
     /// <param name="targetDirectory">Target directory to clone to</param>
-    /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
+    /// <param name="checkoutType">Whether to check out the working tree, submodules...</param>
     /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
     public Task CloneAsync(
         string repoUri,
         string? commit,
         string targetDirectory,
-        bool checkoutSubmodules,
-        string? gitDirectory);
-
-    /// <summary>
-    ///     Clone a remote git repo without checking out the working tree.
-    /// </summary>
-    /// <param name="repoUri">Repository uri to clone</param>
-    /// <param name="targetDirectory">Target directory to clone to</param>
-    /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
-    public Task CloneNoCheckoutAsync(string repoUri, string targetDirectory, string? gitDirectory);
+        CheckoutType checkoutType,
+        string? gitDirectory = null);
 }
 
 public enum CheckoutType

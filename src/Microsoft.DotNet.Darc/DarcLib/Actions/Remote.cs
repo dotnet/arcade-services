@@ -1388,7 +1388,12 @@ public sealed class Remote : IRemote
     public async Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
         CheckForValidGitClient();
-        await _gitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
+        await _gitClient.CloneAsync(
+            repoUri,
+            commit,
+            targetDirectory,
+            checkoutSubmodules ? CheckoutType.CheckoutWithSubmodules : CheckoutType.CheckoutWithoutSubmodules,
+            gitDirectory);
     }
 
     /// <summary>

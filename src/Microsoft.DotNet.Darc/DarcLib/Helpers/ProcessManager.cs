@@ -21,13 +21,13 @@ public interface IProcessManager
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
-        Dictionary<string, string>? envVariables = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         string[] arguments,
-        Dictionary<string, string>? envVariables = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
@@ -36,9 +36,9 @@ public interface IProcessManager
     Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         IEnumerable<string> arguments,
-        Dictionary<string, string>? envVariables = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
-        => ExecuteGit(repoPath, arguments.ToArray(), envVariables, cancellationToken);
+        => ExecuteGit(repoPath, arguments.ToArray(), redactedStrings, cancellationToken);
 
     string FindGitRoot(string path);
 
@@ -60,16 +60,16 @@ public class ProcessManager : IProcessManager
     public Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         string[] arguments,
-        Dictionary<string, string>? envVariables = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
-        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), envVariables: envVariables, cancellationToken: cancellationToken);
+        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), redactedStrings: redactedStrings, cancellationToken: cancellationToken);
 
     public async Task<ProcessExecutionResult> Execute(
         string executable,
         IEnumerable<string> arguments,
         TimeSpan? timeout = null,
         string? workingDir = null,
-        Dictionary<string, string>? envVariables = null,
+        string[]? redactedStrings = null,
         CancellationToken cancellationToken = default)
     {
         var processStartInfo = new ProcessStartInfo()
@@ -95,11 +95,11 @@ public class ProcessManager : IProcessManager
             logMessage = $"{logMessage} in {workingDir}";
         }
 
-        if (envVariables != null)
+        if (redactedStrings != null)
         {
-            foreach (var envVar in envVariables)
+            foreach (var redacted in redactedStrings)
             {
-                processStartInfo.Environment[envVar.Key] = envVar.Value;
+                logMessage = logMessage.Replace(redacted, "[REDACTED]");
             }
         }
 
