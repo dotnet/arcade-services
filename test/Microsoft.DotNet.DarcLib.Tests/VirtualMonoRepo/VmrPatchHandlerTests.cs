@@ -93,7 +93,7 @@ public class VmrPatchHandlerTests
         _dependencyTracker.Reset();
 
         _localGitRepo.Reset();
-        _localGitRepo.SetReturnsDefault<List<GitSubmoduleInfo>>(new());
+        _localGitRepo.SetReturnsDefault(Task.FromResult(new List<GitSubmoduleInfo>()));
 
         _cloneManager.Reset();
         _cloneManager
@@ -186,6 +186,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -250,6 +251,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -271,6 +273,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/SourceBuild/tarball/content",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -292,6 +295,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 $"{_clonePath}/eng/common",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -312,12 +316,12 @@ public class VmrPatchHandlerTests
 
         // Return the same info for both
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -337,6 +341,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -365,12 +370,12 @@ public class VmrPatchHandlerTests
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo>());
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -391,6 +396,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -406,6 +412,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -451,16 +458,16 @@ public class VmrPatchHandlerTests
         
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo>());
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules("/tmp/external-1", SubmoduleSha1))
-            .Returns(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync("/tmp/external-1", SubmoduleSha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -481,6 +488,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -497,6 +505,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -514,6 +523,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-2",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -560,12 +570,12 @@ public class VmrPatchHandlerTests
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo>());
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo>());
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -586,6 +596,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -601,6 +612,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -636,12 +648,12 @@ public class VmrPatchHandlerTests
         string expectedSubmodulePatchName = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -662,6 +674,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -677,6 +690,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -713,12 +727,12 @@ public class VmrPatchHandlerTests
         string expectedSubmodulePatchName2 = $"{_patchDir}/{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha1))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
 
         _localGitRepo
-            .Setup(x => x.GetGitSubmodules(_clonePath, Sha2))
-            .Returns(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
+            .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha2))
+            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -739,6 +753,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -754,6 +769,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-1",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -768,6 +784,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 "/tmp/external-2",
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -920,6 +937,7 @@ public class VmrPatchHandlerTests
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
                 _clonePath,
+                It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
@@ -979,13 +997,13 @@ public class VmrPatchHandlerTests
     private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<Dictionary<string, string>>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, string repoDir, Times? times = null)
     {
         _processManager
-            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<CancellationToken>()), times ?? Times.Once());
+            .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<Dictionary<string, string>>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
     private static IEnumerable<string> GetExpectedGitDiffArguments(

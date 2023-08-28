@@ -13,14 +13,14 @@ namespace Microsoft.DotNet.Darc.Helpers;
 public class GitFileManagerFactory : IGitFileManagerFactory
 {
     private readonly IVmrInfo _vmrInfo;
-    private readonly VmrRemoteConfiguration _remoteConfiguration;
+    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILoggerFactory _loggerFactory;
 
     public GitFileManagerFactory(
         IVmrInfo vmrInfo,
-        VmrRemoteConfiguration remoteConfiguration,
+        RemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
         IVersionDetailsParser versionDetailsParser,
         ILoggerFactory loggerFactory)
@@ -51,7 +51,7 @@ public class GitFileManagerFactory : IGitFileManagerFactory
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalGitClient(_processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
+        GitRepoType.Local => new LocalGitClient(_remoteConfiguration, _processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };
 }

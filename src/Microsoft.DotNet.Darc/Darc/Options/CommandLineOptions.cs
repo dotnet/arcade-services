@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -38,4 +39,9 @@ public abstract class CommandLineOptions
     public DarcOutputType OutputFormat { get; set; }
 
     public abstract Operation GetOperation();
+
+    public RemoteConfiguration GetRemoteConfiguration()
+    {
+        return new RemoteConfiguration(GitHubPat, AzureDevOpsPat);
+    }
 }

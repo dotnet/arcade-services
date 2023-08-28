@@ -29,11 +29,11 @@ public class Local : ILocal
     /// </summary>
     private const string GitExecutable = "git";
 
-    public Local(ILogger logger, string overrideRootPath = null)
+    public Local(RemoteConfiguration remoteConfiguration, ILogger logger, string overrideRootPath = null)
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalGitClient(new ProcessManager(logger, GitExecutable), logger);
+        _gitClient = new LocalGitClient(remoteConfiguration, new ProcessManager(logger, GitExecutable), logger);
         _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
