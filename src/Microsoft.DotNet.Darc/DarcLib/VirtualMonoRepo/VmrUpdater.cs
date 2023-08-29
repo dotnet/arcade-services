@@ -113,6 +113,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings();
@@ -162,22 +163,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         if (updateDependencies)
         {
             await UpdateRepositoryRecursively(
-                dependencyUpdate, 
-                noSquash, 
-                additionalRemotes, 
-                readmeTemplatePath, 
-                tpnTemplatePath, 
+                dependencyUpdate,
+                noSquash,
+                additionalRemotes,
+                readmeTemplatePath,
+                tpnTemplatePath,
+                discardPatches,
                 cancellationToken);
         }
         else
         {
             await UpdateRepositoryInternal(
-                dependencyUpdate, 
-                noSquash, 
-                reapplyVmrPatches: true, 
-                additionalRemotes, 
-                readmeTemplatePath, 
-                tpnTemplatePath, 
+                dependencyUpdate,
+                noSquash,
+                reapplyVmrPatches: true,
+                additionalRemotes,
+                readmeTemplatePath,
+                tpnTemplatePath,
+                discardPatches,
                 cancellationToken);
         }
     }
@@ -189,6 +192,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         var currentSha = GetCurrentVersion(update.Mapping);
@@ -304,6 +308,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reapplyVmrPatches,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                discardPatches,
                 cancellationToken);
         }
 
@@ -332,6 +337,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reapplyVmrPatches,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                discardPatches,
                 cancellationToken);
 
             vmrPatchesToRestore.AddRange(patches);
@@ -352,6 +358,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -428,12 +435,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             try
             {
                 patchesToReapply = await UpdateRepositoryInternal(
-                    update, 
-                    noSquash, 
-                    false, 
-                    additionalRemotes, 
-                    readmeTemplatePath, 
-                    tpnTemplatePath, 
+                    update,
+                    noSquash,
+                    false,
+                    additionalRemotes,
+                    readmeTemplatePath,
+                    tpnTemplatePath,
+                    discardPatches,
                     cancellationToken);
             }
             catch(Exception)
@@ -474,7 +482,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), discardPatches, cancellationToken);
             }
             catch (Exception)
             {

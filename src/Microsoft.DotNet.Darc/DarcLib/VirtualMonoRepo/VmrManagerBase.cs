@@ -71,6 +71,7 @@ public abstract class VmrManagerBase
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -92,6 +93,20 @@ public abstract class VmrManagerBase
         {
             await _patchHandler.ApplyPatch(patch, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (discardPatches)
+            {
+                try
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, $"Failed to delete patch file {patch.Path}");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
@@ -118,7 +133,7 @@ public abstract class VmrManagerBase
 
         if (reapplyVmrPatches)
         {
-            await ReapplyVmrPatchesAsync(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), cancellationToken);
+            await ReapplyVmrPatchesAsync(vmrPatchesToRestore.DistinctBy(p => p.Path).ToArray(), discardPatches, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -135,6 +150,7 @@ public abstract class VmrManagerBase
 
     protected async Task ReapplyVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         if (patches.Count == 0)
@@ -157,6 +173,20 @@ public abstract class VmrManagerBase
 
             await _patchHandler.ApplyPatch(patch, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (discardPatches)
+            {
+                try
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, $"Failed to delete patch file {patch.Path}");
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
