@@ -510,20 +510,18 @@ internal class GatherDropOperation : Operation
                     string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                     allNupkgsFileContent.AppendLine(relativePackagePath);
 
-                    if(category == coreRepoCategory
+                    var packageCategory = category;
+
+                    if (packageCategory == coreRepoCategory
                         && packageFileName.Contains("Workload")
                         && packageFileName.Contains("Manifest"))
                     {
-                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(manifestCategory,
-                            () => new StringBuilder());
-                        categoryStringBuilder.AppendLine(relativePackagePath);
+                        packageCategory = manifestCategory;
                     }
-                    else
-                    {
-                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category,
+
+                    StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(packageCategory,
                             () => new StringBuilder());
-                        categoryStringBuilder.AppendLine(relativePackagePath);
-                    }
+                    categoryStringBuilder.AppendLine(relativePackagePath);
 
                     // Do the same for the identity package. It gets a "name,version" (no file extension).
                     // For the identities, the categories are by repo short name
