@@ -331,6 +331,7 @@ internal class GatherDropOperation : Operation
     private const string coreRepoCategory = "core";
     private const string aspnetCategory = "aspnet";
     private const string wcfCategory = "wcf";
+    private const string manifestCategory = "core-manifest";
 
     // The following is the list of repos that should be picked up by the tooling
     // This list is effectively static, but not the full set of repos that are in the graph,
@@ -410,7 +411,6 @@ internal class GatherDropOperation : Operation
     private const string sympkgsFileName = "sympkgs-all.txt";
     private const string packagesSubDir = "packages";
     private const string symPackagesSubDir = "assets/symbols";
-    private const string manifestCategory = "manifest";
 
     /// <summary>
     ///     Create the nupkg layout required for the final release.
