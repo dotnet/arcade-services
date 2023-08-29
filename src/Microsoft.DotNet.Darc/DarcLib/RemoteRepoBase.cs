@@ -19,8 +19,13 @@ public class RemoteRepoBase : GitRepoCloner
     private readonly ILogger _logger;
     private readonly ProcessManager _processManager;
 
-    protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache, ILogger logger, string accessToken)
-        : base(accessToken, logger)
+    protected RemoteRepoBase(
+        string gitExecutable,
+        string temporaryRepositoryPath,
+        IMemoryCache cache,
+        ILogger logger,
+        RemoteConfiguration remoteConfiguration)
+        : base(remoteConfiguration, logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;

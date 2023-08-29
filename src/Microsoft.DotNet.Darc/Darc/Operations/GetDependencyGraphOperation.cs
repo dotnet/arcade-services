@@ -1,6 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -8,12 +14,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -27,7 +27,7 @@ internal class GetDependencyGraphOperation : Operation
         : base(options)
     {
         _options = options;
-        _gitClient = new LocalGitClient(new ProcessManager(Logger, _options.GitLocation), Logger);
+        _gitClient = new LocalGitClient(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), Logger);
     }
 
     public override async Task<int> ExecuteAsync()
@@ -42,7 +42,7 @@ internal class GetDependencyGraphOperation : Operation
             {
                 NodeDiff diffOption = NodeDiff.None;
                 // Check node diff options
-                switch(_options.DeltaFrom.ToLowerInvariant())
+                switch (_options.DeltaFrom.ToLowerInvariant())
                 {
                     case "none":
                         break;
@@ -74,7 +74,7 @@ internal class GetDependencyGraphOperation : Operation
 
                     // Grab root dependency set. The graph build can do this, but
                     // if an original asset name is passed, then this will do the initial filtering.
-                    IRemote rootRepoRemote = await  remoteFactory.GetRemoteAsync(_options.RepoUri, Logger);
+                    IRemote rootRepoRemote = await remoteFactory.GetRemoteAsync(_options.RepoUri, Logger);
                     rootDependencies = await rootRepoRemote.GetDependenciesAsync(
                         _options.RepoUri,
                         _options.Version,
@@ -91,7 +91,7 @@ internal class GetDependencyGraphOperation : Operation
                     Console.WriteLine($"Getting root dependencies from local repository...");
 
                     // Grab root dependency set from local repo
-                    Local local = new Local(Logger);
+                    var local = new Local(_options.GetRemoteConfiguration(), Logger);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
                 }
@@ -126,7 +126,7 @@ internal class GetDependencyGraphOperation : Operation
             {
                 Console.WriteLine($"Getting root dependencies from local repository...");
 
-                Local local = new Local(Logger);
+                var local = new Local(_options.GetRemoteConfiguration(), Logger);
                 rootDependencies = await local.GetDependenciesAsync(
                     _options.AssetName);
 
@@ -323,20 +323,20 @@ internal class GetDependencyGraphOperation : Operation
             foreach (DependencyGraphNode node in graph.Nodes)
             {
                 StringBuilder nodeBuilder = new StringBuilder();
-                    
+
                 // First add the node name
                 nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
-                    
+
                 // Then add the label.  label looks like [label="<info here>"]
                 nodeBuilder.Append("[label=\"");
-                    
+
                 // Append friendly repo name
                 nodeBuilder.Append(UxHelpers.GetSimpleRepoName(node.Repository));
                 nodeBuilder.Append(@"\n");
-                    
+
                 // Append short commit sha
                 nodeBuilder.Append(node.Commit.Substring(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
-                    
+
                 // Append a build string (with newline) if available
                 if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
                 {

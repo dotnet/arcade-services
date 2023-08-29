@@ -47,12 +47,12 @@ public class UxManager
             string dirPath = Path.GetDirectoryName(path);
 
             Directory.CreateDirectory(dirPath);
-            using (System.IO.StreamWriter streamWriter = new StreamWriter(path))
+            using (StreamWriter streamWriter = new StreamWriter(path))
             {
                 string line;
                 while ((line = Console.ReadLine()) != null)
                 {
-                    streamWriter.WriteLineAsync(line);
+                    streamWriter.WriteLine(line);
                 }
             }
 

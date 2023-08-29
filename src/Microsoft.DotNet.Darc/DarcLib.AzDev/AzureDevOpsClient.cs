@@ -59,7 +59,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     ///     The AzureDevopsClient currently does not utilize the memory cache
     /// </remarks>
     public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
-        : base(gitExecutable, temporaryRepositoryPath, null, logger, accessToken)
+        : base(gitExecutable, temporaryRepositoryPath, null, logger, new RemoteConfiguration(azureDevOpsToken: accessToken))
     {
         _personalAccessToken = accessToken;
         _logger = logger;

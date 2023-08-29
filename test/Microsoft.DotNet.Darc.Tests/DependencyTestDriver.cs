@@ -68,7 +68,7 @@ internal class DependencyTestDriver
 
         // Set up a git file manager
         var processManager = new ProcessManager(NullLogger.Instance, "git");
-        _gitClient = new LocalGitClient(processManager, NullLogger.Instance);
+        _gitClient = new LocalGitClient(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
