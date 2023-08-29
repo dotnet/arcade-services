@@ -813,7 +813,7 @@ public class DependencyGraph
             {
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
-                var gitClient = new LocalGitClient(new ProcessManager(logger, gitExecutable), logger);
+                var gitClient = new LocalGitClient(new RemoteConfiguration(null, null), new ProcessManager(logger, gitExecutable), logger);
                 string parent = await gitClient.GetRootDirAsync();
                 folder = Directory.GetParent(parent).FullName;
             }
@@ -856,7 +856,7 @@ public class DependencyGraph
 
                 if (Directory.Exists(testPath))
                 {
-                    Local local = new Local(logger, testPath);
+                    var local = new Local(new RemoteConfiguration(), logger, testPath);
                     dependencies = await local.GetDependenciesAsync();
                 }
             }
@@ -873,7 +873,7 @@ public class DependencyGraph
 
                 if (!string.IsNullOrEmpty(repoPath))
                 {
-                    Local local = new Local(logger);
+                    var local = new Local(new RemoteConfiguration(), logger);
                     string fileContents = await GitShowAsync(
                         gitExecutable,
                         repoPath,

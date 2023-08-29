@@ -74,7 +74,7 @@ public class VmrBinaryFileScanner : VmrScanner
 
     private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken) 
     {
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken);
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken: cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 

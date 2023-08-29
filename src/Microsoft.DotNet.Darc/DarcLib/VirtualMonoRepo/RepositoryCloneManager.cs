@@ -34,8 +34,9 @@ public interface IRepositoryCloneManager
 public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
+    private readonly RemoteConfiguration _remoteConfig;
+    private readonly IGitRepoCloner _gitRepoCloner;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IGitRepoClonerFactory _remoteFactory;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
@@ -48,15 +49,17 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
+        RemoteConfiguration remoteConfig,
+        IGitRepoCloner gitRepoCloner,
         ILocalGitRepo localGitRepo,
-        IGitRepoClonerFactory remoteFactory,
         IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
+        _remoteConfig = remoteConfig;
+        _gitRepoCloner = gitRepoCloner;
         _localGitRepo = localGitRepo;
-        _remoteFactory = remoteFactory;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -81,7 +84,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
-        _localGitRepo.Checkout(path, checkoutRef);
+        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
 
         return path;
     }
@@ -94,7 +97,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
-        _localGitRepo.Checkout(path, checkoutRef);
+        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
         return path;
     }
 
@@ -114,8 +117,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
-            var repoCloner = _remoteFactory.GetCloner(remoteUri, _logger);
-            repoCloner.Clone(remoteUri, clonePath, null);
+            await _gitRepoCloner.CloneNoCheckoutAsync(remoteUri, clonePath, null);
         }
         else
         {
@@ -123,8 +125,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, skipFetch: true);
 
             // We need to perform a full fetch and not the one provided by localGitRepo as we want all commits
-            var result = await _processManager.ExecuteGit(clonePath, new[] { "fetch", remoteUri }, cancellationToken);
-            result.ThrowIfFailed($"Failed to fetch changes from {remoteUri} into {clonePath}");
+            await _localGitRepo.FetchAsync(clonePath, remoteUri, cancellationToken);
         }
 
         _upToDateRepos.Add(remoteUri);

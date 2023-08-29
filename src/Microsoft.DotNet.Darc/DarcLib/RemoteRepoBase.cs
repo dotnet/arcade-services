@@ -19,8 +19,13 @@ public class RemoteRepoBase : GitRepoCloner
     private readonly ILogger _logger;
     private readonly ProcessManager _processManager;
 
-    protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache, ILogger logger, string accessToken)
-        : base(accessToken, logger)
+    protected RemoteRepoBase(
+        string gitExecutable,
+        string temporaryRepositoryPath,
+        IMemoryCache cache,
+        ILogger logger,
+        RemoteConfiguration remoteConfiguration)
+        : base(remoteConfiguration, logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
@@ -172,7 +177,7 @@ public class RemoteRepoBase : GitRepoCloner
         File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
         await ExecuteGitCommand(new[] { $"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch }, workingDirectory, secretToMask: pat);
-        await ExecuteGitCommand(new[] { $"checkout {branch}" }, workingDirectory);
+        await ExecuteGitCommand(new[] { $"checkout", branch }, workingDirectory);
 
         return workingDirectory;
     }

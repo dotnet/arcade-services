@@ -3,7 +3,6 @@
 
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
@@ -13,7 +12,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddDependencyOperation : Operation
 {
-    AddDependencyCommandLineOptions _options;
+    private readonly AddDependencyCommandLineOptions _options;
+
     public AddDependencyOperation(AddDependencyCommandLineOptions options)
         : base(options)
     {
@@ -24,7 +24,7 @@ internal class AddDependencyOperation : Operation
     {
         DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
 
-        Local local = new Local(Logger);
+        var local = new Local(_options.GetRemoteConfiguration(), Logger);
 
         DependencyDetail dependency = new DependencyDetail
         {
