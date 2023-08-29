@@ -331,6 +331,7 @@ internal class GatherDropOperation : Operation
     private const string coreRepoCategory = "core";
     private const string aspnetCategory = "aspnet";
     private const string wcfCategory = "wcf";
+    private const string manifestCategory = "core-manifest";
 
     // The following is the list of repos that should be picked up by the tooling
     // This list is effectively static, but not the full set of repos that are in the graph,
@@ -432,6 +433,7 @@ internal class GatherDropOperation : Operation
     ///     nupkgs-all-just-for-reference.txt - file list of all packages, 
     ///     nupkgs-aspnet.txt - file list of all packages that aspnetcore owns on nuget.org
     ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
+    ///     nupkgs-core-manifest.txt - file list of all packages that are workload manifests owned by dotnet core on nuget.org
     ///     sympkgs-all.txt - file list of all symbol packages
     /// </remarks>
     private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
@@ -495,9 +497,11 @@ internal class GatherDropOperation : Operation
                 // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
                 else if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
                 {
+                    var packageFileName = Path.GetFileName(asset.UnifiedLayoutTargetLocation);
+
                     // Create the target directory
                     string targetFile = Path.Combine(nupkgDirectory, shortName,
-                        packagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
+                        packagesSubDir, packageFileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                     File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
@@ -506,8 +510,17 @@ internal class GatherDropOperation : Operation
                     string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                     allNupkgsFileContent.AppendLine(relativePackagePath);
 
-                    StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category,
-                        () => new StringBuilder());
+                    var packageCategory = category;
+
+                    if (packageCategory == coreRepoCategory
+                        && packageFileName.Contains("Workload")
+                        && packageFileName.Contains("Manifest"))
+                    {
+                        packageCategory = manifestCategory;
+                    }
+
+                    StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(packageCategory,
+                            () => new StringBuilder());
                     categoryStringBuilder.AppendLine(relativePackagePath);
 
                     // Do the same for the identity package. It gets a "name,version" (no file extension).
