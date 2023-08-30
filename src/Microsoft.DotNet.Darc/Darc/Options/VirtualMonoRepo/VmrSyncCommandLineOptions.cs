@@ -23,4 +23,7 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
 
     [Option("tpn-template", Required = false, HelpText = "Path to a template for generating VMRs THIRD-PARTY-NOTICES file. Leave empty to skip generation.")]
     public string TpnTemplate { get; set; }
+
+    [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
+    public bool DiscardPatches { get; set; } = false;
 }
