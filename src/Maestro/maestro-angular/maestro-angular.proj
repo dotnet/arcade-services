@@ -35,7 +35,8 @@
           Inputs="@(BuildInput)"
           Outputs="@(BuildOutput)">
     <Exec Command="npm run build -- --prod"
-          WorkingDirectory="$(MSBuildProjectDirectory)"/>
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          EnvironmentVariables="NODE_OPTIONS=--openssl-legacy-provider" />
     <Touch AlwaysCreate="true" Files="@(BuildOutput)"/>
     <Message Text="##vso[artifact.upload containerfolder=bundle-report;artifactname=bundle-report.html;]$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)'))bundle-report.html"
              Importance="High"/>
