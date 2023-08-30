@@ -14,7 +14,7 @@
     <PackageVersion Include="Azure.Core" Version="1.31.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
-    <PackageVersion Include="Azure.Identity" Version="1.7.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.10.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.2.1" />
     <PackageVersion Include="CoreHealthMonitor" Version="$(CoreHealthMonitorVersion)" />
