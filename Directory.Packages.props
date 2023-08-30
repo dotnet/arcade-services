@@ -90,7 +90,6 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.55.0" />
     <PackageVersion Include="Microsoft.ServiceFabric.Actors" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Data" Version="5.2.1571" />
