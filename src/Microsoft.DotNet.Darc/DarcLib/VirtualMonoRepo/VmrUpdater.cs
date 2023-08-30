@@ -482,7 +482,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), discardPatches, cancellationToken);
+                await ReapplyVmrPatchesAsync(vmrPatchesToReapply.DistinctBy(p => p.Path).ToArray(), cancellationToken);
             }
             catch (Exception)
             {
