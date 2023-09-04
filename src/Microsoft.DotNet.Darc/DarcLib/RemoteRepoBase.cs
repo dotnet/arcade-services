@@ -109,7 +109,7 @@ public class RemoteRepoBase : GitRepoCloner
                 await _processManager.ExecuteGit(clonedRepo, new[] { "add", filePath });
             }
 
-            await _processManager.ExecuteGit(clonedRepo, new[] { "commit", "-m", commitMessage });
+            await _processManager.ExecuteGit(clonedRepo, new[] { "commit", "--allow-empty", "-m", commitMessage });
             await _processManager.ExecuteGit(clonedRepo, new[] { "-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch });
         }
         catch (Exception exc)
