@@ -18,7 +18,11 @@ public interface IVmrInitializer
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
     /// <param name="targetVersion">Version of packages, that the SHA we're updating to, produced</param>
     /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
-    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
+    /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
+    /// <param name="readmeTemplatePath">Path to VMR's README.md template</param>
+    /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
+    /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
     Task InitializeRepository(
         string mappingName,
         string? targetRevision,
@@ -28,5 +32,6 @@ public interface IVmrInitializer
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool discardPatches,
         CancellationToken cancellationToken);
 }

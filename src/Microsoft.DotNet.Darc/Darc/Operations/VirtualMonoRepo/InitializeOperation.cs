@@ -37,5 +37,6 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
             additionalRemotes,
             _options.ReadMeTemplate,
             _options.TpnTemplate,
+            _options.DiscardPatches,
             cancellationToken);
 }
