@@ -35,6 +35,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
     <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />

@@ -98,6 +98,7 @@
     <PackageVersion Include="Microsoft.ServiceFabric.Services" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.ServiceFabric.Services.Remoting" Version="5.2.1571" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="19.224.0-preview" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.2.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.14" />
     <PackageVersion Include="Moq" Version="4.8.3" />
@@ -109,6 +110,7 @@
     <PackageVersion Include="NUnit3TestAdapter" Version="3.16.1" />
     <PackageVersion Include="Octokit" Version="0.49.0" />
     <PackageVersion Include="ServiceFabricMocks" Version="$(ServiceFabricMocksVersion)" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.2.3" />
     <PackageVersion Include="System.Drawing.Common" Version="6.0.0" />
     <PackageVersion Include="System.IO.Hashing" Version="7.0.0" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
@@ -121,5 +123,8 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="7.0.0" />
     <PackageVersion Include="YamlDotNet" Version="9.1.4" />
     <PackageVersion Include="YamlDotNet.Signed" Version="5.3.0" />
+
+
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="7.0.10" />
   </ItemGroup>
 </Project>

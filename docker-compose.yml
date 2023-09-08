@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  maestro.containerapp:
+    image: ${DOCKER_REGISTRY-}maestrocontainerapp
+    build:
+      context: .
+      dockerfile: src/Maestro/Maestro.ContainerApp/Dockerfile
