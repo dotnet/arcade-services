@@ -6,9 +6,6 @@ using Microsoft.Extensions.Logging.Console;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost
-    .UseSetting(WebHostDefaults.ContentRootKey, AppContext.BaseDirectory);
-
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
