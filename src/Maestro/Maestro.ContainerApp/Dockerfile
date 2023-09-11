@@ -13,16 +13,15 @@ COPY ["Directory.Build.props", "."]
 COPY ["Directory.Build.targets", "."]
 COPY ["NuGet.config", "."]
 COPY ["global.json", "."]
+COPY [".git/config", ".git/config"]
+COPY [".git/HEAD", ".git/HEAD"]
 COPY ["src/Maestro/Maestro.ContainerApp/Maestro.ContainerApp.csproj", "src/Maestro/Maestro.ContainerApp/"]
 RUN dotnet restore "src/Maestro/Maestro.ContainerApp/Maestro.ContainerApp.csproj"
-COPY . .
+COPY ["src", "/src/src"]
 WORKDIR "/src/src/Maestro/Maestro.ContainerApp"
-RUN dotnet build "Maestro.ContainerApp.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
 RUN dotnet publish "Maestro.ContainerApp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Maestro.ContainerApp.dll"]
