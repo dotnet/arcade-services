@@ -109,6 +109,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionActorService.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.ContainerApp", "src\Maestro\Maestro.ContainerApp\Maestro.ContainerApp.csproj", "{A13F91E1-4229-420B-82EC-C1DC0EF90B13}"
 EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -467,6 +469,18 @@ Global
 		{A13F91E1-4229-420B-82EC-C1DC0EF90B13}.Release|x64.Build.0 = Release|Any CPU
 		{A13F91E1-4229-420B-82EC-C1DC0EF90B13}.Release|x86.ActiveCfg = Release|Any CPU
 		{A13F91E1-4229-420B-82EC-C1DC0EF90B13}.Release|x86.Build.0 = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|x64.Build.0 = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Debug|x86.Build.0 = Debug|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|x64.ActiveCfg = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|x64.Build.0 = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|x86.ActiveCfg = Release|Any CPU
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
