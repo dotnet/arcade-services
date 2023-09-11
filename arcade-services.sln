@@ -109,7 +109,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionActorService.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.ContainerApp", "src\Maestro\Maestro.ContainerApp\Maestro.ContainerApp.csproj", "{A13F91E1-4229-420B-82EC-C1DC0EF90B13}"
 EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}"
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "src\Maestro\docker-compose\docker-compose.dcproj", "{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -518,6 +518,7 @@ Global
 		{B396035E-E6C6-4199-A6C6-C1D9B8D401FD} = {1A456CF0-C09A-4DE6-89CE-1110EED31180}
 		{53AAB951-C3FB-44A0-A1FF-E74440400159} = {1A456CF0-C09A-4DE6-89CE-1110EED31180}
 		{A13F91E1-4229-420B-82EC-C1DC0EF90B13} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
+		{DBE8C9A0-BD8A-4D58-9C55-4C22456A5F00} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

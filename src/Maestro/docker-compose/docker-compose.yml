@@ -7,23 +7,19 @@ services:
     command: >
         azurite
         --loose
-        --blobHost 0.0.0.0
-        --blobPort 10000
         --queueHost 0.0.0.0
         --queuePort 10001
         --location /workspace
         --debug /workspace/debug.log
     hostname: azurite
-    restart: always
     ports:
-      - 10000:10000
       - 10001:10001
 
   maestro.containerapp:
     image: ${DOCKER_REGISTRY-}maestrocontainerapp
     container_name: Maestro.ContainerApp
     build:
-      context: .
+      context: ../../..
       dockerfile: src/Maestro/Maestro.ContainerApp/Dockerfile
     depends_on:
       - azurite
