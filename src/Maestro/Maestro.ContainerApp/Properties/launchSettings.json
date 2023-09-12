@@ -1,0 +1,24 @@
+{
+  "profiles": {
+    "Maestro.ContainerApp": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "https://localhost:55821/swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:55821;http://localhost:55822"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/swagger",
+        "environmentVariables": {
+            "ASPNETCORE_URLS": "https://+:443;http://+:80",
+            "ASPNETCORE_ENVIRONMENT": "Development"
+        },
+      "publishAllPorts": true,
+      "useSSL": true
+    }
+  }
+}

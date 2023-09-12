@@ -3,7 +3,7 @@
 
 using Maestro.ContainerApp;
 using Microsoft.Extensions.Logging.Console;
-using Microsoft.Extensions.Azure;
+using Maestro.ContainerApp.Queues;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,11 +17,9 @@ builder.Services.AddLogging(b =>
      .AddConsoleFormatter<SimpleConsoleLoggerFormatter, SimpleConsoleFormatterOptions>(
         options => options.TimestampFormat = "[HH:mm:ss] "));
 
-builder.Services.AddAzureClients(clientBuilder =>
-{
-    // TODO: This would get replaced with a connection string from builder.Configuration["StorageConnectionString:queue"]
-    clientBuilder.AddQueueServiceClient("UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://host.docker.internal");
-});
+builder.AddAzureQueues();
+builder.Services.AddHostedService<QueueProcessor>();
+builder.Services.AddTransient<SubscriptionQueueProcessor>();
 
 var app = builder.Build();
 
