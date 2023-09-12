@@ -1,13 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using JetBrains.Annotations;
-
 namespace Maestro.ContainerApp.Api.Models;
 
 public class AssetLocation
 {
-    public AssetLocation([NotNull] Data.Models.AssetLocation other)
+    public AssetLocation(Data.Models.AssetLocation other)
     {
         if (other == null)
         {

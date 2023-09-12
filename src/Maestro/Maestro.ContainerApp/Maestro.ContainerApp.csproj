@@ -21,7 +21,6 @@
     <!-- <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" /> -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
-    <PackageReference Include="JetBrains.Annotations" />
   </ItemGroup>
 
   <ItemGroup>

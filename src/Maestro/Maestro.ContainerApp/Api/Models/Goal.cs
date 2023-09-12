@@ -1,15 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using JetBrains.Annotations;
-using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Maestro.ContainerApp.Api.Models;
 
 public class Goal
 {
-    public Goal([NotNull] Data.Models.GoalTime other)
+    public Goal(Data.Models.GoalTime other)
     {
         if (other == null)
         {

@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using JetBrains.Annotations;
 using System.ComponentModel.DataAnnotations;
 
 namespace Maestro.ContainerApp.Api.Models;
 
 public class Channel
 {
-    public Channel([NotNull] Data.Models.Channel other)
+    public Channel(Data.Models.Channel other)
     {
         if (other == null)
         {

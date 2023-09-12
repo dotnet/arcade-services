@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
-using JetBrains.Annotations;
 
 namespace Maestro.ContainerApp.Api.Models;
 
 public class DefaultChannel
 {
-    public DefaultChannel([NotNull] Data.Models.DefaultChannel other)
+    public DefaultChannel(Data.Models.DefaultChannel other)
     {
         if (other == null)
         {

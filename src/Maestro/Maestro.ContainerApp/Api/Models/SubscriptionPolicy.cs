@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
-using JetBrains.Annotations;
 using Maestro.Data.Models;
 
 namespace Maestro.ContainerApp.Api.Models;
@@ -14,7 +13,7 @@ public class SubscriptionPolicy : IValidatableObject
     {
     }
 
-    public SubscriptionPolicy([NotNull] Data.Models.SubscriptionPolicy other)
+    public SubscriptionPolicy(Data.Models.SubscriptionPolicy other)
     {
         if (other == null)
         {
