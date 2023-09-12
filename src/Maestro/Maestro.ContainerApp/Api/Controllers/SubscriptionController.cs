@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.ContainerApp.Queues;
+using Maestro.ContainerApp.Queues.WorkItems;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maestro.ContainerApp.Api.Controllers;
@@ -27,10 +28,10 @@ public class SubscriptionController : ControllerBase
     [HttpPost("{id}/trigger")]
     public virtual async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
     {
-        var client = _queueClientFactory.Create<StartSubscriptionUpdateWorkItem>(QueueConfiguration.SubscriptionTriggerQueueName);
+        var client = _queueClientFactory.Create<StartSubscriptionUpdateWorkItem>();
         await client.SendAsync(new StartSubscriptionUpdateWorkItem
         {
-            Id = id,
+            SubscriptionId = id,
             BuildId = buildId,
         });
 
@@ -38,11 +39,4 @@ public class SubscriptionController : ControllerBase
 
         return Ok();
     }
-}
-
-internal class StartSubscriptionUpdateWorkItem
-{
-    public Guid Id { get; set; }
-
-    public int BuildId { get; set; }
 }

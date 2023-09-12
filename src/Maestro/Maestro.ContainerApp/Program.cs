@@ -19,9 +19,7 @@ builder.Services.AddLogging(b =>
      .AddConsoleFormatter<SimpleConsoleLoggerFormatter, SimpleConsoleFormatterOptions>(
         options => options.TimestampFormat = "[HH:mm:ss] "));
 
-builder.AddAzureQueues();
-builder.Services.AddHostedService<QueueProcessor>();
-builder.Services.AddTransient<SubscriptionQueueProcessor>();
+builder.AddBackgroudQueueProcessors();
 
 /// TODO: pass a connection string
 string connectionString = "";

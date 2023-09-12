@@ -4,23 +4,24 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Maestro.ContainerApp.Queues.WorkItems;
 
 namespace Maestro.ContainerApp.Queues;
 
-public abstract class QueueConsumer<T>
+internal class BackgroundQueueProcessor : BackgroundService
 {
     private readonly QueueServiceClient _queueClient;
     private readonly string _queueName;
     private readonly ILogger _logger;
 
-    protected QueueConsumer(QueueServiceClient queueClient, ILogger logger, string queueName)
+    public BackgroundQueueProcessor(QueueServiceClient queueClient, ILogger<BackgroundQueueProcessor> logger, string queueName)
     {
         _queueClient = queueClient;
         _queueName = queueName;
         _logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await _queueClient.CreateQueueAsync(_queueName, cancellationToken: cancellationToken);
         QueueClient client = _queueClient.GetQueueClient(_queueName);
@@ -46,7 +47,7 @@ public abstract class QueueConsumer<T>
 
             try
             {
-                T item = JsonSerializer.Deserialize<T>(message.Body)
+                BackgroundWorkItem item = JsonSerializer.Deserialize<BackgroundWorkItem>(message.Body)
                     ?? throw new InvalidOperationException("Empty message queue received");
                 await ProcessItemAsync(item);
                 await client.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
@@ -58,5 +59,15 @@ public abstract class QueueConsumer<T>
         }
     }
 
-    protected abstract Task ProcessItemAsync(T item);
+    private Task ProcessItemAsync(BackgroundWorkItem item)
+    {
+        switch (item)
+        {
+            case StartSubscriptionUpdateWorkItem startSubscriptionUpdate:
+                _logger.LogInformation($"Processing {nameof(StartSubscriptionUpdateWorkItem)}: {startSubscriptionUpdate.SubscriptionId}");
+                break;
+        }
+
+        return Task.CompletedTask;
+    }
 }

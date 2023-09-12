@@ -8,9 +8,7 @@ namespace Maestro.ContainerApp.Queues;
 
 internal static class QueueConfiguration
 {
-    public const string SubscriptionTriggerQueueName = "subscriptions";
-
-    public static void AddAzureQueues(this WebApplicationBuilder builder)
+    public static void AddBackgroudQueueProcessors(this WebApplicationBuilder builder)
     {
         builder.Services.AddAzureClients(clientBuilder =>
         {
@@ -25,6 +23,12 @@ internal static class QueueConfiguration
             });
         });
 
-        builder.Services.TryAddTransient<QueueProducerFactory>();
+        var backgroundQueueName = builder.Configuration["BackgroundQueueName"]
+            ?? throw new ArgumentException("Please configure the BackgroundQueueName setting");
+
+        builder.Services.AddHostedService(sp
+            => ActivatorUtilities.CreateInstance<BackgroundQueueProcessor>(sp, backgroundQueueName));
+        builder.Services.TryAddTransient(sp
+            => ActivatorUtilities.CreateInstance<QueueProducerFactory>(sp, backgroundQueueName));
     }
 }

@@ -12,6 +12,7 @@ using Newtonsoft.Json.Linq;
 using Maestro.ContainerApp.Utils;
 using Maestro.ContainerApp.Api.Models;
 using Maestro.ContainerApp.Queues;
+using Maestro.ContainerApp.Queues.WorkItems;
 
 namespace Maestro.ContainerApp.Api.Controllers;
 
@@ -323,7 +324,7 @@ public class BuildsController : ControllerBase
             new Models.Build(buildModel));
     }
 
-    private class BuildCoherencyInfoWorkItem : IBackgroundWorkItem
+    private class BuildCoherencyInfoWorkItem : BackgroundWorkItem
     {
         private BuildAssetRegistryContext DBContext { get; }
         private IRemoteFactory RemoteFactory { get; }
