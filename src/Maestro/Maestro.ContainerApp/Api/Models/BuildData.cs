@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class BuildData
 {

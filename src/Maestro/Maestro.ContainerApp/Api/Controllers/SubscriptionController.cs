@@ -4,7 +4,7 @@
 using Maestro.ContainerApp.Queues;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Maestro.ContainerApp.Controllers;
+namespace Maestro.ContainerApp.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]

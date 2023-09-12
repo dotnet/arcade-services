@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
 using Maestro.Data.Models;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class SubscriptionPolicy : IValidatableObject
 {

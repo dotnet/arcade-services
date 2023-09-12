@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using JetBrains.Annotations;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class DefaultChannel
 {

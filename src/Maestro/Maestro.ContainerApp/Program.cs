@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.ContainerApp;
+using Maestro.Data;
 using Microsoft.Extensions.Logging.Console;
 using Maestro.ContainerApp.Queues;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,13 @@ builder.AddAzureQueues();
 builder.Services.AddHostedService<QueueProcessor>();
 builder.Services.AddTransient<SubscriptionQueueProcessor>();
 
+/// TODO: pass a connection string
+string connectionString = "";
+builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
+{
+    options.UseSqlServer(connectionString);
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -29,12 +38,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
 

@@ -5,7 +5,7 @@ using JetBrains.Annotations;
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class Goal
 {

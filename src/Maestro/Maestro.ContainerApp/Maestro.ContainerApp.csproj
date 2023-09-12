@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -16,6 +16,9 @@
     <PackageReference Include="Azure.Storage.Queues" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.Extensions.Azure" />
+    <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
+    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
+    <!-- <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" /> -->
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="JetBrains.Annotations" />

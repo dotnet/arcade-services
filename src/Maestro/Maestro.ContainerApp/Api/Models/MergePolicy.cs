@@ -6,7 +6,7 @@ using JetBrains.Annotations;
 using Maestro.Data.Models;
 using Newtonsoft.Json.Linq;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class MergePolicy
 {

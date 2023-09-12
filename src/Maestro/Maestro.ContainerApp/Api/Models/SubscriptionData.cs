@@ -4,7 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Maestro.ContainerApp.Utils;
 
-namespace Maestro.ContainerApp.Models;
+namespace Maestro.ContainerApp.Api.Models;
 
 public class SubscriptionData
 {
