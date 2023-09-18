@@ -1,8 +1,0 @@
-{
-  "KeyVaultUri": "https://maestroint.vault.azure.net/",
-  "AppConfigurationUri": "https://maestroint.azconfig.io/",
-  "DataProtection": {
-    "KeyBlobUri": "https://maestroint.blob.core.windows.net/dataprotection/keys.xml",
-    "DataProtectionKeyUri": "https://maestroint.vault.azure.net/keys/data-protection-encryption-key/"
-  }
-}
