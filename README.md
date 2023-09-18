@@ -1,21 +1,6 @@
-# Arcade Services
+⚠️⚠️⚠️ PLEASE READ ⚠️⚠️⚠️
 
-## Overview
+This is a servicing branch which contains the Darc tool only. It is not intended to be used for development but only to support servicing of the VMR-lite (.NET 8.0 Virtual Monolithic Repository).  
+The .NET 9.0 VMR synchronization process differs wildly so this branch contains a frozen version of the tooling used for 8.0 flows.
 
-This repo is home of the services that help us construct .NET. Mainly, you can find the Maestro dependency flow system and the Darc CLI tool.
-
-## Development
-
-See instructions on how to debug Maestro [here](src/Maestro/README.md).
-
-## Contribution
-
-We welcome contributions! Please follow the [Code of Conduct](CODE-OF-CONDUCT.md).
-
-## Filing issues
-
-This repo should contain issues that are tied to Maestro and Darc.
-
-### License
-
-.NET (including this repo) is licensed under the [MIT license](LICENSE.TXT).
+The Darc tooling built in this branch is only used in the [`release/8.0` branch of `dotnet/installer`](https://github.com/dotnet/installer/tree/release/8.0.1xx).
