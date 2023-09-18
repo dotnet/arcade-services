@@ -20,9 +20,11 @@ trigger:
     include:
     - main
     - production
+    - release/8.0
 pr:
 - main
 - production
+- release/8.0
 
 pool:
   name: NetCore1ESPool-Internal-NoMSI
@@ -127,11 +129,6 @@ stages:
               AzdoProject: $(AzdoProject)
               BuildId: $(Build.BuildId)
 
-        - task: NodeTool@0
-          displayName: Install node.js
-          inputs:
-            versionSpec: 12.x
-
         - task: NuGetToolInstaller@0
           displayName: Install NuGet
           inputs:
@@ -146,14 +143,6 @@ stages:
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate Release Versions
-
-        - powershell: |
-            [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
-            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
-            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
-            $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
-            git diff
-          displayName: Remove RunAsPolicy From MaestroApplication
 
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
@@ -182,57 +171,8 @@ stages:
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
-          ## Prepare service fabric artifact
-          - task: ServiceFabricUpdateManifests@2
-            displayName: Update Service Fabric manifests
-            inputs:
-              applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
-
-          - powershell: |
-              robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
-              robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
-              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
-              exit 0
-            displayName: Copy Maestro Project Artifacts
-
-          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
-            artifact: MaestroApplication
-            displayName: Publish MaestroApplication
-
           ## Generate SBOM manifest
           - template: /eng/templates/steps/generate-sbom.yml
-
-          ## Prepare database update artifact
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
-            workingDirectory: src/Maestro/Maestro.Data
-            displayName: Create Data Package
-
-          - task: CopyFiles@2
-            displayName: Copy update-database.ps1
-            inputs:
-              sourceFolder: $(Build.SourcesDirectory)\src\Maestro
-              contents: update-database.ps1
-              targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
-
-          - publish: $(Build.ArtifactStagingDirectory)\Maestro.Data
-            artifact: Maestro.Data
-            displayName: Publish Maestro.Data Artifact
-
-          ## Prepare release utilities artifact
-          - task: CopyFiles@2
-            displayName: Prepare Release Utilities
-            inputs:
-              sourceFolder: $(Build.SourcesDirectory)\eng
-              contents: '*'
-              targetFolder: $(Build.ArtifactStagingDirectory)\eng
-
-          - publish: $(Build.ArtifactStagingDirectory)\eng
-            artifact: ReleaseUtilities
-            displayName: Publish Release Utilities Artifact
-
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
-            artifact: Maestro.ScenarioTests
-            displayName: Publish Maestro Scenario Tests
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
   - template: /eng/common/templates/post-build/post-build.yml
@@ -255,18 +195,3 @@ stages:
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True
         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
-
-  - template: /eng/templates/stages/deploy.yaml
-    parameters:
-      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        DeploymentEnvironment: Staging
-        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
-        PublishProfile: Int
-        Subscription: NetHelixStaging
-        VariableGroup: MaestroInt KeyVault
-      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-        DeploymentEnvironment: Production
-        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-        PublishProfile: Prod
-        Subscription: NetHelix
-        VariableGroup: MaestroProd KeyVault

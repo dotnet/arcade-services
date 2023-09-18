@@ -1,11 +1,5 @@
 steps:
 
-- task: Powershell@2
-  displayName: Install SQL Express
-  inputs:
-    targetType: filePath
-    filePath: eng\Install-SqlExpress.ps1
-
 - task: DotNetCoreCLI@2
   displayName: Run unit tests
   inputs:
@@ -61,19 +55,3 @@ steps:
     summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
     pathToSources: $(Build.SourcesDirectory)
     publishRunAttachments: true
-
-- script: echo export const token = ''; > src/environments/token.ts
-  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-  displayName: Prepare For UI Tests
-
-- script: npm run-script test -- --watch=false --reporters progress,junit --browsers ChromeHeadless
-  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-  displayName: Run UI Tests
-
-- task: PublishTestResults@2
-  displayName: Publish UI Test Results
-  inputs:
-    testResultsFormat: 'JUnit'
-    testResultsFiles: '**/TESTS-*.xml'
-    searchFolder: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
-    testRunTitle: UI Tests ($(Agent.JobName))
