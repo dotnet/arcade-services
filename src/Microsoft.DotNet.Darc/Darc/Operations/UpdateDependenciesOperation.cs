@@ -297,46 +297,15 @@ class UpdateDependenciesOperation : Operation
     {
         Console.WriteLine("Checking for coherency updates...");
 
-        CoherencyMode coherencyMode = CoherencyMode.Strict;
-        if (_options.LegacyCoherency)
-        {
-            coherencyMode = CoherencyMode.Legacy;
-        }
-        else
-        {
-            Console.WriteLine("Using 'Strict' coherency mode. If this fails, a second attempt utilizing 'Legacy' Coherency mode will be made.");
-        }
-
         List<DependencyUpdate> coherencyUpdates = null;
-        bool updateSucceeded = false;
         try
         {
             // Now run a coherency update based on the current set of dependencies updated from the previous pass.
-            coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory, coherencyMode);
-            updateSucceeded = true;
+            coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
         }
         catch (DarcCoherencyException e)
         {
             PrettyPrintCoherencyErrors(e);
-        }
-
-        if (coherencyMode == CoherencyMode.Strict && !updateSucceeded)
-        {
-            Console.WriteLine("Attempting fallback to Legacy coherency");
-            try
-            {
-                // Now run a coherency update based on the current set of dependencies updated from the previous pass.
-                coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory, CoherencyMode.Legacy);
-                Console.WriteLine("... Legacy-mode fallback worked");
-                updateSucceeded = true;
-            }
-            catch (DarcCoherencyException e)
-            {
-                PrettyPrintCoherencyErrors(e);
-            }
-        }
-        if (!updateSucceeded)
-        {
             return Constants.ErrorCode;
         }
 
