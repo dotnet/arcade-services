@@ -158,6 +158,9 @@ internal class AddBuildToChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
+            // Get the latest build information to verify the channels
+            build = await remote.GetBuildAsync(build.Id);
+
             Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
             foreach (var channel in targetChannels)
             {
