@@ -1179,7 +1179,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="azdoDefinitionId">ID of the build definition where a build should be queued.</param>
     /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
     /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
-    /// /// <param name="pipelineResources">Pipeline resources as a Dictionary of (pipeline resource name, build number).</param>
+    /// <param name="pipelineResources">Pipeline resources as a Dictionary of (pipeline resource name, build number).</param>
     public async Task<int> StartNewBuildAsync(
         string accountName,
         string projectName,
