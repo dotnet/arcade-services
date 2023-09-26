@@ -1179,6 +1179,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <param name="azdoDefinitionId">ID of the build definition where a build should be queued.</param>
     /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
     /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
+    /// /// <param name="pipelineResources">Pipeline resources as a Dictionary of (pipeline resource name, build number).</param>
     public async Task<int> StartNewBuildAsync(
         string accountName,
         string projectName,
@@ -1186,12 +1187,27 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         string sourceBranch,
         string sourceVersion,
         Dictionary<string, string> queueTimeVariables = null,
-        Dictionary<string, string> templateParameters = null)
+        Dictionary<string, string> templateParameters = null,
+        Dictionary<string, string> pipelineResources = null)
     {
         var variables = new Dictionary<string, AzureDevOpsVariable>();
-        foreach ((string name, string value) in queueTimeVariables)
+
+        if (queueTimeVariables != null)
         {
-            variables.Add(name, new AzureDevOpsVariable(value));
+            foreach ((string name, string value) in queueTimeVariables)
+            {
+                variables.Add(name, new AzureDevOpsVariable(value));
+            }
+        }
+
+        var pipelineResourceParameters = new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
+
+        if (pipelineResources != null)
+        {
+            foreach ((string name, string version) in pipelineResources)
+            {
+                pipelineResourceParameters.Add(name, new AzureDevOpsPipelineResourceParameter(version));
+            }
         }
 
         var body = new AzureDevOpsPipelineRunDefinition
@@ -1201,7 +1217,8 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>
                 {
                     { "self", new AzureDevOpsRepositoryResourceParameter($"refs/heads/{sourceBranch}", sourceVersion) }
-                }
+                },
+                Pipelines = pipelineResourceParameters
             },
             TemplateParameters = templateParameters,
             Variables = variables
