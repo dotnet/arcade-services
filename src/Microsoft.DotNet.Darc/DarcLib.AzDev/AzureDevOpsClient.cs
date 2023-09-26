@@ -10,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using static System.Net.WebRequestMethods;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -1190,25 +1192,13 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         Dictionary<string, string> templateParameters = null,
         Dictionary<string, string> pipelineResources = null)
     {
-        var variables = new Dictionary<string, AzureDevOpsVariable>();
+        var variables = queueTimeVariables?
+            .ToDictionary(x => x.Key, x => new AzureDevOpsVariable(x.Value))
+            ?? new Dictionary<string, AzureDevOpsVariable>();
 
-        if (queueTimeVariables != null)
-        {
-            foreach ((string name, string value) in queueTimeVariables)
-            {
-                variables.Add(name, new AzureDevOpsVariable(value));
-            }
-        }
-
-        var pipelineResourceParameters = new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
-
-        if (pipelineResources != null)
-        {
-            foreach ((string name, string version) in pipelineResources)
-            {
-                pipelineResourceParameters.Add(name, new AzureDevOpsPipelineResourceParameter(version));
-            }
-        }
+        var pipelineResourceParameters = pipelineResources?
+            .ToDictionary(x => x.Key, x => new AzureDevOpsPipelineResourceParameter(x.Value))
+            ?? new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
 
         var body = new AzureDevOpsPipelineRunDefinition
         {
