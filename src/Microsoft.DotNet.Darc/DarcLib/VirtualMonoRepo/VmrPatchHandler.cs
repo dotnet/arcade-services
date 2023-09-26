@@ -351,6 +351,9 @@ public class VmrPatchHandler : IVmrPatchHandler
         _logger.LogWarning("Patch {name} targeting {path} is too large (>1GB). Repo will be split into smaller patches." +
             "Please note that there might be mismatches in non-global cloaking rules.", patchName, applicationPath);
 
+        _logger.LogDebug("Deleting too large patch {path}", patchName);
+        _fileSystem.DeleteFile(patch.Path);
+
         // If the patch is more than 1GB, new must start over and break it down into smaller patches
         var files = _fileSystem.GetFiles(workingDir);
         var directories = _fileSystem.GetDirectories(workingDir);
