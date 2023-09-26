@@ -10,7 +10,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.Extensions.Logging;
@@ -20,7 +19,6 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using static System.Net.WebRequestMethods;
 
 namespace Microsoft.DotNet.DarcLib;
 
