@@ -37,6 +37,9 @@ class UpdateDependenciesCommandLineOptions : CommandLineOptions
     [Option("coherency-only", HelpText = "Only do coherency updates.")]
     public bool CoherencyOnly { get; set; }
 
+    [Option("legacy-coherency", HelpText = "Use 'legacy' coherency mode (default is 'strict')", Hidden = true)]
+    public bool LegacyCoherency { get; set; }
+
     public override Operation GetOperation()
     {
         return new UpdateDependenciesOperation(this);

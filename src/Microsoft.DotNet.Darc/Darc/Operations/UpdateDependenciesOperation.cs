@@ -34,6 +34,12 @@ class UpdateDependenciesOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
+        if (_options.LegacyCoherency)
+        {
+            Logger.LogError("The `legacy-coherency` option is no longer available. Darc supports `Strict` coherency algorithm only.");
+            return Constants.ErrorCode;
+        }
+
         try
         {
             DarcSettings darcSettings = darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
