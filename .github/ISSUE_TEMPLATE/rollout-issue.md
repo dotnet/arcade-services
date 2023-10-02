@@ -16,11 +16,11 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 ## Build status check (Monday)
 - [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
 - [ ] Rotate any secrets that need manual rotation
-- [ ] In case the build is failing, try to fix it and ensure the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline is green
+- [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline. Try to fix issues, if any, so that we have a green build before the rollout day.
 - [ ] Check the `Rollout` column in the [Product Construction](https://github.com/orgs/dotnet/projects/276) board - move any issues rolled-out last week into `Done`
 
 ## Rollout preparation (Tuesday)
-- [ ] Check the vendor prepared the rollout:
+- [ ] Check that the vendor prepared the rollout:
   - Thread on the [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
   - Rollout issue in [AzDO](https://dev.azure.com/dnceng/internal/_workitems/)
   - Rollout PR in `arcade-services`
@@ -30,7 +30,7 @@ This issue tracks the `arcade-services` repository rollout. On top of the [Rollo
 - [ ] Merge the already prepared rollout PR (⚠️ **DO NOT SQUASH**)
 - [ ] Link the rollout build to the [Rollout build](#rollout-build) section of this issue
 - [ ] Verify that Maestro opened a production => main PR in `arcade-services` with the rollout merge commit ([example](https://github.com/dotnet/arcade-services/pull/2741)). There should be no changes in the PR to any files. **Do not merge the PR yet**.
-- [ ] Ensure the build is green and stops at the "Approval" phase
+- [ ] Ensure the build is green and stops at the `Approval` phase
 
 ## Rollout day (Wednesday)
 - [ ] Approve the `Approval` stage of the rollout build (that has been already started the day before)
