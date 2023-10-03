@@ -8,9 +8,11 @@ namespace Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 public class AzureDevOpsRunResourcesParameters
 {
     public Dictionary<string, AzureDevOpsRepositoryResourceParameter> Repositories { get; set; }
+    public Dictionary<string, AzureDevOpsPipelineResourceParameter> Pipelines { get; set; }
 
     public AzureDevOpsRunResourcesParameters()
     {
         Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>();
+        Pipelines = new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
     }
 }
