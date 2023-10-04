@@ -1198,13 +1198,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             .ToDictionary(x => x.Key, x => new AzureDevOpsPipelineResourceParameter(x.Value))
             ?? new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
 
+        var repositoryBranch = sourceBranch.StartsWith("refs/heads/") ? sourceBranch : $"refs/heads/{sourceBranch}";
+
         var body = new AzureDevOpsPipelineRunDefinition
         {
             Resources = new AzureDevOpsRunResourcesParameters
             {
                 Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>
                 {
-                    { "self", new AzureDevOpsRepositoryResourceParameter($"refs/heads/{sourceBranch}", sourceVersion) }
+                    { "self", new AzureDevOpsRepositoryResourceParameter(repositoryBranch, sourceVersion) }
                 },
                 Pipelines = pipelineResourceParameters
             },
