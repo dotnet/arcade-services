@@ -950,6 +950,9 @@ public class VmrPatchHandlerTests
             new VmrIngestionPatch(expectedPatchName + ".1.1", RepoVmrPath / "large-dir-1" / "large-dir-2"),
             new VmrIngestionPatch(expectedPatchName + ".1.2", RepoVmrPath / "large-dir-1" / "small-dir"),
         });
+
+        _fileSystem.Verify(x => x.DeleteFile(expectedPatchName), Times.Once);
+        _fileSystem.Verify(x => x.DeleteFile(expectedPatchName + ".1"), Times.Once);
     }
 
     [Test]
