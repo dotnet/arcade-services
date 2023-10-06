@@ -745,146 +745,6 @@ public sealed class Remote : IRemote
         return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
     }
 
-    /// <summary>
-    ///     Get updates required by coherency constraints.
-    /// </summary>
-    /// <param name="dependencies">Current set of dependencies.</param>
-    /// <param name="remoteFactory">Remote factory for remote queries.</param>
-    /// <returns>Dependencies with updates.</returns>
-    private async Task<List<DependencyUpdate>> GetRequiredLegacyCoherencyUpdatesAsync(
-        IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory)
-    {
-        List<DependencyUpdate> toUpdate = new List<DependencyUpdate>();
-
-        IEnumerable<DependencyDetail> leavesOfCoherencyTrees =
-            CalculateLeavesOfCoherencyTrees(dependencies);
-
-        if (!leavesOfCoherencyTrees.Any())
-        {
-            // Nothing to do.
-            return toUpdate;
-        }
-
-        DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
-        {
-            IncludeToolset = true,
-            LookupBuilds = true,
-            NodeDiff = NodeDiff.None
-        };
-
-        // Now make a walk over coherent dependencies. Note that coherent dependencies could make
-        // a chain (A->B->C). In all cases we need to walk to the head of the chain, keeping track
-        // of all elements in the chain. Also note that we are walking all dependencies here, not
-        // just those that match the incoming AssetData and aligning all of these based on the coherency data.
-        Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
-        HashSet<DependencyDetail> visited = new HashSet<DependencyDetail>();
-        foreach (DependencyDetail dependency in leavesOfCoherencyTrees)
-        {
-            // Build the update list.
-            // Walk to head of dependency tree, keeping track of elements along the way.
-            // If we hit a pinned dependency in the walk, that means we can't move
-            // the dependency and therefore it is effectively the "head" of the subtree.
-            // We will still visit all the elements in the chain eventually in this algorithm:
-            // Consider A->B(pinned)->C(pinned)->D.
-            List<DependencyDetail> updateList = new List<DependencyDetail>();
-            DependencyDetail currentDependency = dependency;
-            while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
-            {
-                updateList.Add(currentDependency);
-                DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
-                    d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
-                    $"dependency {currentDependency.CoherentParentDependencyName}");
-
-                // An interesting corner case develops here. If we have two dependency
-                // chains that have a common element in the middle of the chain, then we can end up updating the common
-                // elements more than once unnecessarily. For example, let's say we have two chains:
-                // A->B->C
-                // D->B->C
-                // The walk of the first chain item will update B based on C, then the second chain will also update B based on C.
-                // We can break out of the chain building if we see a node already visited.
-                // However, we should ensure that we get the updated version of the head of this chain, rather than
-                // the current version.
-                if (visited.Contains(currentDependency))
-                {
-                    DependencyUpdate alreadyUpdated = toUpdate.FirstOrDefault(alreadyUpdatedDep => alreadyUpdatedDep.From == currentDependency);
-                    if (alreadyUpdated != null)
-                    {
-                        currentDependency = alreadyUpdated.To;
-                    }
-                    break;
-                }
-            }
-
-            DependencyGraphNode rootNode = null;
-
-            // Build the graph to find the assets if we don't have the root in the cache.
-            // The graph build is automatically broken when
-            // all the desired assets are found (breadth first search). This means the cache may or
-            // may not contain a complete graph for a given node. So, we first search the cache for the desired assets,
-            // then if not found (or if there was no cache), we then build the graph from that node.
-            bool nodeFromCache = nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode);
-            if (!nodeFromCache)
-            {
-                _logger.LogInformation($"Node not found in cache, starting graph build at " +
-                                       $"{currentDependency.RepoUri}@{currentDependency.Commit}");
-                rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, updateList, nodeCache);
-            }
-
-            // Now do the lookup to find the element in the tree for each item in the update list
-            foreach (DependencyDetail dependencyInUpdateChain in updateList)
-            {
-                (Asset coherentAsset, Build buildForAsset) =
-                    FindNewestAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
-
-                if (coherentAsset == null)
-                {
-                    // This is an invalid state. We can't satisfy the
-                    // constraints so they should either be removed or pinned.
-                    throw new DarcCoherencyException(new CoherencyError()
-                    {
-                        Dependency = dependencyInUpdateChain,
-                        Error = $"No matching build asset found in dependency graph under {currentDependency.RepoUri} @ {currentDependency.Commit}",
-                        PotentialSolutions = new List<string> {
-                            $"Remove the coherency attribute",
-                            $"Pin the dependenency.",
-                        }
-                    });
-                }
-
-                string buildRepoUri = buildForAsset.GitHubRepository ?? buildForAsset.AzureDevOpsRepository;
-
-                if (dependencyInUpdateChain.Name == coherentAsset.Name &&
-                    dependencyInUpdateChain.Version == coherentAsset.Version &&
-                    dependencyInUpdateChain.Commit == buildForAsset.Commit &&
-                    dependencyInUpdateChain.RepoUri == buildRepoUri)
-                {
-                    continue;
-                }
-
-                DependencyDetail updatedDependency = new DependencyDetail(dependencyInUpdateChain)
-                {
-                    Name = coherentAsset.Name,
-                    Version = coherentAsset.Version,
-                    RepoUri = buildRepoUri,
-                    Commit = buildForAsset.Commit,
-                    Locations = coherentAsset.Locations?.Select(l => l.Location)
-                };
-
-                toUpdate.Add(new DependencyUpdate
-                {
-                    From = dependencyInUpdateChain,
-                    To = updatedDependency
-                });
-
-                visited.Add(dependencyInUpdateChain);
-            }
-        }
-
-        return toUpdate;
-    }
-
     private async Task<DependencyGraphNode> BuildGraphAtDependencyAsync(
         IRemoteFactory remoteFactory,
         DependencyDetail rootDependency,
@@ -1050,23 +910,13 @@ public sealed class Remote : IRemote
     /// </summary>
     /// <param name="dependencies">Current set of dependencies.</param>
     /// <param name="remoteFactory">Remote factory for remote queries.</param>
-    /// <param name="coherencyMode">Coherency algorithm that should be used</param>
     /// <returns>List of dependency updates.</returns>
     public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
         IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory,
-        CoherencyMode coherencyMode)
+        IRemoteFactory remoteFactory)
     {
-        _logger.LogInformation($"Running coherency update using the {coherencyMode} algorithm");
-        switch (coherencyMode)
-        {
-            case CoherencyMode.Strict:
-                return await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
-            case CoherencyMode.Legacy:
-                return await GetRequiredLegacyCoherencyUpdatesAsync(dependencies, remoteFactory);
-            default:
-                throw new NotImplementedException($"Coherency mode {coherencyMode} is not supported.");
-        }
+        _logger.LogInformation($"Running coherency update");
+        return await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
     }
 
     /// <summary>

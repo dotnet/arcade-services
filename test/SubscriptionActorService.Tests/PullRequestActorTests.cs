@@ -93,7 +93,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         return base.BeforeExecute(context);
     }
 
-    private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, CoherencyMode withCoherencyMode)
+    private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
@@ -102,7 +102,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
         DarcRemotes[TargetRepo]
-            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object, withCoherencyMode));
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
         assets.Should()
             .BeEquivalentTo(
                 new List<List<AssetData>>
@@ -261,9 +261,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),
-                    It.IsAny<IRemoteFactory>(), It.IsAny<CoherencyMode>()))
+                    It.IsAny<IRemoteFactory>()))
             .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
+                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
                 {
                     return new List<DependencyUpdate>();
                 });
@@ -275,9 +275,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),
-                    It.IsAny<IRemoteFactory>(), CoherencyMode.Strict))
+                    It.IsAny<IRemoteFactory>()))
             .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
+                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
                 {
                     CoherencyError fakeCoherencyError = new CoherencyError()
                     {
@@ -568,7 +568,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 await WhenProcessPendingUpdatesAsyncIsCalled();
                 ThenUpdateReminderIsRemoved();
                 AndPendingUpdateIsRemoved();
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
                 AndCommitUpdatesShouldHaveBeenCalled(b);
                 AndUpdatePullRequestShouldHaveBeenCalled();
                 AndShouldHavePullRequestCheckReminder();
@@ -621,7 +621,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
             await WhenUpdateAssetsAsyncIsCalled(b);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
             AndCreateNewBranchShouldHaveBeenCalled();
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndCreatePullRequestShouldHaveBeenCalled();
@@ -649,7 +649,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
             {
                 await WhenUpdateAssetsAsyncIsCalled(b);
-                ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+                ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
                 AndCommitUpdatesShouldHaveBeenCalled(b);
                 AndUpdatePullRequestShouldHaveBeenCalled();
                 AndShouldHavePullRequestCheckReminder();
@@ -699,7 +699,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
             await WhenUpdateAssetsAsyncIsCalled(b);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
             AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
         }
 
@@ -723,7 +723,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
             await WhenUpdateAssetsAsyncIsCalled(b);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, CoherencyMode.Strict);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
             AndCreateNewBranchShouldHaveBeenCalled();
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndCreatePullRequestShouldHaveBeenCalled();

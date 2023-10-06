@@ -291,8 +291,7 @@ public interface IRemote
     /// <returns>List of dependency updates.</returns>
     Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
         IEnumerable<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory,
-        CoherencyMode coherencyMode);
+        IRemoteFactory remoteFactory);
 
     /// <summary>
     ///     Given a current set of dependencies, determine what non-coherency updates
