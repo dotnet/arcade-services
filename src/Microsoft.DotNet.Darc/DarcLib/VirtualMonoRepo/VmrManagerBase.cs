@@ -31,6 +31,7 @@ public abstract class VmrManagerBase
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ILocalGitRepo _localGitClient;
     private readonly IGitFileManagerFactory _gitFileManagerFactory;
     private readonly IFileSystem _fileSystem;
@@ -44,6 +45,7 @@ public abstract class VmrManagerBase
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
+        ICodeownersGenerator codeownersGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IFileSystem fileSystem,
@@ -57,6 +59,7 @@ public abstract class VmrManagerBase
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
+        _codeownersGenerator = codeownersGenerator;
         _localGitClient = localGitClient;
         _gitFileManagerFactory = gitFileManagerFactory;
         _fileSystem = fileSystem;
@@ -141,6 +144,8 @@ public abstract class VmrManagerBase
         {
             await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
         }
+
+        await _codeownersGenerator.UpdateCodeowners(cancellationToken);
 
         // Commit without adding files as they were added to index directly
         await CommitAsync(commitMessage, author);

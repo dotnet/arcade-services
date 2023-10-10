@@ -40,7 +40,7 @@ public class FileSystem : IFileSystem
 
     public void CopyFile(string sourceFileName, string destFileName, bool overwrite = false) => File.Copy(sourceFileName, destFileName, overwrite);
 
-    public Stream GetFileStream(string path, FileMode mode, FileAccess access) => new FileStream(path, mode, access);
+    public FileStream GetFileStream(string path, FileMode mode, FileAccess access) => new FileStream(path, mode, access);
 
     public IFileInfo GetFileInfo(string path) => new FileInfoWrapper(path);
 

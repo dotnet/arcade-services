@@ -82,6 +82,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
+        ICodeownersGenerator codeownersGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IWorkBranchFactory workBranchFactory,
@@ -89,7 +90,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
