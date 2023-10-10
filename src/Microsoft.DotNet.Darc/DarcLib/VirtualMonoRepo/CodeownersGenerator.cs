@@ -56,7 +56,7 @@ public class CodeownersGenerator : ICodeownersGenerator
     /// </summary>
     public async Task UpdateCodeowners(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Updating {tpnName}...", VmrInfo.CodeownersPath);
+        _logger.LogInformation("Updating {codeowners}...", VmrInfo.CodeownersPath);
 
         var destPath = _vmrInfo.VmrPath / VmrInfo.CodeownersPath;
 
@@ -76,7 +76,7 @@ public class CodeownersGenerator : ICodeownersGenerator
             ?? throw new Exception($"Failed to create {VmrInfo.CodeownersFileName} in {destPath}"));
 
         using (var destStream = _fileSystem.GetFileStream(destPath, FileMode.Create, FileAccess.Write))
-        using (var writer = new StreamWriter(destStream, Encoding.UTF8))
+        using (var writer = new StreamWriter(destStream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
         {
             if (!string.IsNullOrEmpty(header))
             {
@@ -93,10 +93,17 @@ public class CodeownersGenerator : ICodeownersGenerator
                 }
             }
         }
+        
+        if (_fileSystem.GetFileInfo(destPath).Length == CodeownersHeader.Length)
+        {
+            _fileSystem.DeleteFile(destPath);
+        }
+        else
+        {
+            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CodeownersPath }, cancellationToken);
+        }
 
-        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CodeownersPath }, cancellationToken);
-
-        _logger.LogInformation("{tpnName} updated", VmrInfo.CodeownersPath);
+        _logger.LogInformation("{codeowners} updated", VmrInfo.CodeownersPath);
     }
 
     private async Task AddCodeownersContent(string repoPath, StreamWriter writer, CancellationToken cancellationToken)

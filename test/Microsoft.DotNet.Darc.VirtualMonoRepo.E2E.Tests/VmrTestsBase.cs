@@ -102,8 +102,7 @@ public abstract class VmrTestsBase
         {
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
             Info.GetSourceManifestPath(),
-            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
-            vmrPath / VmrInfo.CodeownersPath,
+            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName
         };
 
         foreach (var repo in syncedRepos)
@@ -123,9 +122,9 @@ public abstract class VmrTestsBase
         filesInDir.Should().BeEquivalentTo(expectedFiles);
     }
 
-    protected static void CheckFileContents(NativePath filePath, string expected)
+    protected static void CheckFileContents(NativePath filePath, string expected, bool removeEmptyLines = true)
     {
-        var expectedLines = expected.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        var expectedLines = expected.Split(Environment.NewLine, removeEmptyLines ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
         CheckFileContents(filePath, expectedLines);
     }
 

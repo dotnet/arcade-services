@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -107,6 +108,8 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var submoduleRelativePath = new NativePath("externals") / Constants.SecondRepoName;
         await GitOperations.InitializeSubmodule(ProductRepoPath, submoduleName, SecondRepoPath, submoduleRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CodeownersPath)!);
+        File.WriteAllText(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
@@ -114,14 +117,17 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         {
             _productRepoFilePath,
             _dependencyRepoFilePath,
-            submoduleFilePath
+            submoduleFilePath,
+            VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CodeownersPath,
         };
 
-        var expectedFiles = GetExpectedFilesInVmr(
+        List<LocalPath> expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
             expectedFilesFromRepos
         );
+
+        expectedFiles.Add(VmrPath / VmrInfo.CodeownersPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
@@ -132,6 +138,8 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         // Add a file in the submodule
 
         File.WriteAllText(SecondRepoPath / additionalFileName, "New external repo file");
+        Directory.CreateDirectory(Path.GetDirectoryName(SecondRepoPath / VmrInfo.CodeownersPath)!);
+        File.WriteAllText(SecondRepoPath / VmrInfo.CodeownersPath, "# This is a second repo's CODEOWNERS\n/xyz/foo @other/team");
         await GitOperations.CommitAll(SecondRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
         
@@ -139,6 +147,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
+        expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
@@ -151,9 +160,22 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);
+        expectedFiles.Remove(submodulePathInVmr / VmrInfo.CodeownersPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
+
+        CheckFileContents(
+            VmrPath / VmrInfo.CodeownersPath,
+            """
+            ### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###
+
+            ## product-repo1 #############################################################
+
+            # This is a first repo's CODEOWNERS
+            /src/product-repo1/foo/bar @some/team
+            """,
+            removeEmptyLines: false);
     }
 
     protected override async Task CopyReposForCurrentTest()
