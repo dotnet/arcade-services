@@ -102,7 +102,8 @@ public abstract class VmrTestsBase
         {
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
             Info.GetSourceManifestPath(),
-            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName
+            vmrPath / VmrInfo.SourcesDir / VmrInfo.SourceMappingsFileName,
+            vmrPath / VmrInfo.CodeownersPath,
         };
 
         foreach (var repo in syncedRepos)

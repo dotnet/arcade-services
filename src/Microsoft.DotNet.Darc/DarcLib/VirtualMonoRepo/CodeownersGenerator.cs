@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -55,9 +56,9 @@ public class CodeownersGenerator : ICodeownersGenerator
     /// </summary>
     public async Task UpdateCodeowners(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Updating {tpnName}...", VmrInfo.CodeownersFileName);
+        _logger.LogInformation("Updating {tpnName}...", VmrInfo.CodeownersPath);
 
-        var destPath = _vmrInfo.VmrPath / VmrInfo.CodeownersFileName;
+        var destPath = _vmrInfo.VmrPath / VmrInfo.CodeownersPath;
 
         string header = CodeownersHeader;
         if (_fileSystem.FileExists(destPath))
@@ -70,6 +71,9 @@ public class CodeownersGenerator : ICodeownersGenerator
                 header = content.Substring(0, position + CodeownersHeader.Length);
             }
         }
+
+        _fileSystem.CreateDirectory(_fileSystem.GetDirectoryName(destPath)
+            ?? throw new Exception($"Failed to create {VmrInfo.CodeownersFileName} in {destPath}"));
 
         using (var destStream = _fileSystem.GetFileStream(destPath, FileMode.Create, FileAccess.Write))
         using (var writer = new StreamWriter(destStream, Encoding.UTF8))
@@ -90,9 +94,9 @@ public class CodeownersGenerator : ICodeownersGenerator
             }
         }
 
-        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.CodeownersFileName }, cancellationToken);
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CodeownersPath }, cancellationToken);
 
-        _logger.LogInformation("{tpnName} updated", VmrInfo.CodeownersFileName);
+        _logger.LogInformation("{tpnName} updated", VmrInfo.CodeownersPath);
     }
 
     private async Task AddCodeownersContent(string repoPath, StreamWriter writer, CancellationToken cancellationToken)
