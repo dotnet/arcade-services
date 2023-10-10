@@ -91,37 +91,37 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SignTool" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.VersionTools" Version="6.0.0-beta.23409.1">
+    <Dependency Name="Microsoft.DotNet.VersionTools" Version="6.0.0-beta.23476.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c6613f71edcdc0e782300e3a0f2c74ebd51c0e40</Sha>
+      <Sha>55b44b1f724b5b1ee65e637b498f123709aba8ba</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.23468.2">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.23478.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>53e18be5eddc5a95bf1caf9b3d8bd8f1f3441954</Sha>
+      <Sha>a961f3416b22cb963babfc0aae1c3bd0c76a00be</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.23468.2">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.23478.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>53e18be5eddc5a95bf1caf9b3d8bd8f1f3441954</Sha>
+      <Sha>a961f3416b22cb963babfc0aae1c3bd0c76a00be</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

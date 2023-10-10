@@ -9,11 +9,11 @@
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <MicrosoftNetFrameworkReferenceAssembliesVersion>1.0.0-preview.1</MicrosoftNetFrameworkReferenceAssembliesVersion>
     <!-- Libs -->
-    <MicrosoftDotNetSignToolVersion>6.0.0-beta.23409.1</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>6.0.0-beta.23409.1</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.23409.1</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23409.1</MicrosoftDotNetGitIssueManagerVersion>
-    <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23409.1</MicrosoftDotNetVersionToolsVersion>
+    <MicrosoftDotNetSignToolVersion>6.0.0-beta.23476.1</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>6.0.0-beta.23476.1</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>6.0.0-beta.23476.1</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>6.0.0-beta.23476.1</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetVersionToolsVersion>6.0.0-beta.23476.1</MicrosoftDotNetVersionToolsVersion>
     <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
     <MicrosoftDotNetInternalLoggingVersion>1.1.0-beta.23475.1</MicrosoftDotNetInternalLoggingVersion>
     <MicrosoftAspNetCoreApiPaginationVersion>1.1.0-beta.23475.1</MicrosoftAspNetCoreApiPaginationVersion>
@@ -37,8 +37,8 @@
     <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.23475.1</MicrosoftDotNetWebAuthenticationVersion>
     <ServiceFabricMocksVersion>1.1.0-beta.23475.1</ServiceFabricMocksVersion>
     <CoreHealthMonitorVersion>1.1.0-beta.23475.1</CoreHealthMonitorVersion>
-    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.23468.2</MicrosoftDncEngSecretManagerVersion>
-    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.23468.2</MicrosoftDncEngConfigurationBootstrapVersion>
+    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.23478.1</MicrosoftDncEngSecretManagerVersion>
+    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.23478.1</MicrosoftDncEngConfigurationBootstrapVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>

@@ -28,6 +28,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     private const int MaxPullRequestDescriptionLength = 4000;
 
+    private const string RefsHeadsPrefix = "refs/heads/";
+
     private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
 
     private static readonly string CommentMarker =
@@ -342,8 +344,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         // all of the other APIs we use do not support them (e.g. get an item at branch X).
         // At the time this code was written, the API always returned the refs with this prefix,
         // so verify this is the case.
-        const string refsHeads = "refs/heads/";
-        if (!pr.TargetRefName.StartsWith(refsHeads) || !pr.SourceRefName.StartsWith(refsHeads))
+
+        if (!pr.TargetRefName.StartsWith(RefsHeadsPrefix) || !pr.SourceRefName.StartsWith(RefsHeadsPrefix))
         {
             throw new NotImplementedException("Expected that source and target ref names returned from pull request API include refs/heads");
         }
@@ -352,8 +354,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             Title = pr.Title,
             Description = pr.Description,
-            BaseBranch = pr.TargetRefName.Substring(refsHeads.Length),
-            HeadBranch = pr.SourceRefName.Substring(refsHeads.Length),
+            BaseBranch = pr.TargetRefName.Substring(RefsHeadsPrefix.Length),
+            HeadBranch = pr.SourceRefName.Substring(RefsHeadsPrefix.Length),
         };
     }
 
@@ -375,8 +377,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 Title = pullRequest.Title,
                 Description = TruncateDescriptionIfNeeded(pullRequest.Description),
-                SourceRefName = "refs/heads/" + pullRequest.HeadBranch,
-                TargetRefName = "refs/heads/" + pullRequest.BaseBranch,
+                SourceRefName = RefsHeadsPrefix + pullRequest.HeadBranch,
+                TargetRefName = RefsHeadsPrefix + pullRequest.BaseBranch,
             },
             projectName,
             repoName);
@@ -1198,13 +1200,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             .ToDictionary(x => x.Key, x => new AzureDevOpsPipelineResourceParameter(x.Value))
             ?? new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
 
+        var repositoryBranch = sourceBranch.StartsWith(RefsHeadsPrefix) ? sourceBranch : RefsHeadsPrefix + sourceBranch;
+
         var body = new AzureDevOpsPipelineRunDefinition
         {
             Resources = new AzureDevOpsRunResourcesParameters
             {
                 Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>
                 {
-                    { "self", new AzureDevOpsRepositoryResourceParameter($"refs/heads/{sourceBranch}", sourceVersion) }
+                    { "self", new AzureDevOpsRepositoryResourceParameter(repositoryBranch, sourceVersion) }
                 },
                 Pipelines = pipelineResourceParameters
             },

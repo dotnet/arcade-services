@@ -1168,7 +1168,7 @@ namespace SubscriptionActorService
             try
             {
                 Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
-                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Strict);
+                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
             }
             catch (DarcCoherencyException e)
             {
