@@ -69,6 +69,7 @@ public class VmrInfo : IVmrInfo
 
     public const string ReadmeFileName = "README.md";
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
+    public const string CodeownersFileName = "CODEOWNERS";
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
