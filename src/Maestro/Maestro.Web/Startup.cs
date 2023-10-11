@@ -436,7 +436,6 @@ public partial class Startup : StartupBase
         else
         {
             app.UseHsts();
-            app.UseHttpsRedirection();
         }
 
         // Add security headers
