@@ -35,6 +35,7 @@
            listen. Please note that if your service is partitioned, this port is shared with 
            replicas of different partitions that are placed in your code. -->
       <Endpoint Protocol="http" Name="ServiceEndpoint" Type="Input" Port="8080" />
+      <Endpoint Protocol="http" Name="ServiceEndpoint" Type="Input" Port="8088" />
     </Endpoints>
   </Resources>
 </ServiceManifest>
