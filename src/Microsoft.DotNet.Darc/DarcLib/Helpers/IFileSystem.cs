@@ -35,7 +35,7 @@ public interface IFileSystem
 
     void CopyFile(string sourceFileName, string destFileName, bool overwrite = false);
 
-    Stream GetFileStream(string path, FileMode mode, FileAccess access);
+    FileStream GetFileStream(string path, FileMode mode, FileAccess access);
 
     IFileInfo GetFileInfo(string path);
 

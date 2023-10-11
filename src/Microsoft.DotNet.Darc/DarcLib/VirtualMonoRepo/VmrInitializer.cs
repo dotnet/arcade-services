@@ -54,6 +54,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IRepositoryCloneManager cloneManager,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
+        ICodeownersGenerator codeownersGenerator,
         ILocalGitRepo localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IWorkBranchFactory workBranchFactory,
@@ -61,7 +62,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
