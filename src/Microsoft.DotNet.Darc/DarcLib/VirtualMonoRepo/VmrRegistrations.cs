@@ -63,6 +63,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
         services.TryAddTransient<IReadmeComponentListGenerator, ReadmeComponentListGenerator>();
+        services.TryAddTransient<ICodeownersGenerator, CodeownersGenerator>();
         services.TryAddTransient<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddTransient<IFileSystem, FileSystem>();
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();

@@ -41,7 +41,6 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     /// <summary>
     /// Generates the THIRD-PARTY-NOTICES.txt file by assembling other similar files from the whole VMR.
     /// </summary>
-    /// <param name="force">Force generation (skip check of notice changes)</param>
     public async Task UpdateThirdPartyNotices(string templatePath)
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
