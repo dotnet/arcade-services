@@ -109,7 +109,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         var submoduleRelativePath = new NativePath("externals") / Constants.SecondRepoName;
         await GitOperations.InitializeSubmodule(ProductRepoPath, submoduleName, SecondRepoPath, submoduleRelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CodeownersPath)!);
-        File.WriteAllText(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
+        await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
@@ -133,13 +133,25 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CompareFileContents(_productRepoFilePath, _productRepoFileName);
         CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         CheckFileContents(submoduleFilePath, "File in product-repo2");
+        CheckFileContents(
+            VmrPath / VmrInfo.CodeownersPath,
+            """
+            ### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###
+            
+            ## product-repo1 #############################################################
+            
+            # This is a first repo's CODEOWNERS
+            /src/product-repo1/foo/bar @some/team
+            """,
+            removeEmptyLines: false);
+
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Add a file in the submodule
 
-        File.WriteAllText(SecondRepoPath / additionalFileName, "New external repo file");
+        await File.WriteAllTextAsync(SecondRepoPath / additionalFileName, "New external repo file");
         Directory.CreateDirectory(Path.GetDirectoryName(SecondRepoPath / VmrInfo.CodeownersPath)!);
-        File.WriteAllText(SecondRepoPath / VmrInfo.CodeownersPath, "# This is a second repo's CODEOWNERS\n/xyz/foo @other/team");
+        await File.WriteAllTextAsync(SecondRepoPath / VmrInfo.CodeownersPath, "# This is a second repo's CODEOWNERS\n/xyz/foo @other/team");
         await GitOperations.CommitAll(SecondRepoPath, "Adding new file in the submodule");
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
         
@@ -150,11 +162,29 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
+        CheckFileContents(
+            VmrPath / VmrInfo.CodeownersPath,
+            """
+            ### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###
+            
+            ## product-repo1 #############################################################
+            
+            # This is a first repo's CODEOWNERS
+            /src/product-repo1/foo/bar @some/team
+
+
+            ## product-repo1/externals/product-repo2 #####################################
+            
+            # This is a second repo's CODEOWNERS
+            /src/product-repo1/externals/product-repo2/xyz/foo @other/team
+            """,
+            removeEmptyLines: false);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Remove submodule
 
         await GitOperations.RemoveSubmodule(ProductRepoPath, submoduleRelativePath);
+        await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath, "My new content in the CODEOWNERS\n\n### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###\n");
         await GitOperations.CommitAll(ProductRepoPath, "Remove the submodule");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
@@ -168,6 +198,8 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CheckFileContents(
             VmrPath / VmrInfo.CodeownersPath,
             """
+            My new content in the CODEOWNERS
+
             ### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###
 
             ## product-repo1 #############################################################
