@@ -57,7 +57,6 @@
     <ResourceOverrides>
       <Endpoints>
         <Endpoint Name="ServiceEndpoint" Port="[WebPort]" Protocol="[WebProtocol]" />
-        <Endpoint Name="ServiceEndpointHttp" Port="8088" Protocol="http"/>
       </Endpoints>
     </ResourceOverrides>
     <EnvironmentOverrides CodePackageRef="Code">
