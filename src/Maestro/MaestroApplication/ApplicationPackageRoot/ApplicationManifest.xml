@@ -59,7 +59,7 @@
     <ResourceOverrides>
       <Endpoints>
         <Endpoint Name="ServiceEndpoint" Port="[WebPort]" Protocol="[WebProtocol]" />
-        <Endpoint Name="ServiceEndpointHttp" Port="[WebPort]" Protocol="[WebProtocolHttp]" />
+        <Endpoint Name="ServiceEndpointHttp" Port="[WebPortHttp]" Protocol="[WebProtocolHttp]" />
       </Endpoints>
     </ResourceOverrides>
     <EnvironmentOverrides CodePackageRef="Code">
