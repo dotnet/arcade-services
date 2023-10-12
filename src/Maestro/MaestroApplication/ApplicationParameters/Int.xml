@@ -7,5 +7,7 @@
     <Parameter Name="WebCertName" Value="maestro-int.westus2.cloudapp.azure.com" />
     <Parameter Name="WebProtocol" Value="https" />
     <Parameter Name="WebPort" Value="4430" />
+    <Parameter Name="WebProtocolHttp" Value="http" />
+    <Parameter Name="WebPortHttp" Value="8088" />
   </Parameters>
 </Application>
