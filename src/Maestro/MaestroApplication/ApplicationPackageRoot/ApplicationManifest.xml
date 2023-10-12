@@ -20,6 +20,8 @@
     <Parameter Name="WebCertName" DefaultValue="" />
     <Parameter Name="WebProtocol" DefaultValue="http" />
     <Parameter Name="WebPort" DefaultValue="8080" />
+    <Parameter Name="WebProtocolHttp" DefaultValue="http" />
+    <Parameter Name="WebPortHttp" DefaultValue="8088" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion
        should match the Name and Version attributes of the ServiceManifest element defined in the
@@ -57,6 +59,7 @@
     <ResourceOverrides>
       <Endpoints>
         <Endpoint Name="ServiceEndpoint" Port="[WebPort]" Protocol="[WebProtocol]" />
+        <Endpoint Name="ServiceEndpointHttp" Port="[WebPort]" Protocol="[WebProtocolHttp]" />
       </Endpoints>
     </ResourceOverrides>
     <EnvironmentOverrides CodePackageRef="Code">
