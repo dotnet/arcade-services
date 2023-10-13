@@ -114,6 +114,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -169,6 +170,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 additionalRemotes,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                generateCodeowners,
                 discardPatches,
                 cancellationToken);
         }
@@ -181,6 +183,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 additionalRemotes,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                generateCodeowners,
                 discardPatches,
                 cancellationToken);
         }
@@ -193,6 +196,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -309,6 +313,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reapplyVmrPatches,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                generateCodeowners,
                 discardPatches,
                 cancellationToken);
         }
@@ -338,6 +343,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 reapplyVmrPatches,
                 readmeTemplatePath,
                 tpnTemplatePath,
+                generateCodeowners,
                 discardPatches,
                 cancellationToken);
 
@@ -359,6 +365,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -442,6 +449,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     additionalRemotes,
                     readmeTemplatePath,
                     tpnTemplatePath,
+                    generateCodeowners,
                     discardPatches,
                     cancellationToken);
             }

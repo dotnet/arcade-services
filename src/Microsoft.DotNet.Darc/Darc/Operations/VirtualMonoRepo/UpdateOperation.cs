@@ -36,6 +36,7 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
             additionalRemotes,
             _options.ReadMeTemplate,
             _options.TpnTemplate,
+            _options.GenerateCodeowners,
             _options.DiscardPatches,
             cancellationToken);
 }

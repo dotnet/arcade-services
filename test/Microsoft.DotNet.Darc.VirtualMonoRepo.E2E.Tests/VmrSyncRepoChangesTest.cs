@@ -111,7 +111,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         Directory.CreateDirectory(Path.GetDirectoryName(ProductRepoPath / VmrInfo.CodeownersPath)!);
         await File.WriteAllTextAsync(ProductRepoPath / VmrInfo.CodeownersPath, "# This is a first repo's CODEOWNERS\nfoo/bar @some/team");
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
@@ -156,7 +156,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         await GitOperations.PullMain(ProductRepoPath / submoduleRelativePath);
         
         await GitOperations.CommitAll(ProductRepoPath, "Checkout submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
 
         expectedFiles.Add(additionalSubmoduleFilePath);
         expectedFiles.Add(submodulePathInVmr / VmrInfo.CodeownersPath);
@@ -186,7 +186,7 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         await GitOperations.RemoveSubmodule(ProductRepoPath, submoduleRelativePath);
         await File.WriteAllTextAsync(VmrPath / VmrInfo.CodeownersPath, "My new content in the CODEOWNERS\n\n### CONTENT BELOW IS AUTO-GENERATED AND MANUAL CHANGES WILL BE OVERWRITTEN ###\n");
         await GitOperations.CommitAll(ProductRepoPath, "Remove the submodule");
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
 
         expectedFiles.Remove(submoduleFilePath);
         expectedFiles.Remove(additionalSubmoduleFilePath);

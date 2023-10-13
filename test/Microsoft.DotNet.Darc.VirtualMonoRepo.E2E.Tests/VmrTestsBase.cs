@@ -147,27 +147,27 @@ public abstract class VmrTestsBase
         await CallDarcInitialize(repoName, commit, sourceMappings);
     }
 
-    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath)
+    protected async Task UpdateRepoToLastCommit(string repoName, NativePath repoPath, bool generateCodeowners = false)
     {
         var commit = await GitOperations.GetRepoLastCommit(repoPath);
-        await CallDarcUpdate(repoName, commit);
+        await CallDarcUpdate(repoName, commit, generateCodeowners);
     }
 
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, true, _cancellationToken.Token);
     }
 
-    protected async Task CallDarcUpdate(string repository, string commit)
+    protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false)
     {
-        await CallDarcUpdate(repository, commit, Array.Empty<AdditionalRemote>());
+        await CallDarcUpdate(repository, commit, Array.Empty<AdditionalRemote>(), generateCodeowners);
     }
 
-    protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes)
+    protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
     {
         var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, null, null, true, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

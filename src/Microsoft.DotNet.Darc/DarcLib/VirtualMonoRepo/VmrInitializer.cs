@@ -82,6 +82,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -137,6 +138,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     additionalRemotes,
                     readmeTemplatePath,
                     tpnTemplatePath,
+                    generateCodeowners,
                     discardPatches,
                     cancellationToken);
             }
@@ -165,6 +167,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -200,6 +203,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             reapplyVmrPatches: true,
             readmeTemplatePath,
             tpnTemplatePath,
+            generateCodeowners,
             discardPatches,
             cancellationToken);
 
