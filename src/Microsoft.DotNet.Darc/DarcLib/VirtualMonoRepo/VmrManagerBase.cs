@@ -74,6 +74,7 @@ public abstract class VmrManagerBase
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -145,7 +146,10 @@ public abstract class VmrManagerBase
             await UpdateThirdPartyNoticesAsync(tpnTemplatePath, cancellationToken);
         }
 
-        await _codeownersGenerator.UpdateCodeowners(cancellationToken);
+        if (generateCodeowners)
+        {
+            await _codeownersGenerator.UpdateCodeowners(cancellationToken);
+        }
 
         // Commit without adding files as they were added to index directly
         await CommitAsync(commitMessage, author);
