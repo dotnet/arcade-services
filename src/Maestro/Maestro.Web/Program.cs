@@ -9,6 +9,6 @@ internal static class Program
 {
     private static void Main()
     {
-        ServiceHostWebSite<Startup>.Run("Maestro.WebType");
+        MaestroServiceHostWebSite<Startup>.Run("Maestro.WebType");
     }
 }
