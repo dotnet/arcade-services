@@ -35,7 +35,7 @@ public class MaestroDelegatedStatelessWebService<TStartup> : StatelessService wh
                 {
                     return new HttpSysCommunicationListener(
                         context,
-                        "ServiceEndpoint",
+                        endpointName,
                         (url, listener) =>
                         {
                             var builder = new WebHostBuilder()
