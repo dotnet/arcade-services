@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace Maestro.Web;
 
@@ -22,12 +21,9 @@ public class MaestroDelegatedStatelessWebService<TStartup> : DelegatedStatelessW
     {
     }
 
-    protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
+    protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners() => new[]
     {
-        return new[]
-        {
-            CreateServiceInstanceListener("ServiceEndpoint"),
-            CreateServiceInstanceListener("ServiceEndpointHttp")
-        };
-    }
+        CreateServiceInstanceListener("ServiceEndpoint"),
+        CreateServiceInstanceListener("ServiceEndpointHttp")
+    };
 }

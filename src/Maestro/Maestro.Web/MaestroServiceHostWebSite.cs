@@ -30,11 +30,8 @@ public static class MaestroServiceHostWebSite<TStartup>
     {
         MaestroServiceHost.Run(host => host.RegisterStatelessWebService<TStartup>(serviceTypeName,
             hostBuilder =>
-            {
-                hostBuilder.ConfigureAppConfiguration((context, builder) =>
-                {
-                    builder.AddDefaultJsonConfiguration(context.HostingEnvironment, serviceProvider: null);
-                });
-            }));
+                hostBuilder.ConfigureAppConfiguration((context, builder) =>                
+                    builder.AddDefaultJsonConfiguration(context.HostingEnvironment, serviceProvider: null)
+        )));
     }
 }
