@@ -613,14 +613,14 @@ public class VmrPatchHandler : IVmrPatchHandler
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
-    public IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping)
+    public IReadOnlyCollection<string> GetVmrPatches(string mappingName)
     {
         if (_vmrInfo.PatchesPath is null)
         {
             return Array.Empty<string>();
         }
 
-        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mapping.Name;
+        var mappingPatchesPath = _vmrInfo.VmrPath / _vmrInfo.PatchesPath / mappingName;
         if (!_fileSystem.DirectoryExists(mappingPatchesPath))
         {
             return Array.Empty<string>();
