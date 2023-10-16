@@ -24,6 +24,9 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
+    // Character we use in the commit messages to indicate the change
+    public const string Arrow = " → ";
+
     // Message used when synchronizing a single commit
     private const string SingleCommitMessage =
         $$"""
@@ -59,9 +62,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         {{AUTOMATION_COMMIT_TAG}}
         """;
-
-    // Character we use in the commit messages to indicate the change
-    private const string Arrow = " → ";
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;

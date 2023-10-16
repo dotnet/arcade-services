@@ -651,8 +651,9 @@ public class LocalGitClient : ILocalGitRepo
         var args = new[]
         {
             "blame",
+            "--first-parent",
             "-slL",
-            line.ToString(),
+            $"{line},{line}",
             relativeFilePath,
         };
 
