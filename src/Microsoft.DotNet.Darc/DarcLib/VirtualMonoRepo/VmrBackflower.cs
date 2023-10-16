@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -15,36 +16,59 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrBackflower
 {
-    Task BackflowAsync(string repoName, string targetDirectory, IReadOnlyCollection<AdditionalRemote> additionalRemotes);
+    Task BackflowAsync(string repoName, string targetDirectory, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken);
 }
 
 public class VmrBackflower : IVmrBackflower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitRepo _localGitClient;
     private readonly IVmrPatchHandler _vmrPatchHandler;
+    private readonly IWorkBranchFactory _workBranchFactory;
+    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrBackflower> _logger;
 
     public VmrBackflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
+        IVmrDependencyTracker dependencyTracker,
         ILocalGitRepo localGitClient,
         IVmrPatchHandler vmrPatchHandler,
+        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        ILogger<VmrBackflower> logger)
+        ILogger<VmrBackflower> logger,
+        IRepositoryCloneManager cloneManager)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
+        _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
         _vmrPatchHandler = vmrPatchHandler;
+        _workBranchFactory = workBranchFactory;
+        _cloneManager = cloneManager;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public async Task BackflowAsync(string mappingName, string targetDirectory, IReadOnlyCollection<AdditionalRemote> additionalRemotes)
+    public async Task BackflowAsync(
+        string mappingName,
+        string repoDirectory,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
     {
+        await _dependencyTracker.InitializeSourceMappings(_vmrInfo.SourceMappingsPath);
+
+        SourceMapping mapping = _dependencyTracker.Mappings.FirstOrDefault(x => x.Name == mappingName)
+            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
+
+        if (_vmrPatchHandler.GetVmrPatches(mapping).Any())
+        {
+            throw new InvalidOperationException($"Cannot backflow commit that contains VMR patches");
+        }
+
         IVersionedSourceComponent repo = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
             ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
 
@@ -61,6 +85,50 @@ public class VmrBackflower : IVmrBackflower
 
         _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repoSourceSha);
         _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
+
+        var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
+        var workBranchName = $"backflow/" + patchName;
+        patchName = $"{mappingName}.{patchName}.patch";
+
+        // Checkout repo at base commit and create a working branch
+        var remotes = additionalRemotes
+            .Where(r => r.Mapping == mappingName)
+            .Select(r => r.RemoteUri)
+            .Append(repo.RemoteUri)
+            .ToArray();
+
+        // Ignore all submodules
+        List<string> ignoredPaths = _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mappingName + '/'))
+            .Select(s => s.Path.Substring(mappingName.Length + 1))
+            .Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}")
+            .ToList();
+
+        // Create patches
+        var patches = await _vmrPatchHandler.CreatePatches(
+            _vmrInfo.TmpPath / patchName,
+            vmrSourceSha,
+            vmrTargetSha,
+            path: null,
+            ignoredPaths,
+            relativePaths: true, // Relative paths so that we can apply the patch on repo's root
+            workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
+            applicationPath: null, // We will apply this onto the repo root
+            cancellationToken);
+
+        if (!patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0))
+        {
+            _logger.LogInformation($"There are no new changes between the VMR and {mappingName}");
+            return;
+        }
+
+        repoDirectory = await _cloneManager.PrepareClone(mapping, remotes, repoSourceSha, cancellationToken); // ❌❌❌ TODO: This will go into TMP but we need to get the path provided
+        await _localGitClient.CheckoutNativeAsync(repoDirectory, repoSourceSha);
+        var workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, workBranchName);
+
+        // TODO: await workBranch.MergeBackAsync();
+
+        _logger.LogInformation("Synchronization of {repo} completed", mappingName);
     }
 
     private async Task<string> GetShaOfLastSyncForRepo(IVersionedSourceComponent repo)

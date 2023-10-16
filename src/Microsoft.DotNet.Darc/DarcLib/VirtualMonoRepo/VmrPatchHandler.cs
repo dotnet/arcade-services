@@ -134,7 +134,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         var patches = new List<VmrIngestionPatch>();
-        patches.AddRange(await CreatePatchesSafely(
+        patches.AddRange(await CreatePatches(
             patchName,
             sha1,
             sha2,
@@ -180,7 +180,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 continue;
             }
 
-            patches.AddRange(await CreatePatchesSafely(
+            patches.AddRange(await CreatePatches(
                 patchName,
                 sha1,
                 sha2,
@@ -330,7 +330,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Creates patches and if any is > 1GB, splits it into smaller ones.
     /// </summary>
-    private async Task<List<VmrIngestionPatch>> CreatePatchesSafely(
+    public async Task<List<VmrIngestionPatch>> CreatePatches(
         string patchName,
         string sha1,
         string sha2,
@@ -371,7 +371,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             var newPatchname = $"{patchName}.{i + 1}";
 
-            patches.AddRange(await CreatePatchesSafely(
+            patches.AddRange(await CreatePatches(
                 newPatchname,
                 sha1,
                 sha2,

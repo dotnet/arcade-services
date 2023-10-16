@@ -23,6 +23,17 @@ public interface IVmrPatchHandler
         LocalPath tmpPath,
         CancellationToken cancellationToken);
 
+    Task<List<VmrIngestionPatch>> CreatePatches(
+        string patchName,
+        string sha1,
+        string sha2,
+        string? path,
+        IReadOnlyCollection<string>? filters,
+        bool relativePaths,
+        LocalPath workingDir,
+        UnixPath? applicationPath,
+        CancellationToken cancellationToken);
+
     IReadOnlyCollection<string> GetVmrPatches(SourceMapping mapping);
 
     Task<IReadOnlyCollection<UnixPath>> GetPatchedFiles(string patchPath, CancellationToken cancellationToken);

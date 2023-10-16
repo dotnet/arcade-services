@@ -38,6 +38,6 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.BackflowAsync(repoName, targetDirectory, additionalRemotes);
+        await vmrBackflower.BackflowAsync(repoName, targetDirectory, additionalRemotes, cancellationToken);
     }
 }
