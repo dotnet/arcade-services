@@ -7,7 +7,7 @@ using Microsoft.DotNet.DarcLib;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-public abstract class CommandLineOptions
+public abstract class CommandLineOptions : ICommandLineOptions
 {
     [Option('p', "password", HelpText = "BAR password.")]
     [RedactFromLogging]

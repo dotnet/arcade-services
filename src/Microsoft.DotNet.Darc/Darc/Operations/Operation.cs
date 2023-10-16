@@ -18,7 +18,7 @@ public abstract class Operation : IDisposable
 
     protected ILogger<Operation> Logger { get; }
 
-    protected Operation(CommandLineOptions options, IServiceCollection? services = null)
+    protected Operation(ICommandLineOptions options, IServiceCollection? services = null)
     {
         // Because the internal logging in DarcLib tends to be chatty and non-useful,
         // we remap the --verbose switch onto 'info', --debug onto highest level, and the

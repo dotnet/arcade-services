@@ -17,9 +17,9 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : notnull
 {
-    private readonly VmrSyncCommandLineOptions _options;
+    private readonly IBaseVmrCommandLineOptions _options;
 
-    protected VmrOperationBase(VmrSyncCommandLineOptions options)
+    protected VmrOperationBase(IBaseVmrCommandLineOptions options)
         : base(options, options.RegisterServices())
     {
         _options = options;
@@ -41,7 +41,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
         IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
-            .Select(a => a.Split(':') is string[] parts && parts.Length == 2
+            .Select(a => a.Split(':', 2) is string[] parts && parts.Length == 2
                 ? (Name: parts[0], Revision: parts[1])
                 : (a, null));
 
@@ -49,7 +49,6 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         if (_options.AdditionalRemotes != null)
         {
             additionalRemotes = _options.AdditionalRemotes
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(a => a.Split(':', 2))
                 .Select(parts => new AdditionalRemote(parts[0], parts[1]))
                 .ToImmutableArray();
