@@ -59,6 +59,8 @@ public interface IVmrInfo
 public class VmrInfo : IVmrInfo
 {
     public static readonly UnixPath SourcesDir = new("src");
+    public static readonly UnixPath CodeownersPath = new(".github/" + CodeownersFileName);
+
     public const string SourceMappingsFileName = "source-mappings.json";
     public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
@@ -69,6 +71,7 @@ public class VmrInfo : IVmrInfo
 
     public const string ReadmeFileName = "README.md";
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
+    public const string CodeownersFileName = "CODEOWNERS";
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 

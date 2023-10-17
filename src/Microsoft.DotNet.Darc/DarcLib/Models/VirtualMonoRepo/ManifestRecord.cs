@@ -8,11 +8,21 @@ namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
 public interface ISourceComponent
 {
+    /// <summary>
+    /// Path where the component is located in the VMR.
+    /// </summary>
     public string Path { get; }
+
+    /// <summary>
+    /// URI from which the component has been synchronized from.
+    /// </summary>
     public string RemoteUri { get; }
+
+    /// <summary>
+    /// Original commit SHA from which the component has been synchronized.
+    /// </summary>
     public string CommitSha { get; }
 
-    // TODO (https://github.com/dotnet/arcade/issues/10549): Add also non-GitHub implementations
     public string GetPublicUrl()
     {
         var url = RemoteUri;

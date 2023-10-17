@@ -22,6 +22,7 @@ public interface IVmrInitializer
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
     /// <param name="readmeTemplatePath">Path to VMR's README.md template</param>
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
+    /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
     Task InitializeRepository(
         string mappingName,
@@ -32,6 +33,7 @@ public interface IVmrInitializer
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
+        bool generateCodeowners,
         bool discardPatches,
         CancellationToken cancellationToken);
 }
