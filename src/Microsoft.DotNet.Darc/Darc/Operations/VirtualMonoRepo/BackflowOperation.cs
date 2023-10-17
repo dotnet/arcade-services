@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,14 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
 {
     private readonly BackflowCommandLineOptions _options;
+
+    public static IImmutableDictionary<string, BackflowAction> Actions { get; } = new Dictionary<string, BackflowAction>
+    {
+        { "create-patches", BackflowAction.CreatePatches },
+        { "apply-patches", BackflowAction.ApplyPatches },
+        { "create-branches", BackflowAction.CreateBranches },
+        { "create-prs", BackflowAction.CreatePRs },
+    }.ToImmutableDictionary();
 
     public BackflowOperation(BackflowCommandLineOptions options)
         : base(options)
@@ -38,6 +47,16 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.BackflowAsync(repoName, targetDirectory, additionalRemotes, cancellationToken);
+        await vmrBackflower.BackflowAsync(ParseAction(_options.), repoName, targetDirectory, additionalRemotes, cancellationToken);
+    }
+
+    private static BackflowAction ParseAction(string value)
+    {
+        if (!Actions.TryGetValue(value, out BackflowAction action))
+        {
+            throw new ArgumentException($"Invalid action {value}. Allowed values are: {string.Join(", ", Actions.Keys)}");
+        }
+
+        return action;
     }
 }

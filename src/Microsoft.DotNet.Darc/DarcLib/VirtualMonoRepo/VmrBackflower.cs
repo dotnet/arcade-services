@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -30,6 +31,7 @@ public enum BackflowAction
 {
     CreatePatches,
     ApplyPatches,
+    CreateBranches,
     CreatePRs,
 }
 
@@ -66,16 +68,81 @@ public class VmrBackflower : IVmrBackflower
 
     public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(string mappingName, CancellationToken cancellationToken)
     {
+        (string vmrSourceSha, string vmrTargetSha, IVersionedSourceComponent repo) = await GetMappingInformation(mappingName);
+        return await CreateBackflowPatchesAsync(repo, vmrSourceSha, vmrTargetSha, cancellationToken);
+    }
+
+    public async Task BackflowAsync(
+        BackflowAction action,
+        string mappingName,
+        string repoDirectory,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
+    {
+        (string vmrSourceSha, string vmrTargetSha, IVersionedSourceComponent repo) = await GetMappingInformation(mappingName);
+
+        var patches = await CreateBackflowPatchesAsync(repo, vmrSourceSha, vmrTargetSha, cancellationToken);
+        if (patches.Count == 0)
+        {
+            return;
+        }
+
+        if (action == BackflowAction.CreatePatches)
+        {
+            var message = new StringBuilder();
+            message.AppendLine($"{patches.Count} patch{(patches.Count == 1 ? null : "es")} were created:");
+
+            var longestPath = patches.Max(p => p.Path.Length) + 4;
+
+            foreach (var patch in patches)
+            {
+                message.Append(patch.Path.PadRight(longestPath));
+                message.AppendLine(patch.ApplicationPath ?? string.Empty);
+            }
+
+            Console.WriteLine(message);
+            return;
+        }
+
+        _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repo.CommitSha);
+        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
+
+        var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
+        var workBranchName = $"backflow/" + patchName;
+        patchName = $"{mappingName}.{patchName}.patch";
+
+        // Checkout repo at base commit and create a working branch
+        string[] remotes = additionalRemotes
+            .Where(r => r.Mapping == mappingName)
+            .Select(r => r.RemoteUri)
+            .Append(repo.RemoteUri)
+            .ToArray();
+
+        foreach (var remote in remotes)
+        {
+            _localGitClient.AddRemoteIfMissing(repoDirectory, remote, skipFetch: true);
+        }
+
+        await _localGitClient.(repoDirectory, additionalRemotes, cancellationToken);
+
+        await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, workBranchName);
+
+        // TODO: await workBranch.MergeBackAsync();
+    }
+
+    public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(
+        IVersionedSourceComponent repo,
+        string vmrSourceSha,
+        string vmrTargetSha,
+        CancellationToken cancellationToken)
+    {
+        string mappingName = repo.Path;
+
         if (_vmrPatchHandler.GetVmrPatches(mappingName).Any())
         {
             throw new InvalidOperationException($"Cannot backflow commit that contains VMR patches");
         }
-
-        IVersionedSourceComponent repo = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
-            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
-
-        string vmrSourceSha = await GetShaOfLastSyncForRepo(repo);
-        string vmrTargetSha = await _localGitClient.GetGitCommitAsync(_vmrInfo.VmrPath, cancellationToken);
 
         if (vmrSourceSha == vmrTargetSha)
         {
@@ -108,83 +175,16 @@ public class VmrBackflower : IVmrBackflower
             applicationPath: null, // We will apply this onto the repo root
             cancellationToken);
 
-        if (!patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0))
+        if (patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
         {
             _logger.LogInformation($"There are no new changes between the VMR and {mappingName}");
+            return new();
         }
 
         return patches;
     }
 
-    public async Task BackflowAsync(
-        BackflowAction action,
-        string mappingName,
-        string repoDirectory,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
-    {
-        await Task.CompletedTask;
-    }
-
-    /*public async Task BackflowAsync(
-            string mappingName,
-            string repoDirectory,
-            IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-            CancellationToken cancellationToken)
-        {
-            IVersionedSourceComponent repo = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
-                ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
-
-            var repoSourceSha = repo.CommitSha;
-
-            var vmrSourceSha = await GetShaOfLastSyncForRepo(repo);
-            var vmrTargetSha = await _localGitClient.GetGitCommitAsync(_vmrInfo.VmrPath, cancellationToken);
-
-            if (vmrSourceSha == vmrTargetSha)
-            {
-                _logger.LogInformation("No changes to synchronize, {repo} was just synchronized into the VMR ({sha})", mappingName, vmrTargetSha);
-                return;
-            }
-
-            _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repoSourceSha);
-            _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
-
-            var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
-            var workBranchName = $"backflow/" + patchName;
-            patchName = $"{mappingName}.{patchName}.patch";
-
-            // Checkout repo at base commit and create a working branch
-            string[] remotes = additionalRemotes
-                .Where(r => r.Mapping == mappingName)
-                .Select(r => r.RemoteUri)
-                .Append(repo.RemoteUri)
-                .ToArray();
-
-            // Ignore all submodules
-            List<string> ignoredPaths = _sourceManifest.Submodules
-                .Where(s => s.Path.StartsWith(mappingName + '/'))
-                .Select(s => s.Path.Substring(mappingName.Length + 1))
-                .Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}")
-                .ToList();
-
-            // Create patches
-
-            if (!patches.Any(p => _fileSystem.GetFileInfo(p.Path).Length > 0))
-            {
-                _logger.LogInformation($"There are no new changes between the VMR and {mappingName}");
-                return;
-            }
-
-            repoDirectory = await _cloneManager.PrepareClone(mapping, remotes, repoSourceSha, cancellationToken); // ❌❌❌ TODO: This will go into TMP but we need to get the path provided
-            await _localGitClient.CheckoutNativeAsync(repoDirectory, repoSourceSha);
-            var workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, workBranchName);
-
-            // TODO: await workBranch.MergeBackAsync();
-
-            _logger.LogInformation("Synchronization of {repo} completed", mappingName);
-        }*/
-
-        private async Task<string> GetShaOfLastSyncForRepo(IVersionedSourceComponent repo)
+    private async Task<string> GetShaOfLastSyncForRepo(IVersionedSourceComponent repo)
     {
         var manifestPath = _vmrInfo.GetSourceManifestPath();
 
@@ -205,5 +205,16 @@ public class VmrBackflower : IVmrBackflower
         }
 
         throw new Exception($"Failed to find {repo.Path}'s revision {repo.CommitSha} in {manifestPath}");
+    }
+
+    private async Task<(string VmrSourceSha, string VmrTargetSha, IVersionedSourceComponent Repo)> GetMappingInformation(string mappingName)
+    {
+        IVersionedSourceComponent repo = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
+            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
+
+        string vmrSourceSha = await GetShaOfLastSyncForRepo(repo);
+        string vmrTargetSha = await _localGitClient.GetGitCommitAsync(_vmrInfo.VmrPath);
+
+        return (vmrSourceSha, vmrTargetSha, repo);
     }
 }
