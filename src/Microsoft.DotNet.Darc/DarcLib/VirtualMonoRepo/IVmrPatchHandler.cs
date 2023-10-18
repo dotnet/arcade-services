@@ -12,7 +12,10 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPatchHandler
 {
-    Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken);
+    Task ApplyPatch(
+        VmrIngestionPatch patch,
+        NativePath targetDirectory,
+        CancellationToken cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,

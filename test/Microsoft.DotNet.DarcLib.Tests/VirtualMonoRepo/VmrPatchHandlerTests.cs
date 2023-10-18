@@ -142,7 +142,7 @@ public class VmrPatchHandlerTests
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
-        await _patchHandler.ApplyPatch(patch, new CancellationToken());
+        await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, new CancellationToken());
 
         // Verify
         VerifyGitCall(new List<string>

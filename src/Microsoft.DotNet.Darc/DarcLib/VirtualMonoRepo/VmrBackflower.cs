@@ -31,8 +31,7 @@ public enum BackflowAction
 {
     CreatePatches,
     ApplyPatches,
-    CreateBranches,
-    CreatePRs,
+    // CreatePRs,
 }
 
 public class VmrBackflower : IVmrBackflower
@@ -108,7 +107,7 @@ public class VmrBackflower : IVmrBackflower
         _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
 
         var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
-        var workBranchName = $"backflow/" + patchName;
+        var branchName = $"backflow/" + patchName;
         patchName = $"{mappingName}.{patchName}.patch";
 
         // Checkout repo at base commit and create a working branch
@@ -118,17 +117,35 @@ public class VmrBackflower : IVmrBackflower
             .Append(repo.RemoteUri)
             .ToArray();
 
-        foreach (var remote in remotes)
+        try
         {
-            _localGitClient.AddRemoteIfMissing(repoDirectory, remote, skipFetch: true);
+            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+        }
+        catch
+        {
+            _logger.LogInformation("Failed to checkout {sha} in {repo}, will fetch from all remotes and try again...", repo.CommitSha, repoDirectory);
+
+            foreach (var remote in remotes)
+            {
+                _localGitClient.AddRemoteIfMissing(repoDirectory, remote, skipFetch: true);
+                await _localGitClient.FetchAsync(repoDirectory, remote, cancellationToken);
+            }
+
+            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
         }
 
-        await _localGitClient.(repoDirectory, additionalRemotes, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, branchName);
 
-        await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, workBranchName);
+        _logger.LogInformation("Created branch {branchName} in {repoDir}", branchName, repoDirectory);
 
-        // TODO: await workBranch.MergeBackAsync();
+        // Apply patches
+        foreach (var patch in patches)
+        {
+            await _vmrPatchHandler.ApplyPatch(patch, new NativePath(repoDirectory), cancellationToken);
+        }
+
+        _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
     }
 
     public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(

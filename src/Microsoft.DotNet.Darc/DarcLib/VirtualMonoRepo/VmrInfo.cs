@@ -14,12 +14,12 @@ public interface IVmrInfo
     /// <summary>
     /// Path for temporary files (individual repo clones, created patches, etc.)
     /// </summary>
-    LocalPath TmpPath { get; }
+    NativePath TmpPath { get; }
 
     /// <summary>
     /// Path to the root of the VMR
     /// </summary>
-    LocalPath VmrPath { get; }
+    NativePath VmrPath { get; }
 
     /// <summary>
     /// Path within the VMR where VMR patches are stored.
@@ -75,9 +75,9 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
-    public LocalPath VmrPath { get; }
+    public NativePath VmrPath { get; }
 
-    public LocalPath TmpPath { get; }
+    public NativePath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
 
@@ -85,7 +85,7 @@ public class VmrInfo : IVmrInfo
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
-    public VmrInfo(LocalPath vmrPath, LocalPath tmpPath)
+    public VmrInfo(NativePath vmrPath, NativePath tmpPath)
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;

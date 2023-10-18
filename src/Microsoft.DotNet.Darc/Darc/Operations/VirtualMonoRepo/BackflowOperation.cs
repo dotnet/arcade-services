@@ -21,8 +21,7 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
     {
         { "create-patches", BackflowAction.CreatePatches },
         { "apply-patches", BackflowAction.ApplyPatches },
-        { "create-branches", BackflowAction.CreateBranches },
-        { "create-prs", BackflowAction.CreatePRs },
+        // { "create-prs", BackflowAction.CreatePRs },
     }.ToImmutableDictionary();
 
     public BackflowOperation(BackflowCommandLineOptions options)
@@ -47,7 +46,12 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.BackflowAsync(ParseAction(_options.), repoName, targetDirectory, additionalRemotes, cancellationToken);
+        await vmrBackflower.BackflowAsync(
+            ParseAction(_options.Action),
+            repoName,
+            targetDirectory,
+            additionalRemotes,
+            cancellationToken);
     }
 
     private static BackflowAction ParseAction(string value)

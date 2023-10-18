@@ -240,7 +240,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    public async Task ApplyPatch(VmrIngestionPatch patch, CancellationToken cancellationToken)
+    public async Task ApplyPatch(VmrIngestionPatch patch, NativePath targetDirectory, CancellationToken cancellationToken)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -258,7 +258,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(_vmrInfo.VmrPath, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
+        (await _processManager.ExecuteGit(targetDirectory, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         var args = new List<string>
@@ -284,17 +284,17 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             if (!_fileSystem.DirectoryExists(patch.ApplicationPath))
             {
-                _fileSystem.CreateDirectory(_vmrInfo.VmrPath / patch.ApplicationPath);
+                _fileSystem.CreateDirectory(targetDirectory / patch.ApplicationPath);
             }
         }
 
         args.Add(patch.Path);
 
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch for {patch.ApplicationPath ?? "/"}");
         _logger.LogDebug("{output}", result.ToString());
 
-        await ResetWorkingTreeDirectory(patch.ApplicationPath ?? ".");
+        await ResetWorkingTreeDirectory(targetDirectory, patch.ApplicationPath ?? new UnixPath("."));
     }
 
     /// <summary>
@@ -586,14 +586,14 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private async Task ResetWorkingTreeDirectory(string relativePath)
+    private async Task ResetWorkingTreeDirectory(NativePath repoPath, UnixPath relativePath)
     {
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
         // This will end up having the working tree match what is staged
-        _logger.LogInformation("Cleaning the working tree directory {path}...", relativePath);
+        _logger.LogInformation("Cleaning the working tree directory {path}...", repoPath/relativePath);
         var args = new string[] { "checkout", relativePath };
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
         
         if (result.Succeeded)
         {
@@ -604,12 +604,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
             // We can just remove the working tree folder then
             _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
-            _fileSystem.DeleteDirectory(_vmrInfo.VmrPath / relativePath, true);
+            _fileSystem.DeleteDirectory(repoPath / relativePath, true);
         }
 
         // Also remove untracked files (in case files were removed in index)
         args = new string[] { "clean", "-df", relativePath };
-        result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args, cancellationToken: CancellationToken.None);
+        result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
