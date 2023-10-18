@@ -17,7 +17,7 @@ internal class BackflowCommandLineOptions : VmrCommandLineOptions, IBaseVmrComma
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
     [Value(0, Required = true, HelpText = "Repositories to backflow in the form of NAME:PATH with mapping name and local path to the target repository. " +
-        "Path can be ommitted when ")]
+        "Path can be ommitted when --repository-dirs is supplied.")]
     public IEnumerable<string> Repositories { get; set; }
 
     [Option("action", Required = false, HelpText = "Backflow action to perform with the target repo. One of <create-patches|apply-patches>. Defaults to create-patches")]
