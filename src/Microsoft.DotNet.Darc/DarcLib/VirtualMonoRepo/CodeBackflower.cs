@@ -33,6 +33,10 @@ public enum BackflowAction
     ApplyPatches,
 }
 
+/// <summary>
+/// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
+/// It only makes patches/changes locally, no other effects are done.
+/// </summary>
 public class CodeBackflower : IVmrBackflower
 {
     private readonly IVmrInfo _vmrInfo;
@@ -135,7 +139,6 @@ public class CodeBackflower : IVmrBackflower
 
         _logger.LogInformation("Created branch {branchName} in {repoDir}", branchName, repoDirectory);
 
-        // Apply patches
         foreach (var patch in patches)
         {
             await _vmrPatchHandler.ApplyPatch(patch, repoDirectory, cancellationToken);

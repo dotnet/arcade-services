@@ -167,7 +167,7 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithNoSubmodulesTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -202,9 +202,9 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithAdditionalMappingsTest()
     {
         // Setup
-        string expectedPatchName1 = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedPatchName2 = _patchDir / $"root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
-        string expectedPatchName3 = _patchDir / $"eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
+        NativePath expectedPatchName1 = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedPatchName2 = _patchDir / $"root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
+        NativePath expectedPatchName3 = _patchDir / $"eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
 
         _vmrInfo.Reset();
         _vmrInfo
@@ -262,7 +262,7 @@ public class VmrPatchHandlerTests
             "--patch",
             "--binary",
             "--output",
-            new NativePath(expectedPatchName2),
+            expectedPatchName2,
             "--relative",
             $"{Sha1}..{Sha2}",
             "--",
@@ -284,7 +284,7 @@ public class VmrPatchHandlerTests
             "--patch",
             "--binary",
             "--output",
-            new NativePath(expectedPatchName3),
+            expectedPatchName3,
             "--relative",
             $"{Sha1}..{Sha2}",
             "--",
@@ -313,7 +313,7 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleWithoutChangesTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         // Return the same info for both
         _localGitRepo
@@ -366,8 +366,8 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleAddedTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
@@ -436,8 +436,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, RepoVmrPath),
-            new VmrIngestionPatch(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedPatchName, RepoVmrPath),
+            new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
         });
     }
 
@@ -453,9 +453,9 @@ public class VmrPatchHandlerTests
             "https://github.com/dotnet/external-2",
             nestedSubmoduleSha1);
 
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
-        string expectedNestedSubmodulePatchName = _patchDir / $"{nestedSubmoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(nestedSubmoduleSha1)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha1)}.patch";
+        NativePath expectedNestedSubmodulePatchName = _patchDir / $"{nestedSubmoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(nestedSubmoduleSha1)}.patch";
         
         // Return no submodule for first SHA, one for second
         _localGitRepo
@@ -556,9 +556,9 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, RepoVmrPath),
-            new VmrIngestionPatch(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
-            new VmrIngestionPatch(expectedNestedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path / nestedSubmoduleInfo.Path),
+            new(expectedPatchName, RepoVmrPath),
+            new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedNestedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path / nestedSubmoduleInfo.Path),
         });
     }
 
@@ -566,8 +566,8 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleRemovedTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
 
         // Return no submodule for first SHA, one for second
         _localGitRepo
@@ -636,8 +636,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, RepoVmrPath),
-            new VmrIngestionPatch(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedPatchName, RepoVmrPath),
+            new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
         });
     }
 
@@ -645,8 +645,8 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleCommitChangedTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedSubmodulePatchName = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
@@ -714,8 +714,8 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, RepoVmrPath),
-            new VmrIngestionPatch(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedPatchName, RepoVmrPath),
+            new(expectedSubmodulePatchName, RepoVmrPath / _submoduleInfo.Path),
         });
     }
 
@@ -723,9 +723,9 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleUrlChangedTest()
     {
         // Setup
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        string expectedSubmodulePatchName1 = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
-        string expectedSubmodulePatchName2 = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedSubmodulePatchName1 = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(SubmoduleSha1)}-{Commit.GetShortSha(Constants.EmptyGitObject)}.patch";
+        NativePath expectedSubmodulePatchName2 = _patchDir / $"{_submoduleInfo.Name}-{Commit.GetShortSha(Constants.EmptyGitObject)}-{Commit.GetShortSha(SubmoduleSha2)}.patch";
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clonePath, Sha1))
@@ -816,9 +816,9 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName, RepoVmrPath),
-            new VmrIngestionPatch(expectedSubmodulePatchName1, RepoVmrPath / _submoduleInfo.Path),
-            new VmrIngestionPatch(expectedSubmodulePatchName2, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedPatchName, RepoVmrPath),
+            new(expectedSubmodulePatchName1, RepoVmrPath / _submoduleInfo.Path),
+            new(expectedSubmodulePatchName2, RepoVmrPath / _submoduleInfo.Path),
         });
     }
 
@@ -883,7 +883,7 @@ public class VmrPatchHandlerTests
          *  │       └── c.txt
          *  └── root-file
          */
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         var largeDir1 = _clonePath / "large-dir-1";
         var largeDir2 = largeDir1 / "large-dir-2";
@@ -947,9 +947,9 @@ public class VmrPatchHandlerTests
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
-            new VmrIngestionPatch(expectedPatchName + ".2", RepoVmrPath),
-            new VmrIngestionPatch(expectedPatchName + ".1.1", RepoVmrPath / "large-dir-1" / "large-dir-2"),
-            new VmrIngestionPatch(expectedPatchName + ".1.2", RepoVmrPath / "large-dir-1" / "small-dir"),
+            new(expectedPatchName + ".2", RepoVmrPath),
+            new(expectedPatchName + ".1.1", RepoVmrPath / "large-dir-1" / "large-dir-2"),
+            new(expectedPatchName + ".1.2", RepoVmrPath / "large-dir-1" / "small-dir"),
         });
 
         _fileSystem.Verify(x => x.DeleteFile(expectedPatchName), Times.Once);
@@ -960,7 +960,7 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithAFileTooLargeTest()
     {
         // This test verifies that we cannot ingest files over 1GB in size with a reasonable error
-        string expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
+        NativePath expectedPatchName = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
 
         // Patch for the whole repo
         _fileSystem
