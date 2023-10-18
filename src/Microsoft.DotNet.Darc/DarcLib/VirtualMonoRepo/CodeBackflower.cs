@@ -86,6 +86,7 @@ public class CodeBackflower : IVmrBackflower
             return;
         }
 
+        // When we only care about patch creation, we print the paths of the patches we have created and return
         if (action == BackflowAction.CreatePatches)
         {
             var message = new StringBuilder();
@@ -103,14 +104,12 @@ public class CodeBackflower : IVmrBackflower
             return;
         }
 
+        // Let's apply the patches onto the target repo
         _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repo.CommitSha);
         _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {Constants.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
 
-        var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
-        var branchName = $"backflow/" + patchName;
-        patchName = $"{mappingName}.{patchName}.patch";
+        var branchName = $"backflow/{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
 
-        // Checkout repo at base commit and create a working branch
         string[] remotes = additionalRemotes
             .Where(r => r.Mapping == mappingName)
             .Select(r => r.RemoteUri)
