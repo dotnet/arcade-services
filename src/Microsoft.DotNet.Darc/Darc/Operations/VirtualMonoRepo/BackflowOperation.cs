@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
@@ -21,7 +22,6 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
     {
         { "create-patches", BackflowAction.CreatePatches },
         { "apply-patches", BackflowAction.ApplyPatches },
-        // { "create-prs", BackflowAction.CreatePRs },
     }.ToImmutableDictionary();
 
     public BackflowOperation(BackflowCommandLineOptions options)
@@ -49,7 +49,7 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
         await vmrBackflower.BackflowAsync(
             ParseAction(_options.Action),
             repoName,
-            targetDirectory,
+            new NativePath(targetDirectory),
             additionalRemotes,
             cancellationToken);
     }

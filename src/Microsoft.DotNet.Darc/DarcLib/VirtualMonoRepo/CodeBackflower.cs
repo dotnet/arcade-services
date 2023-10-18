@@ -22,7 +22,7 @@ public interface IVmrBackflower
     Task BackflowAsync(
         BackflowAction action,
         string repoName,
-        string targetDirectory,
+        NativePath targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
 }
@@ -31,36 +31,32 @@ public enum BackflowAction
 {
     CreatePatches,
     ApplyPatches,
-    // CreatePRs,
 }
 
-public class VmrBackflower : IVmrBackflower
+public class CodeBackflower : IVmrBackflower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly ILocalGitRepo _localGitClient;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IRepositoryCloneManager _cloneManager;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VmrBackflower> _logger;
+    private readonly ILogger<CodeBackflower> _logger;
 
-    public VmrBackflower(
+    public CodeBackflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         ILocalGitRepo localGitClient,
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        ILogger<VmrBackflower> logger,
-        IRepositoryCloneManager cloneManager)
+        ILogger<CodeBackflower> logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _localGitClient = localGitClient;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
-        _cloneManager = cloneManager;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -74,7 +70,7 @@ public class VmrBackflower : IVmrBackflower
     public async Task BackflowAsync(
         BackflowAction action,
         string mappingName,
-        string repoDirectory,
+        NativePath repoDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
@@ -142,7 +138,7 @@ public class VmrBackflower : IVmrBackflower
         // Apply patches
         foreach (var patch in patches)
         {
-            await _vmrPatchHandler.ApplyPatch(patch, new NativePath(repoDirectory), cancellationToken);
+            await _vmrPatchHandler.ApplyPatch(patch, repoDirectory, cancellationToken);
         }
 
         _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
