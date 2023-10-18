@@ -131,7 +131,7 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoPath">Path to the repository</param>
     /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>
     /// <param name="line">Line to blame</param>
-    /// <returns>SHA of a commit that last change a given line in a given file</returns>
+    /// <returns>SHA of the commit that last changed the given line in the given file</returns>
     Task<string> BlameLineAsync(
         string repoPath,
         string relativeFilePath,
