@@ -43,7 +43,7 @@ public class VmrPusherTests
     {
         var mockHttpClientFactory = new MockHttpClientFactory();
 
-        var responseMsg = "{\"data\":{\"somerepo\":{\"object\":null}}}";
+        var responseMsg = """{"data":{"somerepo":{"object":null}}}""";
         mockHttpClientFactory.AddCannedResponse(
             GraphQLUri, 
             responseMsg, 
@@ -67,14 +67,14 @@ public class VmrPusherTests
     [Test]
     public async Task PublicCommitsArePushedTest()
     {
-        LocalPath vmrPath = new NativePath("vmr");
+        NativePath vmrPath = new NativePath("vmr");
 
         _vmrInfo.Reset();
         _vmrInfo.SetupGet(i => i.VmrPath).Returns(vmrPath);
 
         var mockHttpClientFactory = new MockHttpClientFactory();
 
-        var responseMsg = "{\"data\":{\"somerepo\":{\"object\": {\"id\": \"C_kwDOBjr6NNoAKGNjYjQ2YWU5M2E4MjhkYjE4MWIzMTBkZTBkMmIwNTI1MWQ0ZDcxNDA\"}}}}";
+        var responseMsg = """{"data":{"somerepo":{"object": {"id": "C_kwDOBjr6NNoAKGNjYjQ2YWU5M2E4MjhkYjE4MWIzMTBkZTBkMmIwNTI1MWQ0ZDcxNDA"}}}}""";
         mockHttpClientFactory.AddCannedResponse(
             GraphQLUri,
             responseMsg,

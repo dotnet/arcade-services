@@ -124,4 +124,16 @@ public interface ILocalGitRepo : IGitRepo
         string repoPath,
         string remoteUri,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves SHA of the commit that last changed the given line in the given file.
+    /// </summary>
+    /// <param name="repoPath">Path to the repository</param>
+    /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>
+    /// <param name="line">Line to blame</param>
+    /// <returns>SHA of the commit that last changed the given line in the given file</returns>
+    Task<string> BlameLineAsync(
+        string repoPath,
+        string relativeFilePath,
+        int line);
 }

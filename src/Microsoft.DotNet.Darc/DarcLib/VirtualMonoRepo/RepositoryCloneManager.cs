@@ -16,9 +16,9 @@ public record AdditionalRemote(string Mapping, string RemoteUri);
 
 public interface IRepositoryCloneManager
 {
-    Task<LocalPath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+    Task<NativePath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
 
-    Task<LocalPath> PrepareClone(
+    Task<NativePath> PrepareClone(
         SourceMapping mapping,
         string[] remotes,
         string checkoutRef,
@@ -34,38 +34,32 @@ public interface IRepositoryCloneManager
 public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
-    private readonly RemoteConfiguration _remoteConfig;
     private readonly IGitRepoCloner _gitRepoCloner;
     private readonly ILocalGitRepo _localGitRepo;
-    private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
     // Map of URI => dir name
-    private readonly Dictionary<string, LocalPath> _clones = new();
+    private readonly Dictionary<string, NativePath> _clones = new();
 
     // Repos we have already pulled updates for during this run
     private readonly List<string> _upToDateRepos = new();
 
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
-        RemoteConfiguration remoteConfig,
         IGitRepoCloner gitRepoCloner,
         ILocalGitRepo localGitRepo,
-        IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
-        _remoteConfig = remoteConfig;
         _gitRepoCloner = gitRepoCloner;
         _localGitRepo = localGitRepo;
-        _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public async Task<LocalPath> PrepareClone(
+    public async Task<NativePath> PrepareClone(
         SourceMapping mapping,
         string[] remoteUris,
         string checkoutRef,
@@ -76,7 +70,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             throw new ArgumentException("No remote URIs provided to clone");
         }
 
-        LocalPath path = null!;
+        NativePath path = null!;
         foreach (string remoteUri in remoteUris)
         {
             // Path should be returned the same for all invocations
@@ -89,7 +83,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path;
     }
 
-    public async Task<LocalPath> PrepareClone(
+    public async Task<NativePath> PrepareClone(
         string repoUri,
         string checkoutRef,
         CancellationToken cancellationToken)
@@ -101,7 +95,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path;
     }
 
-    private async Task<LocalPath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
+    private async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

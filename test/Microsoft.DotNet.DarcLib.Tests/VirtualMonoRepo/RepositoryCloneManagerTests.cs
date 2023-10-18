@@ -19,21 +19,18 @@ public class RepositoryCloneManagerTests
     private const string RepoUri = "https://github.com/dotnet/test-repo";
     private const string Ref = "e7f4f5f758f08b1c5abb1e51ea735ca20e7f83a4";
 
-    private readonly RemoteConfiguration _remoteConfiguration = new(null, null);
-
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<ILocalGitRepo> _localGitRepo = new();
-    private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
     private readonly Mock<IGitRepoCloner> _repoCloner = new();
     private RepositoryCloneManager _manager = null!;
 
-    private readonly LocalPath _tmpDir;
+    private readonly NativePath _tmpDir;
     private readonly LocalPath _clonePath;
 
     public RepositoryCloneManagerTests()
     {
-        _tmpDir = new UnixPath("/data/tmp");
+        _tmpDir = new NativePath("/data/tmp");
         _clonePath = _tmpDir / "62B2F7243B6B94DA";
     }
 
@@ -47,9 +44,6 @@ public class RepositoryCloneManagerTests
 
         _localGitRepo.Reset();
 
-        _processManager.Reset();
-        _processManager.SetReturnsDefault(Task.FromResult(new ProcessExecutionResult() { ExitCode = 0 }));
-
         _fileSystem.Reset();
         _fileSystem
             .Setup(x => x.PathCombine(It.IsAny<string>(), It.IsAny<string>()))
@@ -59,10 +53,8 @@ public class RepositoryCloneManagerTests
 
         _manager = new RepositoryCloneManager(
             _vmrInfo.Object,
-            _remoteConfiguration,
             _repoCloner.Object,
             _localGitRepo.Object,
-            _processManager.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
     }
@@ -131,7 +123,6 @@ public class RepositoryCloneManagerTests
 
         void ResetCalls()
         {
-            _processManager.ResetCalls();
             _repoCloner.ResetCalls();
             _localGitRepo.ResetCalls();
         }
