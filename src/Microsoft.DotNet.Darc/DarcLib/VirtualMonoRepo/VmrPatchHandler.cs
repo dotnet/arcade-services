@@ -74,11 +74,11 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files that can be applied on the VMR</returns>
     public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        LocalPath repoPath,
+        NativePath repoPath,
         string sha1,
         string sha2,
-        LocalPath destDir,
-        LocalPath tmpPath,
+        NativePath destDir,
+        NativePath tmpPath,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
@@ -92,11 +92,11 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
-        LocalPath repoPath,
+        NativePath repoPath,
         string sha1,
         string sha2,
-        LocalPath destDir,
-        LocalPath tmpPath,
+        NativePath destDir,
+        NativePath tmpPath,
         UnixPath relativePath,
         CancellationToken cancellationToken)
     {
@@ -337,7 +337,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
-        LocalPath workingDir,
+        NativePath workingDir,
         UnixPath? applicationPath,
         CancellationToken cancellationToken)
     {
@@ -423,7 +423,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
-        LocalPath workingDir,
+        NativePath workingDir,
         UnixPath? applicationPath,
         CancellationToken cancellationToken)
     {
@@ -532,8 +532,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files with relatives path respective to the VMR</returns>
     private async Task<List<VmrIngestionPatch>> GetPatchesForSubmoduleChange(
         SourceMapping mapping,
-        LocalPath destDir,
-        LocalPath tmpPath,
+        NativePath destDir,
+        NativePath tmpPath,
         UnixPath relativePath,
         SubmoduleChange change,
         CancellationToken cancellationToken)

@@ -67,9 +67,9 @@ public abstract class VmrManagerBase
 
     protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
-        LocalPath clonePath,
+        NativePath clonePath,
         string fromRevision,
-        LibGit2Sharp.Identity author,
+        Identity author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,

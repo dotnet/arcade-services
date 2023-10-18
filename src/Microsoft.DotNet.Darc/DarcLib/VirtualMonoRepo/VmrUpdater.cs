@@ -213,7 +213,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        LocalPath clonePath = await _cloneManager.PrepareClone(
+        NativePath clonePath = await _cloneManager.PrepareClone(
             update.Mapping,
             remotes,
             update.TargetRevision,
@@ -338,7 +338,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 update,
                 clonePath,
                 currentSha,
-                new LibGit2Sharp.Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
+                new Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
                 message,
                 reapplyVmrPatches,
                 readmeTemplatePath,

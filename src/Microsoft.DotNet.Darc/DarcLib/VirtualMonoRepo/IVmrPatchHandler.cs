@@ -19,11 +19,11 @@ public interface IVmrPatchHandler
 
     Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        LocalPath repoPath,
+        NativePath repoPath,
         string sha1,
         string sha2,
-        LocalPath destDir,
-        LocalPath tmpPath,
+        NativePath destDir,
+        NativePath tmpPath,
         CancellationToken cancellationToken);
 
     Task<List<VmrIngestionPatch>> CreatePatches(
@@ -33,7 +33,7 @@ public interface IVmrPatchHandler
         string? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
-        LocalPath workingDir,
+        NativePath workingDir,
         UnixPath? applicationPath,
         CancellationToken cancellationToken);
 
