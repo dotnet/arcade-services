@@ -24,9 +24,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
-    // Character we use in the commit messages to indicate the change
-    public const string Arrow = " → ";
-
     // Message used when synchronizing a single commit
     private const string SingleCommitMessage =
         $$"""
@@ -34,13 +31,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         Original commit: {remote}/commit/{newSha}
         
-        {{AUTOMATION_COMMIT_TAG}}
+        {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     // Message used when synchronizing multiple commits as one
     private const string SquashCommitMessage =
         $$"""
-        [{name}] Sync {oldShaShort}{{Arrow}}{newShaShort}
+        [{name}] Sync {oldShaShort}{{Constants.Arrow}}{newShaShort}
         Diff: {remote}/compare/{oldSha}..{newSha}
         
         From: {remote}/commit/{oldSha}
@@ -49,18 +46,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         Commits:
         {commitMessage}
         
-        {{AUTOMATION_COMMIT_TAG}}
+        {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     // Message used when finalizing the sync with a merge commit
     private const string MergeCommitMessage =
         $$"""
-        [Recursive sync] {name} / {oldShaShort}{{Arrow}}{newShaShort}
+        [Recursive sync] {name} / {oldShaShort}{{Constants.Arrow}}{newShaShort}
         
         Updated repositories:
         {commitMessage}
         
-        {{AUTOMATION_COMMIT_TAG}}
+        {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     private readonly IVmrInfo _vmrInfo;
@@ -372,8 +369,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootUpdate.Mapping.Name,
-            DarcLib.Commit.GetShortSha(originalRootSha),
-            Arrow,
+            Commit.GetShortSha(originalRootSha),
+            Constants.Arrow,
             rootUpdate.TargetRevision);
 
         var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
@@ -393,7 +390,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +
-            $"/{DarcLib.Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
+            $"/{Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, workBranchName);
 
         // Collection of all affected VMR patches we will need to restore after the sync
@@ -435,7 +432,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Parent.Name,
                     update.Mapping.Name,
                     currentSha,
-                    Arrow,
+                    Constants.Arrow,
                     update.TargetRevision);
             }
 
@@ -480,10 +477,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var update in updatedDependencies)
         {
-            var fromShort = DarcLib.Commit.GetShortSha(update.TargetVersion);
-            var toShort = DarcLib.Commit.GetShortSha(update.TargetRevision);
+            var fromShort = Commit.GetShortSha(update.TargetVersion);
+            var toShort = Commit.GetShortSha(update.TargetRevision);
             summaryMessage
-                .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Arrow}{toShort}")
+                .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Constants.Arrow}{toShort}")
                 .AppendLine($"    {update.RemoteUri}/compare/{update.TargetVersion}..{update.TargetRevision}");
         }
 

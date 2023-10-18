@@ -28,7 +28,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         Original commit: {remote}/commit/{newSha}
 
-        {{AUTOMATION_COMMIT_TAG}}
+        {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     // Message used when finalizing the initialization with a merge commit
@@ -36,7 +36,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         $$"""
         Recursive initialization for {name} / {newShaShort}
 
-        {{AUTOMATION_COMMIT_TAG}}
+        {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     private readonly IVmrInfo _vmrInfo;

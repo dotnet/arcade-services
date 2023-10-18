@@ -100,7 +100,7 @@ public class CodeBackflower : IVmrBackflower
         }
 
         _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repo.CommitSha);
-        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
+        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {Constants.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
 
         var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
         var branchName = $"backflow/" + patchName;
@@ -141,6 +141,14 @@ public class CodeBackflower : IVmrBackflower
             await _vmrPatchHandler.ApplyPatch(patch, repoDirectory, cancellationToken);
         }
 
+        var commitMessage = $"""
+            [VMR] Code backflow {Commit.GetShortSha(vmrSourceSha)}{Constants.Arrow}{Commit.GetShortSha(vmrTargetSha)}
+
+            {Constants.AUTOMATION_COMMIT_TAG}
+            """;
+
+        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+
         _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
     }
 
@@ -163,7 +171,7 @@ public class CodeBackflower : IVmrBackflower
             return new();
         }
 
-        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {VmrUpdater.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
+        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {Constants.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
 
         var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
         var workBranchName = $"backflow/" + patchName;
