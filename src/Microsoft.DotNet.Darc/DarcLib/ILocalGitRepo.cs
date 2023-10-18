@@ -126,7 +126,7 @@ public interface ILocalGitRepo : IGitRepo
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves SHA of a commit that last changed a given line in a given file.
+    /// Retrieves SHA of the commit that last changed the given line in the given file.
     /// </summary>
     /// <param name="repoPath">Path to the repository</param>
     /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>
