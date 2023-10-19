@@ -71,10 +71,17 @@ public interface ILocalGitRepo : IGitRepo
     Task<string> GetRootDirAsync(string? path = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    ///     Get the current git commit sha.
+    ///     Gets the current git commit SHA.
     /// </summary>
     /// <param name="repoPath">Path to a git repository (cwd used when null)</param>
     Task<string> GetGitCommitAsync(string? repoPath = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Gets the commit SHA representing given reference (branch, shortened SHA, tag, ...).
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository (cwd used when null)</param>
+    /// <param name="gitRef">Git reference to resolve or HEAD when null</param>
+    Task<string> GetShaForRefAsync(string repoPath, string? gitRef);
 
     /// <summary>
     ///     Returns a list of git submodules registered in a given repository.

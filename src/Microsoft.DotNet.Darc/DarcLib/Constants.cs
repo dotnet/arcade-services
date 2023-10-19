@@ -11,6 +11,7 @@ public class Constants
 
     // Well known ID of an empty commit (can be used as a "commit zero" when diffing)
     public const string EmptyGitObject = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+    public const string HEAD = "HEAD";
 
     // String used to mark the commit as automated
     public const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";

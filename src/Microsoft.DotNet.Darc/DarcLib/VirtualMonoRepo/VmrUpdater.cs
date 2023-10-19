@@ -220,7 +220,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         update = update with
         {
-            TargetRevision = GetShaForRef(clonePath, update.TargetRevision)
+            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
 
         if (currentSha == update.TargetRevision)

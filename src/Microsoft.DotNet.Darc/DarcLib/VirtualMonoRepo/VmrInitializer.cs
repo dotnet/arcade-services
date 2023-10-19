@@ -43,6 +43,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly ILocalGitRepo _localGitClient;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
@@ -68,6 +69,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _localGitClient = localGitClient;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -189,7 +191,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         update = update with
         {
-            TargetRevision = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision)
+            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);

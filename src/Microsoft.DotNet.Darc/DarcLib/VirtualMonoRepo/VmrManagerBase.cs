@@ -17,7 +17,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    protected const string HEAD = "HEAD";
     protected const string InterruptedSyncExceptionMessage = 
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
@@ -355,20 +354,5 @@ public abstract class VmrManagerBase
         }
 
         return template;
-    }
-
-    protected static string GetShaForRef(string repoPath, string? gitRef)
-    {
-        if (gitRef == Constants.EmptyGitObject)
-        {
-            return gitRef;
-        }
-
-        using var repository = new Repository(repoPath);
-        var commit = gitRef is null
-            ? repository.Commits.FirstOrDefault()
-            : repository.Lookup<LibGit2Sharp.Commit>(gitRef);
-
-        return commit?.Id.Sha ?? throw new InvalidOperationException($"Failed to find commit {gitRef} in {repository.Info.Path}");
     }
 }
