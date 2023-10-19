@@ -163,9 +163,11 @@ public class Local : ILocal
     /// </summary>
     /// <param name="repoDir">The directory of the local repo</param>
     /// <param name="repoUrl">The remote URL to add</param>
-    public string AddRemoteIfMissing(string repoDir, string repoUrl)
+    public async Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl)
     {
-        return _gitClient.AddRemoteIfMissing(repoDir, repoUrl);
+        string remoteName = await _gitClient.AddRemoteIfMissingAsync(repoDir, repoUrl);
+        await _gitClient.FetchAsync(repoDir, repoUrl);
+        return remoteName;
     }
 
     private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path)

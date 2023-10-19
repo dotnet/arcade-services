@@ -67,7 +67,7 @@ public class VmrPusher : IVmrPusher
             }
         }
 
-        _localGitRepo.Push(
+        await _localGitRepo.Push(
             _vmrInfo.VmrPath,
             branch,
             remoteUrl,

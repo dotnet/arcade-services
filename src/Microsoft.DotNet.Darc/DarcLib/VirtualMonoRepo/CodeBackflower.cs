@@ -126,7 +126,7 @@ public class CodeBackflower : IVmrBackflower
 
             foreach (var remote in remotes)
             {
-                _localGitClient.AddRemoteIfMissing(repoDirectory, remote, skipFetch: true);
+                await _localGitClient.AddRemoteIfMissingAsync(repoDirectory, remote, cancellationToken);
                 await _localGitClient.FetchAsync(repoDirectory, remote, cancellationToken);
             }
 

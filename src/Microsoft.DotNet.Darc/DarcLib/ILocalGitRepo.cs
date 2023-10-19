@@ -15,9 +15,8 @@ public interface ILocalGitRepo : IGitRepo
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="repoUrl">URL of the remote to add</param>
-    /// <param name="skipFetch">Skip fetching remote changes</param>
     /// <returns>Name of the remote</returns>
-    string AddRemoteIfMissing(string repoDir, string repoUrl, bool skipFetch = false);
+    Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Checkout the repo to the specified state.
@@ -115,7 +114,7 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="remoteUrl">URL to push to</param>
     /// <param name="token">Token for authenticating for pushing</param>
     /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
-    void Push(
+    Task Push(
         string repoPath,
         string branchName,
         string remoteUrl,

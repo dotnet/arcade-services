@@ -116,7 +116,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         else
         {
             _logger.LogDebug("Clone of {repo} found in {clonePath}", remoteUri, clonePath);
-            _localGitRepo.AddRemoteIfMissing(clonePath, remoteUri, skipFetch: true);
+            await _localGitRepo.AddRemoteIfMissingAsync(clonePath, remoteUri, cancellationToken);
 
             // We need to perform a full fetch and not the one provided by localGitRepo as we want all commits
             await _localGitRepo.FetchAsync(clonePath, remoteUri, cancellationToken);

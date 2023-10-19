@@ -34,9 +34,9 @@ public class LocalGitClient : ILocalGitRepo
         _logger = logger;
     }
 
-    public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoDir, string branch)
+    public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
     {
-        string fullPath = Path.Combine(repoDir, relativeFilePath);
+        string fullPath = Path.Combine(repoPath, relativeFilePath);
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
             string? parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
@@ -70,10 +70,11 @@ public class LocalGitClient : ILocalGitRepo
     /// <param name="commitMessage">Unused</param>
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
-        string repoDir = await GetRootDirAsync();
+        repoPath = await GetRootDirAsync();
+
         try
         {
-            using (var localRepo = new Repository(repoDir))
+            using (var localRepo = new Repository(repoPath))
             foreach (GitFile file in filesToCommit)
             {
                 Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
@@ -123,7 +124,7 @@ public class LocalGitClient : ILocalGitRepo
         }
         catch (Exception exc)
         {
-            throw new DarcException($"Something went wrong when checking out {repoPath} in {repoDir}", exc);
+            throw new DarcException($"Something went wrong when checking out {repoPath} in {repoPath}", exc);
         }
     }
 
@@ -188,7 +189,7 @@ public class LocalGitClient : ILocalGitRepo
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="commit">Tag, branch, or commit to checkout.</param>
-    public void Checkout(string repoDir, string commit, bool force = false)
+    public void Checkout(string repoPath, string commit, bool force = false)
     {
         _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
         CheckoutOptions checkoutOptions = new CheckoutOptions
@@ -197,8 +198,8 @@ public class LocalGitClient : ILocalGitRepo
         };
         try
         {
-            _logger.LogDebug($"Reading local repo from {repoDir}");
-            using (Repository localRepo = new Repository(repoDir))
+            _logger.LogDebug($"Reading local repo from {repoPath}");
+            using (Repository localRepo = new Repository(repoPath))
             {
                 if (commit == null)
                 {
@@ -207,7 +208,7 @@ public class LocalGitClient : ILocalGitRepo
                 }
                 try
                 {
-                    _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
+                    _logger.LogDebug($"Attempting to check out {commit} in {repoPath}");
                     LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                     if (force)
                     {
@@ -216,13 +217,13 @@ public class LocalGitClient : ILocalGitRepo
                 }
                 catch (NotFoundException)
                 {
-                    _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
+                    _logger.LogWarning($"Couldn't find commit {commit} in {repoPath} locally.  Attempting fetch.");
                     try
                     {
                         foreach (LibGit2Sharp.Remote r in localRepo.Network.Remotes)
                         {
                             IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
-                            _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
+                            _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoPath}");
                             try
                             {
                                 Commands.Fetch(localRepo, r.Name, refSpecs, new FetchOptions(), $"Fetching from {r.Url}");
@@ -232,7 +233,7 @@ public class LocalGitClient : ILocalGitRepo
                                 _logger.LogWarning($"Fetching failed, are you offline or missing a remote?");
                             }
                         }
-                        _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
+                        _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoPath}");
                         LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
 
                         if (force)
@@ -242,7 +243,7 @@ public class LocalGitClient : ILocalGitRepo
                     }
                     catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
                     {
-                        _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoDir}.  Are you offline or missing a remote?");
+                        _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoPath}.  Are you offline or missing a remote?");
                         throw;
                     }
                 }
@@ -250,21 +251,21 @@ public class LocalGitClient : ILocalGitRepo
         }
         catch (Exception exc)
         {
-            throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
+            throw new Exception($"Something went wrong when checking out {commit} in {repoPath}", exc);
         }
     }
 
-    public async Task CheckoutNativeAsync(string repoDir, string refToCheckout)
+    public async Task CheckoutNativeAsync(string repoPath, string refToCheckout)
     {
-        var result = await _processManager.ExecuteGit(repoDir, new[] { "checkout", refToCheckout });
-        result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoDir}");
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "checkout", refToCheckout });
+        result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoPath}");
     }
 
-    public async Task CreateBranchAsync(string repoDir, string branchName, bool overwriteExistingBranch = false)
+    public async Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false)
     {
         var args = new[] { "checkout", overwriteExistingBranch ? "-B" : "-b", branchName };
-        var result = await _processManager.ExecuteGit(repoDir, args);
-        result.ThrowIfFailed($"Failed to create {branchName} in {repoDir}");
+        var result = await _processManager.ExecuteGit(repoPath, args);
+        result.ThrowIfFailed($"Failed to create {branchName} in {repoPath}");
     }
 
     public async Task CommitAsync(
@@ -290,10 +291,10 @@ public class LocalGitClient : ILocalGitRepo
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
 
-    public async Task StageAsync(string repoDir, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
+    public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoDir, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
-        result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoDir}");
+        var result = await _processManager.ExecuteGit(repoPath, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoPath}");
     }
 
     public async Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default)
@@ -442,49 +443,45 @@ public class LocalGitClient : ILocalGitRepo
     /// <summary>
     ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <param name="repoUrl">URL of the remote to add</param>
     /// <param name="skipFetch">Skip fetching remote changes</param>
     /// <returns>Name of the remote</returns>
-    public string AddRemoteIfMissing(string repoDir, string repoUrl, bool skipFetch = false)
+    public async Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default)
     {
-        using var repo = new Repository(repoDir);
-        return AddRemoteIfMissing(repo, repoUrl, skipFetch);
-    }
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "-v" }, cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to get remotes for {repoPath}");
 
-    private string AddRemoteIfMissing(Repository repo, string repoUrl, bool skipFetch = false)
-    {
-        var remote = repo.Network.Remotes.FirstOrDefault(r => r.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase));
-        string remoteName;
+        string? remoteName = null;
 
-        if (remote is not null)
+        foreach (var line in result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            remoteName = remote.Name;
+            var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var name = parts[0];
+            var url = parts[1];
+
+            if (url == repoUrl)
+            {
+                remoteName = name;
+                break;
+            }
         }
-        else
+
+        if (remoteName == null)
         {
-            _logger.LogDebug($"Adding {repoUrl} remote to {repo.Info.Path}");
+            _logger.LogDebug($"Adding {repoUrl} remote to {repoPath}");
 
             // Remote names don't matter much but should be stable
             remoteName = StringUtils.GetXxHash64(repoUrl);
-            repo.Network.Remotes.Add(remoteName, repoUrl);
-        }
 
-        if (!skipFetch)
-        {
-            _logger.LogDebug($"Fetching new commits from {repoUrl} into {repo.Info.Path}");
-            Commands.Fetch(
-                repo,
-                remoteName,
-                new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" },
-                new FetchOptions(),
-                $"Fetching {repoUrl} into {repo.Info.Path}");
+            result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "add", remoteName, repoUrl }, cancellationToken: cancellationToken);
+            result.ThrowIfFailed($"Failed to add remote {remoteName} ({repoUrl}) to {repoPath}");
         }
 
         return remoteName;
     }
 
-    public async Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoDir, string commit)
+    public async Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoPath, string commit)
     {
         var submodules = new List<GitSubmoduleInfo>();
 
@@ -493,7 +490,7 @@ public class LocalGitClient : ILocalGitRepo
             return submodules;
         }
 
-        var submoduleFile = await GetFileFromGitAsync(repoDir, ".gitmodules", commit);
+        var submoduleFile = await GetFileFromGitAsync(repoPath, ".gitmodules", commit);
         if (submoduleFile == null)
         {
             return submodules;
@@ -522,7 +519,7 @@ public class LocalGitClient : ILocalGitRepo
             }
 
             // Read SHA that the submodule points to
-            var result = await _processManager.ExecuteGit(repoDir, "rev-parse", $"{commit}:{submodule.Path}");
+            var result = await _processManager.ExecuteGit(repoPath, "rev-parse", $"{commit}:{submodule.Path}");
             result.ThrowIfFailed($"Failed to find SHA of commit where submodule {submodule.Path} points to");
 
             submodule = submodule with
@@ -570,9 +567,9 @@ public class LocalGitClient : ILocalGitRepo
         return submodules;
     }
 
-    public IEnumerable<string> GetStagedFiles(string repoDir)
+    public IEnumerable<string> GetStagedFiles(string repoPath)
     {
-        using var repository = new Repository(repoDir);
+        using var repository = new Repository(repoPath);
         var repositoryStatus = repository.RetrieveStatus();
         return repositoryStatus.Added
             .Concat(repositoryStatus.Removed)
@@ -604,19 +601,19 @@ public class LocalGitClient : ILocalGitRepo
         return result.StandardOutput;
     }
 
-    public void Push(
+    public async Task Push(
         string repoPath,
         string branchName,
         string remoteUrl,
-        LibGit2Sharp.Identity? identity = null)
+        Identity? identity = null)
     {
-        identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
+        identity ??= new Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
         using var repo = new Repository(
             repoPath,
             new RepositoryOptions { Identity = identity });
 
-        var remoteName = AddRemoteIfMissing(repo, remoteUrl, true);
+        var remoteName = await AddRemoteIfMissingAsync(repoPath, remoteUrl);
         var remote = repo.Network.Remotes[remoteName];
 
         var branch = repo.Branches[branchName];
