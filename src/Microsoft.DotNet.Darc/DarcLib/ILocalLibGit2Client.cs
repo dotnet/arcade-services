@@ -23,21 +23,6 @@ public interface ILocalLibGit2Client : ILocalGitClient
     void Checkout(string repoDir, string refToCheckout, bool force = false);
 
     /// <summary>
-    ///     Commits files by calling git commit (not through Libgit2sharp)
-    /// </summary>
-    /// <param name="repoPath">Path of the local repository</param>
-    /// <param name="message">Commit message</param>
-    /// <param name="allowEmpty">Allow empty commits?</param>
-    /// <param name="author">Identity object containing username and email. Defaults to DarcBot identity</param>
-    Task CommitAsync( // TODO TEST IF THIS IS USED ANYWHERE
-        string repoPath,
-        string message,
-        bool allowEmpty,
-        Identity? author = null,
-        CancellationToken cancellationToken = default) =>
-        CommitAsync(repoPath, message, allowEmpty, author == null ? null : (author.Name, author.Email), cancellationToken);
-
-    /// <summary>
     ///     Commit or update a set of files to a repo
     /// </summary>
     /// <param name="filesToCommit">Files to comit</param>
