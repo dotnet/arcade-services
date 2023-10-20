@@ -28,7 +28,7 @@ public abstract class VmrManagerBase
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IGitFileManagerFactory _gitFileManagerFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
@@ -42,7 +42,7 @@ public abstract class VmrManagerBase
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
@@ -302,15 +302,15 @@ public abstract class VmrManagerBase
 
     protected async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)
     {
-        var isTpnUpdated = _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath)
+        var isTpnUpdated = (await _localGitClient
+            .GetStagedFiles(_vmrInfo.VmrPath))
             .Where(ThirdPartyNoticesGenerator.IsTpnPath)
             .Any();
 
         if (isTpnUpdated)
         {
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName });
+            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
     }

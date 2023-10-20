@@ -54,7 +54,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
@@ -65,7 +65,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IGitFileManagerFactory gitFileManagerFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,

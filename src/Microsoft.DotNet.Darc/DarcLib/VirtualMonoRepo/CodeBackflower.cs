@@ -41,7 +41,7 @@ public class CodeBackflower : IVmrBackflower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
@@ -50,7 +50,7 @@ public class CodeBackflower : IVmrBackflower
     public CodeBackflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
@@ -118,7 +118,7 @@ public class CodeBackflower : IVmrBackflower
 
         try
         {
-            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
         }
         catch
         {
@@ -130,7 +130,7 @@ public class CodeBackflower : IVmrBackflower
                 await _localGitClient.FetchAsync(repoDirectory, remote, cancellationToken);
             }
 
-            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
         }
 
         cancellationToken.ThrowIfCancellationRequested();

@@ -34,7 +34,7 @@ public class VmrPusher : IVmrPusher
     private readonly IVmrInfo _vmrInfo;
     private readonly ILogger _logger;
     private readonly ISourceManifest _sourceManifest;
-    private readonly ILocalGitRepo _localGitRepo;
+    private readonly ILocalLibGit2Client _localGitRepo;
     private readonly HttpClient _httpClient;
     private const string GraphQLUrl = "https://api.github.com/graphql";
 
@@ -43,7 +43,7 @@ public class VmrPusher : IVmrPusher
         ILogger logger,
         ISourceManifest sourceManifest,
         IHttpClientFactory httpClientFactory,
-        ILocalGitRepo localGitRepo)
+        ILocalLibGit2Client localGitRepo)
     {
         _vmrInfo = vmrInfo;
         _logger = logger;

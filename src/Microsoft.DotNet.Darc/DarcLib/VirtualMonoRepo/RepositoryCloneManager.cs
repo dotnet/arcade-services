@@ -35,7 +35,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly IGitRepoCloner _gitRepoCloner;
-    private readonly ILocalGitRepo _localGitRepo;
+    private readonly ILocalGitClient _localGitRepo;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
@@ -48,7 +48,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         IGitRepoCloner gitRepoCloner,
-        ILocalGitRepo localGitRepo,
+        ILocalGitClient localGitRepo,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
@@ -78,7 +78,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
-        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
+        await _localGitRepo.CheckoutAsync(path, checkoutRef);
 
         return path;
     }
@@ -91,7 +91,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
-        await _localGitRepo.CheckoutNativeAsync(path, checkoutRef);
+        await _localGitRepo.CheckoutAsync(path, checkoutRef);
         return path;
     }
 

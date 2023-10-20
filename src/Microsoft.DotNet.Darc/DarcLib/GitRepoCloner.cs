@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib.Helpers;
+using System;
 using System.IO;
 using System.Linq;
-using System;
-using Microsoft.Extensions.Logging;
-using LibGit2Sharp;
 using System.Threading.Tasks;
+using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -62,7 +61,7 @@ public class GitRepoCloner : IGitRepoCloner
                     Password = _remoteConfiguration.GetTokenForUri(repoUri),
                 },
         };
-        
+
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         try
@@ -99,7 +98,7 @@ public class GitRepoCloner : IGitRepoCloner
             {
                 Directory.Move(repoPath, gitDirectory);
                 File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
-            } 
+            }
             else
             {
                 gitDirectory = repoPath;

@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.DarcLib;
 public class Local : ILocal
 {
     private readonly GitFileManager _fileManager;
-    private readonly ILocalGitRepo _gitClient;
+    private readonly ILocalLibGit2Client _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
 
     private readonly ILogger _logger;
@@ -33,7 +33,7 @@ public class Local : ILocal
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalGitClient(remoteConfiguration, new ProcessManager(logger, GitExecutable), logger);
+        _gitClient = new LocalLibGit2Client(remoteConfiguration, new ProcessManager(logger, GitExecutable), logger);
         _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
