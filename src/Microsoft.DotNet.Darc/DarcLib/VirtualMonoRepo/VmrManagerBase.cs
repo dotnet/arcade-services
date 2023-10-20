@@ -343,8 +343,8 @@ public abstract class VmrManagerBase
             { "remote", remote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? string.Empty : DarcLib.Commit.GetShortSha(oldSha) },
-            { "newShaShort", newSha is null ? string.Empty : DarcLib.Commit.GetShortSha(newSha) },
+            { "oldShaShort", oldSha is null ? string.Empty : Commit.GetShortSha(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
         };
 

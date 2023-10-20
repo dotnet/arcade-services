@@ -3,13 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,16 +22,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
-    // Message used when synchronizing a single commit
-    private const string SingleCommitMessage =
-        $$"""
-        [{name}] Sync {newShaShort}: {commitMessage}
-
-        Original commit: {remote}/commit/{newSha}
-        
-        {{Constants.AUTOMATION_COMMIT_TAG}}
-        """;
-
     // Message used when synchronizing multiple commits as one
     private const string SquashCommitMessage =
         $$"""
@@ -42,9 +30,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         From: {remote}/commit/{oldSha}
         To: {remote}/commit/{newSha}
-        
-        Commits:
-        {commitMessage}
         
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
@@ -229,127 +214,28 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return Array.Empty<VmrIngestionPatch>();
         }
 
-        using var repo = new Repository(clonePath);
-        ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
-        {
-            FirstParentOnly = true,
-            IncludeReachableFrom = update.TargetRevision,
-        });
+        _logger.LogInformation("Updating {repo} from {current} to {next}..",
+            update.Mapping.Name, Commit.GetShortSha(currentSha), Commit.GetShortSha(update.TargetRevision));
 
-        // Will contain SHAs in the order as we want to apply them
-        var commitsToCopy = new Stack<LibGit2Sharp.Commit>();
+        var commitMessage = PrepareCommitMessage(
+            SquashCommitMessage,
+            update.Mapping.Name,
+            update.RemoteUri,
+            currentSha,
+            update.TargetRevision);
 
-        foreach (var commit in commits)
-        {
-            // Target revision goes first
-            if (commit.Sha.StartsWith(update.TargetRevision))
-            {
-                commitsToCopy.Push(commit);
-                continue;
-            }
-
-            // If we reach current commit, stop adding
-            if (commit.Sha.StartsWith(currentSha))
-            {
-                break;
-            }
-
-            // Otherwise add anything in between
-            if (commitsToCopy.Count > 0)
-            {
-                commitsToCopy.Push(commit);
-            }
-        }
-
-        // When no path between two commits is found, force synchronization between arbitrary commits
-        // For this case, do not copy the commit with the same author so it doesn't seem like one commit
-        // from the individual repo
-        bool arbitraryCommits = commitsToCopy.Count == 0;
-        if (arbitraryCommits)
-        {
-            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(update.TargetRevision));
-        }
-
-        // When we don't need to copy the commits one by one and we have more than 1 to mirror,
-        // do them in bulk
-        if (!noSquash && commitsToCopy.Count != 1 || arbitraryCommits)
-        {
-            // We squash commits and list them in the message
-            var commitMessages = new StringBuilder();
-            var commitCount = 0;
-            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
-            {
-                // Do not list over 23 commits in the message
-                // If there are more, list first 20         
-                if (commitCount == 20 && commitsToCopy.Count > 3)
-                {
-                    commitMessages.AppendLine("  [... commit list trimmed ...]");
-                    break;
-                }
-
-                commitCount++;
-                commitMessages
-                    .AppendLine($"  - {commit.MessageShort}")
-                    .AppendLine($"    {update.RemoteUri}/commit/{commit.Id.Sha}");
-            }
-
-            var message = PrepareCommitMessage(
-                SquashCommitMessage,
-                update.Mapping.Name,
-                update.RemoteUri,
-                currentSha,
-                update.TargetRevision,
-                commitMessages.ToString());
-
-            return await UpdateRepoToRevisionAsync(
-                update,
-                clonePath,
-                currentSha,
-                Constants.DotnetBotIdentity,
-                message,
-                reapplyVmrPatches,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
-        }
-
-        var vmrPatchesToRestore = new List<VmrIngestionPatch>();
-        while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                update.Mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
-
-            var message = PrepareCommitMessage(
-                SingleCommitMessage,
-                update.Mapping.Name, 
-                update.RemoteUri,
-                currentSha,
-                commitToCopy.Id.Sha,
-                commitToCopy.Message);
-
-            var patches = await UpdateRepoToRevisionAsync(
-                update,
-                clonePath,
-                currentSha,
-                new Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
-                message,
-                reapplyVmrPatches,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
-
-            vmrPatchesToRestore.AddRange(patches);
-
-            currentSha = commitToCopy.Id.Sha;
-        }
-
-        return vmrPatchesToRestore.DistinctBy(patch => patch.Path).ToImmutableList();
+        return await UpdateRepoToRevisionAsync(
+            update,
+            clonePath,
+            currentSha,
+            Constants.DotnetBotIdentity,
+            commitMessage,
+            reapplyVmrPatches,
+            readmeTemplatePath,
+            tpnTemplatePath,
+            generateCodeowners,
+            discardPatches,
+            cancellationToken);
     }
 
     /// <summary>
