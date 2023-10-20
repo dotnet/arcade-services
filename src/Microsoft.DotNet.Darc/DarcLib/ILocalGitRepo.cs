@@ -47,12 +47,26 @@ public interface ILocalGitRepo : IGitRepo
     /// <param name="repoPath">Path of the local repository</param>
     /// <param name="message">Commit message</param>
     /// <param name="allowEmpty">Allow empty commits?</param>
-    /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
+    /// <param name="author">Identity object containing username and email. Defaults to DarcBot identity</param>
     Task CommitAsync(
         string repoPath,
         string message,
         bool allowEmpty,
-        LibGit2Sharp.Identity? identity = null,
+        LibGit2Sharp.Identity? author = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Commits files by calling git commit (not through Libgit2sharp)
+    /// </summary>
+    /// <param name="repoPath">Path of the local repository</param>
+    /// <param name="message">Commit message</param>
+    /// <param name="allowEmpty">Allow empty commits?</param>
+    /// <param name="author">User name and email; defaults to DarcBot</param>
+    Task CommitAsync(
+        string repoPath,
+        string message,
+        bool allowEmpty,
+        (string Name, string Email)? author = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

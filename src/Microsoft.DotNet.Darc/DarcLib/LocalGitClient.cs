@@ -272,7 +272,7 @@ public class LocalGitClient : ILocalGitRepo
         string repoPath,
         string message,
         bool allowEmpty,
-        LibGit2Sharp.Identity? identity = null,
+        (string Name, string Email)? author = null,
         CancellationToken cancellationToken = default)
     {
         IEnumerable<string> args = new[] { "commit", "-m", message };
@@ -282,14 +282,23 @@ public class LocalGitClient : ILocalGitRepo
             args = args.Append("--allow-empty");
         }
 
-        if (identity != null)
-        {
-            args = args.Append("--author").Append($"{identity.Name} <{identity.Email}>");
-        }
+        author ??= (Constants.DarcBotName, Constants.DarcBotEmail);
+
+        args = args
+            .Append("--author")
+            .Append($"{author.Value.Name} <{author.Value.Email}>");
 
         var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to commit {repoPath}");
     }
+
+    public async Task CommitAsync(
+        string repoPath,
+        string message,
+        bool allowEmpty,
+        Identity? author = null,
+        CancellationToken cancellationToken = default) =>
+        await CommitAsync(repoPath, message, allowEmpty, author == null ? null : (author.Name, author.Email), cancellationToken);
 
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {

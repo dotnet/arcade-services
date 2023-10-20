@@ -76,7 +76,7 @@ internal class DependencyTestDriver
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
         await _gitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
-        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", false);
+        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }
 
     public async Task AddDependencyAsync(DependencyDetail dependency)

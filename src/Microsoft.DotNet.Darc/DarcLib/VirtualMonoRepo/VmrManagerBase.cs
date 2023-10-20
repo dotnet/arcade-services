@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -66,7 +65,7 @@ public abstract class VmrManagerBase
         VmrDependencyUpdate update,
         NativePath clonePath,
         string fromRevision,
-        Identity author,
+        (string Name, string Email)? author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
@@ -183,7 +182,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected async Task CommitAsync(string commitMessage, LibGit2Sharp.Identity author)
+    protected async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
         _logger.LogInformation("Committing..");
 

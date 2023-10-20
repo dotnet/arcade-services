@@ -200,7 +200,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             update,
             clonePath,
             Constants.EmptyGitObject,
-            Constants.DotnetBotIdentity,
+            author: null,
             commitMessage,
             reapplyVmrPatches: true,
             readmeTemplatePath,

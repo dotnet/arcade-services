@@ -1,16 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -27,7 +25,7 @@ public class VmrCloakedFileScanner : VmrScanner
     }
 
     protected override async Task<IEnumerable<string>> ScanSubRepository(
-        SourceMapping sourceMapping, 
+        SourceMapping sourceMapping,
         string? baselineFilePath,
         CancellationToken cancellationToken)
     {
@@ -63,6 +61,6 @@ public class VmrCloakedFileScanner : VmrScanner
     protected override string ScanType { get; } = "cloaked";
     private string GetCloakedFileFilter(string file) => $":(attr:!{VmrInfo.KeepAttribute}){file}";
 
-    protected override Task<IEnumerable<string>> ScanBaseRepository(string? baselineFilePath, CancellationToken cancellationToken) 
+    protected override Task<IEnumerable<string>> ScanBaseRepository(string? baselineFilePath, CancellationToken cancellationToken)
         => Task.FromResult(Enumerable.Empty<string>());
 }

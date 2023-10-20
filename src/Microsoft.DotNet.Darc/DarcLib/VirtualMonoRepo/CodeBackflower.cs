@@ -149,7 +149,7 @@ public class CodeBackflower : IVmrBackflower
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, ((string, string)?)null, cancellationToken: cancellationToken);
 
         _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
     }

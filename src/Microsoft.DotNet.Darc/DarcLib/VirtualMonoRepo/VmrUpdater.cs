@@ -228,7 +228,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             update,
             clonePath,
             currentSha,
-            Constants.DotnetBotIdentity,
+            author: null,
             commitMessage,
             reapplyVmrPatches,
             readmeTemplatePath,
@@ -386,7 +386,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            await CommitAsync("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
+            await CommitAsync("[VMR patches] Re-apply VMR patches");
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -624,7 +624,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        await CommitAsync(commitMessage, Constants.DotnetBotIdentity);
+        await CommitAsync(commitMessage);
     }
 
     private void DeleteRepository(string repo)
