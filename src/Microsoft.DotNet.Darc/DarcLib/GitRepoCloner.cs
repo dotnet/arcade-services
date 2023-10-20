@@ -14,11 +14,13 @@ namespace Microsoft.DotNet.DarcLib;
 public class GitRepoCloner : IGitRepoCloner
 {
     private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
-    public GitRepoCloner(RemoteConfiguration remoteConfiguration, ILogger logger)
+    public GitRepoCloner(RemoteConfiguration remoteConfiguration, ILocalLibGit2Client localGitClient, ILogger logger)
     {
         _remoteConfiguration = remoteConfiguration;
+        _localGitClient = localGitClient;
         _logger = logger;
     }
 
@@ -91,7 +93,7 @@ public class GitRepoCloner : IGitRepoCloner
                     _logger.LogDebug($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                 }
                 _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
+                _localGitClient.SafeCheckout(localRepo, commit, checkoutOptions);
             }
             // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
             if (gitDirectory != null)

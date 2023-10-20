@@ -25,13 +25,24 @@ public class RemoteRepoBase : GitRepoCloner
         IMemoryCache cache,
         ILogger logger,
         RemoteConfiguration remoteConfiguration)
-        : base(remoteConfiguration, logger)
+        : this(gitExecutable, temporaryRepositoryPath, cache, logger, new ProcessManager(logger, gitExecutable), remoteConfiguration)
+    {
+    }
+
+    private RemoteRepoBase(
+        string gitExecutable,
+        string temporaryRepositoryPath,
+        IMemoryCache cache,
+        ILogger logger,
+        ProcessManager processManager,
+        RemoteConfiguration remoteConfiguration)
+        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, processManager, logger), logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
         Cache = cache;
         _logger = logger;
-        _processManager = new ProcessManager(logger, GitExecutable);
+        _processManager = processManager;
     }
 
     /// <summary>
