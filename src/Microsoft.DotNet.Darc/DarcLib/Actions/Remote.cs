@@ -25,6 +25,7 @@ public sealed class Remote : IRemote
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly GitFileManager _fileManager;
     private readonly IRemoteGitRepo _gitClient;
+    private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -35,16 +36,22 @@ public sealed class Remote : IRemote
     private static readonly Regex DependencyUpdatesPattern =
         new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
-    public Remote(IRemoteGitRepo gitClient, IBarClient barClient, IVersionDetailsParser versionDetailsParser, ILogger logger)
+    public Remote(
+        IRemoteGitRepo gitClient,
+        ILocalLibGit2Client localGitClient,
+        IBarClient barClient,
+        IVersionDetailsParser versionDetailsParser,
+        ILogger logger)
     {
         _logger = logger;
         _barClient = barClient;
         _gitClient = gitClient;
+        _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
 
         if (_gitClient != null)
         {
-            _fileManager = new GitFileManager(_gitClient, _versionDetailsParser, _logger);
+            _fileManager = new GitFileManager(localGitClient, _versionDetailsParser, _logger);
         }
     }
 
@@ -1002,7 +1009,7 @@ public sealed class Remote : IRemote
 
         filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
-        await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+        await _localGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
 
         return filesToCommit;
     }

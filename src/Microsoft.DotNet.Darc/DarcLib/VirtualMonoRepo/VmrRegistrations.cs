@@ -19,7 +19,6 @@ public static class VmrRegistrations
 {
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
-        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
@@ -29,13 +28,11 @@ public static class VmrRegistrations
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         services.TryAddSingleton(new RemoteConfiguration(gitHubToken, azureDevOpsToken));
-        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
-        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
@@ -44,7 +41,6 @@ public static class VmrRegistrations
         RegisterCommonServices(services, gitLocation);
         services.TryAddSingleton(configure);
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
-        services.TryAddSingleton(gitManagerFactoryProvider);
         return services;
     }
 
@@ -52,6 +48,7 @@ public static class VmrRegistrations
     {
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
+        services.TryAddTransient<IGitFileManager, GitFileManager>(); 
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();

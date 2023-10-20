@@ -82,15 +82,8 @@ public abstract class VmrTestsBase
     protected abstract Task CopyVmrForCurrentTest();
 
     private IServiceProvider CreateServiceProvider() => new ServiceCollection()
-        .AddTransient<GitFileManagerFactory>()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Information))
-        .AddVmrManagers(
-        sp => sp.GetRequiredService<GitFileManagerFactory>(),
-        "git",
-        VmrPath,
-        TmpPath,
-        null,
-        null)
+        .AddVmrManagers("git", VmrPath, TmpPath, null, null)
         .BuildServiceProvider();
 
     protected List<LocalPath> GetExpectedFilesInVmr(

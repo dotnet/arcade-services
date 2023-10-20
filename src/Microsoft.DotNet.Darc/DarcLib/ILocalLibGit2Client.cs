@@ -29,7 +29,7 @@ public interface ILocalLibGit2Client : ILocalGitClient
     /// <param name="message">Commit message</param>
     /// <param name="allowEmpty">Allow empty commits?</param>
     /// <param name="author">Identity object containing username and email. Defaults to DarcBot identity</param>
-    Task CommitAsync(
+    Task CommitAsync( // TODO TEST IF THIS IS USED ANYWHERE
         string repoPath,
         string message,
         bool allowEmpty,
