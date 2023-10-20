@@ -101,7 +101,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
             var localGitClient = new LocalLibGit2Client(
                 remoteConfiguration,
-                new ProcessManager(logger, null),
+                new ProcessManager(logger, gitExecutable: null),
                 logger);
 
             return new Remote(remoteGitClient, localGitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);

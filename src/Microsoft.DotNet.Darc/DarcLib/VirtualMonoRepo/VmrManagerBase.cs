@@ -29,7 +29,7 @@ public abstract class VmrManagerBase
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ILocalGitClient _localGitClient;
-    private readonly IGitFileManagerFactory _gitFileManagerFactory;
+    private readonly IGitFileManager _gitFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
@@ -43,7 +43,7 @@ public abstract class VmrManagerBase
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
-        IGitFileManagerFactory gitFileManagerFactory,
+        IGitFileManager gitFileManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
@@ -57,7 +57,7 @@ public abstract class VmrManagerBase
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _codeownersGenerator = codeownersGenerator;
         _localGitClient = localGitClient;
-        _gitFileManagerFactory = gitFileManagerFactory;
+        _gitFileManager = gitFileManager;
         _fileSystem = fileSystem;
     }
 
@@ -295,9 +295,7 @@ public abstract class VmrManagerBase
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
         }
 
-        var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
-
-        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        return await _gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     protected async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)
