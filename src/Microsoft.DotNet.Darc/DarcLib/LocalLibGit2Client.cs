@@ -31,7 +31,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
-        repoPath = await GetRootDirAsync();
+        repoPath = await GetRootDirAsync(repoPath);
 
         try
         {
