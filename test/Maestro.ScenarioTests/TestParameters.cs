@@ -20,13 +20,13 @@ namespace Maestro.ScenarioTests
     {
         internal readonly TemporaryDirectory _dir;
 
-        private static string[] maestroBaseUris;
+        private static readonly string[] maestroBaseUris;
         private static int maestroBaseUriIndex = 0;
-        private static string maestroToken;
-        private static string githubToken;
-        private static string darcPackageSource;
-        private static string azdoToken;
-        private static SemaphoreSlim mutex;
+        private static readonly string maestroToken;
+        private static readonly string githubToken;
+        private static readonly string darcPackageSource;
+        private static readonly string azdoToken;
+        private static readonly SemaphoreSlim mutex;
 
         static TestParameters()
         {
@@ -48,10 +48,7 @@ namespace Maestro.ScenarioTests
         private static string GetMaestroBaseUri()
         {
             var maestroBaseUri = maestroBaseUris[maestroBaseUriIndex];
-            maestroBaseUriIndex =
-                maestroBaseUriIndex == maestroBaseUris.Length - 1
-                ? 0
-                : maestroBaseUriIndex + 1;
+            maestroBaseUriIndex = (maestroBaseUriIndex + 1) % maestroBaseUris.Length;
             return maestroBaseUri; 
         }
 
