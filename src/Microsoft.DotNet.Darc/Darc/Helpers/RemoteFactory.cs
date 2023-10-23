@@ -70,7 +70,7 @@ internal class RemoteFactory : IRemoteFactory
 
         var localGitClient = new LocalLibGit2Client(
             options.GetRemoteConfiguration(),
-            new ProcessManager(logger, "git"),
+            new ProcessManager(logger, options.GitLocation),
             logger);
 
         return new Remote(gitClient, localGitClient, barClient, new VersionDetailsParser(), logger);
