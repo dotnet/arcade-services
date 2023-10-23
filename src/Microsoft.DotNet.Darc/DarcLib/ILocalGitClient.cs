@@ -46,7 +46,7 @@ public interface ILocalGitClient : IGitRepo
     Task CommitAsync(string repoPath, string message, bool allowEmpty, (string Name, string Email)? author = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a local branch.
+    ///     Creates a local branch.
     /// </summary>
     /// <param name="repoDir">Path to a git repository</param>
     /// <param name="branchName">New branch name</param>
@@ -54,7 +54,7 @@ public interface ILocalGitClient : IGitRepo
     Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false);
 
     /// <summary>
-    /// Fetches from a given remote URI.
+    ///     Fetches from a given remote URI.
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
     /// <param name="remoteUri">Remote git repository</param>
@@ -62,7 +62,7 @@ public interface ILocalGitClient : IGitRepo
     Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves a file's content from git index (works with bare repositories).
+    ///     Retrieves a file's content from git index (works with bare repositories).
     /// </summary>
     /// <param name="repoPath">Absolute or relative path to the repo</param>
     /// <param name="relativeFilePath">Relative path to the file inside of the repo</param>
