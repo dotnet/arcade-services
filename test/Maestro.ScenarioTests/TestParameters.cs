@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -21,12 +22,10 @@ namespace Maestro.ScenarioTests
         internal readonly TemporaryDirectory _dir;
 
         private static readonly string[] maestroBaseUris;
-        private static int maestroBaseUriIndex = 0;
         private static readonly string maestroToken;
         private static readonly string githubToken;
         private static readonly string darcPackageSource;
         private static readonly string azdoToken;
-        private static readonly SemaphoreSlim mutex;
 
         static TestParameters()
         {
@@ -42,26 +41,17 @@ namespace Maestro.ScenarioTests
             githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
             darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
             azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
-            mutex = new SemaphoreSlim(1);
         }
 
-        private static string GetMaestroBaseUri()
-        {
-            var maestroBaseUri = maestroBaseUris[maestroBaseUriIndex];
-            maestroBaseUriIndex = (maestroBaseUriIndex + 1) % maestroBaseUris.Length;
-            return maestroBaseUri; 
-        }
-
-        public static async Task<TestParameters> GetAsync()
+        /// <param name="useNonPrimaryEndpoint">If set to true, the test will atempt to use the secondary endpoint, if provided</param>
+        public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
         {
             var testDir = TemporaryDirectory.Get();
             var testDirSharedWrapper = Shareable.Create(testDir);
 
-            await mutex.WaitAsync();
-
-            var maestroBaseUri = GetMaestroBaseUri();
-
-            mutex.Release();
+            var maestroBaseUri = useNonPrimaryEndpoint
+                ? maestroBaseUris.Last()
+                : maestroBaseUris.First();
 
             IMaestroApi maestroApi = maestroToken == null
                 ? ApiFactory.GetAnonymous(maestroBaseUri)

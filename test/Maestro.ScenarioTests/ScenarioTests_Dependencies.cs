@@ -28,7 +28,7 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeDependencies_EndToEnd()
         {
-            _parameters = await TestParameters.GetAsync();
+            _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
             SetTestParameters(_parameters);
 
             string source1RepoName = TestRepository.TestRepo1Name;
