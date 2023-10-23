@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
@@ -19,20 +21,37 @@ namespace Maestro.ScenarioTests
     {
         internal readonly TemporaryDirectory _dir;
 
-        public static async Task<TestParameters> GetAsync()
+        private static readonly string[] maestroBaseUris;
+        private static readonly string maestroToken;
+        private static readonly string githubToken;
+        private static readonly string darcPackageSource;
+        private static readonly string azdoToken;
+
+        static TestParameters()
         {
             IConfiguration userSecrets = new ConfigurationBuilder()
                 .AddUserSecrets<TestParameters>()
                 .Build();
 
-            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ??  userSecrets["MAESTRO_BASEURI"] ?? "https://maestro-int.westus2.cloudapp.azure.com";
-            string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
-            string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
-            string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
-            string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
+            maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
+                    ?? userSecrets["MAESTRO_BASEURIS"]
+                    ?? "https://maestro.int-dot.com")
+                    .Split(',');
+            maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
+            githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
+            darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+            azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
+        }
 
+        /// <param name="useNonPrimaryEndpoint">If set to true, the test will atempt to use the non primary endpoint, if provided</param>
+        public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
+        {
             var testDir = TemporaryDirectory.Get();
             var testDirSharedWrapper = Shareable.Create(testDir);
+
+            var maestroBaseUri = useNonPrimaryEndpoint
+                ? maestroBaseUris.Last()
+                : maestroBaseUris.First();
 
             IMaestroApi maestroApi = maestroToken == null
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
