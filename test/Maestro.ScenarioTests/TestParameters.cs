@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
@@ -19,20 +20,53 @@ namespace Maestro.ScenarioTests
     {
         internal readonly TemporaryDirectory _dir;
 
-        public static async Task<TestParameters> GetAsync()
+        private static string[] maestroBaseUris;
+        private static int maestroBaseUriIndex = 0;
+        private static string maestroToken;
+        private static string githubToken;
+        private static string darcPackageSource;
+        private static string azdoToken;
+        private static SemaphoreSlim mutex;
+
+        static TestParameters()
         {
             IConfiguration userSecrets = new ConfigurationBuilder()
                 .AddUserSecrets<TestParameters>()
                 .Build();
 
-            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ??  userSecrets["MAESTRO_BASEURI"] ?? "https://maestro-int.westus2.cloudapp.azure.com";
-            string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
-            string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
-            string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
-            string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
+            maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
+                    ?? userSecrets["MAESTRO_BASEURIS"]
+                    ?? "https://maestro-int.westus2.cloudapp.azure.com")
+                    .Split(',');
+            maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
+            githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
+            darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+            azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
+            mutex = new SemaphoreSlim(1);
+        }
+
+        private static string GetMaestroBaseUri()
+        {
+            var maestroBaseUri = maestroBaseUris[maestroBaseUriIndex];
+            maestroBaseUriIndex =
+                maestroBaseUriIndex == maestroBaseUris.Length - 1
+                ? 0
+                : maestroBaseUriIndex + 1;
+            return maestroBaseUri; 
+        }
+
+        public static async Task<TestParameters> GetAsync()
+        {
+            
 
             var testDir = TemporaryDirectory.Get();
             var testDirSharedWrapper = Shareable.Create(testDir);
+
+            await mutex.WaitAsync();
+
+            var maestroBaseUri = GetMaestroBaseUri();
+
+            mutex.Release();
 
             IMaestroApi maestroApi = maestroToken == null
                 ? ApiFactory.GetAnonymous(maestroBaseUri)

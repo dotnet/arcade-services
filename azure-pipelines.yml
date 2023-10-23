@@ -260,13 +260,13 @@ stages:
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Staging
-        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        MaestroTestEndpoints: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
         PublishProfile: Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         DeploymentEnvironment: Production
-        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
