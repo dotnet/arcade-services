@@ -54,8 +54,6 @@ namespace Maestro.ScenarioTests
 
         public static async Task<TestParameters> GetAsync()
         {
-            
-
             var testDir = TemporaryDirectory.Get();
             var testDirSharedWrapper = Shareable.Create(testDir);
 
