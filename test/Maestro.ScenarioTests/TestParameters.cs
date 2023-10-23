@@ -43,7 +43,7 @@ namespace Maestro.ScenarioTests
             azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
         }
 
-        /// <param name="useNonPrimaryEndpoint">If set to true, the test will atempt to use the secondary endpoint, if provided</param>
+        /// <param name="useNonPrimaryEndpoint">If set to true, the test will atempt to use the non primary endpoint, if provided</param>
         public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
         {
             var testDir = TemporaryDirectory.Get();
