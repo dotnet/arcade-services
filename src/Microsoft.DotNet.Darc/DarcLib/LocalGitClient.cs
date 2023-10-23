@@ -140,11 +140,10 @@ public class LocalGitClient : ILocalGitClient
     }
 
     /// <summary>
-    ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
+    ///     Add a remote to a local repo if does not already exist.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="repoUrl">URL of the remote to add</param>
-    /// <param name="skipFetch">Skip fetching remote changes</param>
     /// <returns>Name of the remote</returns>
     public async Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default)
     {

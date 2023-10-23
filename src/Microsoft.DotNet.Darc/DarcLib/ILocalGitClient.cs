@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public interface ILocalGitClient : IGitRepo
 {    /// <summary>
-     ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
+     ///     Add a remote to a local repo if does not already exist.
      /// </summary>
      /// <param name="repoDir">Path to a git repository</param>
      /// <param name="repoUrl">URL of the remote to add</param>
