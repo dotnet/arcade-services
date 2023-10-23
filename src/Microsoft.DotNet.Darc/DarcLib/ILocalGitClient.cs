@@ -12,13 +12,13 @@ public interface ILocalGitClient : IGitRepo
 {    /// <summary>
      ///     Add a remote to a local repo if does not already exist.
      /// </summary>
-     /// <param name="repoDir">Path to a git repository</param>
+     /// <param name="repoPath">Path to a git repository</param>
      /// <param name="repoUrl">URL of the remote to add</param>
      /// <returns>Name of the remote</returns>
-    Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl, CancellationToken cancellationToken = default);
+    Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Retrieves SHA of the commit that last changed the given line in the given file.
+    ///     Retrieves SHA of the commit that last changed the given line in the given file.
     /// </summary>
     /// <param name="repoPath">Path to the repository</param>
     /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>
@@ -32,7 +32,7 @@ public interface ILocalGitClient : IGitRepo
     /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
     Task CheckoutAsync(string repoPath, string refToCheckout);
 
@@ -48,7 +48,7 @@ public interface ILocalGitClient : IGitRepo
     /// <summary>
     ///     Creates a local branch.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <param name="branchName">New branch name</param>
     /// <param name="overwriteExistingBranch">Whether to overwrite an already existing branch</param>
     Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false);
@@ -58,7 +58,6 @@ public interface ILocalGitClient : IGitRepo
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
     /// <param name="remoteUri">Remote git repository</param>
-    /// <param name="token">Token to use (if any)</param>
     Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -80,7 +79,7 @@ public interface ILocalGitClient : IGitRepo
     /// <summary>
     ///     Returns a list of git submodules registered in a given repository.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <param name="commit">Which commit the info is retrieved for</param>
     Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoPath, string commit);
 
@@ -101,14 +100,14 @@ public interface ILocalGitClient : IGitRepo
     /// <summary>
     ///     Returns a list of modified staged files.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
     Task<string[]> GetStagedFiles(string repoPath);
 
     /// <summary>
     ///     Stages files from the given path.
     /// </summary>
-    /// <param name="repoDir">Path to a git repository</param>
+    /// <param name="repoPath">Path to a git repository</param>
     /// <param name="pathsToStage">Paths that will be staged to index</param>
     Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
 }

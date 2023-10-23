@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -48,7 +49,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     {
         get => _mappings ?? throw new System.Exception("Source mappings have not been initialized.");
     }
-
+            
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
@@ -89,7 +90,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             ?? "0.0.0";
 
         var (buildId, releaseLabel) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
-
+        
         var gitInfo = new GitInfoFile
         {
             GitCommitHash = update.TargetRevision,
@@ -111,7 +112,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             _repoVersions.SerializeToXml(_allVersionsFilePath);
             hasChanges = true;
         }
-
+        
         var gitInfoFilePath = GetGitInfoFilePath(repo);
         if (_fileSystem.FileExists(gitInfoFilePath))
         {
