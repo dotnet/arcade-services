@@ -36,7 +36,7 @@ namespace Maestro.ScenarioTests
 
             maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
                     ?? userSecrets["MAESTRO_BASEURIS"]
-                    ?? "https://maestro-int.westus2.cloudapp.azure.com")
+                    ?? "https://maestro.int-dot.com")
                     .Split(',');
             maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
