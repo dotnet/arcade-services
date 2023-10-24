@@ -16,14 +16,12 @@ interface Theme {
 export class AppComponent implements OnInit {
   static themeCookieName = "Maestro.Theme";
 
-  constructor(private cookieService: CookieService) {
-    this.returnUrl = (location.pathname + location.search).replace("http:", "https:");
-  }
+  constructor(private cookieService: CookieService){}
 
   public title = ".NET Mission Control";
   public navbarOpen = false;
   public sidebarOpen = false;
-  public returnUrl : string;
+  public returnUrl = location.pathname + location.search;
   public brand: string = (window as any).applicationData.brand;
   public userName: string = (window as any).applicationData.userName;
   public authorized: boolean = (window as any).applicationData.authorized;
@@ -55,7 +53,6 @@ export class AppComponent implements OnInit {
 
   public ngOnInit(): void {
     this.currentTheme = this.cookieService.get(AppComponent.themeCookieName) || "light";
-    console.log(this.returnUrl);
   }
 
   public selectTheme(name: string) {
