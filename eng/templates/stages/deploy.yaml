@@ -156,7 +156,7 @@ stages:
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
     - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
-        -maestroTestEndpoints ${{ parameters.MaestroTestEndpoints }}
+        -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
         -apiVersion "2019-01-16"
       displayName: Get DARC version
 
