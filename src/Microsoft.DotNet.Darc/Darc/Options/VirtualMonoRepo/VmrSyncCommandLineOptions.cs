@@ -6,12 +6,12 @@ using CommandLine;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions
+internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBaseVmrCommandLineOptions
 {
     [Option("additional-remotes", Required = false, HelpText =
-        "Comma separated list of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
+        "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
         "Example: installer:https://github.com/myfork/installer,sdk:/local/path/to/sdk")]
-    public string AdditionalRemotes { get; set; }
+    public IEnumerable<string> AdditionalRemotes { get; set; }
     
     [Value(0, Required = true, HelpText =
         "Repository names in the form of NAME or NAME:REVISION where REVISION is a commit SHA or other git reference (branch, tag). " +

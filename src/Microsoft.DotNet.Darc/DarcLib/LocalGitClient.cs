@@ -645,4 +645,20 @@ public class LocalGitClient : ILocalGitRepo
         result.ThrowIfFailed($"Failed to fetch from {remoteUri} in {repoPath}");
         return result.StandardOutput.Trim();
     }
+
+    public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line)
+    {
+        var args = new[]
+        {
+            "blame",
+            "--first-parent",
+            "-slL",
+            $"{line},{line}",
+            relativeFilePath,
+        };
+
+        var result = await _processManager.ExecuteGit(repoPath, args);
+        result.ThrowIfFailed($"Failed to blame line {line} of {repoPath}{Path.DirectorySeparatorChar}{relativeFilePath}");
+        return result.StandardOutput.Trim().Split(' ').First();
+    }
 }

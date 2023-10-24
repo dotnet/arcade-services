@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -17,8 +17,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    // String used to mark the commit as automated
-    protected const string AUTOMATION_COMMIT_TAG = "[[ commit created by automation ]]";
     protected const string HEAD = "HEAD";
     protected const string InterruptedSyncExceptionMessage = 
         "A new branch was created for the sync and didn't get merged as the sync " +
@@ -67,9 +65,9 @@ public abstract class VmrManagerBase
 
     protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
-        LocalPath clonePath,
+        NativePath clonePath,
         string fromRevision,
-        LibGit2Sharp.Identity author,
+        Identity author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
@@ -95,7 +93,7 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (discardPatches)
@@ -179,7 +177,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 

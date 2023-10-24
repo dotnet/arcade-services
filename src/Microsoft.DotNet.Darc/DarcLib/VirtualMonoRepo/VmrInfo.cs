@@ -14,12 +14,12 @@ public interface IVmrInfo
     /// <summary>
     /// Path for temporary files (individual repo clones, created patches, etc.)
     /// </summary>
-    LocalPath TmpPath { get; }
+    NativePath TmpPath { get; }
 
     /// <summary>
     /// Path to the root of the VMR
     /// </summary>
-    LocalPath VmrPath { get; }
+    NativePath VmrPath { get; }
 
     /// <summary>
     /// Path within the VMR where VMR patches are stored.
@@ -29,7 +29,7 @@ public interface IVmrInfo
     string? PatchesPath { get; set; }
 
     /// <summary>
-    /// Path to the source-mappings.json file 
+    /// Path to the source-mappings.json file
     /// </summary>
     string? SourceMappingsPath { get; set; }
 
@@ -43,17 +43,17 @@ public interface IVmrInfo
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
     /// </summary>
-    LocalPath GetRepoSourcesPath(SourceMapping mapping);
+    NativePath GetRepoSourcesPath(SourceMapping mapping);
 
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo
     /// </summary>
-    LocalPath GetRepoSourcesPath(string mappingName);
+    NativePath GetRepoSourcesPath(string mappingName);
 
     /// <summary>
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
-    LocalPath GetSourceManifestPath();
+    NativePath GetSourceManifestPath();
 }
 
 public class VmrInfo : IVmrInfo
@@ -75,9 +75,9 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath RelativeSourcesDir { get; } = new("src");
 
-    public LocalPath VmrPath { get; }
+    public NativePath VmrPath { get; }
 
-    public LocalPath TmpPath { get; }
+    public NativePath TmpPath { get; }
 
     public string? PatchesPath { get; set; }
 
@@ -85,7 +85,7 @@ public class VmrInfo : IVmrInfo
 
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
-    public VmrInfo(LocalPath vmrPath, LocalPath tmpPath)
+    public VmrInfo(NativePath vmrPath, NativePath tmpPath)
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;
@@ -95,11 +95,11 @@ public class VmrInfo : IVmrInfo
     {
     }
 
-    public LocalPath GetRepoSourcesPath(SourceMapping mapping) => GetRepoSourcesPath(mapping.Name);
+    public NativePath GetRepoSourcesPath(SourceMapping mapping) => GetRepoSourcesPath(mapping.Name);
 
-    public LocalPath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
+    public NativePath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
 
     public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
 
-    public LocalPath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
+    public NativePath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }
