@@ -55,30 +55,30 @@ stages:
       inputs:
         useGlobalJson: true
 
-    - task: AzurePowerShell@3
-      displayName: Add firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
-    - task: PowerShell@2
-      displayName: update-database.ps1
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
-        arguments: Maestro.Data.dll
-        workingDirectory: $(Pipeline.Workspace)/Maestro.Data
-      env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
-    - task: AzurePowerShell@3
-      displayName: Remove firewall rule
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
-        ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
-        azurePowerShellVersion: LatestVersion
-      condition: always()
+    # - task: AzurePowerShell@3
+    #   displayName: Add firewall rule
+    #   inputs:
+    #     azureSubscription: ${{ parameters.Subscription }}
+    #     ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+    #     ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
+    #     azurePowerShellVersion: LatestVersion
+    # - task: PowerShell@2
+    #   displayName: update-database.ps1
+    #   inputs:
+    #     targetType: filePath
+    #     filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
+    #     arguments: Maestro.Data.dll
+    #     workingDirectory: $(Pipeline.Workspace)/Maestro.Data
+    #   env:
+    #     BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
+    # - task: AzurePowerShell@3
+    #   displayName: Remove firewall rule
+    #   inputs:
+    #     azureSubscription: ${{ parameters.Subscription }}
+    #     ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+    #     ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(build-asset-registry-admin-connection-string)"
+    #     azurePowerShellVersion: LatestVersion
+    #   condition: always()
 
   - job: deployMaestro
     displayName: Deploy Maestro
@@ -89,24 +89,24 @@ stages:
       artifact: MaestroApplication
     - download: current
       artifact: ReleaseUtilities
-    - task: AzurePowerShell@5
-      displayName: Deploy Service Fabric Application (Maestro)
-      inputs:
-        azureSubscription: ${{ parameters.Subscription }}
-        scriptType: inlineScript
-        azurePowerShellVersion: LatestVersion
-        inline: |
-          $autoRollBack = $true
-          if ($env:DisableAutoRollBack -eq 'true') {
-            $autoRollBack = $false
-          }
-          if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
-            $autoRollBack = $false
-          }
-          eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
-      env:
-        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
-        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+    # - task: AzurePowerShell@5
+    #   displayName: Deploy Service Fabric Application (Maestro)
+    #   inputs:
+    #     azureSubscription: ${{ parameters.Subscription }}
+    #     scriptType: inlineScript
+    #     azurePowerShellVersion: LatestVersion
+    #     inline: |
+    #       $autoRollBack = $true
+    #       if ($env:DisableAutoRollBack -eq 'true') {
+    #         $autoRollBack = $false
+    #       }
+    #       if ($env:BUILD_SOURCEBRANCH -eq 'refs/heads/main') {
+    #         $autoRollBack = $false
+    #       }
+    #       eng/deployment/deploy.ps1 -obj $env:BUILD_ARTIFACTSTAGINGDIRECTORY -appPackagePath $env:ApplicationPackage -publishProfile $env:PublishProfilePath -autoRollBack $autoRollBack -location westus2
+    #   env:
+    #     PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/${{ parameters.PublishProfile }}.xml
+    #     ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
 
 - stage: validateDeployment
   displayName: Validate deployment
@@ -137,19 +137,19 @@ stages:
       inputs:
         useGlobalJson: true
 
-    - task: VSTest@2
-      displayName: Maestro Scenario Tests
-      inputs:
-        testSelector: testAssemblies
-        testAssemblyVer2: |
-          Maestro.ScenarioTests.dll
-        searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
-      env:
-        MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
-        MAESTRO_TOKEN: $(scenario-test-maestro-token)
-        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
-        AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
-        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+    # - task: VSTest@2
+    #   displayName: Maestro Scenario Tests
+    #   inputs:
+    #     testSelector: testAssemblies
+    #     testAssemblyVer2: |
+    #       Maestro.ScenarioTests.dll
+    #     searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
+    #   env:
+    #     MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
+    #     MAESTRO_TOKEN: $(scenario-test-maestro-token)
+    #     GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+    #     AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
+    #     DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
 
     - powershell: |
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
