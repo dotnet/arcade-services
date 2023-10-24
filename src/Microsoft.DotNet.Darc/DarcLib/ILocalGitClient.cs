@@ -9,13 +9,17 @@ using System.Threading.Tasks;
 namespace Microsoft.DotNet.DarcLib;
 
 public interface ILocalGitClient : IGitRepo
-{    /// <summary>
-     ///     Add a remote to a local repo if does not already exist.
-     /// </summary>
-     /// <param name="repoPath">Path to a git repository</param>
-     /// <param name="repoUrl">URL of the remote to add</param>
-     /// <returns>Name of the remote</returns>
-    Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default);
+{
+    /// <summary>
+    ///     Add a remote to a local repo if does not already exist.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="repoUrl">URL of the remote to add</param>
+    /// <returns>Name of the remote</returns>
+    Task<string> AddRemoteIfMissingAsync(
+        string repoPath,
+        string repoUrl,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Retrieves SHA of the commit that last changed the given line in the given file.
@@ -43,7 +47,12 @@ public interface ILocalGitClient : IGitRepo
     /// <param name="message">Commit message</param>
     /// <param name="allowEmpty">Allow empty commits?</param>
     /// <param name="author">User name and email; defaults to DarcBot</param>
-    Task CommitAsync(string repoPath, string message, bool allowEmpty, (string Name, string Email)? author = null, CancellationToken cancellationToken = default);
+    Task CommitAsync(
+        string repoPath,
+        string message,
+        bool allowEmpty,
+        (string Name, string Email)? author = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Creates a local branch.
@@ -68,7 +77,11 @@ public interface ILocalGitClient : IGitRepo
     /// <param name="revision">Revision to get the file from</param>
     /// <param name="outputPath">Optional path to write the contents to</param>
     /// <returns>File contents</returns>
-    Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null);
+    Task<string?> GetFileFromGitAsync(
+        string repoPath,
+        string relativeFilePath,
+        string revision = "HEAD",
+        string? outputPath = null);
 
     /// <summary>
     ///     Gets the current git commit SHA.
@@ -86,7 +99,7 @@ public interface ILocalGitClient : IGitRepo
     /// <summary>
     ///     Gets the root directory of a git repo.
     /// </summary>
-    /// <param name="path">Path inside of a git repository</param>
+    /// <param name="repoPath">Path inside of a git repository</param>
     /// <returns>Path where the .git folder resides</returns>
     Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default);
 
@@ -109,5 +122,8 @@ public interface ILocalGitClient : IGitRepo
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="pathsToStage">Paths that will be staged to index</param>
-    Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default);
+    Task StageAsync(
+        string repoPath,
+        IEnumerable<string> pathsToStage,
+        CancellationToken cancellationToken = default);
 }
