@@ -234,27 +234,27 @@ stages:
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production', 'refs/heads/dkurepa/FixDarcTest'))}}:
-  # - template: /eng/common/templates/post-build/post-build.yml
-  #   parameters:
-  #     enableSymbolValidation: true
-  #     enableSigningValidation: false
-  #     artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-  #     symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-  #     # This is to enable SDL runs part of Post-Build Validation Stage
-  #     SDLValidationParameters:
-  #       enable: true
-  #       params: '-SourceToolsList @("policheck","credscan")
-  #       -TsaInstanceURL $(_TsaInstanceURL)
-  #       -TsaProjectName $(_TsaProjectName)
-  #       -TsaNotificationEmail $(_TsaNotificationEmail)
-  #       -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-  #       -TsaBugAreaPath $(_TsaBugAreaPath)
-  #       -TsaIterationPath $(_TsaIterationPath)
-  #       -TsaRepositoryName "Arcade-Services"
-  #       -TsaCodebaseName "Arcade-Services"
-  #       -TsaPublish $True
-  #       -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
+  - template: /eng/common/templates/post-build/post-build.yml
+    parameters:
+      enableSymbolValidation: true
+      enableSigningValidation: false
+      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+      symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+      # This is to enable SDL runs part of Post-Build Validation Stage
+      SDLValidationParameters:
+        enable: true
+        params: '-SourceToolsList @("policheck","credscan")
+        -TsaInstanceURL $(_TsaInstanceURL)
+        -TsaProjectName $(_TsaProjectName)
+        -TsaNotificationEmail $(_TsaNotificationEmail)
+        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+        -TsaBugAreaPath $(_TsaBugAreaPath)
+        -TsaIterationPath $(_TsaIterationPath)
+        -TsaRepositoryName "Arcade-Services"
+        -TsaCodebaseName "Arcade-Services"
+        -TsaPublish $True
+        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
   - template: /eng/templates/stages/deploy.yaml
     parameters:
