@@ -20,14 +20,14 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependencyGraphOperation : Operation
 {
     private readonly GetDependencyGraphCommandLineOptions _options;
-    private readonly LocalGitClient _gitClient;
+    private readonly LocalLibGit2Client _gitClient;
     private readonly HashSet<string> _flatList = new();
 
     public GetDependencyGraphOperation(GetDependencyGraphCommandLineOptions options)
         : base(options)
     {
         _options = options;
-        _gitClient = new LocalGitClient(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), Logger);
+        _gitClient = new LocalLibGit2Client(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), Logger);
     }
 
     public override async Task<int> ExecuteAsync()

@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 internal class DependencyTestDriver
 {
     private string _testName;
-    private LocalGitClient _gitClient;
+    private LocalLibGit2Client _gitClient;
     private VersionDetailsParser _versionDetailsParser;
     private GitFileManager _gitFileManager;
     private const string inputRootDir = "inputs";
@@ -38,7 +38,7 @@ internal class DependencyTestDriver
     public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
     public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
     public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
-    public LocalGitClient GitClient { get => _gitClient; }
+    public LocalLibGit2Client GitClient { get => _gitClient; }
     public GitFileManager GitFileManager { get => _gitFileManager; }
 
     public DependencyTestDriver(string testName)
@@ -68,15 +68,15 @@ internal class DependencyTestDriver
 
         // Set up a git file manager
         var processManager = new ProcessManager(NullLogger.Instance, "git");
-        _gitClient = new LocalGitClient(new RemoteConfiguration(), processManager, NullLogger.Instance);
+        _gitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
-        _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
+        _gitFileManager = new GitFileManager(_gitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
         await _gitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
-        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", false);
+        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }
 
     public async Task AddDependencyAsync(DependencyDetail dependency)

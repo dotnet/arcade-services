@@ -43,6 +43,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
@@ -55,19 +56,20 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
-        ILocalGitRepo localGitClient,
-        IGitFileManagerFactory gitFileManagerFactory,
+        ILocalGitClient localGitClient,
+        IGitFileManager gitFileManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, gitFileManager, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
+        _localGitClient = localGitClient;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -189,7 +191,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         update = update with
         {
-            TargetRevision = GetShaForRef(clonePath, update.TargetRevision == HEAD ? null : update.TargetRevision)
+            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
@@ -198,7 +200,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             update,
             clonePath,
             Constants.EmptyGitObject,
-            Constants.DotnetBotIdentity,
+            author: null,
             commitMessage,
             reapplyVmrPatches: true,
             readmeTemplatePath,

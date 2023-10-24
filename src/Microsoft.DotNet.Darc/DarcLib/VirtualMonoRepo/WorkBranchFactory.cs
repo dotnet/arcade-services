@@ -16,11 +16,11 @@ public interface IWorkBranchFactory
 
 public class WorkBranchFactory : IWorkBranchFactory
 {
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IProcessManager _processManager;
     private readonly ILogger<WorkBranch> _logger;
 
-    public WorkBranchFactory(ILocalGitRepo localGitClient, IProcessManager processManager, ILogger<WorkBranch> logger)
+    public WorkBranchFactory(ILocalGitClient localGitClient, IProcessManager processManager, ILogger<WorkBranch> logger)
     {
         _localGitClient = localGitClient;
         _processManager = processManager;

@@ -52,7 +52,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
     {
-        return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
+        return Task.FromResult((IRemote)new Remote(null, null, new MaestroBarClient(_context), _versionDetailsParser, logger));
     }
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -73,29 +73,51 @@ public class DarcRemoteFactory : IRemoteFactory
             }
 
             long installationId = await _context.GetInstallationId(normalizedUrl);
+            var repoType = GitRepoTypeParser.ParseFromUri(normalizedUrl);
+
+            if (repoType == GitRepoType.GitHub && installationId == default)
+            {
+                throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
+            }
+
+            var remoteConfiguration = repoType switch
+            {
+                GitRepoType.GitHub => new RemoteConfiguration(
+                    gitHubToken: await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
+                GitRepoType.AzureDevOps => new RemoteConfiguration(
+                    azureDevOpsToken: await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
+
+                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
+            };
+
             var gitExe = _localGit.GetPathToLocalGit();
 
-            IRemoteGitRepo gitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
+            IRemoteGitRepo remoteGitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
             {
                 GitRepoType.GitHub => installationId == default
                     ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
                     : new GitHubClient(
                         gitExe,
-                        await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId),
+                        remoteConfiguration.GitHubToken,
                         logger,
                         temporaryRepositoryRoot,
                         _cache.Cache),
 
                 GitRepoType.AzureDevOps => new AzureDevOpsClient(
                     gitExe,
-                    await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
+                    remoteConfiguration.AzureDevOpsToken,
                     logger,
                     temporaryRepositoryRoot),
 
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(gitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
+            var localGitClient = new LocalLibGit2Client(
+                remoteConfiguration,
+                new ProcessManager(logger, gitExe),
+                logger);
+
+            return new Remote(remoteGitClient, localGitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
         }
     }
 }

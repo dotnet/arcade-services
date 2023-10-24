@@ -259,7 +259,7 @@ internal class CloneOperation : Operation
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
         var local = new Local(_options.GetRemoteConfiguration(), Logger, masterGitRepoPath);
-        local.AddRemoteIfMissing(masterGitRepoPath, repoUrl);
+        await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
     private async Task HandleMasterCopyWithDefaultGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)

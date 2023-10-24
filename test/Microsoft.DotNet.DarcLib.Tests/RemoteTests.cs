@@ -16,9 +16,10 @@ public class RemoteTests
     [Test]
     public async Task ValidateCommitMessageTest()
     {
-        Mock<IRemoteGitRepo> client = new Mock<IRemoteGitRepo>();
-        Mock<IBarClient> barClient = new Mock<IBarClient>();
-        MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
+        var client = new Mock<IRemoteGitRepo>();
+        var barClient = new Mock<IBarClient>();
+        var localGitClient = new Mock<ILocalLibGit2Client>();
+        var mergePullRequest = new MergePullRequestParameters
         {
             DeleteSourceBranch = true,
             CommitToMerge = "",
@@ -80,7 +81,7 @@ Coherency Update:
 
         var logger = new NUnitLogger();
 
-        Remote remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(), logger);
+        var remote = new Remote(client.Object, localGitClient.Object, barClient.Object, new VersionDetailsParser(), logger);
 
         await remote.MergeDependencyPullRequestAsync(
             "https://github.com/test/test2",

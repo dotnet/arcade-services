@@ -24,7 +24,7 @@ public class VmrPusherTests
 {
     private readonly Mock<ISourceManifest> _sourceManifest = new();
     private readonly Mock<IVmrInfo> _vmrInfo = new();
-    private readonly Mock<ILocalGitRepo> _localGitRepo = new();
+    private readonly Mock<ILocalLibGit2Client> _localGitRepo = new();
     private const string GraphQLUri = "https://api.github.com/graphql";
     private const string Sha = "7cf329817c862c15f9a4e5849b2268d801cb1078";
     private const string VmrUrl = "https://github.com/org/vmr";
