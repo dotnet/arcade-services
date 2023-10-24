@@ -16,14 +16,6 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public interface IGitFileManager
 {
-    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
-
-    Task AddDependencyToGlobalJson(string repo, string branch, string parentField, string dependencyName, string version);
-
-    Task AddDependencyToVersionDetailsAsync(string repo, string branch, DependencyDetail dependency);
-
-    Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency);
-
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
     List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null);

@@ -9,10 +9,9 @@ using System.Threading.Tasks;
 using System.Xml;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
-using NuGet.Versioning;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
@@ -29,7 +28,7 @@ internal class DependencyTestDriver
     private string _testName;
     private LocalLibGit2Client _gitClient;
     private VersionDetailsParser _versionDetailsParser;
-    private GitFileManager _gitFileManager;
+    private LibGit2FileManager _gitFileManager;
     private const string inputRootDir = "inputs";
     private const string inputDir = "input";
     private const string outputDir = "output";
@@ -39,7 +38,7 @@ internal class DependencyTestDriver
     public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
     public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
     public LocalLibGit2Client GitClient { get => _gitClient; }
-    public GitFileManager GitFileManager { get => _gitFileManager; }
+    public LibGit2FileManager GitFileManager { get => _gitFileManager; }
 
     public DependencyTestDriver(string testName)
     {
@@ -70,7 +69,7 @@ internal class DependencyTestDriver
         var processManager = new ProcessManager(NullLogger.Instance, "git");
         _gitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
-        _gitFileManager = new GitFileManager(_gitClient, _versionDetailsParser, NullLogger.Instance);
+        _gitFileManager = new LibGit2FileManager(_gitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
@@ -141,8 +140,8 @@ internal class DependencyTestDriver
     }
 
     private static async Task TestAndCompareImpl(
-        string testInputsName, 
-        bool compareOutput, 
+        string testInputsName,
+        bool compareOutput,
         Func<DependencyTestDriver, Task> testFunc)
     {
         DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
@@ -173,7 +172,7 @@ internal class DependencyTestDriver
         return TestAndCompareImpl(testInputsName, false, testFunc);
     }
 
-    public static async Task GetGraphAndCompare(string testInputsName, 
+    public static async Task GetGraphAndCompare(string testInputsName,
         Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
         string expectedGraphFile)
     {
@@ -271,7 +270,7 @@ internal class DependencyTestDriver
     }
 
     private void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
-    {   
+    {
         foreach (XmlNode node in xmlNodes)
         {
             string repoUri = node.SelectSingleNode("RepoUri").InnerText;
@@ -299,7 +298,7 @@ internal class DependencyTestDriver
         {
             string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
             string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
-            actualOutput.Should().Be(                    expectedOutput);
+            actualOutput.Should().Be(expectedOutput);
         }
     }
 
