@@ -3,12 +3,6 @@
 
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -30,21 +24,5 @@ public static class IGitRepoExtension
         {
             return encodedContent;
         }
-    }
-
-    public static byte[] GetContentBytes(this IRemoteGitRepo gitRepo, string content)
-    {
-        string decodedContent = GetDecodedContent(gitRepo, content);
-        return Encoding.UTF8.GetBytes(decodedContent);
-    }
-
-    const string refsHeadsPrefix = "refs/heads/";
-    public static string NormalizeBranchName(string branch)
-    {
-        if (branch != null && branch.StartsWith(refsHeadsPrefix))
-        {
-            return branch.Substring(refsHeadsPrefix.Length);
-        }
-        return branch;
     }
 }

@@ -44,7 +44,7 @@ public class VmrPatchHandlerTests
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<IVmrDependencyTracker> _dependencyTracker = new();
-    private readonly Mock<ILocalGitRepo> _localGitRepo = new();
+    private readonly Mock<ILocalLibGit2Client> _localGitRepo = new();
     private readonly Mock<IRepositoryCloneManager> _cloneManager = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();

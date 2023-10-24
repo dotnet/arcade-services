@@ -813,7 +813,7 @@ public class DependencyGraph
             {
                 // If a repo folder or a mapping was not set we use the current parent's 
                 // parent folder.
-                var gitClient = new LocalGitClient(new RemoteConfiguration(null, null), new ProcessManager(logger, gitExecutable), logger);
+                var gitClient = new LocalLibGit2Client(new RemoteConfiguration(null, null), new ProcessManager(logger, gitExecutable), logger);
                 string parent = await gitClient.GetRootDirAsync();
                 folder = Directory.GetParent(parent).FullName;
             }

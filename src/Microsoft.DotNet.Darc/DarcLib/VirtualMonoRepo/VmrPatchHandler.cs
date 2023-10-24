@@ -36,7 +36,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ILocalGitRepo _localGitRepo;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -45,7 +45,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     public VmrPatchHandler(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
-        ILocalGitRepo localGitRepo,
+        ILocalGitClient localGitClient,
         IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
@@ -53,7 +53,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _localGitRepo = localGitRepo;
+        _localGitClient = localGitClient;
         _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -472,8 +472,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>A pair of submodules (state in SHA1, state in SHA2) where additions/removals are marked by EmptyGitObject</returns>
     private async Task<List<SubmoduleChange>> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
     {
-        List<GitSubmoduleInfo> submodulesBefore = await _localGitRepo.GetGitSubmodulesAsync(repoPath, sha1);
-        List<GitSubmoduleInfo> submodulesAfter = await _localGitRepo.GetGitSubmodulesAsync(repoPath, sha2);
+        List<GitSubmoduleInfo> submodulesBefore = await _localGitClient.GetGitSubmodulesAsync(repoPath, sha1);
+        List<GitSubmoduleInfo> submodulesAfter = await _localGitClient.GetGitSubmodulesAsync(repoPath, sha2);
 
         var submodulePaths = submodulesBefore
             .Concat(submodulesAfter)

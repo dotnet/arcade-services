@@ -33,14 +33,14 @@ public class CodeownersGenerator : ICodeownersGenerator
 
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<CodeownersGenerator> _logger;
 
     public CodeownersGenerator(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IFileSystem fileSystem,
         ILogger<CodeownersGenerator> logger)
     {
