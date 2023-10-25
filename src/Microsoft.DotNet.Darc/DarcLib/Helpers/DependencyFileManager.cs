@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -17,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class DependencyFileManager : IDependencyFileManager
 {
-    private static readonly Dictionary<string, KnownDependencyType> _knownAssetNames = new()
+    private static readonly ImmutableDictionary<string, KnownDependencyType> _knownAssetNames = new Dictionary<string, KnownDependencyType>()
     {
         { "Microsoft.DotNet.Arcade.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
@@ -26,9 +27,9 @@ public class DependencyFileManager : IDependencyFileManager
         { "Microsoft.NET.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.CMake.Sdk", KnownDependencyType.GlobalJson },
         { "dotnet", KnownDependencyType.GlobalJson },
-    };
+    }.ToImmutableDictionary();
 
-    private static readonly Dictionary<string, string> _sdkMapping = new()
+    private static readonly ImmutableDictionary<string, string> _sdkMapping = new Dictionary<string, string>()
     {
         { "Microsoft.DotNet.Arcade.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", "msbuild-sdks" },
@@ -36,7 +37,7 @@ public class DependencyFileManager : IDependencyFileManager
         { "Microsoft.DotNet.SharedFramework.Sdk", "msbuild-sdks" },
         { "Microsoft.NET.SharedFramework.Sdk", "msbuild-sdks" },
         { "dotnet", "tools" },
-    };
+    }.ToImmutableDictionary();
 
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -61,13 +62,13 @@ public class DependencyFileManager : IDependencyFileManager
         _logger = logger;
     }
 
-    public static HashSet<string> DependencyFiles => new()
+    public static ImmutableHashSet<string> DependencyFiles { get; } = new HashSet<string>()
     {
         VersionFiles.VersionDetailsXml,
         VersionFiles.VersionProps,
         VersionFiles.GlobalJson,
         VersionFiles.DotnetToolsConfigJson
-    };
+    }.ToImmutableHashSet();
 
     public async Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch)
     {
@@ -130,6 +131,13 @@ public class DependencyFileManager : IDependencyFileManager
         return _versionDetailsParser.ParseVersionDetailsXml(document, includePinned);
     }
 
+    /// <summary>
+    /// Add a new dependency to the repository
+    /// </summary>
+    /// <param name="dependency">Dependency to add.</param>
+    /// <param name="repoUri">Repository URI to add the dependency to.</param>
+    /// <param name="branch">Branch to add the dependency to.</param>
+    /// <returns>Async task.</returns>
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
@@ -157,6 +165,504 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
+    }
+
+    private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
+    {
+        XmlAttribute attribute = node.Attributes[name];
+        if (attribute == null)
+        {
+            node.Attributes.Append(attribute = document.CreateAttribute(name));
+        }
+        attribute.Value = value;
+    }
+
+    private static XmlNode SetElement(XmlDocument document, XmlNode node, string name, string value = null, bool replace = true)
+    {
+        XmlNode element = node.SelectSingleNode(name);
+        if (element == null || !replace)
+        {
+            element = node.AppendChild(document.CreateElement(name));
+        }
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            element.InnerText = value;
+        }
+        return element;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name="itemsToUpdate"></param>
+    /// <param name="repoUri"></param>
+    /// <param name="branch"></param>
+    /// <param name="oldDependencies"></param>
+    /// <param name="incomingDotNetSdkVersion"></param>
+    /// <returns></returns>
+    public async Task<GitFileContentContainer> UpdateDependencyFiles(
+        IEnumerable<DependencyDetail> itemsToUpdate,
+        string repoUri,
+        string branch,
+        IEnumerable<DependencyDetail> oldDependencies,
+        SemanticVersion incomingDotNetSdkVersion)
+    {
+        XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
+        XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
+        XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
+
+        foreach (DependencyDetail itemToUpdate in itemsToUpdate)
+        {
+            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
+                string.IsNullOrEmpty(itemToUpdate.Name) ||
+                string.IsNullOrEmpty(itemToUpdate.Commit) ||
+                string.IsNullOrEmpty(itemToUpdate.RepoUri))
+            {
+                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
+                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+            }
+
+            // Double check that the dependency is not pinned
+            if (itemToUpdate.Pinned)
+            {
+                throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
+            }
+
+            // Use a case-insensitive update.
+            XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionDetailsParser.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
+                                                                 $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
+
+            if (versionList.Count != 1)
+            {
+                if (versionList.Count == 0)
+                {
+                    throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
+                }
+                else
+                {
+                    throw new DarcException($"The use of the same asset '{itemToUpdate.Name}', even with a different version, is currently not " +
+                                            "supported.");
+                }
+            }
+
+            XmlNode nodeToUpdate = versionList.Item(0);
+
+            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.VersionAttributeName, itemToUpdate.Version);
+            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.NameAttributeName, itemToUpdate.Name);
+            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.ShaElementName, itemToUpdate.Commit);
+            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.UriElementName, itemToUpdate.RepoUri);
+            UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
+        }
+
+        // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
+        // prefer that one over the old dependencies
+        Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
+
+        if (oldDependencies != null)
+        {
+            foreach (DependencyDetail dependency in oldDependencies)
+            {
+                if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
+                {
+                    itemsToUpdateLocations.Add(dependency.Name, new HashSet<string>(dependency.Locations));
+                }
+            }
+        }
+
+        // At this point we only care about the Maestro managed locations for the assets.
+        // Flatten the dictionary into a set that has all the managed feeds
+        Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
+        var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
+
+        // Update the dotnet sdk if necessary
+        Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
+        if (incomingDotNetSdkVersion != null)
+        {
+            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
+        }
+
+        var fileContainer = new GitFileContentContainer
+        {
+            GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
+            VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
+            VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
+            NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
+        };
+
+        // dotnet-tools.json is optional, so only include it if it was found.
+        if (toolsConfigurationJson != null)
+        {
+            fileContainer.DotNetToolsJson = new GitFile(VersionFiles.DotnetToolsConfigJson, toolsConfigurationJson);
+        }
+
+        return fileContainer;
+    }
+
+    /// <summary>
+    /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+    /// </summary>
+    /// <param name="incomingDotnetVersion">version to compare against</param>
+    /// <param name="repoGlobalJson">Global.Json file to update</param>
+    /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
+    private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, JObject globalJson)
+    {
+        try
+        {
+            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
+            {
+                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
+                {
+                    Dictionary<GitFileMetadataName, string> metadata = new Dictionary<GitFileMetadataName, string>();
+
+                    globalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+                    metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
+
+                    // Also update and keep sdk.version in sync.
+                    JToken sdkVersion = globalJson.SelectToken("sdk.version");
+                    if (sdkVersion != null)
+                    {
+                        globalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                        metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
+                    }
+
+                    return metadata;
+                }
+            }
+            else
+            {
+                _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+        }
+
+        // No updates
+        return null;
+    }
+
+    private bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
+    {
+        return locations != null && locations.All(l => IsMaestroManagedFeed(l));
+    }
+
+    private static bool IsMaestroManagedFeed(string feed)
+    {
+        return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) ||
+               Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
+    }
+
+    public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
+    {
+        // Reconstruct the PackageSources section with the feeds
+        XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
+        if (packageSourcesNode == null)
+        {
+            _logger.LogError("Did not find a <packageSources> element in NuGet.config");
+            return nugetConfig;
+        }
+
+        const string addPackageSourcesElementName = "add";
+
+        XmlNode currentNode = packageSourcesNode.FirstChild;
+
+        // This will be used to denote whether we should delete a managed source. Managed sources should only
+        // be deleted within the maestro comment block. This allows for repository owners to use specific feeds from
+        // other channels or releases in special cases.
+        bool withinMaestroComments = false;
+
+        // Remove all managed feeds and Maestro's comments
+        while (currentNode != null)
+        {
+            if (currentNode.NodeType == XmlNodeType.Element)
+            {
+                if (currentNode.Name.Equals(addPackageSourcesElementName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Get the feed value
+                    var feedValue = currentNode.Attributes["value"];
+                    if (feedValue == null)
+                    {
+                        // This is unexpected, error
+                        _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
+                        return nugetConfig;
+                    }
+
+                    if (withinMaestroComments && IsMaestroManagedFeed(feedValue.Value))
+                    {
+                        currentNode = RemoveCurrentNode(currentNode);
+                        continue;
+                    }
+                }
+                // Remove the clear element wherever it is.
+                // It will be added when we add the maestro managed sources.
+                else if (currentNode.Name.Equals(VersionDetailsParser.ClearElement, StringComparison.OrdinalIgnoreCase))
+                {
+                    currentNode = RemoveCurrentNode(currentNode);
+                    continue;
+                }
+            }
+            else if (currentNode.NodeType == XmlNodeType.Comment)
+            {
+                if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
+                {
+                    withinMaestroComments = true;
+                }
+                else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                {
+                    withinMaestroComments = false;
+                }
+            }
+
+            currentNode = currentNode.NextSibling;
+        }
+
+        InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, maestroManagedFeedsByRepo);
+
+        CreateOrUpdateDisabledSourcesBlock(nugetConfig, maestroManagedFeedsByRepo, FeedConstants.MaestroManagedInternalFeedPrefix);
+
+        return nugetConfig;
+    }
+
+    /// <summary>
+    /// Remove the current node and return the next node that should be walked
+    /// </summary>
+    /// <param name="toRemove">Node to remove</param>
+    /// <returns>Next node to walk</returns>
+    private static XmlNode RemoveCurrentNode(XmlNode toRemove)
+    {
+        var nextNodeToWalk = toRemove.NextSibling;
+        toRemove.ParentNode.RemoveChild(toRemove);
+        return nextNodeToWalk;
+    }
+
+    // Ensure that the file contains a <disabledPackageSources> node.
+    // - If it exists, do not modify values other than key nodes starting with disableFeedKeyPrefix,
+    //   which we'll ensure are after any <clear/> tags and set to 'true'
+    // - If it does not exist, add it
+    // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
+    private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, string disableFeedKeyPrefix)
+    {
+        _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
+        XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
+        XmlNode insertAfterNode = null;
+
+        if (disabledSourcesNode == null)
+        {
+            XmlNode configNode = nugetConfig.SelectSingleNode("//configuration");
+            _logger.LogInformation("Config file did not previously have <disabledSourcesNode>, adding");
+            disabledSourcesNode = nugetConfig.CreateElement("disabledPackageSources");
+            configNode.AppendChild(disabledSourcesNode);
+        }
+        // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
+        else if (disabledSourcesNode.HasChildNodes)
+        {
+            bool withinMaestroComments = false;
+            var allPossibleManagedSources = new List<string>();
+
+            foreach (var repoName in maestroManagedFeedsByRepo.Keys)
+            {
+                allPossibleManagedSources.AddRange(GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).Select(ms => ms.key).ToList());
+            }
+
+            XmlNode currentNode = disabledSourcesNode.FirstChild;
+
+            while (currentNode != null)
+            {
+                if (currentNode.Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    insertAfterNode = currentNode;
+                }
+                // while we traverse, remove all existing entries for what we're updating if inside the comment block
+                else if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                         currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                         withinMaestroComments)
+                {
+                    currentNode = RemoveCurrentNode(currentNode);
+                    continue;
+                }
+                else if (currentNode.NodeType == XmlNodeType.Comment)
+                {
+                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        withinMaestroComments = true;
+                    }
+                    else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        withinMaestroComments = false;
+                    }
+                }
+                currentNode = currentNode.NextSibling;
+            }
+
+            if (insertAfterNode != null)
+            {
+                _logger.LogInformation("Found a <clear/> in disabledPackageSources; will insert or update as needed after it.");
+            }
+        }
+
+        XmlComment startCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroBeginComment);
+        if (startCommentBlock != null)
+        {
+            insertAfterNode = startCommentBlock;
+        }
+
+        XmlComment endCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroEndComment);
+        bool introducedAStartCommentBlock = false;
+
+        foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderBy(t => t))
+        {
+            var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderBy(t => t.feed).ToList();
+
+            // If this set of sources doesn't have one, just keep going
+            if (!managedSources.Any(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                continue;
+            }
+
+            // For a config that doesn't already have the outermost 'begin' comment, create it.
+            if (startCommentBlock == null)
+            {
+                if (insertAfterNode != null)
+                {
+                    insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), insertAfterNode);
+                }
+                else
+                {
+                    insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), disabledSourcesNode.FirstChild);
+                }
+                startCommentBlock = (XmlComment) insertAfterNode;
+                introducedAStartCommentBlock = true;
+            }
+
+            // We'll insert after the begin comment
+            XmlComment startDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificBeginComment} {repoName} ");
+            if (startDisabled != null)
+            {
+                insertAfterNode = startDisabled;
+            }
+            else
+            {
+                startDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repoName} ");
+                insertAfterNode = disabledSourcesNode.InsertAfter(startDisabled, insertAfterNode);
+            }
+
+            foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                XmlElement addEntry = nugetConfig.CreateElement("add");
+                addEntry.SetAttribute("key", key);
+                addEntry.SetAttribute("value", "true");
+                insertAfterNode = disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
+            }
+
+            // We'll insert after the begin comment
+            XmlComment endDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificEndComment} {repoName} ");
+            if (endDisabled != null)
+            {
+                insertAfterNode = startDisabled;
+            }
+            else
+            {
+                endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
+                insertAfterNode = disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
+            }
+        }
+
+        // For a config that doesn't already have the end comment, create it.
+        if (endCommentBlock == null && introducedAStartCommentBlock)
+        {
+            endCommentBlock = (XmlComment) disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), insertAfterNode);
+        }
+    }
+
+    // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
+    // <clear/>
+    // <MaestroBeginComment />
+    // managedSources*
+    // <MaestroEndComment />
+    private void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
+    {
+        var clearNode = nugetConfig.CreateElement(VersionDetailsParser.ClearElement);
+        XmlNode currentNode = packageSourcesNode.PrependChild(clearNode);
+
+        if (maestroManagedFeedsByRepo.Values.Count == 0)
+        {
+            return;
+        }
+
+        var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
+
+        XmlComment blockBeginComment = GetFirstMatchingComment(packageSourcesNode, MaestroBeginComment);
+        if (blockBeginComment == null)
+        {
+            blockBeginComment = (XmlComment) packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
+        }
+        currentNode = blockBeginComment;
+
+        foreach (string repository in repoList)
+        {
+            var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repository]).OrderByDescending(t => t.feed).ToList();
+
+            var startBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificBeginComment} {repository} ");
+            if (startBlockComment == null)
+            {
+                startBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repository} ");
+                currentNode = packageSourcesNode.InsertAfter(startBlockComment, currentNode);
+            }
+            else
+            {
+                currentNode = startBlockComment;
+            }
+
+            foreach ((string key, string feed) in managedSources)
+            {
+                var newElement = nugetConfig.CreateElement(VersionDetailsParser.AddElement);
+
+                SetAttribute(nugetConfig, newElement, VersionDetailsParser.KeyAttributeName, key);
+                SetAttribute(nugetConfig, newElement, VersionDetailsParser.ValueAttributeName, feed);
+
+                currentNode = packageSourcesNode.InsertAfter(newElement, currentNode);
+            }
+
+            var endBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificEndComment} {repository} ");
+            if (endBlockComment == null)
+            {
+                endBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repository} ");
+                currentNode = packageSourcesNode.InsertAfter(endBlockComment, currentNode);
+            }
+            else
+            {
+                currentNode = endBlockComment;
+            }
+        }
+
+        if (GetFirstMatchingComment(packageSourcesNode, MaestroEndComment) == null)
+        {
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), currentNode);
+        }
+    }
+
+    private static XmlComment GetFirstMatchingComment(XmlNode nodeToCheck, string commentText)
+    {
+        if (nodeToCheck.HasChildNodes)
+        {
+            XmlNode currentNode = nodeToCheck.FirstChild;
+
+            while (currentNode != null)
+            {
+                if (currentNode.NodeType == XmlNodeType.Comment &&
+                    (currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return (XmlComment)currentNode;
+                }
+                currentNode = currentNode.NextSibling;
+            }
+        }
+        return null;
     }
 
     private async Task AddDependencyToVersionDetailsAsync(
@@ -341,504 +847,6 @@ public class DependencyFileManager : IDependencyFileManager
             $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
         _logger.LogInformation($"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to global.json");
-    }
-
-    protected static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
-    {
-        XmlAttribute attribute = node.Attributes[name];
-        if (attribute == null)
-        {
-            node.Attributes.Append(attribute = document.CreateAttribute(name));
-        }
-        attribute.Value = value;
-    }
-
-    protected static XmlNode SetElement(XmlDocument document, XmlNode node, string name, string value = null, bool replace = true)
-    {
-        XmlNode element = node.SelectSingleNode(name);
-        if (element == null || !replace)
-        {
-            element = node.AppendChild(document.CreateElement(name));
-        }
-
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            element.InnerText = value;
-        }
-        return element;
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="itemsToUpdate"></param>
-    /// <param name="repoUri"></param>
-    /// <param name="branch"></param>
-    /// <param name="oldDependencies"></param>
-    /// <param name="incomingDotNetSdkVersion"></param>
-    /// <returns></returns>
-    public async Task<GitFileContentContainer> UpdateDependencyFiles(
-        IEnumerable<DependencyDetail> itemsToUpdate,
-        string repoUri,
-        string branch,
-        IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion)
-    {
-        XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
-        XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
-        XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
-
-        foreach (DependencyDetail itemToUpdate in itemsToUpdate)
-        {
-            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
-                string.IsNullOrEmpty(itemToUpdate.Name) ||
-                string.IsNullOrEmpty(itemToUpdate.Commit) ||
-                string.IsNullOrEmpty(itemToUpdate.RepoUri))
-            {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
-                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
-            }
-
-            // Double check that the dependency is not pinned
-            if (itemToUpdate.Pinned)
-            {
-                throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
-            }
-
-            // Use a case-insensitive update.
-            XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionDetailsParser.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
-                                                                 $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
-
-            if (versionList.Count != 1)
-            {
-                if (versionList.Count == 0)
-                {
-                    throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
-                }
-                else
-                {
-                    throw new DarcException($"The use of the same asset '{itemToUpdate.Name}', even with a different version, is currently not " +
-                                            "supported.");
-                }
-            }
-
-            XmlNode nodeToUpdate = versionList.Item(0);
-
-            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.VersionAttributeName, itemToUpdate.Version);
-            SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.NameAttributeName, itemToUpdate.Name);
-            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.ShaElementName, itemToUpdate.Commit);
-            SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.UriElementName, itemToUpdate.RepoUri);
-            UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
-        }
-
-        // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
-        // prefer that one over the old dependencies
-        Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
-
-        if (oldDependencies != null)
-        {
-            foreach (DependencyDetail dependency in oldDependencies)
-            {
-                if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
-                {
-                    itemsToUpdateLocations.Add(dependency.Name, new HashSet<string>(dependency.Locations));
-                }
-            }
-        }
-
-        // At this point we only care about the Maestro managed locations for the assets.
-        // Flatten the dictionary into a set that has all the managed feeds
-        Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
-        var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
-
-        // Update the dotnet sdk if necessary
-        Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
-        if (incomingDotNetSdkVersion != null)
-        {
-            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
-        }
-
-        var fileContainer = new GitFileContentContainer
-        {
-            GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
-            VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
-            VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
-            NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
-        };
-
-        // dotnet-tools.json is optional, so only include it if it was found.
-        if (toolsConfigurationJson != null)
-        {
-            fileContainer.DotNetToolsJson = new GitFile(VersionFiles.DotnetToolsConfigJson, toolsConfigurationJson);
-        }
-
-        return fileContainer;
-    }
-
-    /// <summary>
-    /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
-    /// </summary>
-    /// <param name="incomingDotnetVersion">version to compare against</param>
-    /// <param name="repoGlobalJson">Global.Json file to update</param>
-    /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
-    private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, JObject globalJson)
-    {
-        try
-        {
-            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
-            {
-                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
-                {
-                    Dictionary<GitFileMetadataName, string> metadata = new Dictionary<GitFileMetadataName, string>();
-
-                    globalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
-                    metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
-
-                    // Also update and keep sdk.version in sync.
-                    JToken sdkVersion = globalJson.SelectToken("sdk.version");
-                    if (sdkVersion != null)
-                    {
-                        globalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
-                        metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
-                    }
-
-                    return metadata;
-                }
-            }
-            else
-            {
-                _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
-        }
-
-        // No updates
-        return null;
-    }
-
-    private bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
-    {
-        return locations != null && locations.All(l => IsMaestroManagedFeed(l));
-    }
-
-    private bool IsMaestroManagedFeed(string feed)
-    {
-        return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) ||
-               Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
-    }
-
-    public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
-    {
-        // Reconstruct the PackageSources section with the feeds
-        XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
-        if (packageSourcesNode == null)
-        {
-            _logger.LogError("Did not find a <packageSources> element in NuGet.config");
-            return nugetConfig;
-        }
-
-        const string addPackageSourcesElementName = "add";
-
-        XmlNode currentNode = packageSourcesNode.FirstChild;
-
-        // This will be used to denote whether we should delete a managed source. Managed sources should only
-        // be deleted within the maestro comment block. This allows for repository owners to use specific feeds from
-        // other channels or releases in special cases.
-        bool withinMaestroComments = false;
-
-        // Remove all managed feeds and Maestro's comments
-        while (currentNode != null)
-        {
-            if (currentNode.NodeType == XmlNodeType.Element)
-            {
-                if (currentNode.Name.Equals(addPackageSourcesElementName, StringComparison.OrdinalIgnoreCase))
-                {
-                    // Get the feed value
-                    var feedValue = currentNode.Attributes["value"];
-                    if (feedValue == null)
-                    {
-                        // This is unexpected, error
-                        _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
-                        return nugetConfig;
-                    }
-
-                    if (withinMaestroComments && IsMaestroManagedFeed(feedValue.Value))
-                    {
-                        currentNode = RemoveCurrentNode(currentNode);
-                        continue;
-                    }
-                }
-                // Remove the clear element wherever it is.
-                // It will be added when we add the maestro managed sources.
-                else if (currentNode.Name.Equals(VersionDetailsParser.ClearElement, StringComparison.OrdinalIgnoreCase))
-                {
-                    currentNode = RemoveCurrentNode(currentNode);
-                    continue;
-                }
-            }
-            else if (currentNode.NodeType == XmlNodeType.Comment)
-            {
-                if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
-                {
-                    withinMaestroComments = true;
-                }
-                else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
-                {
-                    withinMaestroComments = false;
-                }
-            }
-
-            currentNode = currentNode.NextSibling;
-        }
-
-        InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, maestroManagedFeedsByRepo);
-
-        CreateOrUpdateDisabledSourcesBlock(nugetConfig, maestroManagedFeedsByRepo, FeedConstants.MaestroManagedInternalFeedPrefix);
-
-        return nugetConfig;
-    }
-
-    /// <summary>
-    /// Remove the current node and return the next node that should be walked
-    /// </summary>
-    /// <param name="toRemove">Node to remove</param>
-    /// <returns>Next node to walk</returns>
-    private static XmlNode RemoveCurrentNode(XmlNode toRemove)
-    {
-        var nextNodeToWalk = toRemove.NextSibling;
-        toRemove.ParentNode.RemoveChild(toRemove);
-        return nextNodeToWalk;
-    }
-
-    // Ensure that the file contains a <disabledPackageSources> node.
-    // - If it exists, do not modify values other than key nodes starting with disableFeedKeyPrefix,
-    //   which we'll ensure are after any <clear/> tags and set to 'true'
-    // - If it does not exist, add it
-    // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
-    private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, string disableFeedKeyPrefix)
-    {
-        _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
-        XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
-        XmlNode insertAfterNode = null;
-
-        if (disabledSourcesNode == null)
-        {
-            XmlNode configNode = nugetConfig.SelectSingleNode("//configuration");
-            _logger.LogInformation("Config file did not previously have <disabledSourcesNode>, adding");
-            disabledSourcesNode = nugetConfig.CreateElement("disabledPackageSources");
-            configNode.AppendChild(disabledSourcesNode);
-        }
-        // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
-        else if (disabledSourcesNode.HasChildNodes)
-        {
-            bool withinMaestroComments = false;
-            var allPossibleManagedSources = new List<string>();
-
-            foreach (var repoName in maestroManagedFeedsByRepo.Keys)
-            {
-                allPossibleManagedSources.AddRange(GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).Select(ms => ms.key).ToList());
-            }
-
-            XmlNode currentNode = disabledSourcesNode.FirstChild;
-
-            while (currentNode != null)
-            {
-                if (currentNode.Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    insertAfterNode = currentNode;
-                }
-                // while we traverse, remove all existing entries for what we're updating if inside the comment block
-                else if (currentNode.Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                         currentNode.Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
-                         withinMaestroComments)
-                {
-                    currentNode = RemoveCurrentNode(currentNode);
-                    continue;
-                }
-                else if (currentNode.NodeType == XmlNodeType.Comment)
-                {
-                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
-                    {
-                        withinMaestroComments = true;
-                    }
-                    else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
-                    {
-                        withinMaestroComments = false;
-                    }
-                }
-                currentNode = currentNode.NextSibling;
-            }
-
-            if (insertAfterNode != null)
-            {
-                _logger.LogInformation("Found a <clear/> in disabledPackageSources; will insert or update as needed after it.");
-            }
-        }
-
-        XmlComment startCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroBeginComment);
-        if (startCommentBlock != null)
-        {
-            insertAfterNode = startCommentBlock;
-        }
-
-        XmlComment endCommentBlock = GetFirstMatchingComment(disabledSourcesNode, MaestroEndComment);
-        bool introducedAStartCommentBlock = false;
-
-        foreach (string repoName in maestroManagedFeedsByRepo.Keys.OrderBy(t => t))
-        {
-            var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repoName]).OrderBy(t => t.feed).ToList();
-
-            // If this set of sources doesn't have one, just keep going
-            if (!managedSources.Any(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                continue;
-            }
-
-            // For a config that doesn't already have the outermost 'begin' comment, create it.
-            if (startCommentBlock == null)
-            {
-                if (insertAfterNode != null)
-                {
-                    insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), insertAfterNode);
-                }
-                else
-                {
-                    insertAfterNode = disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), disabledSourcesNode.FirstChild);
-                }
-                startCommentBlock = (XmlComment)insertAfterNode;
-                introducedAStartCommentBlock = true;
-            }
-
-            // We'll insert after the begin comment
-            XmlComment startDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificBeginComment} {repoName} ");
-            if (startDisabled != null)
-            {
-                insertAfterNode = startDisabled;
-            }
-            else
-            {
-                startDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repoName} ");
-                insertAfterNode = disabledSourcesNode.InsertAfter(startDisabled, insertAfterNode);
-            }
-
-            foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                XmlElement addEntry = nugetConfig.CreateElement("add");
-                addEntry.SetAttribute("key", key);
-                addEntry.SetAttribute("value", "true");
-                insertAfterNode = disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
-            }
-
-            // We'll insert after the begin comment
-            XmlComment endDisabled = GetFirstMatchingComment(disabledSourcesNode, $"{MaestroRepoSpecificEndComment} {repoName} ");
-            if (endDisabled != null)
-            {
-                insertAfterNode = startDisabled;
-            }
-            else
-            {
-                endDisabled = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repoName} ");
-                insertAfterNode = disabledSourcesNode.InsertAfter(endDisabled, insertAfterNode);
-            }
-        }
-
-        // For a config that doesn't already have the end comment, create it.
-        if (endCommentBlock == null && introducedAStartCommentBlock)
-        {
-            endCommentBlock = (XmlComment)disabledSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), insertAfterNode);
-        }
-    }
-
-    // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
-    // <clear/>
-    // <MaestroBeginComment />
-    // managedSources*
-    // <MaestroEndComment />
-    private void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
-    {
-        var clearNode = nugetConfig.CreateElement(VersionDetailsParser.ClearElement);
-        XmlNode currentNode = packageSourcesNode.PrependChild(clearNode);
-
-        if (maestroManagedFeedsByRepo.Values.Count == 0)
-        {
-            return;
-        }
-
-        var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
-
-        XmlComment blockBeginComment = GetFirstMatchingComment(packageSourcesNode, MaestroBeginComment);
-        if (blockBeginComment == null)
-        {
-            blockBeginComment = (XmlComment)packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
-        }
-        currentNode = blockBeginComment;
-
-        foreach (string repository in repoList)
-        {
-            var managedSources = GetManagedPackageSources(maestroManagedFeedsByRepo[repository]).OrderByDescending(t => t.feed).ToList();
-
-            var startBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificBeginComment} {repository} ");
-            if (startBlockComment == null)
-            {
-                startBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificBeginComment} {repository} ");
-                currentNode = packageSourcesNode.InsertAfter(startBlockComment, currentNode);
-            }
-            else
-            {
-                currentNode = startBlockComment;
-            }
-
-            foreach ((string key, string feed) in managedSources)
-            {
-                var newElement = nugetConfig.CreateElement(VersionDetailsParser.AddElement);
-
-                SetAttribute(nugetConfig, newElement, VersionDetailsParser.KeyAttributeName, key);
-                SetAttribute(nugetConfig, newElement, VersionDetailsParser.ValueAttributeName, feed);
-
-                currentNode = packageSourcesNode.InsertAfter(newElement, currentNode);
-            }
-
-            var endBlockComment = GetFirstMatchingComment(packageSourcesNode, $"{MaestroRepoSpecificEndComment} {repository} ");
-            if (endBlockComment == null)
-            {
-                endBlockComment = nugetConfig.CreateComment($"{MaestroRepoSpecificEndComment} {repository} ");
-                currentNode = packageSourcesNode.InsertAfter(endBlockComment, currentNode);
-            }
-            else
-            {
-                currentNode = endBlockComment;
-            }
-        }
-
-        if (GetFirstMatchingComment(packageSourcesNode, MaestroEndComment) == null)
-        {
-            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), currentNode);
-        }
-    }
-
-    private XmlComment GetFirstMatchingComment(XmlNode nodeToCheck, string commentText)
-    {
-        if (nodeToCheck.HasChildNodes)
-        {
-            XmlNode currentNode = nodeToCheck.FirstChild;
-
-            while (currentNode != null)
-            {
-                if (currentNode.NodeType == XmlNodeType.Comment &&
-                    (currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase)))
-                {
-                    return (XmlComment)currentNode;
-                }
-                currentNode = currentNode.NextSibling;
-            }
-        }
-        return null;
     }
 
     public static XmlDocument GetXmlDocument(string fileContent)
@@ -1463,7 +1471,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
-    private Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
+    private static Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
     {
         var assetLocationMappings = new Dictionary<string, HashSet<string>>();
 

@@ -10,9 +10,6 @@ namespace Microsoft.DotNet.DarcLib;
 
 /// <summary>
 /// Richer implementations of local git repo operations utilizing LibGit2Sharp.
-/// When implementing new functionality, consider whether it should be added to <see cref="ILocalGitClient"/> instead
-/// and whether it can work without using LibGit2Sharp which is more memory intensive (e.g. when working with the VMR)
-/// and can affect how the code runs in Azure.
 /// </summary>
 public interface ILocalLibGit2Client : ILocalGitClient
 {
