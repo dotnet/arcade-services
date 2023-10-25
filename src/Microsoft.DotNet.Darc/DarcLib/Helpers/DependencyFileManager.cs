@@ -1,23 +1,45 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class GitFileManager : IGitFileManager
+public class DependencyFileManager : IDependencyFileManager
 {
-    private readonly ILocalLibGit2Client _localLibGit2Client;
+    private static readonly ImmutableDictionary<string, KnownDependencyType> _knownAssetNames = new Dictionary<string, KnownDependencyType>()
+    {
+        { "Microsoft.DotNet.Arcade.Sdk", KnownDependencyType.GlobalJson },
+        { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
+        { "Microsoft.DotNet.Helix.Sdk", KnownDependencyType.GlobalJson },
+        { "Microsoft.DotNet.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
+        { "Microsoft.NET.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
+        { "Microsoft.DotNet.CMake.Sdk", KnownDependencyType.GlobalJson },
+        { "dotnet", KnownDependencyType.GlobalJson },
+    }.ToImmutableDictionary();
+
+    private static readonly ImmutableDictionary<string, string> _sdkMapping = new Dictionary<string, string>()
+    {
+        { "Microsoft.DotNet.Arcade.Sdk", "msbuild-sdks" },
+        { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", "msbuild-sdks" },
+        { "Microsoft.DotNet.Helix.Sdk", "msbuild-sdks" },
+        { "Microsoft.DotNet.SharedFramework.Sdk", "msbuild-sdks" },
+        { "Microsoft.NET.SharedFramework.Sdk", "msbuild-sdks" },
+        { "dotnet", "tools" },
+    }.ToImmutableDictionary();
+
+    private readonly ILocalLibGit2Client _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
 
@@ -30,24 +52,23 @@ public class GitFileManager : IGitFileManager
     private const string MaestroRepoSpecificBeginComment = "  Begin: Package sources from";
     private const string MaestroRepoSpecificEndComment = "  End: Package sources from";
 
-    public GitFileManager(
-        ILocalLibGit2Client localLibGit2Client,
+    public DependencyFileManager(
+        ILocalLibGit2Client localGitClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
-        _localLibGit2Client = localLibGit2Client;
+        _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
         _logger = logger;
     }
 
-    public static HashSet<string> DependencyFiles =>
-        new HashSet<string>
-        {
-            VersionFiles.VersionDetailsXml,
-            VersionFiles.VersionProps,
-            VersionFiles.GlobalJson,
-            VersionFiles.DotnetToolsConfigJson
-        };
+    public static ImmutableHashSet<string> DependencyFiles { get; } = new HashSet<string>()
+    {
+        VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionProps,
+        VersionFiles.GlobalJson,
+        VersionFiles.DotnetToolsConfigJson
+    }.ToImmutableHashSet();
 
     public async Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch)
     {
@@ -64,7 +85,7 @@ public class GitFileManager : IGitFileManager
         _logger.LogInformation(
             $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _localLibGit2Client.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        string fileContent = await _localGitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
@@ -76,7 +97,7 @@ public class GitFileManager : IGitFileManager
 
         try
         {
-            string fileContent = await _localLibGit2Client.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            string fileContent = await _localGitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -122,27 +143,28 @@ public class GitFileManager : IGitFileManager
         string repoUri,
         string branch)
     {
-        if ((await ParseVersionDetailsXmlAsync(repoUri, branch)).Any(
-                existingDependency => existingDependency.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
+        var existingDependencies = await ParseVersionDetailsXmlAsync(repoUri, branch);
+        if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new DependencyException($"Dependency {dependency.Name} already exists in this repository");
         }
 
-        if (DependencyOperations.TryGetKnownUpdater(dependency.Name, out Delegate function))
+        // Should the dependency go to Versions.props or global.json?
+        if (_knownAssetNames.ContainsKey(dependency.Name))
         {
-            await (Task) function.DynamicInvoke(this, repoUri, branch, dependency);
+            if (!_sdkMapping.TryGetValue(dependency.Name, out string parent))
+            {
+                throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
+            }
+
+            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
         }
         else
         {
-            await AddDependencyToVersionsPropsAsync(
-                repoUri,
-                branch,
-                dependency);
-            await AddDependencyToVersionDetailsAsync(
-                repoUri,
-                branch,
-                dependency);
+            await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
         }
+
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
     }
 
     private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
@@ -329,7 +351,7 @@ public class GitFileManager : IGitFileManager
         return locations != null && locations.All(l => IsMaestroManagedFeed(l));
     }
 
-    private bool IsMaestroManagedFeed(string feed)
+    private static bool IsMaestroManagedFeed(string feed)
     {
         return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) ||
                Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
@@ -624,7 +646,7 @@ public class GitFileManager : IGitFileManager
         }
     }
 
-    private XmlComment GetFirstMatchingComment(XmlNode nodeToCheck, string commentText)
+    private static XmlComment GetFirstMatchingComment(XmlNode nodeToCheck, string commentText)
     {
         if (nodeToCheck.HasChildNodes)
         {
@@ -635,7 +657,7 @@ public class GitFileManager : IGitFileManager
                 if (currentNode.NodeType == XmlNodeType.Comment &&
                     (currentNode.Value.Equals(commentText, StringComparison.OrdinalIgnoreCase)))
                 {
-                    return (XmlComment) currentNode;
+                    return (XmlComment)currentNode;
                 }
                 currentNode = currentNode.NextSibling;
             }
@@ -643,7 +665,7 @@ public class GitFileManager : IGitFileManager
         return null;
     }
 
-    public async Task AddDependencyToVersionDetailsAsync(
+    private async Task AddDependencyToVersionDetailsAsync(
         string repo,
         string branch,
         DependencyDetail dependency)
@@ -683,7 +705,7 @@ public class GitFileManager : IGitFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
-        await _localLibGit2Client.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await _localGitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionDetailsXml}'");
 
         _logger.LogInformation(
@@ -702,8 +724,7 @@ public class GitFileManager : IGitFileManager
     /// </summary>
     /// <param name="repo">Path to Versions.props file</param>
     /// <param name="dependency">Dependency information to add.</param>
-    /// <returns>Async task.</returns>
-    public async Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency)
+    private async Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency)
     {
         XmlDocument versionProps = await ReadVersionPropsAsync(repo, null);
         string documentNamespaceUri = versionProps.DocumentElement.NamespaceURI;
@@ -715,10 +736,7 @@ public class GitFileManager : IGitFileManager
         // Attempt to find the element name or alternate element name under
         // the property group nodes
         XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]");
-        if (existingVersionNode == null)
-        {
-            existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
-        }
+        existingVersionNode ??= versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
 
         if (existingVersionNode != null)
         {
@@ -794,7 +812,7 @@ public class GitFileManager : IGitFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionProps, versionProps);
-        await _localLibGit2Client.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await _localGitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionProps}'");
 
         _logger.LogInformation(
@@ -802,14 +820,13 @@ public class GitFileManager : IGitFileManager
             $"'{VersionFiles.VersionProps}'");
     }
 
-    public async Task AddDependencyToGlobalJson(
+    private async Task AddDependencyToGlobalJson(
         string repo,
         string branch,
         string parentField,
-        string dependencyName,
-        string version)
+        DependencyDetail dependency)
     {
-        JToken versionProperty = new JProperty(dependencyName, version);
+        JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
         JObject globalJson = await ReadGlobalJsonAsync(repo, branch);
         JToken parent = globalJson[parentField];
 
@@ -823,16 +840,18 @@ public class GitFileManager : IGitFileManager
         }
 
         var file = new GitFile(VersionFiles.GlobalJson, globalJson);
-        await _localLibGit2Client.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependencyName} to " +
-            $"'{VersionFiles.GlobalJson}'");
+        await _localGitClient.CommitFilesAsync(
+            new List<GitFile> { file },
+            repo,
+            branch,
+            $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
-        _logger.LogInformation(
-            $"Dependency '{dependencyName}' with version '{version}' successfully added to global.json");
+        _logger.LogInformation($"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to global.json");
     }
 
     public static XmlDocument GetXmlDocument(string fileContent)
     {
-        XmlDocument document = new XmlDocument
+        var document = new XmlDocument
         {
             PreserveWhitespace = true
         };
@@ -845,7 +864,7 @@ public class GitFileManager : IGitFileManager
     {
         _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _localLibGit2Client.GetFileContentsAsync(filePath, repoUri, branch);
+        string fileContent = await _localGitClient.GetFileContentsAsync(filePath, repoUri, branch);
 
         try
         {
@@ -941,13 +960,13 @@ public class GitFileManager : IGitFileManager
     {
         string versionElementName = itemToUpdate.Name;
 
-        JObject toolsNode = (JObject) token["tools"];
+        JObject toolsNode = (JObject)token["tools"];
 
         foreach (JProperty property in toolsNode?.Children<JProperty>())
         {
             if (property.Name.Equals(versionElementName, StringComparison.OrdinalIgnoreCase))
             {
-                JValue versionEntry = (JValue) property.Value.SelectToken("version", false);
+                JValue versionEntry = (JValue)property.Value.SelectToken("version", false);
 
                 if (versionEntry != null)
                 {
@@ -1195,14 +1214,14 @@ public class GitFileManager : IGitFileManager
             if (dependencyNode != null)
             {
                 // Should be a string with matching version.
-                if (dependencyNode.Type != JTokenType.Property || ((JProperty) dependencyNode).Value.Type != JTokenType.String)
+                if (dependencyNode.Type != JTokenType.Property || ((JProperty)dependencyNode).Value.Type != JTokenType.String)
                 {
                     _logger.LogError($"The element '{dependency.Name}' in '{VersionFiles.GlobalJson}' should be a property " +
                                      $"with a value of type string.");
                     result = false;
                     continue;
                 }
-                JProperty property = (JProperty) dependencyNode;
+                JProperty property = (JProperty)dependencyNode;
                 // Validate that the casing matches for consistency
                 if (property.Name != versionedName)
                 {
@@ -1212,7 +1231,7 @@ public class GitFileManager : IGitFileManager
                     result = false;
                 }
                 // Validate version
-                JToken value = (JToken) property.Value;
+                JToken value = (JToken)property.Value;
                 if (value.Value<string>() != dependency.Version)
                 {
                     _logger.LogError($"The dependency '{dependency.Name}' has a version mismatch between " +
@@ -1257,7 +1276,7 @@ public class GitFileManager : IGitFileManager
                         continue;
                     }
 
-                    JProperty property = (JProperty) dependencyNode;
+                    JProperty property = (JProperty)dependencyNode;
                     // Validate that the casing matches for consistency
                     if (property.Name != versionedName)
                     {
@@ -1452,7 +1471,7 @@ public class GitFileManager : IGitFileManager
         }
     }
 
-    private Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
+    private static Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
     {
         var assetLocationMappings = new Dictionary<string, HashSet<string>>();
 

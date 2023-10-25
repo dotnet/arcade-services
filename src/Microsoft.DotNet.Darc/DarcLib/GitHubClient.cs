@@ -1095,7 +1095,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             if (content.Type == GitHubContentType.File)
             {
-                if (!GitFileManager.DependencyFiles.Contains(content.Path))
+                if (!DependencyFileManager.DependencyFiles.Contains(content.Path))
                 {
                     string fileContent = await GetFileContentsAsync(owner, repo, content.Path);
                     var gitCommit = new GitFile(content.Path, fileContent);

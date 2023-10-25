@@ -134,7 +134,7 @@ public class RemoteRepoBase : GitRepoCloner
             try
             {
                 // .git/objects hierarchy are marked as read-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
-                GitFileManager.NormalizeAttributes(tempRepoFolder);
+                DependencyFileManager.NormalizeAttributes(tempRepoFolder);
                 Directory.Delete(tempRepoFolder, true);
             }
             catch (DirectoryNotFoundException)
