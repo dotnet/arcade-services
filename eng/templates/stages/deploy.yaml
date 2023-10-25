@@ -155,12 +155,9 @@ stages:
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
-    - powershell: |
-        $maestroTestEndpoint = ${{ parameters.MaestroTestEndpoints }}.Split(',')[0]
-        $versionEndpoint = "$maestroTestEndpoint/api/assets/darc-version?api-version=2019-01-16"
-        $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
-        Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
-        Write-Host "Using Darc version $latestDarcVersion to run the tests"
+    - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
+        -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
+        -apiVersion "2019-01-16"
       displayName: Get DARC version
 
 
