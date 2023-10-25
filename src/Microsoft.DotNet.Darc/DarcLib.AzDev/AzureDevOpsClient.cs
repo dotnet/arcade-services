@@ -581,7 +581,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         {
             if (!item.IsFolder)
             {
-                if (!GitFileManager.DependencyFiles.Contains(item.Path))
+                if (!DependencyFileManager.DependencyFiles.Contains(item.Path))
                 {
                     string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, item.Path, commit);
                     var gitCommit = new GitFile(item.Path.TrimStart('/'), fileContent);

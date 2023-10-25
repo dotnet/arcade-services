@@ -23,7 +23,7 @@ public sealed class Remote : IRemote
 {
     private readonly IBarClient _barClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly GitFileManager _fileManager;
+    private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
@@ -48,7 +48,7 @@ public sealed class Remote : IRemote
         _remoteGitClient = remoteGitClient;
         _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
-        _fileManager = new GitFileManager(localGitClient, _versionDetailsParser, _logger);
+        _fileManager = new DependencyFileManager(localGitClient, _versionDetailsParser, _logger);
     }
 
     /// <summary>
