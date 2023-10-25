@@ -18,33 +18,4 @@ public interface ILibGit2FileManager : IGitFileManager
         DependencyDetail dependency,
         string repoUri,
         string branch);
-
-    Task AddDependencyToGlobalJson(
-        string repo,
-        string branch,
-        string parentField,
-        string dependencyName,
-        string version);
-
-    Task AddDependencyToVersionDetailsAsync(
-        string repo,
-        string branch,
-        DependencyDetail dependency);
-
-    /// <summary>
-    ///     <!-- Package versions -->
-    ///     <PropertyGroup>
-    ///         <MicrosoftDotNetApiCompatPackageVersion>1.0.0-beta.18478.5</MicrosoftDotNetApiCompatPackageVersion>
-    ///     </PropertyGroup>
-    ///
-    ///     See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md for more
-    ///     information.
-    /// </summary>
-    /// <param name="repo">Path to Versions.props file</param>
-    /// <param name="dependency">Dependency information to add.</param>
-    /// <returns>Async task.</returns>
-    Task AddDependencyToVersionsPropsAsync(
-        string repo,
-        string branch,
-        DependencyDetail dependency);
 }

@@ -61,6 +61,7 @@ public class LibGit2FileManager : GitFileManager, ILibGit2FileManager
             throw new DependencyException($"Dependency {dependency.Name} already exists in this repository");
         }
 
+        // Should the dependency go to Versions.props or global.json?
         if (_knownAssetNames.ContainsKey(dependency.Name))
         {
             if (!_sdkMapping.TryGetValue(dependency.Name, out string parent))
@@ -68,21 +69,17 @@ public class LibGit2FileManager : GitFileManager, ILibGit2FileManager
                 throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
             }
 
-            await AddDependencyToGlobalJson(
-                repoUri,
-                branch,
-                parent,
-                dependency.Name,
-                dependency.Version);
+            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
+        }
+        else
+        {
+            await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
         }
 
-        await AddDependencyToVersionDetailsAsync(
-            repoUri,
-            branch,
-            dependency);
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
     }
 
-    public async Task AddDependencyToVersionDetailsAsync(
+    private async Task AddDependencyToVersionDetailsAsync(
         string repo,
         string branch,
         DependencyDetail dependency)
@@ -130,7 +127,18 @@ public class LibGit2FileManager : GitFileManager, ILibGit2FileManager
             $"'{VersionFiles.VersionDetailsXml}'");
     }
 
-    public async Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency)
+    /// <summary>
+    ///     <!-- Package versions -->
+    ///     <PropertyGroup>
+    ///         <MicrosoftDotNetApiCompatPackageVersion>1.0.0-beta.18478.5</MicrosoftDotNetApiCompatPackageVersion>
+    ///     </PropertyGroup>
+    ///
+    ///     See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md for more
+    ///     information.
+    /// </summary>
+    /// <param name="repo">Path to Versions.props file</param>
+    /// <param name="dependency">Dependency information to add.</param>
+    private async Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency)
     {
         XmlDocument versionProps = await ReadVersionPropsAsync(repo, null);
         string documentNamespaceUri = versionProps.DocumentElement.NamespaceURI;
@@ -226,14 +234,13 @@ public class LibGit2FileManager : GitFileManager, ILibGit2FileManager
             $"'{VersionFiles.VersionProps}'");
     }
 
-    public async Task AddDependencyToGlobalJson(
+    private async Task AddDependencyToGlobalJson(
         string repo,
         string branch,
         string parentField,
-        string dependencyName,
-        string version)
+        DependencyDetail dependency)
     {
-        JToken versionProperty = new JProperty(dependencyName, version);
+        JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
         JObject globalJson = await ReadGlobalJsonAsync(repo, branch);
         JToken parent = globalJson[parentField];
 
@@ -251,8 +258,8 @@ public class LibGit2FileManager : GitFileManager, ILibGit2FileManager
             new List<GitFile> { file },
             repo,
             branch,
-            $"Add {dependencyName} to '{VersionFiles.GlobalJson}'");
+            $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
-        _logger.LogInformation($"Dependency '{dependencyName}' with version '{version}' successfully added to global.json");
+        _logger.LogInformation($"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to global.json");
     }
 }
