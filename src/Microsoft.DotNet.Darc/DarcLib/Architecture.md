@@ -20,59 +20,54 @@ classDiagram
         GetFilesAsync()
         CommitFilesAsync()
     }
-    
-    namespace LocalClients {
-        class ILocalLibGit2Client {
-            <<interface>>
-            Extended functionality
-            via LibGit2Sharp
-            SafeCheckout()
-            Checkout()
-            Push()
-        }
-
-        class ILocalGitClient {
-            <<interface>>
-            Can manage local git folder
-            AddRemote()
-            Checkout()
-            Commit()
-            ...()
-        }
-
-        class LocalGitClient {
-            Implemented by calling
-            git out-of-proc
-        }
-
-        class LocalLibGit2Client {
-            Extended using
-            LibGit2Sharp
-        }
+    class ILocalLibGit2Client {
+        <<interface>>
+        Extended functionality
+        via LibGit2Sharp
+        SafeCheckout()
+        Checkout()
+        Push()
     }
-    
-    namespace RemoteClients {
-        class IGitRepoCloner {
-            <<interface>>
-            Can clone a remote repo
-        }
 
-        class IRemoteGitRepo {
-            <<interface>>
-            Can manage repo remotely
-            Create/DeleteBranch()
-            Get/CreatePullRequest()
-            ...()
-        }
+    class ILocalGitClient {
+        <<interface>>
+        Can manage local git folder
+        AddRemote()
+        Checkout()
+        Commit()
+        ...()
+    }
 
-        class GitHubClient {
-            Implementation via
-            Octokit
-        }
+    class LocalGitClient {
+        Implemented by calling
+        git out-of-proc
+    }
 
-        class AzureDevOpsClient {
-            Implementation via
-            AzDO client lib
-        }
+    class LocalLibGit2Client {
+        Extended using
+        LibGit2Sharp
+    }
+
+    class IGitRepoCloner {
+        <<interface>>
+        Can clone a remote repo
+    }
+
+    class IRemoteGitRepo {
+        <<interface>>
+        Can manage repo remotely
+        Create/DeleteBranch()
+        Get/CreatePullRequest()
+        ...()
+    }
+
+    class GitHubClient {
+        Implementation via
+        Octokit
+    }
+
+    class AzureDevOpsClient {
+        Implementation via
+        AzDO client lib
     }
 ```
