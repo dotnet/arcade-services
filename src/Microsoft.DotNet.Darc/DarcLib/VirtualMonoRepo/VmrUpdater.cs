@@ -106,12 +106,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
             ?? throw new Exception($"No mapping named '{mappingName}' found");
 
-        if (_dependencyTracker.GetDependencyVersion(mapping)?.Sha == targetRevision && targetRevision != null)
-        {
-            _logger.LogInformation("Repository {repo} is already at {sha}", mapping.Name, targetRevision);
-            return;
-        }
-
         if (_vmrInfo.SourceMappingsPath != null
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
@@ -142,7 +136,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            null);
+            Parent: null);
 
         if (updateDependencies)
         {
@@ -182,10 +176,31 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var currentSha = GetCurrentVersion(update.Mapping);
+        VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
+            ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
-            update.Mapping.Name, currentSha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
+            update.Mapping.Name, currentVersion.Sha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
+
+        // Do we need to change anything?
+        if (update.TargetRevision != null && currentVersion?.Sha == update.TargetRevision)
+        {
+            if (currentVersion.PackageVersion != update.TargetVersion || update.TargetVersion == null)
+            {
+                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
+            }
+            else
+            {
+                await UpdateTargetVersionOnly(
+                    update.TargetRevision,
+                    update.TargetVersion,
+                    update.Mapping,
+                    currentVersion,
+                    cancellationToken);
+            }
+
+            return Array.Empty<VmrIngestionPatch>();
+        }
 
         var remotes = additionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
@@ -208,26 +223,26 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
 
-        if (currentSha == update.TargetRevision)
+        if (currentVersion.Sha == update.TargetRevision)
         {
             _logger.LogInformation("No new commits found to synchronize");
             return Array.Empty<VmrIngestionPatch>();
         }
 
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
-            update.Mapping.Name, Commit.GetShortSha(currentSha), Commit.GetShortSha(update.TargetRevision));
+            update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.TargetRevision));
 
         var commitMessage = PrepareCommitMessage(
             SquashCommitMessage,
             update.Mapping.Name,
             update.RemoteUri,
-            currentSha,
+            currentVersion.Sha,
             update.TargetRevision);
 
         return await UpdateRepoToRevisionAsync(
             update,
             clonePath,
-            currentSha,
+            currentVersion.Sha,
             author: null,
             commitMessage,
             reapplyVmrPatches,
@@ -304,12 +319,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 {
                     TargetRevision = currentSha
                 });
-            }
-
-            if (currentSha == update.TargetRevision)
-            {
-                _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", update.Mapping.Name, currentSha);
-                continue;
             }
 
             if (update.Parent is not null)
@@ -651,6 +660,43 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             _logger.LogInformation("{repo} version information is already deleted", repo);
         }
+    }
+
+    /// <summary>
+    /// This method is called in cases when a repository is already at the target revision but the package version
+    /// differs. This can happen when a new build from the same commit is synchronized to the VMR.
+    /// </summary>
+    private async Task UpdateTargetVersionOnly(
+        string targetRevision,
+        string targetVersion,
+        SourceMapping mapping,
+        VmrDependencyVersion currentVersion,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogWarning(
+            "Repository {repo} is already at {sha} but differs in package version ({old} vs {new}). Updating metadata...",
+            mapping.Name,
+            targetRevision,
+            currentVersion.PackageVersion,
+            targetVersion);
+
+        _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
+            Mapping: mapping,
+            TargetRevision: targetRevision,
+            TargetVersion: targetVersion,
+            Parent: null,
+            RemoteUri: _sourceManifest.Repositories.First(r => r.Path == mapping.Name).RemoteUri));
+
+        var filesToAdd = new List<string>
+        {
+            VmrInfo.GitInfoSourcesDir,
+            _vmrInfo.GetSourceManifestPath()
+        };
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await CommitAsync($"Updated package version of {mapping.Name} metadata to {targetVersion}", author: null);
     }
 
     private class RepositoryNotInitializedException : Exception
