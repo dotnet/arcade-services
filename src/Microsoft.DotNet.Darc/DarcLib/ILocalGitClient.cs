@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
-public interface ILocalGitClient : IGitRepo
+public interface ILocalGitClient
 {
     /// <summary>
     ///     Add a remote to a local repo if does not already exist.

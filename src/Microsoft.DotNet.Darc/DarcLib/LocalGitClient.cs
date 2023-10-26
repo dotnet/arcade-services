@@ -3,14 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +17,6 @@ namespace Microsoft.DotNet.DarcLib;
 /// <summary>
 /// This class can manage a local git repository.
 /// It is deliberately not using LibGit2Sharp (for memory reasons) but instead calls git out of process.
-/// TODO https://github.com/dotnet/arcade-services/issues/2982: CommitFilesAsync still uses LibGit2Sharp (though it's not used in the VMR flows)
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
@@ -64,141 +60,6 @@ public class LocalGitClient : ILocalGitClient
         {
             return await streamReader.ReadToEndAsync();
         }
-    }
-
-    public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
-    {
-        repoPath = await GetRootDirAsync(repoPath);
-
-        try
-        {
-            using (var localRepo = new Repository(repoPath))
-                foreach (GitFile file in filesToCommit)
-                {
-                    Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
-                    switch (file.Operation)
-                    {
-                        case GitFileOperation.Add:
-                            var parentDirectoryInfo = Directory.GetParent(file.FilePath)
-                                ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
-
-                            string parentDirectory = parentDirectoryInfo.FullName;
-
-                            if (!Directory.Exists(parentDirectory))
-                            {
-                                Directory.CreateDirectory(parentDirectory);
-                            }
-
-                            string fullPath = Path.Combine(repoPath, file.FilePath);
-                            using (var streamWriter = new StreamWriter(fullPath))
-                            {
-                                string finalContent;
-                                switch (file.ContentEncoding)
-                                {
-                                    case ContentEncoding.Utf8:
-                                        finalContent = file.Content;
-                                        break;
-                                    case ContentEncoding.Base64:
-                                        byte[] bytes = Convert.FromBase64String(file.Content);
-                                        finalContent = Encoding.UTF8.GetString(bytes);
-                                        break;
-                                    default:
-                                        throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                                }
-                                finalContent = await NormalizeLineEndingsAsync(repoPath, fullPath, finalContent);
-                                await streamWriter.WriteAsync(finalContent);
-
-                                AddFileToIndex(localRepo, file, fullPath);
-                            }
-                            break;
-                        case GitFileOperation.Delete:
-                            if (File.Exists(file.FilePath))
-                            {
-                                File.Delete(file.FilePath);
-                            }
-                            break;
-                    }
-                }
-        }
-        catch (Exception exc)
-        {
-            throw new DarcException($"Something went wrong when checking out {repoPath} in {repoPath}", exc);
-        }
-    }
-
-    /// <summary>
-    /// Normalize line endings of content.
-    /// </summary>
-    /// <param name="filePath">Path of file</param>
-    /// <param name="content">Content to normalize</param>
-    /// <returns>Normalized content</returns>
-    /// <remarks>
-    ///     Normalize based on the following rules:
-    ///     - Auto CRLF is assumed.
-    ///     - Check the git attributes the file to determine whether it has a specific setting for the file.  If so, use that.
-    ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
-    ///       OS setting, and replace if needed.
-    /// </remarks>
-    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
-    {
-        const string crlf = "\r\n";
-        const string lf = "\n";
-
-        // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
-        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
-
-        string eofAttr = result.StandardOutput.Trim();
-
-        if (string.IsNullOrEmpty(eofAttr) ||
-            eofAttr.Contains("eol: unspecified") ||
-            eofAttr.Contains("eol: auto"))
-        {
-            if (Environment.NewLine != crlf)
-            {
-                return content.Replace(crlf, Environment.NewLine);
-            }
-            else if (Environment.NewLine == crlf && !content.Contains(crlf))
-            {
-                return content.Replace(lf, Environment.NewLine);
-            }
-        }
-        else if (eofAttr.Contains("eol: crlf"))
-        {
-            // Test to avoid adding extra \r.
-            if (!content.Contains(crlf))
-            {
-                return content.Replace(lf, crlf);
-            }
-        }
-        else if (eofAttr.Contains("eol: lf"))
-        {
-            return content.Replace(crlf, lf);
-        }
-        else
-        {
-            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
-        }
-
-        return content;
-    }
-
-    /// <summary>
-    /// Adds a file to the repo's index respecting the original file's mode.
-    /// </summary>
-    /// <param name="repo">Repo to add the files to</param>
-    /// <param name="file">Original GitFile to add</param>
-    /// <param name="fullPath">Final path for the file to be added</param>
-    private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
-    {
-        var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
-        if (!Enum.IsDefined(typeof(Mode), fileMode) || fileMode == Mode.Nonexistent)
-        {
-            _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
-            fileMode = Mode.NonExecutableFile;
-        }
-        Blob fileBlob = repo.ObjectDatabase.CreateBlob(fullPath);
-        repo.Index.Add(fileBlob, file.FilePath, fileMode);
     }
 
     public async Task CheckoutAsync(string repoPath, string refToCheckout)

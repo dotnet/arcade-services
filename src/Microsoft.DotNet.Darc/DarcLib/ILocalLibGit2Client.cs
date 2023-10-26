@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.DarcLib;
 /// <summary>
 /// Richer implementations of local git repo operations utilizing LibGit2Sharp.
 /// </summary>
-public interface ILocalLibGit2Client : ILocalGitClient
+public interface ILocalLibGit2Client : ILocalGitClient, IGitRepo
 {
     /// <summary>
     ///     Checkout the repo to the specified state.
