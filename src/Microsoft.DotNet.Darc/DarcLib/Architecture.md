@@ -5,9 +5,9 @@ This document describes some of the architecture of the code in `DarcLib`, espec
 ```mermaid
 classDiagram
     IGitRepo <|-- ILocalLibGit2Client
-    ILocalGitClient <|-- LocalGitClient
     ILocalGitClient <|-- LocalLibGit2Client
     ILocalLibGit2Client <|-- LocalLibGit2Client
+    ILocalGitClient <|-- LocalGitClient
     IGitRepo <|-- IRemoteGitRepo
     IGitRepoCloner <|-- IRemoteGitRepo
     IRemoteGitRepo <|-- AzureDevOpsClient
@@ -20,6 +20,7 @@ classDiagram
         GetFilesAsync()
         CommitFilesAsync()
     }
+
     class ILocalLibGit2Client {
         <<interface>>
         Extended functionality
