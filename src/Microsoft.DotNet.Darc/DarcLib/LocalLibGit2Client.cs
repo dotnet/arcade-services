@@ -93,6 +93,63 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     }
 
     /// <summary>
+    /// Normalize line endings of content.
+    /// </summary>
+    /// <param name="filePath">Path of file</param>
+    /// <param name="content">Content to normalize</param>
+    /// <returns>Normalized content</returns>
+    /// <remarks>
+    ///     Normalize based on the following rules:
+    ///     - Auto CRLF is assumed.
+    ///     - Check the git attributes the file to determine whether it has a specific setting for the file.  If so, use that.
+    ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
+    ///       OS setting, and replace if needed.
+    /// </remarks>
+    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
+    {
+        const string crlf = "\r\n";
+        const string lf = "\n";
+
+        // Check gitAttributes to determine whether the file has eof handling set.
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
+        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
+
+        string eofAttr = result.StandardOutput.Trim();
+
+        if (string.IsNullOrEmpty(eofAttr) ||
+            eofAttr.Contains("eol: unspecified") ||
+            eofAttr.Contains("eol: auto"))
+        {
+            if (Environment.NewLine != crlf)
+            {
+                return content.Replace(crlf, Environment.NewLine);
+            }
+            else if (Environment.NewLine == crlf && !content.Contains(crlf))
+            {
+                return content.Replace(lf, Environment.NewLine);
+            }
+        }
+        else if (eofAttr.Contains("eol: crlf"))
+        {
+            // Test to avoid adding extra \r.
+            if (!content.Contains(crlf))
+            {
+                return content.Replace(lf, crlf);
+            }
+        }
+        else if (eofAttr.Contains("eol: lf"))
+        {
+            return content.Replace(crlf, lf);
+        }
+        else
+        {
+            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
+        }
+
+        return content;
+    }
+
+    /// <summary>
     ///     Checkout the repo to the specified state.
     /// </summary>
     /// <param name="commit">Tag, branch, or commit to checkout.</param>
@@ -303,6 +360,24 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
     }
 
+    /// <summary>
+    /// Adds a file to the repo's index respecting the original file's mode.
+    /// </summary>
+    /// <param name="repo">Repo to add the files to</param>
+    /// <param name="file">Original GitFile to add</param>
+    /// <param name="fullPath">Final path for the file to be added</param>
+    private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
+    {
+        var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
+        if (!Enum.IsDefined(typeof(Mode), fileMode) || fileMode == Mode.Nonexistent)
+        {
+            _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
+            fileMode = Mode.NonExecutableFile;
+        }
+        Blob fileBlob = repo.ObjectDatabase.CreateBlob(fullPath);
+        repo.Index.Add(fileBlob, file.FilePath, fileMode);
+    }
+
     public void SafeCheckout(Repository repo, string commit, CheckoutOptions options)
     {
         try
@@ -375,81 +450,6 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Normalize line endings of content.
-    /// </summary>
-    /// <param name="filePath">Path of file</param>
-    /// <param name="content">Content to normalize</param>
-    /// <returns>Normalized content</returns>
-    /// <remarks>
-    ///     Normalize based on the following rules:
-    ///     - Auto CRLF is assumed.
-    ///     - Check the git attributes the file to determine whether it has a specific setting for the file.  If so, use that.
-    ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
-    ///       OS setting, and replace if needed.
-    /// </remarks>
-    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
-    {
-        const string crlf = "\r\n";
-        const string lf = "\n";
-
-        // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
-        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
-
-        string eofAttr = result.StandardOutput.Trim();
-
-        if (string.IsNullOrEmpty(eofAttr) ||
-            eofAttr.Contains("eol: unspecified") ||
-            eofAttr.Contains("eol: auto"))
-        {
-            if (Environment.NewLine != crlf)
-            {
-                return content.Replace(crlf, Environment.NewLine);
-            }
-            else if (Environment.NewLine == crlf && !content.Contains(crlf))
-            {
-                return content.Replace(lf, Environment.NewLine);
-            }
-        }
-        else if (eofAttr.Contains("eol: crlf"))
-        {
-            // Test to avoid adding extra \r.
-            if (!content.Contains(crlf))
-            {
-                return content.Replace(lf, crlf);
-            }
-        }
-        else if (eofAttr.Contains("eol: lf"))
-        {
-            return content.Replace(crlf, lf);
-        }
-        else
-        {
-            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
-        }
-
-        return content;
-    }
-
-    /// <summary>
-    /// Adds a file to the repo's index respecting the original file's mode.
-    /// </summary>
-    /// <param name="repo">Repo to add the files to</param>
-    /// <param name="file">Original GitFile to add</param>
-    /// <param name="fullPath">Final path for the file to be added</param>
-    private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
-    {
-        var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
-        if (!Enum.IsDefined(typeof(Mode), fileMode) || fileMode == Mode.Nonexistent)
-        {
-            _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
-            fileMode = Mode.NonExecutableFile;
-        }
-        Blob fileBlob = repo.ObjectDatabase.CreateBlob(fullPath);
-        repo.Index.Add(fileBlob, file.FilePath, fileMode);
     }
 
     private void FetchRepo(Repository repo)
