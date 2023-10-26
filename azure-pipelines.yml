@@ -27,15 +27,16 @@ pr:
     - production
   paths:
     include:
-      - '*'
+    - '*'
     exclude:
-      - .github/*
-      - docs/*
-      - CODE-OF-CONDUCT.md
-      - LICENSE.TXT
-      - README.md
-      - SECURITY.md
-      - THIRD-PARTY-NOTICES.TXT
+    - '*.md'
+    - '.github/*'
+    - 'docs/*'
+    - CODE-OF-CONDUCT.md
+    - LICENSE.TXT
+    - README.md
+    - SECURITY.md
+    - THIRD-PARTY-NOTICES.TXT
 
 pool:
   name: NetCore1ESPool-Internal-NoMSI
