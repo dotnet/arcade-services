@@ -21,8 +21,22 @@ trigger:
     - main
     - production
 pr:
-- main
-- production
+  branches:
+    include:
+    - main
+    - production
+  paths:
+    include:
+    - '*'
+    exclude:
+    - '**/*.md'
+    - '.github/*'
+    - 'docs/*'
+    - CODE-OF-CONDUCT.md
+    - LICENSE.TXT
+    - README.md
+    - SECURITY.md
+    - THIRD-PARTY-NOTICES.TXT
 
 pool:
   name: NetCore1ESPool-Internal-NoMSI
