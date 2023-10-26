@@ -56,6 +56,7 @@ classDiagram
     class IGitRepoCloner {
         <<interface>>
         Can clone a remote repo
+        CloneAsync()
     }
 
     class IRemoteGitRepo {
