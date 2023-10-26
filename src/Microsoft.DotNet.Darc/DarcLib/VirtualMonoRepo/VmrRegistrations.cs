@@ -50,6 +50,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>(); 
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
+        services.TryAddTransient<IGitRepo, LocalLibGit2Client>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();

@@ -14,6 +14,10 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
+/// <summary>
+/// This class can manage a local git repository.
+/// It is deliberately not using LibGit2Sharp (for memory reasons) but instead calls git out of process.
+/// </summary>
 public class LocalGitClient : ILocalGitClient
 {
     private readonly RemoteConfiguration _remoteConfiguration;

@@ -15,6 +15,9 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
+/// <summary>
+/// This class extends the local git client with operations that are hard to express without LibGit2Sharp.
+/// </summary>
 public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 {
     private readonly RemoteConfiguration _remoteConfiguration;
@@ -357,14 +360,12 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         _logger.LogInformation($"Pushed branch {branch} to remote {remote.Name}");
     }
 
-
     /// <summary>
     /// Adds a file to the repo's index respecting the original file's mode.
     /// </summary>
     /// <param name="repo">Repo to add the files to</param>
     /// <param name="file">Original GitFile to add</param>
     /// <param name="fullPath">Final path for the file to be added</param>
-    /// <param name="log">Logger</param>
     private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
     {
         var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);

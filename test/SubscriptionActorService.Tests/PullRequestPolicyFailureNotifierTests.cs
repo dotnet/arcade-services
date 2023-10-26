@@ -89,9 +89,7 @@ public class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>) checksToReturn);
             });
 
-        LocalGitClient = new Mock<ILocalLibGit2Client>(MockBehavior.Strict);
-
-        MockRemote = new Remote(GitRepo.Object, LocalGitClient.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
+        MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
         Provider = services.BuildServiceProvider();

@@ -52,7 +52,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
     {
-        return Task.FromResult((IRemote)new Remote(null, null, new MaestroBarClient(_context), _versionDetailsParser, logger));
+        return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
     }
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -112,12 +112,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            var localGitClient = new LocalLibGit2Client(
-                remoteConfiguration,
-                new ProcessManager(logger, gitExe),
-                logger);
-
-            return new Remote(remoteGitClient, localGitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
         }
     }
 }

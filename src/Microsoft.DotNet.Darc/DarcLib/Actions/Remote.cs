@@ -25,7 +25,6 @@ public sealed class Remote : IRemote
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
-    private readonly ILocalLibGit2Client _localGitClient;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -38,7 +37,6 @@ public sealed class Remote : IRemote
 
     public Remote(
         IRemoteGitRepo remoteGitClient,
-        ILocalLibGit2Client localGitClient,
         IBarClient barClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
@@ -46,9 +44,8 @@ public sealed class Remote : IRemote
         _logger = logger;
         _barClient = barClient;
         _remoteGitClient = remoteGitClient;
-        _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
-        _fileManager = new DependencyFileManager(localGitClient, _versionDetailsParser, _logger);
+        _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
 
     /// <summary>
@@ -1005,7 +1002,7 @@ public sealed class Remote : IRemote
 
         filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
-        await _localGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+        await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
 
         return filesToCommit;
     }
