@@ -39,8 +39,7 @@ public class DependencyFileManager : IDependencyFileManager
         { "dotnet", "tools" },
     }.ToImmutableDictionary();
 
-    private readonly IGitRepo _remoteGitClient;
-    private readonly ILocalLibGit2Client _localGitClient;
+    private readonly IGitRepo _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
 
@@ -54,13 +53,11 @@ public class DependencyFileManager : IDependencyFileManager
     private const string MaestroRepoSpecificEndComment = "  End: Package sources from";
 
     public DependencyFileManager(
-        IGitRepo remoteGitClient,
-        ILocalLibGit2Client localGitClient,
+        IGitRepo gitClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
-        _remoteGitClient = remoteGitClient;
-        _localGitClient = localGitClient;
+        _gitClient = gitClient;
         _versionDetailsParser = versionDetailsParser;
         _logger = logger;
     }
@@ -88,7 +85,7 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation(
             $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _remoteGitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
@@ -100,7 +97,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            string fileContent = await _remoteGitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -708,7 +705,7 @@ public class DependencyFileManager : IDependencyFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
-        await _localGitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionDetailsXml}'");
 
         _logger.LogInformation(
@@ -815,7 +812,7 @@ public class DependencyFileManager : IDependencyFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionProps, versionProps);
-        await _localGitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionProps}'");
 
         _logger.LogInformation(
@@ -843,7 +840,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         var file = new GitFile(VersionFiles.GlobalJson, globalJson);
-        await _localGitClient.CommitFilesAsync(
+        await _gitClient.CommitFilesAsync(
             new List<GitFile> { file },
             repoUri,
             branch,
@@ -867,7 +864,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+        string fileContent = await _gitClient.GetFileContentsAsync(filePath, repoUri, branch);
 
         try
         {

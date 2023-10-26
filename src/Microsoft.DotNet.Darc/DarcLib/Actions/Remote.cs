@@ -48,7 +48,7 @@ public sealed class Remote : IRemote
         _remoteGitClient = remoteGitClient;
         _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
-        _fileManager = new DependencyFileManager(remoteGitClient, localGitClient, _versionDetailsParser, _logger);
+        _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
 
     /// <summary>

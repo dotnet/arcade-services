@@ -26,9 +26,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 internal class DependencyTestDriver
 {
     private string _testName;
-    private LocalLibGit2Client _gitClient;
     private VersionDetailsParser _versionDetailsParser;
-    private DependencyFileManager _dependencyFileManager;
     private const string inputRootDir = "inputs";
     private const string inputDir = "input";
     private const string outputDir = "output";
@@ -37,8 +35,8 @@ internal class DependencyTestDriver
     public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
     public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
     public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
-    public LocalLibGit2Client GitClient { get => _gitClient; }
-    public DependencyFileManager dependencyFileManager { get => _dependencyFileManager; }
+    public LocalLibGit2Client GitClient { get; private set; }
+    public DependencyFileManager DependencyFileManager { get; private set; }
 
     public DependencyTestDriver(string testName)
     {
@@ -67,20 +65,20 @@ internal class DependencyTestDriver
 
         // Set up a git file manager
         var processManager = new ProcessManager(NullLogger.Instance, "git");
-        _gitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
+        GitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
-        _dependencyFileManager = new DependencyFileManager(_gitClient, _gitClient, _versionDetailsParser, NullLogger.Instance);
+        DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
-        await _gitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
-        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
+        await GitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
+        await GitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }
 
     public async Task AddDependencyAsync(DependencyDetail dependency)
     {
-        await _dependencyFileManager.AddDependencyAsync(
+        await DependencyFileManager.AddDependencyAsync(
             dependency,
             TemporaryRepositoryPath,
             null);
@@ -88,14 +86,14 @@ internal class DependencyTestDriver
 
     public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, SemanticVersion dotNetVersion = null)
     {
-        GitFileContentContainer container = await _dependencyFileManager.UpdateDependencyFiles(
+        GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
             TemporaryRepositoryPath,
             null,
             null,
             dotNetVersion);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();
-        await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+        await GitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
     }
 
     public async Task UpdatePinnedDependenciesAsync()
@@ -104,19 +102,19 @@ internal class DependencyTestDriver
         string versionDetailsContents = File.ReadAllText(testVersionDetailsXmlPath);
         IEnumerable<DependencyDetail> dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents, false);
 
-        GitFileContentContainer container = await _dependencyFileManager.UpdateDependencyFiles(
+        GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
             TemporaryRepositoryPath,
             null,
             null,
             null);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();
-        await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+        await GitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
     }
 
     public async Task VerifyAsync()
     {
-        await _dependencyFileManager.Verify(TemporaryRepositoryPath, null);
+        await DependencyFileManager.Verify(TemporaryRepositoryPath, null);
     }
 
     public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)

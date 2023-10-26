@@ -22,19 +22,6 @@ public interface ILocalLibGit2Client : ILocalGitClient
     void Checkout(string repoDir, string refToCheckout, bool force = false);
 
     /// <summary>
-    ///     Commit or update a set of files to a repo
-    /// </summary>
-    /// <param name="filesToCommit">Files to comit</param>
-    /// <param name="repoUri">Remote repository URI</param>
-    /// <param name="branch">Branch to push to</param>
-    /// <param name="commitMessage">Commit message</param>
-    Task CommitFilesAsync(
-        List<GitFile> filesToCommit,
-        string repoPath,
-        string branch,
-        string commitMessage);
-
-    /// <summary>
     ///     Pushes a branch to a remote
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
