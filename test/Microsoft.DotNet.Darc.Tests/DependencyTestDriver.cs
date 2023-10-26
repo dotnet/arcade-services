@@ -69,7 +69,7 @@ internal class DependencyTestDriver
         var processManager = new ProcessManager(NullLogger.Instance, "git");
         _gitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
-        _dependencyFileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, NullLogger.Instance);
+        _dependencyFileManager = new DependencyFileManager(_gitClient, _gitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });

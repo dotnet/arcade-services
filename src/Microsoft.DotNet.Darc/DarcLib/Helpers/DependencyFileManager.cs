@@ -39,6 +39,7 @@ public class DependencyFileManager : IDependencyFileManager
         { "dotnet", "tools" },
     }.ToImmutableDictionary();
 
+    private readonly IGitRepo _remoteGitClient;
     private readonly ILocalLibGit2Client _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
@@ -53,10 +54,12 @@ public class DependencyFileManager : IDependencyFileManager
     private const string MaestroRepoSpecificEndComment = "  End: Package sources from";
 
     public DependencyFileManager(
+        IGitRepo remoteGitClient,
         ILocalLibGit2Client localGitClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
+        _remoteGitClient = remoteGitClient;
         _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
         _logger = logger;
@@ -85,7 +88,7 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation(
             $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _localGitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        string fileContent = await _remoteGitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
@@ -97,7 +100,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            string fileContent = await _localGitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            string fileContent = await _remoteGitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -821,13 +824,13 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     private async Task AddDependencyToGlobalJson(
-        string repo,
+        string repoUri,
         string branch,
         string parentField,
         DependencyDetail dependency)
     {
         JToken versionProperty = new JProperty(dependency.Name, dependency.Version);
-        JObject globalJson = await ReadGlobalJsonAsync(repo, branch);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
         JToken parent = globalJson[parentField];
 
         if (parent != null)
@@ -842,7 +845,7 @@ public class DependencyFileManager : IDependencyFileManager
         var file = new GitFile(VersionFiles.GlobalJson, globalJson);
         await _localGitClient.CommitFilesAsync(
             new List<GitFile> { file },
-            repo,
+            repoUri,
             branch,
             $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
@@ -864,7 +867,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _localGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+        string fileContent = await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
 
         try
         {

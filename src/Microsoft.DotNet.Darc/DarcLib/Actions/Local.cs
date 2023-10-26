@@ -34,7 +34,7 @@ public class Local : ILocal
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
         _gitClient = new LocalLibGit2Client(remoteConfiguration, new ProcessManager(logger, GitExecutable), logger);
-        _fileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
+        _fileManager = new DependencyFileManager(_gitClient, _gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
     }

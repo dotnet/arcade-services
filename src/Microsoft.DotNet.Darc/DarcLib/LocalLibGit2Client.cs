@@ -364,7 +364,6 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     /// <param name="repo">Repo to add the files to</param>
     /// <param name="file">Original GitFile to add</param>
     /// <param name="fullPath">Final path for the file to be added</param>
-    /// <param name="log">Logger</param>
     private void AddFileToIndex(Repository repo, GitFile file, string fullPath)
     {
         var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
