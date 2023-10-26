@@ -29,7 +29,7 @@ pr:
     include:
     - '*'
     exclude:
-    - '*.md'
+    - '**/*.md'
     - '.github/*'
     - 'docs/*'
     - CODE-OF-CONDUCT.md
