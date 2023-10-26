@@ -68,12 +68,7 @@ internal class RemoteFactory : IRemoteFactory
                 darcSettings.BuildAssetRegistryBaseUri);
         }
 
-        var localGitClient = new LocalLibGit2Client(
-            options.GetRemoteConfiguration(),
-            new ProcessManager(logger, options.GitLocation),
-            logger);
-
-        return new Remote(gitClient, localGitClient, barClient, new VersionDetailsParser(), logger);
+        return new Remote(gitClient, barClient, new VersionDetailsParser(), logger);
     }
 
     /// <summary>

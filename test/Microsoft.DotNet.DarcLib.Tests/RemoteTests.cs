@@ -81,7 +81,7 @@ Coherency Update:
 
         var logger = new NUnitLogger();
 
-        var remote = new Remote(client.Object, localGitClient.Object, barClient.Object, new VersionDetailsParser(), logger);
+        var remote = new Remote(client.Object, barClient.Object, new VersionDetailsParser(), logger);
 
         await remote.MergeDependencyPullRequestAsync(
             "https://github.com/test/test2",
