@@ -2,6 +2,10 @@ This document describes some of the architecture of the code in `DarcLib`, espec
 
 ### Git clients
 
+The `DarcLib` has several git-related classes which manage either a local git directory or a remote GitHub/AzureDevOps repository.
+- The local repositories are either managed by calling `git` out-of-proc or by using the `LibGit2Sharp` library.
+- The remote repositories are managed via 3rd party client libraries (OctoKit / AzDO clients).
+
 ```mermaid
 classDiagram
     IGitRepo <|-- ILocalLibGit2Client
