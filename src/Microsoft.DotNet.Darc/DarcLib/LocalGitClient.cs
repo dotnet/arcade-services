@@ -271,7 +271,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string[]> GetStagedFiles(string repoPath)
     {
-        var result = await _processManager.ExecuteGit(repoPath, "git", "diff", "--name-only", "--cached");
+        var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
 
         return result.StandardOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
