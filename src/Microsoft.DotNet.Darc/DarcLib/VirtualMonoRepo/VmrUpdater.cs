@@ -91,7 +91,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
-        bool noSquash,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -142,7 +141,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             await UpdateRepositoryRecursively(
                 dependencyUpdate,
-                noSquash,
                 additionalRemotes,
                 readmeTemplatePath,
                 tpnTemplatePath,
@@ -154,7 +152,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             await UpdateRepositoryInternal(
                 dependencyUpdate,
-                noSquash,
                 reapplyVmrPatches: true,
                 additionalRemotes,
                 readmeTemplatePath,
@@ -167,7 +164,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
-        bool noSquash,
         bool reapplyVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -179,11 +175,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
-        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
-            update.Mapping.Name, currentVersion.Sha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
+        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
+            update.Mapping.Name,
+            currentVersion.Sha,
+            update.RemoteUri,
+            update.TargetRevision);
 
         // Do we need to change anything?
-        if (update.TargetRevision != null && currentVersion?.Sha == update.TargetRevision)
+        if (currentVersion.Sha == update.TargetRevision)
         {
             if (currentVersion.PackageVersion != update.TargetVersion || update.TargetVersion == null)
             {
@@ -259,7 +258,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// </summary>
     private async Task UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
-        bool noSquash,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
@@ -336,7 +334,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 patchesToReapply = await UpdateRepositoryInternal(
                     update,
-                    noSquash,
                     false,
                     additionalRemotes,
                     readmeTemplatePath,

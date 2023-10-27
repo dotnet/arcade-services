@@ -27,7 +27,6 @@ public interface IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
-        bool noSquash,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,

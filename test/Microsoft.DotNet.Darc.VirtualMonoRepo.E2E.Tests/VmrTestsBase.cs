@@ -160,7 +160,7 @@ public abstract class VmrTestsBase
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
     {
         var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, false, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
