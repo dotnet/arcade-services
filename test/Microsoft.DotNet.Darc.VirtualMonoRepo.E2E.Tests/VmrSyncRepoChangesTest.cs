@@ -88,7 +88,10 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CheckFileContents(_productRepoPath / VersionFiles.VersionDetailsXml, versionDetails, removeEmptyLines: false);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
+
         sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.Should().Be("8.0.1");
+        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / Constants.DependencyRepoName + ".props")).Should().Contain("8.0.1");
+        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName)).Should().Contain("8.0.1");
     }
 
     [Test]
