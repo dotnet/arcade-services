@@ -184,11 +184,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Do we need to change anything?
         if (currentVersion.Sha == update.TargetRevision)
         {
-            if (currentVersion.PackageVersion != update.TargetVersion || update.TargetVersion == null)
-            {
-                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
-            }
-            else
+            if (currentVersion.PackageVersion != update.TargetVersion && update.TargetVersion != null)
             {
                 await UpdateTargetVersionOnly(
                     update.TargetRevision,
@@ -196,6 +192,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
             }
 
             return Array.Empty<VmrIngestionPatch>();
@@ -356,10 +356,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             updatedDependencies.Add(update with
             {
-                // We the SHA again because original target could have been a branch name
+                // We resolve the SHA again because original target could have been a branch name
                 TargetRevision = GetCurrentVersion(update.Mapping),
 
-                // We also store the original version so that later we use it in the commit message
+                // We also store the original SHA (into the version!) so that later we use it in the commit message
                 TargetVersion = currentSha,
             });
         }
@@ -693,7 +693,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         cancellationToken.ThrowIfCancellationRequested();
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        await CommitAsync($"Updated package version of {mapping.Name} metadata to {targetVersion}", author: null);
+        await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
     }
 
     private class RepositoryNotInitializedException : Exception

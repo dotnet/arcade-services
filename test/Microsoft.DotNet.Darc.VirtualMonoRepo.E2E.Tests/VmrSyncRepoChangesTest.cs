@@ -1,15 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
-
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
@@ -56,6 +57,38 @@ public class VmrSyncRepoChangesTest :  VmrTestsBase
         CheckFileContents(_productRepoFilePath, "Test changes in repo file");
         CheckFileContents(_dependencyRepoFilePath, "File in dependency");
         await GitOperations.CheckAllIsCommitted(VmrPath);
+    }
+
+    [Test]
+    public async Task PackageVersionIsUpdatedOnlyTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        // Update version of dependent repo to 8.0.1
+        var versionDetails = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml);
+        versionDetails = versionDetails.Replace("8.0.0", "8.0.1");
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
+        await GitOperations.CommitAll(ProductRepoPath, "Changing SHA");
+
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
+
+        var expectedFilesFromRepos = new List<LocalPath>
+        {
+            _productRepoFilePath,
+            _dependencyRepoFilePath
+        };
+
+        var expectedFiles = GetExpectedFilesInVmr(
+            VmrPath,
+            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            expectedFilesFromRepos
+        );
+
+        CheckDirectoryContents(VmrPath, expectedFiles);
+        CheckFileContents(_productRepoPath / VersionFiles.VersionDetailsXml, versionDetails, removeEmptyLines: false);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
+        sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.Should().Be("8.0.1");
     }
 
     [Test]

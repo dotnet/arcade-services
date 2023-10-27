@@ -216,7 +216,7 @@ public abstract class VmrTestsBase
         return files;
     }
 
-    internal async Task<string> CopyRepoAndCreateVersionDetails(
+    protected async Task<string> CopyRepoAndCreateVersionDetails(
         NativePath currentTestDir,
         string repoName,
         IDictionary<string, List<string>>? dependencies = null)
