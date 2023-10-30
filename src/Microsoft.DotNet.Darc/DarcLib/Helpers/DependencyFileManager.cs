@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
@@ -39,8 +40,10 @@ public class DependencyFileManager : IDependencyFileManager
         { "dotnet", "tools" },
     }.ToImmutableDictionary();
 
-    private readonly IGitRepo _gitClient;
+    private IGitRepo GetGitClient(string repoUri) => _gitClientFactory(repoUri);
+
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly Func<string, IGitRepo> _gitClientFactory;
     private readonly ILogger _logger;
 
     private const string MaestroBeginComment =
@@ -57,7 +60,17 @@ public class DependencyFileManager : IDependencyFileManager
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
-        _gitClient = gitClient;
+        _gitClientFactory = _ => gitClient;
+        _versionDetailsParser = versionDetailsParser;
+        _logger = logger;
+    }
+
+    public DependencyFileManager(
+        IGitRepoFactory gitClientFactory,
+        IVersionDetailsParser versionDetailsParser,
+        ILogger logger)
+    {
+        _gitClientFactory = gitClientFactory.CreateClient;
         _versionDetailsParser = versionDetailsParser;
         _logger = logger;
     }
@@ -85,7 +98,7 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation(
             $"Reading '{VersionFiles.GlobalJson}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
+        string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
         return JObject.Parse(fileContent);
     }
@@ -97,7 +110,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         try
         {
-            string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+            string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
             return JObject.Parse(fileContent);
         }
         catch (DependencyFileNotFoundException)
@@ -705,7 +718,7 @@ public class DependencyFileManager : IDependencyFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
-        await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await GetGitClient(repo).CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionDetailsXml}'");
 
         _logger.LogInformation(
@@ -812,7 +825,7 @@ public class DependencyFileManager : IDependencyFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(VersionFiles.VersionProps, versionProps);
-        await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+        await GetGitClient(repo).CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionProps}'");
 
         _logger.LogInformation(
@@ -840,7 +853,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         var file = new GitFile(VersionFiles.GlobalJson, globalJson);
-        await _gitClient.CommitFilesAsync(
+        await GetGitClient(repoUri).CommitFilesAsync(
             new List<GitFile> { file },
             repoUri,
             branch,
@@ -864,7 +877,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         _logger.LogInformation($"Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...");
 
-        string fileContent = await _gitClient.GetFileContentsAsync(filePath, repoUri, branch);
+        string fileContent = await GetGitClient(repoUri).GetFileContentsAsync(filePath, repoUri, branch);
 
         try
         {

@@ -2,27 +2,25 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Helpers;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IGitRepoFactory
 {
-    IGitRepo Create(string repoUri);
+    IGitRepo CreateClient(string repoUri);
 }
 
-public class GitRepoFactory : IGitRepoFactory
+public class VmrGitClientFactory : IGitRepoFactory
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILoggerFactory _loggerFactory;
 
-    public GitRepoFactory(
+    public VmrGitClientFactory(
         IVmrInfo vmrInfo,
         RemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
@@ -34,7 +32,7 @@ public class GitRepoFactory : IGitRepoFactory
         _loggerFactory = loggerFactory;
     }
 
-    public IGitRepo Create(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
+    public IGitRepo CreateClient(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _processManager.GitExecutable,
