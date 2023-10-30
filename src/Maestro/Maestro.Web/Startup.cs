@@ -435,6 +435,14 @@ public partial class Startup : StartupBase
         }
         else
         {
+            app.UseWhen(context => context.Request.Path == "/Account/SignIn", app =>
+            {
+                app.Use((context, next) =>
+                {
+                    context.Request.Scheme = "https";
+                    return next(context);
+                });
+            });
             app.UseHsts();
         }
 
