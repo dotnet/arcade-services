@@ -436,7 +436,8 @@ public partial class Startup : StartupBase
         }
         else
         {
-            // Force redirect_url to be https, when authentication on BarViz
+            // Force redirect_url to be https, when authentication on BarViz.
+            // Otherwise it deafults to http, since that's how we're talking to Application Gateway
             app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
             {
                 app.Use((context, next) =>
