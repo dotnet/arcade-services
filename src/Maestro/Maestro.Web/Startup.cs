@@ -436,8 +436,12 @@ public partial class Startup : StartupBase
         }
         else
         {
-            // Force redirect_url to be https, when authentication on BarViz.
-            // Otherwise it deafults to http, since that's how we're talking to Application Gateway
+            // When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
+            // When using Application Gateway with TLS termination, the communication between the Application Gateway and
+            // server is done over HTTP. Because of this, the Aspnet library that's handling the authentication is giving GitHub the
+            // http uri, for the redirect_uri parameter. The call to GitHub itself, is still being done over HTTPS.
+            // The code below fixes that by adding middlewear that will make it so the asp library thinks the call was made over HTTPS
+            // so it will set the redirect_uri to https too
             app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
             {
                 app.Use((context, next) =>
