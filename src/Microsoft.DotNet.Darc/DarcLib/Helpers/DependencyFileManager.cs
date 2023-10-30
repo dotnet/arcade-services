@@ -1398,7 +1398,7 @@ public class DependencyFileManager : IDependencyFileManager
             }
             catch (Exception e)
             {
-                _logger.LogError("Unable to use regex to determine repo information from feed", e);
+                _logger.LogError(e, "Unable to use regex to determine repo information from feed");
                 repoNameFromFeed = unableToResolveName;
             }
 

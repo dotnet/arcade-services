@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -166,7 +167,7 @@ public class Local : ILocal
     public async Task<string> AddRemoteIfMissingAsync(string repoDir, string repoUrl)
     {
         string remoteName = await _gitClient.AddRemoteIfMissingAsync(repoDir, repoUrl);
-        await _gitClient.FetchAsync(repoDir, repoUrl);
+        await _gitClient.UpdateRemoteAsync(repoDir, remoteName);
         return remoteName;
     }
 
