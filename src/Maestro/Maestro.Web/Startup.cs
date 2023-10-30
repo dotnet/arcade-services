@@ -436,6 +436,7 @@ public partial class Startup : StartupBase
         }
         else
         {
+            // Force redirect_url to be https, when authentication on BarViz
             app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
             {
                 app.Use((context, next) =>
