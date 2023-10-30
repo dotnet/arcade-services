@@ -47,6 +47,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using Azure.Identity;
+using Maestro.Web.Pages.Account;
 
 namespace Maestro.Web;
 
@@ -435,7 +436,7 @@ public partial class Startup : StartupBase
         }
         else
         {
-            app.UseWhen(context => context.Request.Path == "/Account/SignIn", app =>
+            app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
             {
                 app.Use((context, next) =>
                 {
