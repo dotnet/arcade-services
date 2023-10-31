@@ -124,10 +124,10 @@ public class CodeBackflower : IVmrBackflower
         {
             _logger.LogInformation("Failed to checkout {sha} in {repo}, will fetch from all remotes and try again...", repo.CommitSha, repoDirectory);
 
-            foreach (var remote in remotes)
+            foreach (var remoteUri in remotes)
             {
-                await _localGitClient.AddRemoteIfMissingAsync(repoDirectory, remote, cancellationToken);
-                await _localGitClient.FetchAsync(repoDirectory, remote, cancellationToken);
+                var remoteName = await _localGitClient.AddRemoteIfMissingAsync(repoDirectory, remoteUri, cancellationToken);
+                await _localGitClient.UpdateRemoteAsync(repoDirectory, remoteName, cancellationToken);
             }
 
             await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
