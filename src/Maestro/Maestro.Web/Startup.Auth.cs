@@ -109,7 +109,7 @@ public partial class Startup
             {
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                 options.ReturnUrlParameter = "returnUrl";
-                options.LoginPath = "/Account/SignIn";
+                options.LoginPath = AccountController.AccountSignInRoute;
                 options.Events = new CookieAuthenticationEvents
                 {
                     OnRedirectToLogin = ctx =>
@@ -136,7 +136,7 @@ public partial class Startup
                 options.ExpireTimeSpan = LoginCookieLifetime;
                 options.SlidingExpiration = true;
                 options.ReturnUrlParameter = "returnUrl";
-                options.LoginPath = "/Account/SignIn";
+                options.LoginPath = AccountController.AccountSignInRoute;
                 options.Events = new CookieAuthenticationEvents
                 {
                     OnSigningIn = async ctx =>

@@ -47,6 +47,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using Azure.Identity;
+using Maestro.Web.Pages.Account;
 
 namespace Maestro.Web;
 
@@ -435,6 +436,22 @@ public partial class Startup : StartupBase
         }
         else
         {
+            // When we're using GitHub authentication on BarViz, one of the parameters that we're giving GitHub is the redirect_uri
+            // When we authenticate ourselves, GitHub sends us the token, and redirects us to the redirect_uri so this needs to be on HTTPS
+            // When using Application Gateway with TLS termination, we, the Client, talk to the Gateway over HTTPS,
+            // the Gateway then transforms that package to HTTP, and the communication between the Gateway and
+            // server is done over HTTP. Because of this, the Aspnet library that's handling the authentication is giving GitHub the
+            // http uri, for the redirect_uri parameter.
+            // The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
+            // so it will set the redirect_uri to https too
+            app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
+            {
+                app.Use((context, next) =>
+                {
+                    context.Request.Scheme = "https";
+                    return next(context);
+                });
+            });
             app.UseHsts();
         }
 
