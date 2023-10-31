@@ -25,32 +25,15 @@ public static class VmrRegistrations
         string? gitHubToken,
         string? azureDevOpsToken)
     {
-        RegisterCommonServices(services, gitLocation);
+        // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         services.TryAddSingleton(new RemoteConfiguration(gitHubToken, azureDevOpsToken));
-        return services;
-    }
-
-    public static IServiceCollection AddVmrManagers(
-        this IServiceCollection services,
-        string gitLocation,
-        string vmrPath,
-        string tmpPath,
-        Func<IServiceProvider, RemoteConfiguration> configure)
-    {
-        RegisterCommonServices(services, gitLocation);
-        services.TryAddSingleton(configure);
-        services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
-        return services;
-    }
-
-    private static void RegisterCommonServices(IServiceCollection services, string gitLocation)
-    {
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
-        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>(); 
+
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
+        services.TryAddTransient<IGitRepoFactory, VmrGitClientFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
-        services.TryAddTransient<IGitRepo, LocalLibGit2Client>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
@@ -97,5 +80,7 @@ public static class VmrRegistrations
             var configuration = sp.GetRequiredService<IVmrInfo>();
             return SourceManifest.FromJson(configuration.GetSourceManifestPath());
         });
+
+        return services;
     }
 }

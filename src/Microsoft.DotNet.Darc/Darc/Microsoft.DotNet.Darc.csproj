@@ -12,7 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
   

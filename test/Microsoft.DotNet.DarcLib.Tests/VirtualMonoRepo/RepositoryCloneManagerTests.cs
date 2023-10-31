@@ -141,7 +141,7 @@ public class RepositoryCloneManagerTests
         
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "default", default), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
 
         // A third clone with a new remote
@@ -152,7 +152,7 @@ public class RepositoryCloneManagerTests
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, newRemote, default), Times.Once);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Once);
 
         // Same again, should be cached
         ResetCalls();
@@ -162,7 +162,7 @@ public class RepositoryCloneManagerTests
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "3"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
 
         // Call with URI directly
         ResetCalls();
@@ -172,7 +172,7 @@ public class RepositoryCloneManagerTests
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, RepoUri, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "4"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
 
         // Call with the second URI directly
         ResetCalls();
@@ -182,6 +182,6 @@ public class RepositoryCloneManagerTests
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "5"), Times.Once);
-        _localGitRepo.Verify(x => x.FetchAsync(clonePath, mapping.DefaultRemote, default), Times.Never);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
     }
 }

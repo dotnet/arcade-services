@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -183,6 +184,12 @@ public class LocalGitClient : ILocalGitClient
         return remoteName;
     }
 
+    public async Task UpdateRemoteAsync(string repoPath, string remoteName, CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "update", remoteName }, cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
+    }
+
     public async Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoPath, string commit)
     {
         var submodules = new List<GitSubmoduleInfo>();
@@ -299,31 +306,6 @@ public class LocalGitClient : ILocalGitClient
         }
 
         return result.StandardOutput;
-    }
-
-    public async Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default)
-    {
-        var args = new List<string>();
-        var envVars = new Dictionary<string, string>
-        {
-            { "GIT_TERMINAL_PROMPT", "0" }
-        };
-
-        string? token = _remoteConfiguration.GetTokenForUri(remoteUri);
-
-        if (!string.IsNullOrEmpty(token))
-        {
-            const string ENV_VAR_NAME = "GIT_REMOTE_PAT";
-            args.Add($"--config-env=http.extraheader={ENV_VAR_NAME}");
-            envVars[ENV_VAR_NAME] = GitNativeRepoCloner.GetAuthorizationHeaderArgument(token);
-        }
-
-        args.Add("fetch");
-        args.Add(remoteUri);
-
-        var result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken);
-        result.ThrowIfFailed($"Failed to fetch from {remoteUri} in {repoPath}");
-        return result.StandardOutput.Trim();
     }
 
     public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line)

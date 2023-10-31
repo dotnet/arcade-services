@@ -63,11 +63,11 @@ public interface ILocalGitClient
     Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false);
 
     /// <summary>
-    ///     Fetches from a given remote URI.
+    ///     Fetches from a given remote.
     /// </summary>
     /// <param name="repoPath">Path of the local repository</param>
-    /// <param name="remoteUri">Remote git repository</param>
-    Task<string> FetchAsync(string repoPath, string remoteUri, CancellationToken cancellationToken = default);
+    /// <param name="remoteName">Name of an already existing remote</param>
+    Task UpdateRemoteAsync(string repoPath, string remoteName, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Retrieves a file's content from git index (works with bare repositories).
