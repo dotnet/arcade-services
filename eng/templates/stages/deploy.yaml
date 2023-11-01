@@ -82,6 +82,7 @@ stages:
 
   - job: deployMaestro
     displayName: Deploy Maestro
+    timeoutInMinutes: 75
     dependsOn:
     - updateDatabase
     steps:
@@ -120,7 +121,7 @@ stages:
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 120
+    timeoutInMinutes: 100
     steps:
     - download: current
       artifact: PackageArtifacts
