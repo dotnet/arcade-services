@@ -444,13 +444,10 @@ public partial class Startup : StartupBase
             // http uri, for the redirect_uri parameter.
             // The code below fixes that by adding middleware that will make it so the asp library thinks the call was made over HTTPS
             // so it will set the redirect_uri to https too
-            app.UseWhen(context => context.Request.Path == AccountController.AccountSignInRoute, app =>
+            app.Use((context, next) =>
             {
-                app.Use((context, next) =>
-                {
-                    context.Request.Scheme = "https";
-                    return next(context);
-                });
+                context.Request.Scheme = "https";
+                return next(context);
             });
             app.UseHsts();
         }
