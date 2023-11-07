@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 

@@ -6,6 +6,7 @@
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <ServerGarbageCollection>True</ServerGarbageCollection>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
     <TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
   </PropertyGroup>
 
