@@ -369,6 +369,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var update in updatedDependencies)
         {
+            if (update.TargetRevision == update.TargetVersion)
+            {
+                continue;
+            }
+
             var fromShort = Commit.GetShortSha(update.TargetVersion);
             var toShort = Commit.GetShortSha(update.TargetRevision);
             summaryMessage
