@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>

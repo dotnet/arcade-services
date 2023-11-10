@@ -244,7 +244,7 @@ stages:
             artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net8.0\publish
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
 
