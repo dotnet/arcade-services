@@ -244,9 +244,11 @@ stages:
             artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net8.0\publish
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
+
+        - template: /eng/common/templates/steps/publish-logs.yml
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production'))}}:
   - template: /eng/common/templates/post-build/post-build.yml

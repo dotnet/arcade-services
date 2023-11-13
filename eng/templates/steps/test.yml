@@ -21,6 +21,7 @@ steps:
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
       -v normal
+      /bl:$(Build.SourcesDirectory)/artifacts/log/Debug/UnitTest.binlog
       --
       "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
       RunConfiguration.MapCpuCount=4
