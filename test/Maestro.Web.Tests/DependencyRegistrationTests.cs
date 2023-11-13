@@ -20,6 +20,7 @@ namespace Maestro.Web.Tests;
 public class DependencyRegistrationTests
 {
     [Test]
+    [Ignore("Needs https://github.com/dotnet/dnceng-shared/pull/42")]
     public void AreDependenciesRegistered()
     {
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Development);

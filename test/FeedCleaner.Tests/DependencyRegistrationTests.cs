@@ -14,6 +14,7 @@ namespace FeedCleanerService.Tests;
 public class DependencyRegistrationTests
 {
     [Test]
+    [Ignore("Needs https://github.com/dotnet/dnceng-shared/pull/42")]
     public void AreDependenciesRegistered()
     {
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
