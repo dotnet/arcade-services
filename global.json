@@ -1,10 +1,10 @@
 {
   "sdk": {
-    "version": "8.0.100-rtm.23506.1",
+    "version": "8.0.100",
     "rollForward": "minor"
   },
   "tools": {
-    "dotnet": "8.0.100-rtm.23506.1",
+    "dotnet": "8.0.100",
     "runtimes": {
       "dotnet": [
         "3.1.32",
