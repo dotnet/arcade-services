@@ -62,15 +62,22 @@ stages:
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
         azurePowerShellVersion: LatestVersion
-    - task: PowerShell@2
-      displayName: update-database.ps1
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
-        arguments: Maestro.Data.dll
-        workingDirectory: $(Pipeline.Workspace)/Maestro.Data
+
+    - powershell: |
+        . .\eng\common\tools.ps1
+        InitializeDotNetCli -install $true
+        .\.dotnet\dotnet tool restore
+        .\.dotnet\dotnet ef database update `
+          --assembly Maestro.Data.dll `
+          --startup-assembly Maestro.Data.dll `
+          --root-namespace Maestro.Data `
+          --project-dir . `
+          --verbose
+      displayName: Entity Framework update
+      workingDirectory: $(Pipeline.Workspace)/Maestro.Data
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
+
     - task: AzurePowerShell@3
       displayName: Remove firewall rule
       inputs:
