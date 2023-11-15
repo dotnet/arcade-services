@@ -64,8 +64,7 @@ stages:
         azurePowerShellVersion: LatestVersion
 
     - powershell: |
-        . $(Build.SourcesDirectory)\eng\common\tools.ps1
-        InitializeDotNetCli -install $true
+        . $(Build.SourcesDirectory)\eng\common\build.ps1 -restore
         $(Build.SourcesDirectory)\.dotnet\dotnet tool restore
         $(Build.SourcesDirectory)\.dotnet\dotnet ef database update `
           --assembly Maestro.Data.dll `
