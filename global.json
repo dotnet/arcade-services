@@ -8,6 +8,9 @@
     "runtimes": {
       "dotnet": [
         "6.0.25"
+      ],
+      "aspnetcore": [
+        "6.0.25"
       ]
     }
   },

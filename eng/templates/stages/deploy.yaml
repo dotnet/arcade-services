@@ -47,13 +47,6 @@ stages:
     steps:
     - download: current
       artifact: ReleaseUtilities
-    - download: current
-      artifact: Maestro.Data
-
-    - task: UseDotNet@2
-      displayName: Install .NET
-      inputs:
-        useGlobalJson: true
 
     - task: AzurePowerShell@3
       displayName: Add firewall rule
@@ -64,16 +57,14 @@ stages:
         azurePowerShellVersion: LatestVersion
 
     - powershell: |
-        . $(Build.SourcesDirectory)\eng\common\build.ps1 -restore
-        $(Build.SourcesDirectory)\.dotnet\dotnet tool restore
-        $(Build.SourcesDirectory)\.dotnet\dotnet ef database update `
-          --assembly Maestro.Data.dll `
-          --startup-assembly Maestro.Data.dll `
-          --root-namespace Maestro.Data `
-          --project-dir . `
+        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+        .\.dotnet\dotnet tool restore
+        .\.dotnet\dotnet ef database update                           `
+          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+          --no-build                                                  `
           --verbose
       displayName: Entity Framework update
-      workingDirectory: $(Pipeline.Workspace)/Maestro.Data
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
 
