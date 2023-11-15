@@ -216,22 +216,6 @@ stages:
           ## Generate SBOM manifest
           - template: /eng/templates/steps/generate-sbom.yml
 
-          ## Prepare database update artifact
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f net6.0
-            workingDirectory: src/Maestro/Maestro.Data
-            displayName: Create Data Package
-
-          - task: CopyFiles@2
-            displayName: Copy update-database.ps1
-            inputs:
-              sourceFolder: $(Build.SourcesDirectory)\src\Maestro
-              contents: update-database.ps1
-              targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
-
-          - publish: $(Build.ArtifactStagingDirectory)\Maestro.Data
-            artifact: Maestro.Data
-            displayName: Publish Maestro.Data Artifact
-
           ## Prepare release utilities artifact
           - task: CopyFiles@2
             displayName: Prepare Release Utilities
