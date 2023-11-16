@@ -67,12 +67,10 @@ stages:
     parameters:
       artifacts:
         publish:
+          logs: true
           ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
             artifacts: true
-            logs: true
             manifests: true
-          ${{ else }}:
-            logs: true
       enableTelemetry: true
       enableMicrobuild: false
       enablePublishTestResults: false
