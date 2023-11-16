@@ -149,18 +149,6 @@ stages:
           inputs:
             versionSpec: 12.x
 
-        - task: NuGetToolInstaller@0
-          displayName: Install NuGet
-          inputs:
-            versionSpec: 6.1.x
-
-        - task: NuGetCommand@2
-          displayName: Restore Packages
-          inputs:
-            command: restore
-            solution: "**/*.sln"
-            feedstoUse: config
-
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate Release Versions
 
