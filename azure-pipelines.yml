@@ -65,6 +65,11 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
+      enableTelemetry: true
+      publish:
+        artifacts: true
+        logs: true
+        manifests: true
       ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
         enablePublishBuildArtifacts: true
         enablePublishBuildAssets: true
@@ -74,8 +79,7 @@ stages:
       enableMicrobuild: false
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-      enableTelemetry: true
-      helixRepo: dotnet/arcade-services
+
       jobs:
       - job: Windows_NT
         timeoutInMinutes: 90
@@ -89,7 +93,6 @@ stages:
 
         variables:
         - _InternalBuildArgs: ''
-        - _ProductionArgs: ''
 
         # Only enable publishing in non-public, non PR scenarios.
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -173,7 +176,6 @@ stages:
             -configuration $(_BuildConfig)
             -prepareMachine
             $(_InternalBuildArgs)
-            $(_ProductionArgs)
             /p:Test=false
             /P:Sign=false
           name: Build
@@ -231,8 +233,6 @@ stages:
           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
-
-        - template: /eng/common/templates/steps/publish-logs.yml
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
   - template: /eng/common/templates/post-build/post-build.yml
