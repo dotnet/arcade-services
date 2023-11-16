@@ -66,16 +66,8 @@ stages:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
       enableTelemetry: true
-      publish:
-        artifacts: true
-        logs: true
-        manifests: true
-      ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-        enablePublishBuildArtifacts: true
-        enablePublishBuildAssets: true
-      ${{ else }}:
-        enablePublishBuildArtifacts: false
-        enablePublishBuildAssets: false
+      enablePublishBuildArtifacts: true
+      enablePublishBuildAssets: true
       enableMicrobuild: false
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
