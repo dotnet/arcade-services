@@ -149,7 +149,19 @@ public abstract class VmrTestsBase
     private async Task CallDarcInitialize(string repository, string commit, LocalPath sourceMappingsPath)
     {
         var vmrInitializer = _serviceProvider.Value.GetRequiredService<IVmrInitializer>();
-        await vmrInitializer.InitializeRepository(repository, commit, null, true, sourceMappingsPath, Array.Empty<AdditionalRemote>(), null, null, false, true, _cancellationToken.Token);
+        await vmrInitializer.InitializeRepository(
+            mappingName: repository,
+            targetRevision: commit,
+            targetVersion: null,
+            initializeDependencies: true,
+            sourceMappingsPath: sourceMappingsPath,
+            additionalRemotes: Array.Empty<AdditionalRemote>(),
+            readmeTemplatePath: null,
+            tpnTemplatePath: null,
+            generateCodeowners: false,
+            discardPatches: true,
+            publicUrisOnly: false,
+            cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false)
@@ -160,7 +172,18 @@ public abstract class VmrTestsBase
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
     {
         var vmrUpdater = _serviceProvider.Value.GetRequiredService<IVmrUpdater>();
-        await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
+        await vmrUpdater.UpdateRepository(
+            mappingName: repository,
+            targetRevision: commit,
+            targetVersion: null,
+            updateDependencies: true,
+            additionalRemotes: additionalRemotes,
+            readmeTemplatePath: null,
+            tpnTemplatePath: null,
+            generateCodeowners: generateCodeowners,
+            discardPatches: true,
+            publicUrisOnly: false,
+            cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

@@ -29,4 +29,7 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBase
 
     [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
     public bool DiscardPatches { get; set; } = false;
+
+    [Option("public-uris-only", Required = false, HelpText = "Turns internal AzDO repository URIs into public GitHub ones.")]
+    public bool PublicUrisOnly { get; set; } = false;
 }

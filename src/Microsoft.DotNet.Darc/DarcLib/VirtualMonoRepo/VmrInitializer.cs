@@ -86,6 +86,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings(sourceMappingsPath);
@@ -116,7 +117,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-            ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)
+            ? await GetAllDependenciesAsync(rootUpdate, additionalRemotes, publicUrisOnly, cancellationToken)
             : new[] { rootUpdate };
 
             foreach (var update in updates)
@@ -142,6 +143,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
                     tpnTemplatePath,
                     generateCodeowners,
                     discardPatches,
+                    publicUrisOnly,
                     cancellationToken);
             }
         }
@@ -171,6 +173,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Initializing {name} at {revision}..", update.Mapping.Name, update.TargetRevision);
@@ -207,6 +210,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             tpnTemplatePath,
             generateCodeowners,
             discardPatches,
+            publicUrisOnly,
             cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
@@ -215,6 +219,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping mapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         // We only need to apply VMR patches that belong to the mapping, nothing to restore from before

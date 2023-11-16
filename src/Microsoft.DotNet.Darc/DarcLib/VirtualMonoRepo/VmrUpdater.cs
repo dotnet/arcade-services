@@ -97,6 +97,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.InitializeSourceMappings();
@@ -114,6 +115,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 .Where(r => r.Mapping == mappingName)
                 .Select(r => r.RemoteUri)
                 .Prepend(mapping.DefaultRemote)
+                .Select(uri => publicUrisOnly ? GitRepoUrlParser.ConvertInternalUriToPublic(uri) : uri)
+                .Distinct()
                 .ToArray();
 
             var clonePath = await _cloneManager.PrepareClone(
@@ -137,6 +140,23 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             targetVersion,
             Parent: null);
 
+        if (publicUrisOnly)
+        {
+            var newUri = GitRepoUrlParser.ConvertInternalUriToPublic(dependencyUpdate.RemoteUri);
+
+            if (newUri != dependencyUpdate.RemoteUri)
+            {
+                _logger.LogWarning("Found an internal URI {internalUri}, translating to public: {publicUri}",
+                    dependencyUpdate.RemoteUri,
+                    newUri);
+
+                dependencyUpdate = dependencyUpdate with
+                {
+                    RemoteUri = newUri
+                };
+            }
+        }
+
         if (updateDependencies)
         {
             await UpdateRepositoryRecursively(
@@ -146,6 +166,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 tpnTemplatePath,
                 generateCodeowners,
                 discardPatches,
+                publicUrisOnly,
                 cancellationToken);
         }
         else
@@ -158,6 +179,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 tpnTemplatePath,
                 generateCodeowners,
                 discardPatches,
+                publicUrisOnly,
                 cancellationToken);
         }
     }
@@ -170,6 +192,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
@@ -206,7 +229,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .Select(r => r.RemoteUri)
             // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
             .Prepend(_sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri)
+            // Add the target remote
             .Prepend(update.RemoteUri)
+            // Transform internal URIs to public
+            .Select(uri => publicUrisOnly ? GitRepoUrlParser.ConvertInternalUriToPublic(uri) : uri)
+            .Distinct()
             .ToArray();
 
         NativePath clonePath = await _cloneManager.PrepareClone(
@@ -249,6 +276,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             tpnTemplatePath,
             generateCodeowners,
             discardPatches,
+            publicUrisOnly,
             cancellationToken);
     }
 
@@ -263,6 +291,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
@@ -272,7 +301,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             Constants.Arrow,
             rootUpdate.TargetRevision);
 
-        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, cancellationToken)).ToList();
+        var updates = (await GetAllDependenciesAsync(rootUpdate, additionalRemotes, publicUrisOnly, cancellationToken)).ToList();
 
         var extraneousMappings = _dependencyTracker.Mappings
             .Where(mapping => !updates.Any(update => update.Mapping == mapping))
@@ -340,6 +369,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     tpnTemplatePath,
                     generateCodeowners,
                     discardPatches,
+                    publicUrisOnly,
                     cancellationToken);
             }
             catch(Exception)
@@ -418,16 +448,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             summaryMessage);
     }
 
-    /// <summary>
-    /// Detects VMR patches affected by a given set of patches and restores files patched by these
-    /// VMR patches into their original state.
-    /// Detects whether patched files are coming from a mapped repository or a submodule too.
-    /// </summary>
-    /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
-    /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
     protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping updatedMapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatchesToRestore(
@@ -492,13 +516,18 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var groups = affectedFiles.GroupBy(x => x.Origin, x => (x.RepoPath, x.VmrPath));
         foreach (var group in groups)
         {
-            var source = group.Key;
+            ISourceComponent source = group.Key;
+
+            string remoteUri = publicUrisOnly
+                ? GitRepoUrlParser.ConvertInternalUriToPublic(source.RemoteUri)
+                : source.RemoteUri;
+
             _logger.LogDebug("Restoring {count} patched files from {uri} / {sha}...",
                 group.Count(),
-                source.RemoteUri,
+                remoteUri,
                 source.CommitSha);
 
-            var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            var clonePath = await _cloneManager.PrepareClone(remoteUri, source.CommitSha, cancellationToken);
 
             foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
             {

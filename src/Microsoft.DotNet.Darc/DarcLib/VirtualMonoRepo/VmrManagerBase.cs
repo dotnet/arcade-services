@@ -72,6 +72,7 @@ public abstract class VmrManagerBase
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -87,7 +88,7 @@ public abstract class VmrManagerBase
         // Get a list of patches that need to be reverted for this update so that repo changes can be applied
         // This includes all patches that are also modified by the current change
         // (happens when we update repo from which the VMR patches come)
-        var vmrPatchesToRestore = await RestoreVmrPatchedFilesAsync(update.Mapping, patches, cancellationToken);
+        var vmrPatchesToRestore = await RestoreVmrPatchedFilesAsync(update.Mapping, patches, publicUrisOnly, cancellationToken);
 
         foreach (var patch in patches)
         {
@@ -199,6 +200,7 @@ public abstract class VmrManagerBase
     protected async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependenciesAsync(
         VmrDependencyUpdate root,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        bool publicUrisOnly,
         CancellationToken cancellationToken)
     {
         var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
@@ -219,6 +221,8 @@ public abstract class VmrManagerBase
                 .Where(r => r.Mapping == repo.Mapping.Name)
                 .Select(r => r.RemoteUri)
                 .Prepend(repo.RemoteUri)
+                .Select(uri => publicUrisOnly ? GitRepoUrlParser.ConvertInternalUriToPublic(uri) : uri)
+                .Distinct()
                 .ToArray();
 
             IEnumerable<DependencyDetail>? repoDependencies = null;
@@ -258,7 +262,7 @@ public abstract class VmrManagerBase
 
                 var update = new VmrDependencyUpdate(
                     mapping,
-                    dependency.RepoUri,
+                    publicUrisOnly ? GitRepoUrlParser.ConvertInternalUriToPublic(dependency.RepoUri) : dependency.RepoUri,
                     dependency.Commit,
                     dependency.Version,
                     repo.Mapping);
@@ -313,9 +317,18 @@ public abstract class VmrManagerBase
         }
     }
 
+    /// <summary>
+    /// Detects VMR patches affected by a given set of patches and restores files patched by these
+    /// VMR patches into their original state.
+    /// Detects whether patched files are coming from a mapped repository or a submodule too.
+    /// </summary>
+    /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
+    /// <param name="publicUrisOnly">Use public GitHub URIs only</param>
+    /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
     protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping mapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken);
 
     /// <summary>

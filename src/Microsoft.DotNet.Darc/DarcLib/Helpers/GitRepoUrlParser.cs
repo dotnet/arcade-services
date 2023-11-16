@@ -48,4 +48,30 @@ public static class GitRepoUrlParser
 
         throw new Exception("Unsupported format of repository url " + uri);
     }
+
+    public static string ConvertInternalUriToPublic(string uri)
+    {
+        if (!uri.StartsWith(Constants.AzureDevOpsUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uri;
+        }
+
+        string[] repoParts = uri.Substring(uri.LastIndexOf('/') + 1).Split('-', 2);
+        if (repoParts.Length != 2)
+        {
+            return uri;
+        }
+
+        string org = repoParts[0];
+        string repo = repoParts[1];
+
+        // The internal Nuget.Client repo has suffix which needs to be accounted for.
+        const string trustedSuffix = "-Trusted";
+        if (uri.EndsWith(trustedSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            repo = repo.Substring(0, repo.Length - trustedSuffix.Length);
+        }
+
+        return $"{Constants.GitHubUrlPrefix}{org}/{repo}";
+    }
 }

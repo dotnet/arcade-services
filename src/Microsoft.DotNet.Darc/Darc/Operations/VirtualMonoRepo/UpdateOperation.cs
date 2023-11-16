@@ -37,5 +37,6 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
             _options.TpnTemplate,
             _options.GenerateCodeowners,
             _options.DiscardPatches,
+            _options.PublicUrisOnly,
             cancellationToken);
 }

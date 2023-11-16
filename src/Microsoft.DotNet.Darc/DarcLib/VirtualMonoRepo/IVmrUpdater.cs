@@ -23,6 +23,7 @@ public interface IVmrUpdater
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
+    /// <param name="publicUrisOnly">Whether to turn internal AzDO repository URIs into public GitHub ones</param>
     Task UpdateRepository(
         string mappingName,
         string? targetRevision,
@@ -33,5 +34,6 @@ public interface IVmrUpdater
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
+        bool publicUrisOnly,
         CancellationToken cancellationToken);
 }

@@ -39,5 +39,6 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
             _options.TpnTemplate,
             _options.GenerateCodeowners,
             _options.DiscardPatches,
+            _options.PublicUrisOnly,
             cancellationToken);
 }
