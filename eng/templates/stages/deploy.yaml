@@ -121,8 +121,10 @@ stages:
     timeoutInMinutes: 100
     steps:
     - download: current
+      displayName: Download Darc
       artifact: PackageArtifacts
     - download: current
+      displayName: Download ScenarioTets
       artifact: Maestro.ScenarioTests
 
     - task: NuGetToolInstaller@1
@@ -130,10 +132,8 @@ stages:
       inputs:
         versionSpec: 5.3.x
 
-    - task: UseDotNet@2
+    - powershell: .\eng\common\build.ps1 -restore
       displayName: Install .NET
-      inputs:
-        useGlobalJson: true
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests
