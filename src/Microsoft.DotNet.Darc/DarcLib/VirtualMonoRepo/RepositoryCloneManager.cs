@@ -148,7 +148,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
                 if (refsToVerify.Count == 0)
                 {
-                    _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", refsToVerify), path);
+                    _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
                     break;
                 }
             }
@@ -156,7 +156,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
         if (refsToVerify.Count > 0)
         {
-            throw new Exception($"Failed to find all requested refs ({string.Join(", ", refsToVerify)}) in {string.Join(", ", remoteUris)}");
+            throw new Exception($"Failed to find all requested refs ({string.Join(", ", requestedRefs)}) in {string.Join(", ", remoteUris)}");
         }
 
         cancellationToken.ThrowIfCancellationRequested();

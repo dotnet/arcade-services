@@ -94,7 +94,7 @@ public abstract class VmrTestsBase
         var expectedFiles = new List<LocalPath>
         {
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
-            vmrPath / VmrInfo.RelativeSourceManifestPath,
+            vmrPath / VmrInfo.DefaultRelativeSourceManifestPath,
             vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath,
         };
 

@@ -739,8 +739,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 _logger.LogDebug("Looking for a new version of {file} in {repo}", relativePath, remote);
                 sourceMappingContent = await gitClient.GetFileContentsAsync(relativePath, remote, targetRevision);
-                _logger.LogDebug("Found new version of {file} in {repo}", relativePath, remote);
-                break;
+
+                if (sourceMappingContent != null)
+                {
+                    _logger.LogDebug("Found new version of {file} in {repo}", relativePath, remote);
+                    break;
+                }
             }
             catch
             {
