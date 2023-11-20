@@ -218,8 +218,7 @@ public abstract class VmrManagerBase
             var remotes = additionalRemotes
                 .Where(r => r.Mapping == repo.Mapping.Name)
                 .Select(r => r.RemoteUri)
-                .Prepend(repo.RemoteUri)
-                .ToArray();
+                .Prepend(repo.RemoteUri);
 
             IEnumerable<DependencyDetail>? repoDependencies = null;
             foreach (var remoteUri in remotes)

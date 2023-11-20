@@ -55,6 +55,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitClient _localGitClient;
+    private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
@@ -67,6 +68,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
         IDependencyFileManager dependencyFileManager,
+        IGitRepoFactory gitRepoFactory,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
@@ -84,6 +86,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _localGitClient = localGitClient;
+        _gitRepoFactory = gitRepoFactory;
         _workBranchFactory = workBranchFactory;
     }
 
@@ -105,29 +108,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
             ?? throw new Exception($"No mapping named '{mappingName}' found");
 
+        // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
+            && targetRevision != null
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
         {
-            var fileRelativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-
-            var remotes = additionalRemotes
-                .Where(r => r.Mapping == mappingName)
-                .Select(r => r.RemoteUri)
-                .Prepend(mapping.DefaultRemote)
-                .ToArray();
-
-            var clonePath = await _cloneManager.PrepareClone(
-                mapping,
-                remotes,
-                targetRevision ?? mapping.DefaultRef, 
-                cancellationToken);
-
-            _logger.LogDebug($"Loading a new version of source mappings from {clonePath / fileRelativePath}");
-            await _dependencyTracker.InitializeSourceMappings(clonePath / fileRelativePath);
-            
-            mapping = _dependencyTracker.Mappings
-                .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
-                ?? throw new Exception($"No mapping named '{mappingName}' found");
+            var relativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
+            mapping = await LoadNewSourceMappings(mapping, relativePath, targetRevision, additionalRemotes);
         }
 
         var dependencyUpdate = new VmrDependencyUpdate(
@@ -699,6 +686,64 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
+    }
+
+    private async Task<SourceMapping> LoadNewSourceMappings(
+        SourceMapping mapping,
+        string relativePath,
+        string? targetRevision,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes)
+    {
+        var remotes = additionalRemotes
+            .Where(r => r.Mapping == mapping.Name)
+            .Select(r => r.RemoteUri)
+            .Prepend(mapping.DefaultRemote);
+
+        string? sourceMappingContent = null;
+
+        foreach (var remote in remotes)
+        {
+            IGitRepo gitClient = _gitRepoFactory.CreateClient(remote);
+
+            try
+            {
+                _logger.LogDebug("Looking for a new version of {file} in {repo}", relativePath, remote);
+                sourceMappingContent = await gitClient.GetFileContentsAsync(relativePath, remote, targetRevision);
+                _logger.LogDebug("Found new version of {file} in {repo}", relativePath, remote);
+                break;
+            }
+            catch
+            {
+                _logger.LogDebug("Failed to find {revision} in {repo}", targetRevision, remote);
+            }
+        }
+
+        if (sourceMappingContent is null)
+        {
+            throw new Exception($"Failed to find version {targetRevision} of {relativePath} in any of the {mapping.Name} remotes");
+        }
+
+        _logger.LogDebug($"Loading a new version of source mappings...");
+
+        var tempFile = _fileSystem.GetTempFileName();
+
+        try
+        {
+            _fileSystem.WriteToFile(tempFile, sourceMappingContent);
+            await _dependencyTracker.InitializeSourceMappings(tempFile);
+            _logger.LogInformation("Initialized a new version of {file}", relativePath);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to initialize a new version of {file}", relativePath);
+        }
+        finally
+        {
+            _fileSystem.DeleteFile(tempFile);
+        }
+
+        return _dependencyTracker.Mappings.FirstOrDefault(m => m.Name.Equals(mapping.Name, StringComparison.InvariantCultureIgnoreCase))
+            ?? throw new Exception($"No mapping named '{mapping.Name}' found");
     }
 
     private class RepositoryNotInitializedException : Exception
