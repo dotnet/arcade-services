@@ -188,6 +188,8 @@ public class LocalGitClient : ILocalGitClient
     {
         var result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "update", remoteName }, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
+        result = await _processManager.ExecuteGit(repoPath, new[] { "fetch", "--tags", remoteName }, cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
     }
 
     public async Task<List<GitSubmoduleInfo>> GetGitSubmodulesAsync(string repoPath, string commit)
