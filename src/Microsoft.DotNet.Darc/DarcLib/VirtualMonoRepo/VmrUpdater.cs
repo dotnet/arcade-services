@@ -188,21 +188,51 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return Array.Empty<VmrIngestionPatch>();
         }
 
+        // Sort remotes so that we go Local -> GitHub -> AzDO
+        // This makes the synchronization work even for cases when we can't access internal repos
+        // For example, when we merge internal branches to public and the commits are already in public,
+        // even though Version.Details.xml or source-manifest.json point to internal AzDO ones, we can still synchronize.
         var remotes = additionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
             .Select(r => r.RemoteUri)
             // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
-            .Prepend(_sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri)
-            .Prepend(update.RemoteUri)
+            .Append(_sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri)
+            .Append(update.RemoteUri)
+            // Add the default remote
+            .Prepend(update.Mapping.DefaultRemote)
+            // Prefer local git repos, then GitHub, then AzDO
+            .OrderBy(GitRepoTypeParser.ParseFromUri, Comparer<GitRepoType>.Create((first, second) =>
+            {
+                if (first == second)
+                {
+                    return 0;
+                }
+
+                if (first == GitRepoType.Local)
+                {
+                    return -1;
+                }
+
+                if (second == GitRepoType.Local)
+                {
+                    return 1;
+                }
+
+                if (first == GitRepoType.GitHub)
+                {
+                    return -1;
+                }
+
+                return 1;
+            }))
             .ToArray();
 
         NativePath clonePath = await _cloneManager.PrepareClone(
             update.Mapping,
             remotes,
-            update.TargetRevision,
+            requestedRefs: new[] { currentVersion.Sha, update.TargetRevision },
+            checkoutRef: update.TargetRevision,
             cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
 
         update = update with
         {
@@ -272,7 +302,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 string.Join(separator, extraneousMappings));
         }
 
-        // When we synchronize in bulk, we do it in a separate branch that we then merge into the main one
+        // Synchronization creates commits (one per mapping and some extra) on a separate branch that is then merged into original one
 
         var workBranchName = "sync" +
             $"/{rootUpdate.Mapping.Name}" +

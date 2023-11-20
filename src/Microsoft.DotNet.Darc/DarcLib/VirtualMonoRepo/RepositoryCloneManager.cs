@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -21,6 +22,21 @@ public interface IRepositoryCloneManager
     Task<NativePath> PrepareClone(
         SourceMapping mapping,
         string[] remotes,
+        string checkoutRef,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
+    /// </summary>
+    /// <param name="mapping">Mapping that clone is associated with</param>
+    /// <param name="remoteUris">Remotes to fetch one by one</param>
+    /// <param name="requestedRefs">List of commits that </param>
+    /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <returns>Path to the clone</returns>
+    Task<NativePath> PrepareClone(
+        SourceMapping mapping,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
         CancellationToken cancellationToken);
 }
@@ -92,6 +108,60 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
         await _localGitRepo.CheckoutAsync(path, checkoutRef);
+        return path;
+    }
+
+    public async Task<NativePath> PrepareClone(
+        SourceMapping mapping,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        CancellationToken cancellationToken)
+    {
+        if (remoteUris.Count == 0)
+        {
+            throw new ArgumentException("No remote URIs provided to clone");
+        }
+
+        var refsToVerify = new HashSet<string>(requestedRefs);
+
+        NativePath path = null!;
+        foreach (string remoteUri in remoteUris)
+        {
+            // Path should be returned the same for all invocations
+            // We checkout a default ref
+            path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
+
+            // Verify that all requested commits are available
+            foreach (var commit in refsToVerify.ToArray())
+            {
+                try
+                {
+                    await _localGitRepo.GetShaForRefAsync(path, commit);
+                    refsToVerify.Remove(commit);
+                }
+                catch
+                {
+                    // Ref not found yet, let's try another remote
+                    continue;
+                }
+
+                if (refsToVerify.Count == 0)
+                {
+                    _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", refsToVerify), path);
+                    break;
+                }
+            }
+        }
+
+        if (refsToVerify.Count > 0)
+        {
+            throw new Exception($"Failed to find all requested refs ({string.Join(", ", refsToVerify)}) in {string.Join(", ", remoteUris)}");
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await _localGitRepo.CheckoutAsync(path, checkoutRef);
+
         return path;
     }
 
