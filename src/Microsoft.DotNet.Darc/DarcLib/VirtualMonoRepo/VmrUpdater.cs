@@ -201,30 +201,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             // Add the default remote
             .Prepend(update.Mapping.DefaultRemote)
             // Prefer local git repos, then GitHub, then AzDO
-            .OrderBy(GitRepoTypeParser.ParseFromUri, Comparer<GitRepoType>.Create((first, second) =>
-            {
-                if (first == second)
-                {
-                    return 0;
-                }
-
-                if (first == GitRepoType.Local)
-                {
-                    return -1;
-                }
-
-                if (second == GitRepoType.Local)
-                {
-                    return 1;
-                }
-
-                if (first == GitRepoType.GitHub)
-                {
-                    return -1;
-                }
-
-                return 1;
-            }))
+            .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
             .ToArray();
 
         NativePath clonePath = await _cloneManager.PrepareClone(
@@ -258,6 +235,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return await UpdateRepoToRevisionAsync(
             update,
             clonePath,
+            additionalRemotes,
             currentVersion.Sha,
             author: null,
             commitMessage,
@@ -445,6 +423,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping updatedMapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatchesToRestore(
@@ -515,7 +494,26 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 source.RemoteUri,
                 source.CommitSha);
 
-            var clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            // If we are restoring from a mapped repo, we need to respect additional remotes and also use public/local repos first
+            NativePath clonePath;
+            if (source is IVersionedSourceComponent repo)
+            {
+                var sourceMapping = _dependencyTracker.Mappings.First(m => m.Name == repo.Path);
+                var remotes = additionalRemotes
+                    .Where(r => r.Mapping == sourceMapping.Name)
+                    .Select(r => r.RemoteUri)
+                    .Prepend(sourceMapping.DefaultRef)
+                    .Append(source.RemoteUri)
+                    .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
+                    .Distinct()
+                    .ToList();
+
+                clonePath = await _cloneManager.PrepareClone(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
+            }
+            else
+            {
+                clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+            }
 
             foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
             {

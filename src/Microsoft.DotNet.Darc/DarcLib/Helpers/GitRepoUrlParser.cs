@@ -8,9 +8,55 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class GitRepoUrlParser
 {
+    public static GitRepoType ParseTypeFromUri(string pathOrUri)
+    {
+        if (!Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? parsedUri))
+        {
+            return GitRepoType.None;
+        }
+
+        return parsedUri switch
+        {
+            { IsFile: true } => GitRepoType.Local,
+            { Host: "github.com" } => GitRepoType.GitHub,
+            { Host: var host } when host is "dev.azure.com" => GitRepoType.AzureDevOps,
+            { Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
+            _ => GitRepoType.None,
+        };
+    }
+
+    /// <summary>
+    /// Sorts so that we go Local -> GitHub -> AzDO.
+    /// (in other words local, public, internal)
+    /// </summary>
+    public static int OrderByLocalPublicOther(GitRepoType first, GitRepoType second)
+    {
+        if (first == second)
+        {
+            return 0;
+        }
+
+        if (first == GitRepoType.Local)
+        {
+            return -1;
+        }
+
+        if (second == GitRepoType.Local)
+        {
+            return 1;
+        }
+
+        if (first == GitRepoType.GitHub)
+        {
+            return -1;
+        }
+
+        return 1;
+    }
+
     public static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
     {
-        var repoType = GitRepoTypeParser.ParseFromUri(uri);
+        var repoType = ParseTypeFromUri(uri);
 
         if (repoType == GitRepoType.AzureDevOps)
         {

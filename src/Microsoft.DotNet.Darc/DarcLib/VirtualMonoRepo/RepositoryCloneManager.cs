@@ -21,7 +21,7 @@ public interface IRepositoryCloneManager
 
     Task<NativePath> PrepareClone(
         SourceMapping mapping,
-        string[] remotes,
+        IReadOnlyCollection<string> remotes,
         string checkoutRef,
         CancellationToken cancellationToken);
 
@@ -77,11 +77,11 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
     public async Task<NativePath> PrepareClone(
         SourceMapping mapping,
-        string[] remoteUris,
+        IReadOnlyCollection<string> remoteUris,
         string checkoutRef,
         CancellationToken cancellationToken)
     {
-        if (remoteUris.Length == 0)
+        if (remoteUris.Count == 0)
         {
             throw new ArgumentException("No remote URIs provided to clone");
         }
