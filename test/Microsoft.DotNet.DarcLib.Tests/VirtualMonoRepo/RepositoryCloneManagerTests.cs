@@ -295,7 +295,7 @@ public class RepositoryCloneManagerTests
                 .Setup(x => x.GetShaForRefAsync(clonePath, It.IsAny<string>()))
                 .Callback((string _, string sha) =>
                 {
-                    if (!configuration.Any(p => p.Value.CommitContained.Contains(sha) && p.Value.IsCloned))
+                    if (!configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned))
                     {
                         throw new Exception($"Could not find {sha}");
                     }
@@ -308,18 +308,14 @@ public class RepositoryCloneManagerTests
     {
         public string RemoteUri { get; set; }
 
-        public IReadOnlyCollection<string> CommitContained { get; set; }
-
-        //public TaskCompletionSource<string> CloneTask { get; } = new();
-
-        //public TaskCompletionSource<string> UpdateTask { get; } = new();
+        public IReadOnlyCollection<string> CommitsContained { get; set; }
 
         public bool IsCloned { get; set; }
 
-        public RemoteState(string remoteUri, params string[] commitContained)
+        public RemoteState(string remoteUri, params string[] commitsContained)
         {
             RemoteUri = remoteUri;
-            CommitContained = commitContained;
+            CommitsContained = commitsContained;
         }
     }
 }
