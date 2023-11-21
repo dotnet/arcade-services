@@ -48,7 +48,7 @@ If you want to run the C# scenario tests (make sure that you followed the gettin
    1. AZDO_TOKEN Get a Azure DevOps PAT from https://dnceng.visualstudio.com/_usersSettings/tokens (or appropriately matching project name if not dnceng)
    1. MAESTRO_TOKEN : Get a maestro bearer token (you can create one after running maestro app)
    1. DARC_PACKAGE_SOURCE : Get the path to the darc nuget package (which would be in `arcade-services\artifacts\packages\Debug\NonShipping\`, see below for getting this built)
-   1. MAESTRO_BASEURI : Run ngrok and get the https url
+   1. MAESTRO_BASEURIS : Run ngrok and get the https url
 
 Generally this is easiest if you want to debug both sides to simply have two instances of Visual Studio 2019 running. See below if you do not have the file paths mentioned for DARC_PACKAGE_SOURCE
 
@@ -59,7 +59,7 @@ Since Visual Studio's Debug Environment variable settings do not apply to debugg
 1. set GITHUB_TOKEN=...
 1. set MAESTRO_TOKEN=...
 1. set DARC_PACKAGE_SOURCE=...
-1. set MAESTRO_BASEURI=https://blahblahblah.ngrok.io
+1. set MAESTRO_BASEURIS=https://blahblahblah.ngrok.io
 1. "C:\Program Files (x86)\Microsoft Visual Studio\2019\Preview\Common7\IDE\devenv.com" (adjusted for your VS version / drive)
 
 When debugging the tests, you can check this via the Immediate window, e.g. by running `System.Environment.GetEnvironmentVariable("GITHUB_TOKEN")`

@@ -14,15 +14,9 @@ namespace Microsoft.DotNet.DarcLib;
 /// Represents various actions around files in git that can be performed on a local repository or even remotely.
 /// Most of these are connected to the Maestro dependency flow system.
 /// </summary>
-public interface IGitFileManager
+public interface IDependencyFileManager
 {
     Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string branch);
-
-    Task AddDependencyToGlobalJson(string repo, string branch, string parentField, string dependencyName, string version);
-
-    Task AddDependencyToVersionDetailsAsync(string repo, string branch, DependencyDetail dependency);
-
-    Task AddDependencyToVersionsPropsAsync(string repo, string branch, DependencyDetail dependency);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 

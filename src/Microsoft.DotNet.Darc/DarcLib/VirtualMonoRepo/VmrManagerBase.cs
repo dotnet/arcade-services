@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public abstract class VmrManagerBase
 {
-    protected const string HEAD = "HEAD";
     protected const string InterruptedSyncExceptionMessage = 
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
@@ -30,8 +28,8 @@ public abstract class VmrManagerBase
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
-    private readonly ILocalGitRepo _localGitClient;
-    private readonly IGitFileManagerFactory _gitFileManagerFactory;
+    private readonly ILocalGitClient _localGitClient;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
@@ -44,8 +42,8 @@ public abstract class VmrManagerBase
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
-        ILocalGitRepo localGitClient,
-        IGitFileManagerFactory gitFileManagerFactory,
+        ILocalGitClient localGitClient,
+        IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
@@ -59,7 +57,7 @@ public abstract class VmrManagerBase
         _readmeComponentListGenerator = readmeComponentListGenerator;
         _codeownersGenerator = codeownersGenerator;
         _localGitClient = localGitClient;
-        _gitFileManagerFactory = gitFileManagerFactory;
+        _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
     }
 
@@ -67,7 +65,7 @@ public abstract class VmrManagerBase
         VmrDependencyUpdate update,
         NativePath clonePath,
         string fromRevision,
-        Identity author,
+        (string Name, string Email)? author,
         string commitMessage,
         bool reapplyVmrPatches,
         string? readmeTemplatePath,
@@ -184,7 +182,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected async Task CommitAsync(string commitMessage, LibGit2Sharp.Identity author)
+    protected async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
         _logger.LogInformation("Committing..");
 
@@ -297,22 +295,20 @@ public abstract class VmrManagerBase
             return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
         }
 
-        var gitFileManager = _gitFileManagerFactory.Create(remoteRepoUri);
-
-        return await gitFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        return await _dependencyFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
     }
 
     protected async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)
     {
-        var isTpnUpdated = _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath)
+        var isTpnUpdated = (await _localGitClient
+            .GetStagedFiles(_vmrInfo.VmrPath))
             .Where(ThirdPartyNoticesGenerator.IsTpnPath)
             .Any();
 
         if (isTpnUpdated)
         {
             await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName });
+            await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName }, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
@@ -344,8 +340,8 @@ public abstract class VmrManagerBase
             { "remote", remote },
             { "oldSha", oldSha },
             { "newSha", newSha },
-            { "oldShaShort", oldSha is null ? string.Empty : DarcLib.Commit.GetShortSha(oldSha) },
-            { "newShaShort", newSha is null ? string.Empty : DarcLib.Commit.GetShortSha(newSha) },
+            { "oldShaShort", oldSha is null ? string.Empty : Commit.GetShortSha(oldSha) },
+            { "newShaShort", newSha is null ? string.Empty : Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
         };
 
@@ -355,20 +351,5 @@ public abstract class VmrManagerBase
         }
 
         return template;
-    }
-
-    protected static string GetShaForRef(string repoPath, string? gitRef)
-    {
-        if (gitRef == Constants.EmptyGitObject)
-        {
-            return gitRef;
-        }
-
-        using var repository = new Repository(repoPath);
-        var commit = gitRef is null
-            ? repository.Commits.FirstOrDefault()
-            : repository.Lookup<LibGit2Sharp.Commit>(gitRef);
-
-        return commit?.Id.Sha ?? throw new InvalidOperationException($"Failed to find commit {gitRef} in {repository.Info.Path}");
     }
 }

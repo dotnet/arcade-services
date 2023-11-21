@@ -1,18 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <SignAssembly>false</SignAssembly>
-    <IsPackable>false</IsPackable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Verify.NUnit" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj" />
   </ItemGroup>

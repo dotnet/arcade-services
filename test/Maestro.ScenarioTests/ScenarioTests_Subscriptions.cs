@@ -35,7 +35,7 @@ namespace Maestro.ScenarioTests
             string channel1Name = $"SubscriptionEndToEnd_TestChannel1_{Environment.MachineName}";
             string channel2Name = $"SubscriptionEndToEnd_TestChannel2_{Environment.MachineName}";
 
-            _parameters = await TestParameters.GetAsync();
+            _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
             SetTestParameters(_parameters);
 
             string repo1Uri = GetRepoUrl(repo1Name);

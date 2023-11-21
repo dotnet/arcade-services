@@ -1,16 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
-using NuGet.Packaging;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -22,17 +20,17 @@ public class VmrBinaryFileScanner : VmrScanner
     private const string Utf16Marker = "UTF-16 Unicode text";
 
     public VmrBinaryFileScanner(
-        IVmrDependencyTracker dependencyTracker, 
+        IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
-        IVmrInfo vmrInfo, 
-        ILogger<VmrScanner> logger) 
+        IVmrInfo vmrInfo,
+        ILogger<VmrScanner> logger)
         : base(dependencyTracker, processManager, vmrInfo, logger)
     {
     }
 
     protected override async Task<IEnumerable<string>> ScanSubRepository(
         SourceMapping sourceMapping,
-        string? baselineFilePath, 
+        string? baselineFilePath,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -72,7 +70,7 @@ public class VmrBinaryFileScanner : VmrScanner
         return await ScanAndParseResult(args.ToArray(), "base VMR", cancellationToken);
     }
 
-    private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken) 
+    private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken)
     {
         var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken: cancellationToken);
 

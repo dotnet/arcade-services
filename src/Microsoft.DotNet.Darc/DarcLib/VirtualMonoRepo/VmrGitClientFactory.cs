@@ -2,40 +2,37 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Helpers;
+namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public class GitFileManagerFactory : IGitFileManagerFactory
+public interface IGitRepoFactory
+{
+    IGitRepo CreateClient(string repoUri);
+}
+
+public class VmrGitClientFactory : IGitRepoFactory
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILoggerFactory _loggerFactory;
 
-    public GitFileManagerFactory(
+    public VmrGitClientFactory(
         IVmrInfo vmrInfo,
         RemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
-        IVersionDetailsParser versionDetailsParser,
         ILoggerFactory loggerFactory)
     {
         _vmrInfo = vmrInfo;
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
-        _versionDetailsParser = versionDetailsParser;
         _loggerFactory = loggerFactory;
     }
 
-    public IGitFileManager Create(string repoUri)
-        => new GitFileManager(CreateGitRepo(repoUri), _versionDetailsParser, _loggerFactory.CreateLogger<GitFileManager>());
-
-    private IGitRepo CreateGitRepo(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
+    public IGitRepo CreateClient(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _processManager.GitExecutable,
@@ -51,7 +48,8 @@ public class GitFileManagerFactory : IGitFileManagerFactory
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalGitClient(_remoteConfiguration, _processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
+        GitRepoType.Local => new LocalLibGit2Client(_remoteConfiguration, _processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
+
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };
 }

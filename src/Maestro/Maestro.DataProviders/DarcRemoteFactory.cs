@@ -62,28 +62,44 @@ public class DarcRemoteFactory : IRemoteFactory
             string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
 
             long installationId = await Context.GetInstallationId(normalizedUrl);
+            var repoType = GitRepoTypeParser.ParseFromUri(normalizedUrl);
 
-            IRemoteGitRepo gitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
+            if (repoType == GitRepoType.GitHub && installationId == default)
             {
-                GitRepoType.GitHub => installationId == default
-                    ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
-                    : new GitHubClient(
-                        null,
-                        await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
-                        logger,
-                        null,
-                        Cache.Cache),
+                throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
+            }
 
-                GitRepoType.AzureDevOps => new AzureDevOpsClient(
-                    null,
-                    await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
-                    logger,
-                    null),
+            var remoteConfiguration = repoType switch
+            {
+                GitRepoType.GitHub => new RemoteConfiguration(
+                    gitHubToken: await GitHubTokenProvider.GetTokenForInstallationAsync(installationId)),
+                GitRepoType.AzureDevOps => new RemoteConfiguration(
+                    azureDevOpsToken: await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl)),
 
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
+            IRemoteGitRepo remoteGitClient = repoType switch
+            {
+                GitRepoType.GitHub => installationId == default
+                    ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")
+                    : new GitHubClient(
+                        gitExecutable: null,
+                        remoteConfiguration.GitHubToken,
+                        logger,
+                        temporaryRepositoryPath: null,
+                        Cache.Cache),
+
+                GitRepoType.AzureDevOps => new AzureDevOpsClient(
+                    gitExecutable: null,
+                    remoteConfiguration.AzureDevOpsToken,
+                    logger,
+                    temporaryRepositoryPath: null),
+
+                _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
+            };
+
+            return new Remote(remoteGitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
         }
     }
 }

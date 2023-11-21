@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests;
 
 [TestFixture]
-public class GitFileManagerTests
+public class DependencyFileManagerTests
 {
     const string TestInputsRootDir = "inputs";
     const string ConfigFilesInput = "NugetConfigFiles";
@@ -65,7 +65,7 @@ public class GitFileManagerTests
         "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
     public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
     {
-        GitFileManager gitFileManager = new GitFileManager(null, new VersionDetailsParser(), NullLogger.Instance);
+        DependencyFileManager dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
 
         string inputNugetPath = Path.Combine(
             Environment.CurrentDirectory,
@@ -74,17 +74,17 @@ public class GitFileManagerTests
             testName,
             InputNugetConfigFile);
         string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
-        var inputNuGetConfigFile = GitFileManager.GetXmlDocument(inputXmlContent);
+        var inputNuGetConfigFile = DependencyFileManager.GetXmlDocument(inputXmlContent);
 
         Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>();
         configFileUpdateData.Add("testKey", new HashSet<string>(managedFeeds));
-        var managedFeedsForTest = gitFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
+        var managedFeedsForTest = dependencyFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
 
         // 'unknown' = regex failed to match and extract repo name from feed
         managedFeedsForTest.Keys.Should().NotContain("unknown");
 
         XmlDocument updatedConfigFile =
-            gitFileManager.UpdatePackageSources(inputNuGetConfigFile, managedFeedsForTest);
+            dependencyFileManager.UpdatePackageSources(inputNuGetConfigFile, managedFeedsForTest);
 
         var outputNugetPath = Path.Combine(
             Environment.CurrentDirectory,
@@ -106,7 +106,7 @@ public class GitFileManagerTests
         // When this is performed via the Maestro service instead of the Darc CLI, it seemingly can 
         // be run more than once for the same XmlDocument.  This should not impact the contents of the file; 
         // Validate this expectation of idempotency by running the same update on the resultant file.
-        XmlDocument doubleUpdatedConfigFile = gitFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest);
+        XmlDocument doubleUpdatedConfigFile = dependencyFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest);
         GitFile doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
         doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
     }
@@ -118,7 +118,7 @@ public class GitFileManagerTests
     [TestCase("NoDuplicatedDifferentConditions.props", false)]
     public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
     {
-        GitFileManager gitFileManager = new GitFileManager(null, new VersionDetailsParser(), NullLogger.Instance);
+        DependencyFileManager dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
 
         string inputVersionPropsPath = Path.Combine(
             Environment.CurrentDirectory,
@@ -128,9 +128,9 @@ public class GitFileManagerTests
 
         string propsFileContent = File.ReadAllText(inputVersionPropsPath);
 
-        XmlDocument propsFile = GitFileManager.GetXmlDocument(propsFileContent);
+        XmlDocument propsFile = DependencyFileManager.GetXmlDocument(propsFileContent);
 
-        gitFileManager.VerifyNoDuplicatedProperties(propsFile).Result.Should().Be(!hasDuplicatedProps);
+        dependencyFileManager.VerifyNoDuplicatedProperties(propsFile).Result.Should().Be(!hasDuplicatedProps);
     }
 
 }

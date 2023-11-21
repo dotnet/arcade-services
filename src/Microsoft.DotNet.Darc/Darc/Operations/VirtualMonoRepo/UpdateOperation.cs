@@ -30,8 +30,7 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
         await vmrManager.UpdateRepository(
             repoName,
             targetRevision,
-            null,
-            _options.NoSquash,
+            targetVersion: null,
             _options.Recursive,
             additionalRemotes,
             _options.ReadMeTemplate,

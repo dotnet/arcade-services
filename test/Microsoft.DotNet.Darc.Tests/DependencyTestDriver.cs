@@ -9,10 +9,9 @@ using System.Threading.Tasks;
 using System.Xml;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
-using NuGet.Versioning;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
@@ -27,9 +26,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 internal class DependencyTestDriver
 {
     private string _testName;
-    private LocalGitClient _gitClient;
     private VersionDetailsParser _versionDetailsParser;
-    private GitFileManager _gitFileManager;
     private const string inputRootDir = "inputs";
     private const string inputDir = "input";
     private const string outputDir = "output";
@@ -38,8 +35,8 @@ internal class DependencyTestDriver
     public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
     public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
     public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
-    public LocalGitClient GitClient { get => _gitClient; }
-    public GitFileManager GitFileManager { get => _gitFileManager; }
+    public LocalLibGit2Client GitClient { get; private set; }
+    public DependencyFileManager DependencyFileManager { get; private set; }
 
     public DependencyTestDriver(string testName)
     {
@@ -68,20 +65,20 @@ internal class DependencyTestDriver
 
         // Set up a git file manager
         var processManager = new ProcessManager(NullLogger.Instance, "git");
-        _gitClient = new LocalGitClient(new RemoteConfiguration(), processManager, NullLogger.Instance);
+        GitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
-        _gitFileManager = new GitFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
+        DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
         await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
-        await _gitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
-        await _gitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", false);
+        await GitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
+        await GitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }
 
     public async Task AddDependencyAsync(DependencyDetail dependency)
     {
-        await _gitFileManager.AddDependencyAsync(
+        await DependencyFileManager.AddDependencyAsync(
             dependency,
             TemporaryRepositoryPath,
             null);
@@ -89,14 +86,14 @@ internal class DependencyTestDriver
 
     public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, SemanticVersion dotNetVersion = null)
     {
-        GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
+        GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
             TemporaryRepositoryPath,
             null,
             null,
             dotNetVersion);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();
-        await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+        await GitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
     }
 
     public async Task UpdatePinnedDependenciesAsync()
@@ -105,19 +102,19 @@ internal class DependencyTestDriver
         string versionDetailsContents = File.ReadAllText(testVersionDetailsXmlPath);
         IEnumerable<DependencyDetail> dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents, false);
 
-        GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
+        GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
             TemporaryRepositoryPath,
             null,
             null,
             null);
         List<GitFile> filesToUpdate = container.GetFilesToCommit();
-        await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+        await GitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
     }
 
     public async Task VerifyAsync()
     {
-        await _gitFileManager.Verify(TemporaryRepositoryPath, null);
+        await DependencyFileManager.Verify(TemporaryRepositoryPath, null);
     }
 
     public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)
@@ -141,8 +138,8 @@ internal class DependencyTestDriver
     }
 
     private static async Task TestAndCompareImpl(
-        string testInputsName, 
-        bool compareOutput, 
+        string testInputsName,
+        bool compareOutput,
         Func<DependencyTestDriver, Task> testFunc)
     {
         DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
@@ -173,7 +170,7 @@ internal class DependencyTestDriver
         return TestAndCompareImpl(testInputsName, false, testFunc);
     }
 
-    public static async Task GetGraphAndCompare(string testInputsName, 
+    public static async Task GetGraphAndCompare(string testInputsName,
         Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
         string expectedGraphFile)
     {
@@ -271,7 +268,7 @@ internal class DependencyTestDriver
     }
 
     private void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
-    {   
+    {
         foreach (XmlNode node in xmlNodes)
         {
             string repoUri = node.SelectSingleNode("RepoUri").InnerText;
@@ -299,7 +296,7 @@ internal class DependencyTestDriver
         {
             string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
             string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
-            actualOutput.Should().Be(                    expectedOutput);
+            actualOutput.Should().Be(expectedOutput);
         }
     }
 

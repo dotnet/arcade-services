@@ -3,6 +3,7 @@
   <PropertyGroup>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

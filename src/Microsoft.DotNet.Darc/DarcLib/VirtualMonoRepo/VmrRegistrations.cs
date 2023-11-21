@@ -19,40 +19,22 @@ public static class VmrRegistrations
 {
     public static IServiceCollection AddVmrManagers(
         this IServiceCollection services,
-        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
         string gitLocation,
         string vmrPath,
         string tmpPath,
         string? gitHubToken,
         string? azureDevOpsToken)
     {
-        RegisterCommonServices(services, gitLocation);
+        // Configuration based registrations
         services.TryAddSingleton<IVmrInfo>(new VmrInfo(Path.GetFullPath(vmrPath), Path.GetFullPath(tmpPath)));
         services.TryAddSingleton(new RemoteConfiguration(gitHubToken, azureDevOpsToken));
-        services.TryAddSingleton(gitManagerFactoryProvider);
-        return services;
-    }
-
-    public static IServiceCollection AddVmrManagers(
-        this IServiceCollection services,
-        Func<IServiceProvider, IGitFileManagerFactory> gitManagerFactoryProvider,
-        string gitLocation,
-        string vmrPath,
-        string tmpPath,
-        Func<IServiceProvider, RemoteConfiguration> configure)
-    {
-        RegisterCommonServices(services, gitLocation);
-        services.TryAddSingleton(configure);
-        services.TryAddSingleton<IVmrInfo>(new VmrInfo(vmrPath, tmpPath));
-        services.TryAddSingleton(gitManagerFactoryProvider);
-        return services;
-    }
-
-    private static void RegisterCommonServices(IServiceCollection services, string gitLocation)
-    {
-        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, gitLocation));
-        services.TryAddTransient<ILocalGitRepo, LocalGitClient>();
+
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
+        services.TryAddTransient<IGitRepoFactory, VmrGitClientFactory>();
+        services.TryAddTransient<ILocalGitClient, LocalGitClient>();
+        services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
         services.TryAddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
@@ -98,5 +80,7 @@ public static class VmrRegistrations
             var configuration = sp.GetRequiredService<IVmrInfo>();
             return SourceManifest.FromJson(configuration.GetSourceManifestPath());
         });
+
+        return services;
     }
 }

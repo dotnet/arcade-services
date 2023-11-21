@@ -19,7 +19,7 @@ public interface IWorkBranch
 /// </summary>
 public class WorkBranch : IWorkBranch
 {
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
     private readonly string _repoPath;
@@ -29,7 +29,7 @@ public class WorkBranch : IWorkBranch
     public string OriginalBranch => _originalBranch;
 
     public WorkBranch(
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IProcessManager processManager,
         ILogger logger,
         string repoPath,
@@ -48,7 +48,7 @@ public class WorkBranch : IWorkBranch
     {
         _logger.LogInformation("Merging {branchName} into {mainBranch}", _workBranch, _originalBranch);
 
-        await _localGitClient.CheckoutNativeAsync(_repoPath, _originalBranch);
+        await _localGitClient.CheckoutAsync(_repoPath, _originalBranch);
         var result = await _processManager.ExecuteGit(
             _repoPath,
             "merge",
@@ -61,6 +61,6 @@ public class WorkBranch : IWorkBranch
 
         result.ThrowIfFailed("Failed to merge work branch back into the original branch");
 
-        await _localGitClient.CommitAsync(_repoPath, commitMessage, true, Constants.DotnetBotIdentity);
+        await _localGitClient.CommitAsync(_repoPath, commitMessage, true);
     }
 }

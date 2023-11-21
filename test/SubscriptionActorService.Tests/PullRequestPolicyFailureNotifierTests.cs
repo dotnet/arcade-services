@@ -23,6 +23,7 @@ public class PullRequestPolicyFailureNotifierTests
 {
     protected Mock<IBarClient> BarClient;
     protected Mock<IRemoteGitRepo> GitRepo;
+    protected Mock<ILocalLibGit2Client> LocalGitClient;
     protected Mock<IRemoteFactory> RemoteFactory;
     protected Mock<IHostEnvironment> Env;
     protected Mock<Octokit.IGitHubClient> GithubClient;
@@ -87,7 +88,6 @@ public class PullRequestPolicyFailureNotifierTests
 
                 return Task.FromResult((IList<Check>) checksToReturn);
             });
-
 
         MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);

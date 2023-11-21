@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <IsPackable>false</IsPackable>
-    <SignAssembly>false</SignAssembly>
-    <LangVersion>8.0</LangVersion>
     <UserSecretsId>a523e3e9-b284-4c40-962d-e06de454891e</UserSecretsId>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>

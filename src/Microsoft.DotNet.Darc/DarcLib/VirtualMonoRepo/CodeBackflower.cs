@@ -41,7 +41,7 @@ public class CodeBackflower : IVmrBackflower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
@@ -50,7 +50,7 @@ public class CodeBackflower : IVmrBackflower
     public CodeBackflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
-        ILocalGitRepo localGitClient,
+        ILocalGitClient localGitClient,
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
@@ -118,19 +118,19 @@ public class CodeBackflower : IVmrBackflower
 
         try
         {
-            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
         }
         catch
         {
             _logger.LogInformation("Failed to checkout {sha} in {repo}, will fetch from all remotes and try again...", repo.CommitSha, repoDirectory);
 
-            foreach (var remote in remotes)
+            foreach (var remoteUri in remotes)
             {
-                _localGitClient.AddRemoteIfMissing(repoDirectory, remote, skipFetch: true);
-                await _localGitClient.FetchAsync(repoDirectory, remote, cancellationToken);
+                var remoteName = await _localGitClient.AddRemoteIfMissingAsync(repoDirectory, remoteUri, cancellationToken);
+                await _localGitClient.UpdateRemoteAsync(repoDirectory, remoteName, cancellationToken);
             }
 
-            await _localGitClient.CheckoutNativeAsync(repoDirectory, repo.CommitSha);
+            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -149,7 +149,7 @@ public class CodeBackflower : IVmrBackflower
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, ((string, string)?)null, cancellationToken: cancellationToken);
 
         _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
     }

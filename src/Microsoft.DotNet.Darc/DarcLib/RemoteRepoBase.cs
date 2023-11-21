@@ -25,13 +25,24 @@ public class RemoteRepoBase : GitRepoCloner
         IMemoryCache cache,
         ILogger logger,
         RemoteConfiguration remoteConfiguration)
-        : base(remoteConfiguration, logger)
+        : this(gitExecutable, temporaryRepositoryPath, cache, logger, new ProcessManager(logger, gitExecutable), remoteConfiguration)
+    {
+    }
+
+    private RemoteRepoBase(
+        string gitExecutable,
+        string temporaryRepositoryPath,
+        IMemoryCache cache,
+        ILogger logger,
+        ProcessManager processManager,
+        RemoteConfiguration remoteConfiguration)
+        : base(remoteConfiguration, new LocalLibGit2Client(remoteConfiguration, processManager, logger), logger)
     {
         TemporaryRepositoryPath = temporaryRepositoryPath;
         GitExecutable = gitExecutable;
         Cache = cache;
         _logger = logger;
-        _processManager = new ProcessManager(logger, GitExecutable);
+        _processManager = processManager;
     }
 
     /// <summary>
@@ -123,7 +134,7 @@ public class RemoteRepoBase : GitRepoCloner
             try
             {
                 // .git/objects hierarchy are marked as read-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
-                GitFileManager.NormalizeAttributes(tempRepoFolder);
+                DependencyFileManager.NormalizeAttributes(tempRepoFolder);
                 Directory.Delete(tempRepoFolder, true);
             }
             catch (DirectoryNotFoundException)

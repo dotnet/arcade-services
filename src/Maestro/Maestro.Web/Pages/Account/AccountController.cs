@@ -31,6 +31,7 @@ public class AccountController : Controller
     public SignInManager<ApplicationUser> SignInManager { get; }
     public UserManager<ApplicationUser> UserManager { get; }
     public BuildAssetRegistryContext Context { get; }
+    public const string AccountSignInRoute = "/Account/SignIn";
 
     [HttpGet("/Account/SignOut")]
     [AllowAnonymous]
@@ -40,7 +41,7 @@ public class AccountController : Controller
         return RedirectToPage("/Index");
     }
 
-    [HttpGet("/Account/SignIn")]
+    [HttpGet(AccountSignInRoute)]
     [AllowAnonymous]
     public IActionResult SignIn(string returnUrl = null)
     {

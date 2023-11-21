@@ -3,13 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,16 +22,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
-    // Message used when synchronizing a single commit
-    private const string SingleCommitMessage =
-        $$"""
-        [{name}] Sync {newShaShort}: {commitMessage}
-
-        Original commit: {remote}/commit/{newSha}
-        
-        {{Constants.AUTOMATION_COMMIT_TAG}}
-        """;
-
     // Message used when synchronizing multiple commits as one
     private const string SquashCommitMessage =
         $$"""
@@ -42,9 +30,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         
         From: {remote}/commit/{oldSha}
         To: {remote}/commit/{newSha}
-        
-        Commits:
-        {commitMessage}
         
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
@@ -69,7 +54,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
-    private readonly ILocalGitRepo _localGitClient;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
@@ -80,14 +65,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
         IReadmeComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
-        ILocalGitRepo localGitClient,
-        IGitFileManagerFactory gitFileManagerFactory,
+        ILocalGitClient localGitClient,
+        IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, gitFileManagerFactory, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, dependencyFileManager, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -106,7 +91,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string mappingName,
         string? targetRevision,
         string? targetVersion,
-        bool noSquash,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -120,12 +104,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var mapping = _dependencyTracker.Mappings
             .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
             ?? throw new Exception($"No mapping named '{mappingName}' found");
-
-        if (_dependencyTracker.GetDependencyVersion(mapping)?.Sha == targetRevision && targetRevision != null)
-        {
-            _logger.LogInformation("Repository {repo} is already at {sha}", mapping.Name, targetRevision);
-            return;
-        }
 
         if (_vmrInfo.SourceMappingsPath != null
             && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
@@ -157,13 +135,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             targetVersion,
-            null);
+            Parent: null);
 
         if (updateDependencies)
         {
             await UpdateRepositoryRecursively(
                 dependencyUpdate,
-                noSquash,
                 additionalRemotes,
                 readmeTemplatePath,
                 tpnTemplatePath,
@@ -175,7 +152,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             await UpdateRepositoryInternal(
                 dependencyUpdate,
-                noSquash,
                 reapplyVmrPatches: true,
                 additionalRemotes,
                 readmeTemplatePath,
@@ -188,7 +164,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
     private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
-        bool noSquash,
         bool reapplyVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -197,10 +172,34 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var currentSha = GetCurrentVersion(update.Mapping);
+        VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
+            ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
-        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}{oneByOne}",
-            update.Mapping.Name, currentSha, update.RemoteUri, update.TargetRevision, noSquash ? " one commit at a time" : string.Empty);
+        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
+            update.Mapping.Name,
+            currentVersion.Sha,
+            update.RemoteUri,
+            update.TargetRevision);
+
+        // Do we need to change anything?
+        if (currentVersion.Sha == update.TargetRevision)
+        {
+            if (currentVersion.PackageVersion != update.TargetVersion && update.TargetVersion != null)
+            {
+                await UpdateTargetVersionOnly(
+                    update.TargetRevision,
+                    update.TargetVersion,
+                    update.Mapping,
+                    currentVersion,
+                    cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
+            }
+
+            return Array.Empty<VmrIngestionPatch>();
+        }
 
         var remotes = additionalRemotes
             .Where(r => r.Mapping == update.Mapping.Name)
@@ -220,136 +219,37 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         update = update with
         {
-            TargetRevision = GetShaForRef(clonePath, update.TargetRevision)
+            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
 
-        if (currentSha == update.TargetRevision)
+        if (currentVersion.Sha == update.TargetRevision)
         {
             _logger.LogInformation("No new commits found to synchronize");
             return Array.Empty<VmrIngestionPatch>();
         }
 
-        using var repo = new Repository(clonePath);
-        ICommitLog commits = repo.Commits.QueryBy(new CommitFilter
-        {
-            FirstParentOnly = true,
-            IncludeReachableFrom = update.TargetRevision,
-        });
+        _logger.LogInformation("Updating {repo} from {current} to {next}..",
+            update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.TargetRevision));
 
-        // Will contain SHAs in the order as we want to apply them
-        var commitsToCopy = new Stack<LibGit2Sharp.Commit>();
+        var commitMessage = PrepareCommitMessage(
+            SquashCommitMessage,
+            update.Mapping.Name,
+            update.RemoteUri,
+            currentVersion.Sha,
+            update.TargetRevision);
 
-        foreach (var commit in commits)
-        {
-            // Target revision goes first
-            if (commit.Sha.StartsWith(update.TargetRevision))
-            {
-                commitsToCopy.Push(commit);
-                continue;
-            }
-
-            // If we reach current commit, stop adding
-            if (commit.Sha.StartsWith(currentSha))
-            {
-                break;
-            }
-
-            // Otherwise add anything in between
-            if (commitsToCopy.Count > 0)
-            {
-                commitsToCopy.Push(commit);
-            }
-        }
-
-        // When no path between two commits is found, force synchronization between arbitrary commits
-        // For this case, do not copy the commit with the same author so it doesn't seem like one commit
-        // from the individual repo
-        bool arbitraryCommits = commitsToCopy.Count == 0;
-        if (arbitraryCommits)
-        {
-            commitsToCopy.Push(repo.Lookup<LibGit2Sharp.Commit>(update.TargetRevision));
-        }
-
-        // When we don't need to copy the commits one by one and we have more than 1 to mirror,
-        // do them in bulk
-        if (!noSquash && commitsToCopy.Count != 1 || arbitraryCommits)
-        {
-            // We squash commits and list them in the message
-            var commitMessages = new StringBuilder();
-            var commitCount = 0;
-            while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commit))
-            {
-                // Do not list over 23 commits in the message
-                // If there are more, list first 20         
-                if (commitCount == 20 && commitsToCopy.Count > 3)
-                {
-                    commitMessages.AppendLine("  [... commit list trimmed ...]");
-                    break;
-                }
-
-                commitCount++;
-                commitMessages
-                    .AppendLine($"  - {commit.MessageShort}")
-                    .AppendLine($"    {update.RemoteUri}/commit/{commit.Id.Sha}");
-            }
-
-            var message = PrepareCommitMessage(
-                SquashCommitMessage,
-                update.Mapping.Name,
-                update.RemoteUri,
-                currentSha,
-                update.TargetRevision,
-                commitMessages.ToString());
-
-            return await UpdateRepoToRevisionAsync(
-                update,
-                clonePath,
-                currentSha,
-                Constants.DotnetBotIdentity,
-                message,
-                reapplyVmrPatches,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
-        }
-
-        var vmrPatchesToRestore = new List<VmrIngestionPatch>();
-        while (commitsToCopy.TryPop(out LibGit2Sharp.Commit? commitToCopy))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _logger.LogInformation("Updating {repo} from {current} to {next}..",
-                update.Mapping.Name, DarcLib.Commit.GetShortSha(currentSha), DarcLib.Commit.GetShortSha(commitToCopy.Id.Sha));
-
-            var message = PrepareCommitMessage(
-                SingleCommitMessage,
-                update.Mapping.Name, 
-                update.RemoteUri,
-                currentSha,
-                commitToCopy.Id.Sha,
-                commitToCopy.Message);
-
-            var patches = await UpdateRepoToRevisionAsync(
-                update,
-                clonePath,
-                currentSha,
-                new Identity(commitToCopy.Author.Name, commitToCopy.Author.Email),
-                message,
-                reapplyVmrPatches,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
-
-            vmrPatchesToRestore.AddRange(patches);
-
-            currentSha = commitToCopy.Id.Sha;
-        }
-
-        return vmrPatchesToRestore.DistinctBy(patch => patch.Path).ToImmutableList();
+        return await UpdateRepoToRevisionAsync(
+            update,
+            clonePath,
+            currentVersion.Sha,
+            author: null,
+            commitMessage,
+            reapplyVmrPatches,
+            readmeTemplatePath,
+            tpnTemplatePath,
+            generateCodeowners,
+            discardPatches,
+            cancellationToken);
     }
 
     /// <summary>
@@ -358,7 +258,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// </summary>
     private async Task UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
-        bool noSquash,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
         string? tpnTemplatePath,
@@ -420,12 +319,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 });
             }
 
-            if (currentSha == update.TargetRevision)
-            {
-                _logger.LogDebug("Dependency {name} is already at {sha}, skipping..", update.Mapping.Name, currentSha);
-                continue;
-            }
-
             if (update.Parent is not null)
             {
                 _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
@@ -441,7 +334,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 patchesToReapply = await UpdateRepositoryInternal(
                     update,
-                    noSquash,
                     false,
                     additionalRemotes,
                     readmeTemplatePath,
@@ -464,10 +356,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             updatedDependencies.Add(update with
             {
-                // We the SHA again because original target could have been a branch name
+                // We resolve the SHA again because original target could have been a branch name
                 TargetRevision = GetCurrentVersion(update.Mapping),
 
-                // We also store the original version so that later we use it in the commit message
+                // We also store the original SHA (into the version!) so that later we use it in the commit message
                 TargetVersion = currentSha,
             });
         }
@@ -477,6 +369,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var update in updatedDependencies)
         {
+            if (update.TargetRevision == update.TargetVersion)
+            {
+                continue;
+            }
+
             var fromShort = Commit.GetShortSha(update.TargetVersion);
             var toShort = Commit.GetShortSha(update.TargetRevision);
             summaryMessage
@@ -500,7 +397,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 throw;
             }
 
-            await CommitAsync("[VMR patches] Re-apply VMR patches", Constants.DotnetBotIdentity);
+            await CommitAsync("[VMR patches] Re-apply VMR patches");
         }
 
         await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
@@ -738,7 +635,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { "*" });
         var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        await CommitAsync(commitMessage, Constants.DotnetBotIdentity);
+        await CommitAsync(commitMessage);
     }
 
     private void DeleteRepository(string repo)
@@ -765,6 +662,43 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             _logger.LogInformation("{repo} version information is already deleted", repo);
         }
+    }
+
+    /// <summary>
+    /// This method is called in cases when a repository is already at the target revision but the package version
+    /// differs. This can happen when a new build from the same commit is synchronized to the VMR.
+    /// </summary>
+    private async Task UpdateTargetVersionOnly(
+        string targetRevision,
+        string targetVersion,
+        SourceMapping mapping,
+        VmrDependencyVersion currentVersion,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogWarning(
+            "Repository {repo} is already at {sha} but differs in package version ({old} vs {new}). Updating metadata...",
+            mapping.Name,
+            targetRevision,
+            currentVersion.PackageVersion,
+            targetVersion);
+
+        _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
+            Mapping: mapping,
+            TargetRevision: targetRevision,
+            TargetVersion: targetVersion,
+            Parent: null,
+            RemoteUri: _sourceManifest.Repositories.First(r => r.Path == mapping.Name).RemoteUri));
+
+        var filesToAdd = new List<string>
+        {
+            VmrInfo.GitInfoSourcesDir,
+            _vmrInfo.GetSourceManifestPath()
+        };
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
     }
 
     private class RepositoryNotInitializedException : Exception

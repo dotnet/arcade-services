@@ -988,9 +988,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests10()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1059,9 +1059,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests11()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1128,9 +1128,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests12()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1201,9 +1201,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests13()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1275,9 +1275,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests14()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();
@@ -1391,9 +1391,9 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests16()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Mock<IRemoteGitRepo> gitRepoMock = new Mock<IRemoteGitRepo>();
-        Remote remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var gitRepoMock = new Mock<IRemoteGitRepo>();
+        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         Mock<IRemote> remoteMock = new Mock<IRemote>();

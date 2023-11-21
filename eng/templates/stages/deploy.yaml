@@ -8,7 +8,7 @@ parameters:
   type: string
 - name: VariableGroup
   type: string
-- name: MaestroTestEndpoint
+- name: MaestroTestEndpoints
   type: string
 
   # --- Secret Variable group requirements ---
@@ -47,13 +47,6 @@ stages:
     steps:
     - download: current
       artifact: ReleaseUtilities
-    - download: current
-      artifact: Maestro.Data
-
-    - task: UseDotNet@2
-      displayName: Install .NET
-      inputs:
-        useGlobalJson: true
 
     - task: AzurePowerShell@3
       displayName: Add firewall rule
@@ -62,15 +55,19 @@ stages:
         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(build-asset-registry-admin-connection-string)"
         azurePowerShellVersion: LatestVersion
-    - task: PowerShell@2
-      displayName: update-database.ps1
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
-        arguments: Maestro.Data.dll
-        workingDirectory: $(Pipeline.Workspace)/Maestro.Data
+
+    - powershell: |
+        .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+        .\.dotnet\dotnet tool restore
+        .\.dotnet\dotnet ef database update                           `
+          --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+          --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+          --no-build                                                  `
+          --verbose
+      displayName: Entity Framework update
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(build-asset-registry-admin-connection-string)
+
     - task: AzurePowerShell@3
       displayName: Remove firewall rule
       inputs:
@@ -82,6 +79,7 @@ stages:
 
   - job: deployMaestro
     displayName: Deploy Maestro
+    timeoutInMinutes: 75
     dependsOn:
     - updateDatabase
     steps:
@@ -120,11 +118,13 @@ stages:
   jobs:
   - job: scenario
     displayName: Scenario tests
-    timeoutInMinutes: 120
+    timeoutInMinutes: 100
     steps:
     - download: current
+      displayName: Download Darc
       artifact: PackageArtifacts
     - download: current
+      displayName: Download ScenarioTets
       artifact: Maestro.ScenarioTests
 
     - task: NuGetToolInstaller@1
@@ -132,10 +132,8 @@ stages:
       inputs:
         versionSpec: 5.3.x
 
-    - task: UseDotNet@2
+    - powershell: .\eng\common\build.ps1 -restore
       displayName: Install .NET
-      inputs:
-        useGlobalJson: true
 
     - task: VSTest@2
       displayName: Maestro Scenario Tests
@@ -145,7 +143,7 @@ stages:
           Maestro.ScenarioTests.dll
         searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
       env:
-        MAESTRO_BASEURI: ${{ parameters.MaestroTestEndpoint }}
+        MAESTRO_BASEURIS: ${{ parameters.MaestroTestEndpoints }}
         MAESTRO_TOKEN: $(scenario-test-maestro-token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
         AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
@@ -155,11 +153,9 @@ stages:
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
       displayName: Add nuget Sources
-    - powershell: |
-        $versionEndpoint = "${{ parameters.MaestroTestEndpoint }}/api/assets/darc-version?api-version=2019-01-16"
-        $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
-        Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
-        Write-Host "Using Darc version $latestDarcVersion to run the tests"
+    - powershell: $(Build.SourcesDirectory)\eng\get-darc-version.ps1
+        -maestroTestEndpoints "${{ parameters.MaestroTestEndpoints }}"
+        -apiVersion "2019-01-16"
       displayName: Get DARC version
 
 

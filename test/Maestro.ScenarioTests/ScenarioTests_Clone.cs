@@ -21,7 +21,7 @@ namespace Maestro.ScenarioTests
         {
             TestContext.WriteLine("Darc-Clone repo end to end test");
 
-            TestParameters parameters = await TestParameters.GetAsync();
+            TestParameters parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
             SetTestParameters(parameters);
 
             string sourceRepoName = "core-sdk";

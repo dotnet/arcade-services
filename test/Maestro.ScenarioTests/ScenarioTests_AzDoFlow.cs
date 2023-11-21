@@ -107,7 +107,7 @@ namespace Maestro.ScenarioTests
         {
             TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
 
-            TestParameters parameters = await TestParameters.GetAsync();
+            TestParameters parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
             SetTestParameters(parameters);
             EndToEndFlowLogic testLogic = new EndToEndFlowLogic(parameters);
             List<DependencyDetail> expectedDependencies = expectedAzDoDependenciesSource1.Concat(expectedAzDoDependenciesSource2).ToList();

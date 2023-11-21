@@ -24,6 +24,5 @@ public interface IGitRepo
     /// <param name="repoUri">Remote repository URI</param>
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
-    /// <returns></returns>
     Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
 }

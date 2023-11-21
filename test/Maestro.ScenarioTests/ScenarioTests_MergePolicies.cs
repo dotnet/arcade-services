@@ -23,7 +23,7 @@ namespace Maestro.ScenarioTests
         [SetUp]
         public async Task InitializeAsync()
         {
-            _parameters = await TestParameters.GetAsync();
+            _parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
             SetTestParameters(_parameters);
         }
 
