@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -183,5 +185,141 @@ public class RepositoryCloneManagerTests
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "5"), Times.Once);
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
+    }
+
+    [Test]
+    public async Task CommitsAreFetchedGradually()
+    {
+        var mapping = new SourceMapping(
+            "test-repo",
+            RepoUri,
+            "main",
+            Array.Empty<string>(),
+            Array.Empty<string>());
+
+        var clonePath = _tmpDir / mapping.Name;
+        var configuration = new Dictionary<string, RemoteState>()
+        {
+            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1"),
+            ["github"] = new("https://github.com/dotnet/test-repo", "sha1", "sha2", "sha3"),
+            ["local"] = new("/var/test-repo", "sha3"),
+        };
+
+        _fileSystem
+            .SetupSequence(x => x.DirectoryExists(clonePath))
+            .Returns(false)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true);
+
+        SetupLazyFetching("\\data\\tmp\\test-repo", configuration);
+
+        var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
+
+        await _manager.PrepareCloneAsync(mapping, remotes, new[] { "sha1", "sha2", "sha3" }, "main", default);
+
+        _repoCloner
+            .Verify(x => x.CloneNoCheckoutAsync(configuration["azdo"].RemoteUri, clonePath, It.IsAny<string?>()), Times.Once);
+        _localGitRepo
+            .Verify(x => x.AddRemoteIfMissingAsync(clonePath, configuration["github"].RemoteUri, It.IsAny<CancellationToken>()), Times.Once);
+        _localGitRepo
+            .Verify(x => x.AddRemoteIfMissingAsync(clonePath, configuration["local"].RemoteUri, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task CommitIsNotFound()
+    {
+        var mapping = new SourceMapping(
+            "test-repo",
+            RepoUri,
+            "main",
+            Array.Empty<string>(),
+            Array.Empty<string>());
+
+        var clonePath = _tmpDir / mapping.Name;
+        var configuration = new Dictionary<string, RemoteState>()
+        {
+            ["azdo"] = new("https://dev.azure.com/dnceng/internal/_git/test-repo", "sha1"),
+            ["github"] = new("https://github.com/dotnet/test-repo", "sha1", "sha2", "sha3"),
+            ["local"] = new("/var/test-repo", "sha3"),
+        };
+
+        _fileSystem.SetReturnsDefault(true);
+
+        SetupLazyFetching("\\data\\tmp\\test-repo", configuration);
+
+        var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
+
+        var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, new[] { "sha1", "sha2", "sha4" }, "main", default);
+        await action.Should().ThrowAsync<Exception>("because sha4 is not present anywhere");
+
+        foreach (var pair in configuration)
+        {
+            _localGitRepo
+                .Verify(x => x.AddRemoteIfMissingAsync(clonePath, pair.Value.RemoteUri, It.IsAny<CancellationToken>()), Times.Once);
+        }
+    }
+
+    /// <summary>
+    /// Sets up the mocks to simulate gradual fetching of given commits from given remotes.
+    /// </summary>
+    private void SetupLazyFetching(string clonePath, Dictionary<string, RemoteState> configuration)
+    {
+        foreach (var pair in configuration)
+        {
+            _localGitRepo
+                .Setup(x => x.AddRemoteIfMissingAsync(clonePath, pair.Value.RemoteUri, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(pair.Key);
+
+            _repoCloner
+                .Setup(x => x.CloneNoCheckoutAsync(pair.Value.RemoteUri, clonePath, It.IsAny<string?>()))
+                .Callback(() =>
+                {
+                    pair.Value.IsCloned = true;
+                })
+                .Returns(Task.CompletedTask);
+
+            _localGitRepo
+                .Setup(x => x.UpdateRemoteAsync(clonePath, pair.Key, It.IsAny<CancellationToken>()))
+                .Callback(() =>
+                {
+                    pair.Value.IsCloned = true;
+                })
+                .Returns(Task.CompletedTask);
+
+            _localGitRepo
+                .Setup(x => x.GetShaForRefAsync(clonePath, It.IsAny<string>()))
+                .Callback((string _, string sha) =>
+                {
+                    if (!configuration.Any(p => p.Value.CommitContained.Contains(sha) && p.Value.IsCloned))
+                    {
+                        throw new Exception($"Could not find {sha}");
+                    }
+                })
+                .ReturnsAsync("not-important-sha");
+        }
+    }
+
+    private class RemoteState
+    {
+        public string RemoteUri { get; set; }
+
+        public IReadOnlyCollection<string> CommitContained { get; set; }
+
+        //public TaskCompletionSource<string> CloneTask { get; } = new();
+
+        //public TaskCompletionSource<string> UpdateTask { get; } = new();
+
+        public bool IsCloned { get; set; }
+
+        public RemoteState(string remoteUri, params string[] commitContained)
+        {
+            RemoteUri = remoteUri;
+            CommitContained = commitContained;
+        }
     }
 }

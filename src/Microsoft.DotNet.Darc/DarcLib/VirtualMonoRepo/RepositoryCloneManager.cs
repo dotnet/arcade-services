@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Build.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -145,12 +146,17 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
         var refsToVerify = new HashSet<string>(requestedRefs);
 
+        _logger.LogDebug("Fetching refs {refs} from {uris}",
+            string.Join(", ", requestedRefs),
+            string.Join(", ", remoteUris));
+
         NativePath path = null!;
         foreach (string remoteUri in remoteUris)
         {
             // Path should be returned the same for all invocations
             // We checkout a default ref
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
+            bool missingCommit = false;
 
             // Verify that all requested commits are available
             foreach (var commit in refsToVerify.ToArray())
@@ -163,14 +169,15 @@ public class RepositoryCloneManager : IRepositoryCloneManager
                 catch
                 {
                     // Ref not found yet, let's try another remote
-                    continue;
-                }
-
-                if (refsToVerify.Count == 0)
-                {
-                    _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
+                    missingCommit = true;
                     break;
                 }
+            }
+
+            if (!missingCommit)
+            {
+                _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
+                break;
             }
         }
 
