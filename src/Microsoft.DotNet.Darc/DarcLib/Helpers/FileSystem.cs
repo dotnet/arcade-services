@@ -29,6 +29,8 @@ public class FileSystem : IFileSystem
 
     public string? GetFileName(string? path) => Path.GetFileName(path);
 
+    public string GetTempFileName() => Path.GetTempFileName();
+
     public string PathCombine(string path1, string path2) => Path.Combine(path1, path2);
 
     public void WriteToFile(string path, string content)

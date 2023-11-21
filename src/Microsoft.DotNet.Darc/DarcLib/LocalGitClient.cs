@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -21,24 +20,18 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class LocalGitClient : ILocalGitClient
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    /// <summary>
-    ///     Construct a new local git client
-    /// </summary>
-    /// <param name="path">Current path</param>
-    public LocalGitClient(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
+    public LocalGitClient(IProcessManager processManager, ILogger logger)
     {
-        _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
         _logger = logger;
     }
 
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
     {
-        string fullPath = Path.Combine(repoPath, relativeFilePath);
+        string fullPath = new NativePath(repoPath) / relativeFilePath;
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
             string? parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
@@ -187,6 +180,8 @@ public class LocalGitClient : ILocalGitClient
     public async Task UpdateRemoteAsync(string repoPath, string remoteName, CancellationToken cancellationToken = default)
     {
         var result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "update", remoteName }, cancellationToken: cancellationToken);
+        result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
+        result = await _processManager.ExecuteGit(repoPath, new[] { "fetch", "--tags", "--force", remoteName }, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
     }
 

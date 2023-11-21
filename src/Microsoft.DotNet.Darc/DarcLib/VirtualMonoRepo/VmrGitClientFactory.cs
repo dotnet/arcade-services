@@ -32,7 +32,7 @@ public class VmrGitClientFactory : IGitRepoFactory
         _loggerFactory = loggerFactory;
     }
 
-    public IGitRepo CreateClient(string repoUri) => GitRepoTypeParser.ParseFromUri(repoUri) switch
+    public IGitRepo CreateClient(string repoUri) => GitRepoUrlParser.ParseTypeFromUri(repoUri) switch
     {
         GitRepoType.AzureDevOps => new AzureDevOpsClient(
             _processManager.GitExecutable,

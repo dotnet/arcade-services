@@ -102,7 +102,7 @@ internal class LocalSettings
 
         if (!string.IsNullOrEmpty(repoUri))
         {
-            darcSettings.GitType = GitRepoTypeParser.ParseFromUri(repoUri);
+            darcSettings.GitType = GitRepoUrlParser.ParseTypeFromUri(repoUri);
             switch (darcSettings.GitType)
             {
                 case GitRepoType.GitHub:

@@ -63,11 +63,11 @@ public class RepositoryCloneManagerTests
     [Test]
     public async Task RepoIsClonedOnceTest()
     {
-        var path = await _manager.PrepareClone(RepoUri, Ref, default);
+        var path = await _manager.PrepareCloneAsync(RepoUri, Ref, default);
         path.Should().Be(_clonePath);
-        path = await _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareCloneAsync(RepoUri, "main", default);
         path.Should().Be(_clonePath);
-        path = await _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareCloneAsync(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, _clonePath, null), Times.Once);
@@ -82,9 +82,9 @@ public class RepositoryCloneManagerTests
             .Setup(x => x.DirectoryExists(_clonePath))
             .Returns(true);
 
-        var path = await _manager.PrepareClone(RepoUri, Ref, default);
+        var path = await _manager.PrepareCloneAsync(RepoUri, Ref, default);
         path.Should().Be(_clonePath);
-        path = await _manager.PrepareClone(RepoUri, "main", default);
+        path = await _manager.PrepareCloneAsync(RepoUri, "main", default);
         path.Should().Be(_clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, _clonePath, null), Times.Never);
@@ -129,7 +129,7 @@ public class RepositoryCloneManagerTests
         }
 
         // Clone for the first time
-        var path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, "main", default);
+        var path = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote }, "main", default);
         path.Should().Be(clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
@@ -137,7 +137,7 @@ public class RepositoryCloneManagerTests
 
         // A second clone of the same
         ResetCalls();
-        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote }, Ref, default);
+        path = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote }, Ref, default);
         
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
@@ -146,7 +146,7 @@ public class RepositoryCloneManagerTests
 
         // A third clone with a new remote
         ResetCalls();
-        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
+        path = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
@@ -156,7 +156,7 @@ public class RepositoryCloneManagerTests
 
         // Same again, should be cached
         ResetCalls();
-        path = await _manager.PrepareClone(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
+        path = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
@@ -166,7 +166,7 @@ public class RepositoryCloneManagerTests
 
         // Call with URI directly
         ResetCalls();
-        path = await _manager.PrepareClone(RepoUri, Ref + "4", default);
+        path = await _manager.PrepareCloneAsync(RepoUri, Ref + "4", default);
 
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
@@ -176,7 +176,7 @@ public class RepositoryCloneManagerTests
 
         // Call with the second URI directly
         ResetCalls();
-        path = await _manager.PrepareClone(newRemote, Ref + "5", default);
+        path = await _manager.PrepareCloneAsync(newRemote, Ref + "5", default);
 
         path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
