@@ -82,7 +82,7 @@ public abstract class VmrTestsBase
     protected abstract Task CopyVmrForCurrentTest();
 
     private IServiceProvider CreateServiceProvider() => new ServiceCollection()
-        .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Information))
+        .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
         .BuildServiceProvider();
 

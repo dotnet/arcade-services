@@ -502,7 +502,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 var remotes = additionalRemotes
                     .Where(r => r.Mapping == sourceMapping.Name)
                     .Select(r => r.RemoteUri)
-                    .Prepend(sourceMapping.DefaultRef)
+                    .Prepend(sourceMapping.DefaultRemote)
                     .Append(source.RemoteUri)
                     .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
                     .Distinct()

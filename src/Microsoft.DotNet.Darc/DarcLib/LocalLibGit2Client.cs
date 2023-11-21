@@ -25,7 +25,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     private readonly ILogger _logger;
 
     public LocalLibGit2Client(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
-        : base(remoteConfiguration, processManager, logger)
+        : base(processManager, logger)
     {
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
