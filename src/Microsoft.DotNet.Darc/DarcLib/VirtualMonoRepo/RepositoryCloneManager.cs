@@ -17,9 +17,9 @@ public record AdditionalRemote(string Mapping, string RemoteUri);
 
 public interface IRepositoryCloneManager
 {
-    Task<NativePath> PrepareClone(string repoUri, string checkoutRef, CancellationToken cancellationToken);
-
-    Task<NativePath> PrepareClone(
+    Task<NativePath> PrepareCloneAsync(string repoUri, string checkoutRef, CancellationToken cancellationToken);
+    
+    Task<NativePath> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remotes,
         string checkoutRef,
@@ -33,7 +33,7 @@ public interface IRepositoryCloneManager
     /// <param name="requestedRefs">List of commits that </param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
     /// <returns>Path to the clone</returns>
-    Task<NativePath> PrepareClone(
+    Task<NativePath> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
@@ -75,7 +75,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         _logger = logger;
     }
 
-    public async Task<NativePath> PrepareClone(
+    public async Task<NativePath> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         string checkoutRef,
@@ -99,7 +99,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path;
     }
 
-    public async Task<NativePath> PrepareClone(
+    public async Task<NativePath> PrepareCloneAsync(
         string repoUri,
         string checkoutRef,
         CancellationToken cancellationToken)
@@ -111,7 +111,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return path;
     }
 
-    public async Task<NativePath> PrepareClone(
+    public async Task<NativePath> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,

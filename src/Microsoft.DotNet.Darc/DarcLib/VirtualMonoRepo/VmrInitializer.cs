@@ -181,7 +181,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareClone(
+        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
             new[] { update.TargetRevision },

@@ -204,7 +204,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareClone(
+        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
             requestedRefs: new[] { currentVersion.Sha, update.TargetRevision },
@@ -508,11 +508,11 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     .Distinct()
                     .ToList();
 
-                clonePath = await _cloneManager.PrepareClone(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
+                clonePath = await _cloneManager.PrepareCloneAsync(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
             }
             else
             {
-                clonePath = await _cloneManager.PrepareClone(source.RemoteUri, source.CommitSha, cancellationToken);
+                clonePath = await _cloneManager.PrepareCloneAsync(source.RemoteUri, source.CommitSha, cancellationToken);
             }
 
             foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
