@@ -17,8 +17,28 @@ public record AdditionalRemote(string Mapping, string RemoteUri);
 
 public interface IRepositoryCloneManager
 {
-    Task<NativePath> PrepareCloneAsync(string repoUri, string checkoutRef, CancellationToken cancellationToken);
-    
+    /// <summary>
+    /// Clones a target repo URI into a given directory and checks out a given ref.
+    /// When clone is already present, it is re-used and we only fetch.
+    /// When given remotes have already been fetched during this run, they are not fetched again.
+    /// </summary>
+    /// <param name="repoUri">Remote to fetch from</param>
+    /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <returns>Path to the clone</returns>
+    Task<NativePath> PrepareCloneAsync(
+        string repoUri,
+        string checkoutRef,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Clones a repo in a target directory, fetches from given remotes and checks out a given ref.
+    /// When clone is already present, it is re-used and only remotes are fetched.
+    /// When given remotes have already been fetched during this run, they are not fetched again.
+    /// </summary>
+    /// <param name="mapping">VMR repo mapping to associate the clone with</param>
+    /// <param name="remotes">Remotes to fetch from</param>
+    /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <returns>Path to the clone</returns>
     Task<NativePath> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remotes,
