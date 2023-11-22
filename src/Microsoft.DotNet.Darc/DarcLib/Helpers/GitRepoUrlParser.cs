@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using System.IO;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -11,9 +11,17 @@ public static class GitRepoUrlParser
 {
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
     {
-        if (!Uri.TryCreate(pathOrUri, UriKind.Absolute, out Uri? parsedUri))
+        if (!Uri.TryCreate(pathOrUri, UriKind.RelativeOrAbsolute, out Uri? parsedUri))
         {
             return GitRepoType.None;
+        }
+
+        // Local relative paths are still a local git URI
+        if (!parsedUri.IsAbsoluteUri)
+        {
+            return pathOrUri.IndexOfAny(Path.GetInvalidPathChars()) == -1
+                ? GitRepoType.Local
+                : GitRepoType.None;
         }
 
         return parsedUri switch

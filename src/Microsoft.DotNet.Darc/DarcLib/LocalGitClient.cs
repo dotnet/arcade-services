@@ -137,6 +137,21 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim();
     }
 
+    public async Task<string> GetObjectTypeAsync(string repoPath, string objectSha)
+    {
+        var args = new[]
+        {
+            "cat-file",
+            "-t",
+            objectSha,
+        };
+
+        var result = await _processManager.ExecuteGit(repoPath, args);
+        result.ThrowIfFailed($"Failed to find object {objectSha} in {repoPath}");
+
+        return result.StandardOutput.Trim();
+    }
+
     /// <summary>
     ///     Add a remote to a local repo if does not already exist.
     /// </summary>
