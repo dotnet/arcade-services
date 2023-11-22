@@ -292,7 +292,7 @@ public class RepositoryCloneManagerTests
                 .Returns(Task.CompletedTask);
 
             _localGitRepo
-                .Setup(x => x.GetShaForRefAsync(clonePath, It.IsAny<string>()))
+                .Setup(x => x.GetObjectTypeAsync(clonePath, It.IsAny<string>()))
                 .Callback((string _, string sha) =>
                 {
                     if (!configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned))
@@ -300,7 +300,7 @@ public class RepositoryCloneManagerTests
                         throw new Exception($"Could not find {sha}");
                     }
                 })
-                .ReturnsAsync("not-important-sha");
+                .ReturnsAsync("commit");
         }
     }
 

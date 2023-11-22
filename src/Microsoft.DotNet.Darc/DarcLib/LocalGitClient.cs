@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -133,6 +134,21 @@ public class LocalGitClient : ILocalGitClient
 
         var result = await _processManager.ExecuteGit(repoPath, args);
         result.ThrowIfFailed($"Failed to find commit {gitRef} in {repoPath}");
+
+        return result.StandardOutput.Trim();
+    }
+
+    public async Task<string> GetObjectTypeAsync(string repoPath, string objectSha)
+    {
+        var args = new[]
+        {
+            "cat-file",
+            "-t",
+            objectSha,
+        };
+
+        var result = await _processManager.ExecuteGit(repoPath, args);
+        result.ThrowIfFailed($"Failed to find object {objectSha} in {repoPath}");
 
         return result.StandardOutput.Trim();
     }

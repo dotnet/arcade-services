@@ -143,7 +143,8 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             throw new ArgumentException("No remote URIs provided to clone");
         }
 
-        var refsToVerify = new HashSet<string>(requestedRefs);
+        // Rule out the null commit
+        var refsToVerify = new HashSet<string>(requestedRefs.Where(sha => !Constants.EmptyGitObject.StartsWith(sha)));
 
         _logger.LogDebug("Fetching refs {refs} from {uris}",
             string.Join(", ", requestedRefs),
@@ -158,12 +159,15 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             bool missingCommit = false;
 
             // Verify that all requested commits are available
-            foreach (var commit in refsToVerify.ToArray())
+            foreach (string commit in refsToVerify.ToArray())
             {
                 try
                 {
-                    await _localGitRepo.GetShaForRefAsync(path, commit);
-                    refsToVerify.Remove(commit);
+                    string objectType = await _localGitRepo.GetObjectTypeAsync(path, commit);
+                    if (objectType == "commit")
+                    {
+                        refsToVerify.Remove(commit);
+                    }
                 }
                 catch
                 {
