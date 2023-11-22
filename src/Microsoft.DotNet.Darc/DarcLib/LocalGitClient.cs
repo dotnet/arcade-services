@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
