@@ -219,7 +219,9 @@ public abstract class VmrManagerBase
             var remotes = additionalRemotes
                 .Where(r => r.Mapping == repo.Mapping.Name)
                 .Select(r => r.RemoteUri)
-                .Prepend(repo.RemoteUri);
+                .Append(repo.RemoteUri)
+                .Prepend(repo.Mapping.DefaultRemote)
+                .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther));
 
             IEnumerable<DependencyDetail>? repoDependencies = null;
             foreach (var remoteUri in remotes)
