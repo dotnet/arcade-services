@@ -1,0 +1,38 @@
+# Secrets required for the dotnet-dotnet-synchronization(-internal) pipelines
+
+storageLocation:
+  type: azure-key-vault
+  parameters:
+    subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+    name: EngKeyVault
+
+references:
+  helixkv:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: helixkv
+
+secrets:
+  BotAccount-dotnet-bot:
+    type: github-account
+    parameters:
+      Name: dotnet-bot
+
+  # Required in the dotnet-dotnet-synchronization pipeline
+  dn-bot-dnceng-build-rw-code-rw:
+    type: azure-devops-access-token
+    parameters:
+      domainAccountName: dn-bot
+      domainAccountSecret:
+          location: helixkv
+          name: dn-bot-account-redmond
+      name: dn-bot-dnceng-build
+      organizations: dnceng
+      scopes: build_execute code_write
+
+  BotAccount-dotnet-bot-repo-PAT:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
