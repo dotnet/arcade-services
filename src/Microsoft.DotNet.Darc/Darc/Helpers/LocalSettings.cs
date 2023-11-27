@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Helpers;
 /// </summary>
 internal class LocalSettings
 {
-    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro-prod.westus2.cloudapp.azure.com/";
+    private static readonly string _defaultBuildAssetRegistryBaseUri = "https://maestro.dot.net/";
 
     public string BuildAssetRegistryPassword { get; set; }
 
