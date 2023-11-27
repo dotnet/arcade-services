@@ -201,14 +201,14 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"No remote named {remoteName} in {repoPath}");
         var remoteUri = result.StandardOutput.Trim();
 
-        var args = new[] { "remote", "update", remoteName };
+        List<string> args = new() { "remote", "update", remoteName };
         var envVars = new Dictionary<string, string>();
         AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
-        args = new[] { "fetch", "--tags", "--force", remoteName };
+        args = new() { "fetch", "--tags", "--force", remoteName };
         envVars = new Dictionary<string, string>();
         AddGitAuthHeader(args, envVars, remoteUri);
 
