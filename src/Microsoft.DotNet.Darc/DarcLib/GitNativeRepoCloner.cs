@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
@@ -17,13 +16,16 @@ namespace Microsoft.DotNet.DarcLib;
 /// </summary>
 public class GitNativeRepoCloner : IGitRepoCloner
 {
-    private readonly RemoteConfiguration _remoteConfiguration;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IProcessManager _processManager;
     private readonly ILogger _logger;
 
-    public GitNativeRepoCloner(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
+    public GitNativeRepoCloner(
+        ILocalGitClient localGitClient,
+        IProcessManager processManager,
+        ILogger logger)
     {
-        _remoteConfiguration = remoteConfiguration;
+        _localGitClient = localGitClient;
         _processManager = processManager;
         _logger = logger;
     }
@@ -49,19 +51,8 @@ public class GitNativeRepoCloner : IGitRepoCloner
         _logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
 
         var args = new List<string>();
-        var envVars = new Dictionary<string, string>
-        {
-            { "GIT_TERMINAL_PROMPT", "0" }
-        };
-
-        string? token = _remoteConfiguration.GetTokenForUri(repoUri);
-
-        if (!string.IsNullOrEmpty(token))
-        {
-            const string ENV_VAR_NAME = "GIT_REMOTE_PAT";
-            args.Add($"--config-env=http.extraheader={ENV_VAR_NAME}");
-            envVars[ENV_VAR_NAME] = GetAuthorizationHeaderArgument(token);
-        }
+        var envVars = new Dictionary<string, string>();
+        _localGitClient.AddGitAuthHeader(args, envVars, repoUri);
 
         if (gitDirectory != null)
         {
@@ -92,11 +83,5 @@ public class GitNativeRepoCloner : IGitRepoCloner
             result = await _processManager.ExecuteGit(targetDirectory, "checkout", commit);
             result.ThrowIfFailed($"Failed to check out {commit} in {targetDirectory}");
         }
-    }
-
-    public static string GetAuthorizationHeaderArgument(string token)
-    {
-        var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"));
-        return $"Authorization: Basic {encodedToken}";
     }
 }
