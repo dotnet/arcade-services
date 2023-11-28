@@ -10,7 +10,7 @@
     },
     "Maestro.Web": {
       "commandName": "Project",
-      "commandLineArgs": "get-buil",
+      "commandLineArgs": "get-build",
       "launchBrowser": true,
       "launchUrl": "api/values",
       "environmentVariables": {
