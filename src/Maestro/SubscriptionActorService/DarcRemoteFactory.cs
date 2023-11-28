@@ -73,7 +73,7 @@ public class DarcRemoteFactory : IRemoteFactory
             }
 
             long installationId = await _context.GetInstallationId(normalizedUrl);
-            var repoType = GitRepoTypeParser.ParseFromUri(normalizedUrl);
+            var repoType = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl);
 
             if (repoType == GitRepoType.GitHub && installationId == default)
             {
@@ -92,7 +92,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
             var gitExe = _localGit.GetPathToLocalGit();
 
-            IRemoteGitRepo remoteGitClient = GitRepoTypeParser.ParseFromUri(normalizedUrl) switch
+            IRemoteGitRepo remoteGitClient = GitRepoUrlParser.ParseTypeFromUri(normalizedUrl) switch
             {
                 GitRepoType.GitHub => installationId == default
                     ? throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'")

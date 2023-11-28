@@ -2,15 +2,70 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class GitRepoUrlParser
 {
+    public static GitRepoType ParseTypeFromUri(string pathOrUri)
+    {
+        if (!Uri.TryCreate(pathOrUri, UriKind.RelativeOrAbsolute, out Uri? parsedUri))
+        {
+            return GitRepoType.None;
+        }
+
+        // Local relative paths are still a local git URI
+        if (!parsedUri.IsAbsoluteUri)
+        {
+            return pathOrUri.IndexOfAny(Path.GetInvalidPathChars()) == -1
+                ? GitRepoType.Local
+                : GitRepoType.None;
+        }
+
+        return parsedUri switch
+        {
+            { IsFile: true } => GitRepoType.Local,
+            { Host: "github.com" } => GitRepoType.GitHub,
+            { Host: var host } when host is "dev.azure.com" => GitRepoType.AzureDevOps,
+            { Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
+            _ => GitRepoType.None,
+        };
+    }
+
+    /// <summary>
+    /// Sorts so that we go Local -> GitHub -> AzDO.
+    /// (in other words local, public, internal)
+    /// </summary>
+    public static int OrderByLocalPublicOther(GitRepoType first, GitRepoType second)
+    {
+        if (first == second)
+        {
+            return 0;
+        }
+
+        if (first == GitRepoType.Local)
+        {
+            return -1;
+        }
+
+        if (second == GitRepoType.Local)
+        {
+            return 1;
+        }
+
+        if (first == GitRepoType.GitHub)
+        {
+            return -1;
+        }
+
+        return 1;
+    }
+
     public static (string RepoName, string Org) GetRepoNameAndOwner(string uri)
     {
-        var repoType = GitRepoTypeParser.ParseFromUri(uri);
+        var repoType = ParseTypeFromUri(uri);
 
         if (repoType == GitRepoType.AzureDevOps)
         {
@@ -47,5 +102,16 @@ public static class GitRepoUrlParser
         }
 
         throw new Exception("Unsupported format of repository url " + uri);
+    }
+
+    public static string ConvertInternalUriToPublic(string uri)
+    {
+        if (!uri.StartsWith(Constants.AzureDevOpsUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uri;
+        }
+
+        var (repo, org) = GetRepoNameAndOwner(uri);
+        return $"{Constants.GitHubUrlPrefix}{org}/{repo}";
     }
 }

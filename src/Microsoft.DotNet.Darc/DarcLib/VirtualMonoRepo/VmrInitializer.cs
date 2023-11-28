@@ -181,9 +181,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareClone(
+        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
+            new[] { update.TargetRevision },
             update.TargetRevision,
             cancellationToken);
 
@@ -199,6 +200,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await UpdateRepoToRevisionAsync(
             update,
             clonePath,
+            additionalRemotes,
             Constants.EmptyGitObject,
             author: null,
             commitMessage,
@@ -215,6 +217,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     protected override Task<IReadOnlyCollection<VmrIngestionPatch>> RestoreVmrPatchedFilesAsync(
         SourceMapping mapping,
         IReadOnlyCollection<VmrIngestionPatch> patches,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
         // We only need to apply VMR patches that belong to the mapping, nothing to restore from before

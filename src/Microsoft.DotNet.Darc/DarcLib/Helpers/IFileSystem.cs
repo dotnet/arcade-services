@@ -27,6 +27,8 @@ public interface IFileSystem
 
     string? GetFileName(string? path);
 
+    public string GetTempFileName();
+
     string? GetDirectoryName(string? path);
 
     string PathCombine(string path1, string path2);

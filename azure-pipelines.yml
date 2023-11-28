@@ -65,17 +65,17 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
-      ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-        enablePublishBuildArtifacts: true
-        enablePublishBuildAssets: true
-      ${{ else }}:
-        enablePublishBuildArtifacts: false
-        enablePublishBuildAssets: false
+      artifacts:
+        publish:
+          logs: true
+          ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+            artifacts: true
+            manifests: true
+      enableTelemetry: true
       enableMicrobuild: false
       enablePublishTestResults: false
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
-      enableTelemetry: true
-      helixRepo: dotnet/arcade-services
+
       jobs:
       - job: Windows_NT
         timeoutInMinutes: 90
@@ -89,21 +89,14 @@ stages:
 
         variables:
         - _InternalBuildArgs: ''
-        - _ProductionArgs: ''
 
         # Only enable publishing in non-public, non PR scenarios.
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-          # DotNet-Blob-Feed provides: dotnetfeed-storage-access-key-1
           # DotNet-Symbol-Server-Pats provides: microsoft-symbol-server-pat, symweb-symbol-server-pat
           # Publish-Build-Assets provides: MaestroAccessToken, BotAccount-dotnet-maestro-bot-PAT
-          - group: DotNet-Blob-Feed
           - group: DotNet-Symbol-Server-Pats
           - group: Publish-Build-Assets
-          - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
           - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
-              /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
-              /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
-              /p:DotNetPublishToBlobFeed=$(_DotNetPublishToBlobFeed)
               /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
               /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
               /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
@@ -118,18 +111,15 @@ stages:
                   _BuildConfig: Debug
                   _PublishType: none
                   _SignType: test
-                  _DotNetPublishToBlobFeed : false
             release_configuration:
               _BuildConfig: Release
               # PRs or external builds are not signed.
               ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
                 _PublishType: none
                 _SignType: test
-                _DotNetPublishToBlobFeed : false
               ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
                 _PublishType: blob
                 _SignType: test
-                _DotNetPublishToBlobFeed : true
         steps:
         - checkout: self
           clean: true
@@ -173,7 +163,6 @@ stages:
             -configuration $(_BuildConfig)
             -prepareMachine
             $(_InternalBuildArgs)
-            $(_ProductionArgs)
             /p:Test=false
             /P:Sign=false
           name: Build
@@ -231,8 +220,6 @@ stages:
           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
             artifact: Maestro.ScenarioTests
             displayName: Publish Maestro Scenario Tests
-
-        - template: /eng/common/templates/steps/publish-logs.yml
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
   - template: /eng/common/templates/post-build/post-build.yml
