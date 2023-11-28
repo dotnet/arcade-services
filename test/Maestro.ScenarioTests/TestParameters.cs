@@ -35,7 +35,7 @@ namespace Maestro.ScenarioTests
 
             maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
                     ?? userSecrets["MAESTRO_BASEURIS"]
-                    ?? "https://maestro.int-dot.com")
+                    ?? "https://maestro.int-dot.net")
                     .Split(',');
             maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
@@ -43,7 +43,7 @@ namespace Maestro.ScenarioTests
             azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
         }
 
-        /// <param name="useNonPrimaryEndpoint">If set to true, the test will atempt to use the non primary endpoint, if provided</param>
+        /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
         public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
         {
             var testDir = TemporaryDirectory.Get();

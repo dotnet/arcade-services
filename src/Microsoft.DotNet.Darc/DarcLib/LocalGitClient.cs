@@ -201,18 +201,18 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"No remote named {remoteName} in {repoPath}");
         var remoteUri = result.StandardOutput.Trim();
 
-        List<string> args = new() { "remote", "update", remoteName };
+        List<string> args = [ "remote", "update", remoteName ];
         var envVars = new Dictionary<string, string>();
         AddGitAuthHeader(args, envVars, remoteUri);
 
-        result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+        result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
-        args = new() { "fetch", "--tags", "--force", remoteName };
+        args = [ "fetch", "--tags", "--force", remoteName ];
         envVars = new Dictionary<string, string>();
         AddGitAuthHeader(args, envVars, remoteUri);
 
-        result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: cancellationToken);
+        result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
     }
 
@@ -366,7 +366,8 @@ public class LocalGitClient : ILocalGitClient
         }
 
         const string ENV_VAR_NAME = "GIT_REMOTE_PAT";
-        args.Add($"--config-env=http.extraheader={ENV_VAR_NAME}");
+        // Must be before the executed option
+        args.Insert(0, $"--config-env=http.extraheader={ENV_VAR_NAME}");
         envVars[ENV_VAR_NAME] = repoType switch
         {
             GitRepoType.GitHub => $"Authorization: Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Constants.GitHubBotUserName}:{token}"))}",
