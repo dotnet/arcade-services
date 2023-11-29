@@ -405,8 +405,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -497,8 +497,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, new[] { nestedSubmoduleInfo.Path })
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md")
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"))
             .Append(":(exclude)external-2");
 
         _processManager
@@ -517,7 +517,7 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedNestedSubmodulePatchName, Constants.EmptyGitObject, nestedSubmoduleSha1, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -605,8 +605,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, Constants.EmptyGitObject, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -683,8 +683,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, SubmoduleSha2, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -762,8 +762,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName1, SubmoduleSha1, Constants.EmptyGitObject, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -777,8 +777,8 @@ public class VmrPatchHandlerTests
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
             .Take(7)
-            .Append(":(glob,attr:!vmr-ignore)**/*")
-            .Append(":(exclude,glob,attr:!vmr-preserve)LICENSE.md");
+            .Append(VmrPatchHandler.GetInclusionRule("**/*"))
+            .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
         _processManager
             .Verify(x => x.Execute("git",
@@ -1027,10 +1027,10 @@ public class VmrPatchHandlerTests
             "--",
             ":(glob,attr:!vmr-ignore)*.*",
             ":(glob,attr:!vmr-ignore)src/*",
-            ":(exclude,glob,attr:!vmr-preserve)*.dll",
-            ":(exclude,glob,attr:!vmr-preserve)*.exe",
-            ":(exclude,glob,attr:!vmr-preserve)src/**/tests/**/*.*",
-            ":(exclude,glob,attr:!vmr-preserve)submodules/external-1/LICENSE.md",
+            VmrPatchHandler.GetExclusionRule("*.dll"),
+            VmrPatchHandler.GetExclusionRule("*.exe"),
+            VmrPatchHandler.GetExclusionRule("src/**/tests/**/*.*"),
+            VmrPatchHandler.GetExclusionRule("submodules/external-1/LICENSE.md"),
         };
 
         if (submodules != null)

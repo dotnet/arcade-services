@@ -397,7 +397,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                [.. filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }) ],
+                [.. filters?.Except([GetInclusionRule("**/*")]) ],
                 true,
                 workingDir,
                 applicationPath,
