@@ -103,7 +103,9 @@ public class VmrInfo : IVmrInfo
 
     public NativePath GetRepoSourcesPath(string mappingName) => VmrPath / SourcesDir / mappingName;
 
-    public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => RelativeSourcesDir / mapping.Name;
+    public static UnixPath GetRelativeRepoSourcesPath(SourceMapping mapping) => GetRelativeRepoSourcesPath(mapping.Name);
+
+    public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
 
     public NativePath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
 }

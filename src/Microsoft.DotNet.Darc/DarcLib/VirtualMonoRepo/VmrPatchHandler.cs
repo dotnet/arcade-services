@@ -123,9 +123,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
         }
 
-        var filters = new List<string>();
-        filters.AddRange(mapping.Include.Select(p => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){p}"));
-        filters.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}"));
+        List<string> filters =
+        [
+            .. mapping.Include.Select(GetInclusionRule),
+            .. mapping.Exclude.Select(GetExclusionRule),
+        ];
 
         // Ignore submodules in the diff, they will be inlined via their own diffs
         if (submoduleChanges.Any())
@@ -395,7 +397,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }).ToArray(),
+                [.. filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }) ],
                 true,
                 workingDir,
                 applicationPath,
@@ -628,6 +630,10 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
+
+    public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.KeepAttribute}){path}";
+
+    public static string GetExclusionRule(string path) => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){path}";
 
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
 }

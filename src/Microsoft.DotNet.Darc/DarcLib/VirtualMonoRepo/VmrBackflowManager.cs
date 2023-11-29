@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -15,8 +16,9 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-internal record FlowInfo(string SourceSha, string TargetSha);
-internal record CodeflowInfo(bool IsBackflow, FlowInfo LastForwardFlow, FlowInfo? LastBackflow);
+internal abstract record LastCodeflow(bool IsBackflow, string SourceSha, string TargetSha);
+internal record LastForwardFlow(string VmrSha, string RepoSha) : LastCodeflow(false, RepoSha, VmrSha);
+internal record LastBackflow(string VmrSha, string RepoSha) : LastCodeflow(true, VmrSha, RepoSha);
 
 public interface IVmrBackflowManager
 {
@@ -71,23 +73,59 @@ public class VmrBackflowManager : IVmrBackflowManager
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        var flowInfo = await GetLastFlowInformationAsync(mappingName, repoPath);
+        var flowInfo = await GetLastFlowAsync(mappingName, repoPath);
 
-        if (flowInfo.IsBackflow)
+        if (flowInfo is LastBackflow lastBackflow)
         {
-            await SimpleDiffFlow(mappingName, flowInfo);
+            await SimpleDiffFlow(mappingName, repoPath, lastBackflow, cancellationToken);
         }
         else
         {
-            await DeltaFlow(mappingName, flowInfo);
+            await DeltaFlow(mappingName, (LastForwardFlow)flowInfo);
+        }
+    }
+
+    private async Task SimpleDiffFlow(string mappingName, NativePath repoPath, LastBackflow lastFlow, CancellationToken cancellationToken)
+    {
+        var currentVmrSha = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
+
+        if (currentVmrSha == lastFlow.VmrSha)
+        {
+            _logger.LogInformation("No changes to synchronize, {repo} was already synchronized to {sha}", _vmrInfo.VmrPath, currentVmrSha);
+            return;
         }
 
+        _logger.LogInformation("Backflowing {sha} from VMR to {repoName}", currentVmrSha, mappingName);
 
-        /*
+        await _localGitClient.CheckoutAsync(repoPath, lastFlow.RepoSha);
+        var shortShas = $"{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentVmrSha)}";
+        var branchName = $"backflow/{shortShas}";
+        var patchName = _vmrInfo.TmpPath / (mappingName + "-backflow-" + shortShas + ".patch");
 
-        var patches = await CreateBackflowPatchesAsync(repo, vmrSourceSha, vmrTargetSha, cancellationToken);
+        // Ignore all submodules
+        var ignoredPaths = _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mappingName + '/'))
+            .Select(s => s.Path.Substring(mappingName.Length + 1))
+            .Select(VmrPatchHandler.GetExclusionRule)
+            .ToList();
+
+        List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
+            patchName,
+            lastFlow.VmrSha,
+            currentVmrSha,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName),
+            filters: ignoredPaths,
+            relativePaths: true,
+            workingDir: _vmrInfo.VmrPath,
+            applicationPath: null,
+            cancellationToken);
+
         if (patches.Count == 0)
         {
+            _logger.LogInformation("There are no new changes for {mappingName} between {sha1} and {sha2}",
+                mappingName,
+                lastFlow.VmrSha,
+                currentVmrSha);
             return;
         }
 
@@ -98,83 +136,92 @@ public class VmrBackflowManager : IVmrBackflowManager
 
         foreach (var patch in patches)
         {
-            message.Append(patch.Path.PadRight(longestPath));
-            message.AppendLine(patch.ApplicationPath ?? string.Empty);
+            message.AppendLine(patch.Path.PadRight(longestPath));
         }
 
         _logger.LogDebug(message.ToString());
 
-        // Let's apply the patches onto the target repo
-        _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repo.CommitSha);
-        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {Constants.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
-
-        var branchName = $"backflow/{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
-
-        string[] remotes = additionalRemotes
-            .Where(r => r.Mapping == mappingName)
-            .Select(r => r.RemoteUri)
-            .Append(repo.RemoteUri)
-            .ToArray();
+        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
+        _logger.LogInformation("Created branch {branchName} in {repoDir}", branchName, repoPath);
 
         try
         {
-            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
-        }
-        catch
-        {
-            _logger.LogInformation("Failed to checkout {sha} in {repo}, will fetch from all remotes and try again...", repo.CommitSha, repoDirectory);
-
-            foreach (var remoteUri in remotes)
+            foreach (VmrIngestionPatch patch in patches)
             {
-                var remoteName = await _localGitClient.AddRemoteIfMissingAsync(repoDirectory, remoteUri, cancellationToken);
-                await _localGitClient.UpdateRemoteAsync(repoDirectory, remoteName, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
             }
-
-            await _localGitClient.CheckoutAsync(repoDirectory, repo.CommitSha);
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(repoDirectory, branchName);
-
-        _logger.LogInformation("Created branch {branchName} in {repoDir}", branchName, repoDirectory);
-
-        foreach (var patch in patches)
+        catch (Exception)
         {
-            await _vmrPatchHandler.ApplyPatch(patch, repoDirectory, cancellationToken);
+            // TODO: Recursive fallback
+            throw;
         }
 
         var commitMessage = $"""
-            [VMR] Code backflow {Commit.GetShortSha(vmrSourceSha)}{Constants.Arrow}{Commit.GetShortSha(vmrTargetSha)}
+            [VMR] Code backflow {shortShas}
 
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, ((string, string)?)null, cancellationToken: cancellationToken);
+        await _localGitClient.CommitAsync(repoPath, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
 
-        _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);*/
+        _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoPath);
     }
 
-    private async Task SimpleDiffFlow(string mappingName, CodeflowInfo flowInfo)
-    {
-        var currentVmrSha = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
-
-        if (currentVmrSha == flowInfo.LastBackflow?.SourceSha)
-        {
-            _logger.LogInformation("No changes to synchronize, {repo} was already synchronized to {sha}", _vmrInfo.VmrPath, currentVmrSha);
-            return;
-        }
-
-        _logger.LogInformation("Backflowing {sha} from VMR to {repoName}", currentVmrSha, mappingName);
-
-
-    }
-
-    private async Task DeltaFlow(string mappingName, CodeflowInfo flowInfo)
+    private async Task DeltaFlow(string mappingName, LastForwardFlow lastFlow)
     {
         await Task.CompletedTask;
     }
 
-    private async Task<CodeflowInfo> GetLastFlowInformationAsync(string mappingName, NativePath repoPath)
+    private async Task<LastCodeflow> GetLastFlowAsync(string mappingName, NativePath repoPath)
+    {
+        LastForwardFlow lastForwardFlow = await GetLastForwardFlow(mappingName);
+        LastBackflow? lastBackflow = await GetLastBackflow(repoPath);
+
+        if (lastBackflow is null)
+        {
+            return lastForwardFlow;
+        }
+
+        string objectType1 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastBackflow.VmrSha);
+        string objectType2 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastForwardFlow.VmrSha);
+
+        if (objectType1 != "commit" || objectType2 != "commit")
+        {
+            throw new Exception($"Failed to find commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {_vmrInfo.VmrPath}");
+        }
+
+        // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
+        bool isBackwardOlder = await IsOlderCommit(lastForwardFlow.VmrSha, lastBackflow.VmrSha);
+        bool isForwardOlder = await IsOlderCommit(lastBackflow.VmrSha, lastForwardFlow.VmrSha);
+
+        // Commits not comparable
+        if (isBackwardOlder == isForwardOlder)
+        {
+            throw new Exception($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
+        };
+
+        return isBackwardOlder ? lastForwardFlow : lastBackflow;
+    }
+
+    private async Task<LastBackflow?> GetLastBackflow(NativePath repoPath)
+    {
+        // Last backflow SHA comes from Version.Details.xml in the repo
+        VmrCodeflow? codeflowInformation = _versionDetailsParser.ParseVersionDetailsXml(repoPath).VmrCodeflow;
+        if (codeflowInformation is null)
+        {
+            return null;
+        }
+
+        string lastBackflowVmrSha = codeflowInformation.Inflow.Sha;
+        string lastBackflowRepoSha = await BlameLineAsync(
+            repoPath / VersionFiles.VersionDetailsXml,
+            line => line.Contains("Inflow") && line.Contains(lastBackflowVmrSha));
+
+        return new LastBackflow(lastBackflowVmrSha, lastBackflowRepoSha);
+    }
+
+    private async Task<LastForwardFlow> GetLastForwardFlow(string mappingName)
     {
         IVersionedSourceComponent repoInVmr = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
             ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
@@ -185,42 +232,7 @@ public class VmrBackflowManager : IVmrBackflowManager
             _vmrInfo.GetSourceManifestPath(),
             line => line.Contains(lastForwardRepoSha));
 
-        // Last backflow SHA comes from Version.Details.xml in the repo
-        VmrCodeflow? codeflowInformation = _versionDetailsParser.ParseVersionDetailsXml(repoPath).VmrCodeflow;
-        if (codeflowInformation is null)
-        {
-            return new CodeflowInfo(
-                IsBackflow: true,
-                LastForwardFlow: new FlowInfo(lastForwardRepoSha, lastForwardVmrSha),
-                LastBackflow: null);
-        }
-
-        string lastBackflowVmrSha = codeflowInformation.Inflow.Sha;
-        string lastBackflowRepoSha = await BlameLineAsync(
-            repoPath / VersionFiles.VersionDetailsXml,
-            line => line.Contains("Inflow") && line.Contains(lastBackflowVmrSha));
-
-        string objectType1 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastForwardVmrSha);
-        string objectType2 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastForwardVmrSha);
-
-        if (objectType1 != "commit" || objectType2 != "commit")
-        {
-            throw new Exception($"Failed to find commits {lastBackflowVmrSha}, {lastForwardVmrSha} in {_vmrInfo.VmrPath}");
-        }
-
-        bool isBackwardOlder = await IsOlderCommit(lastForwardVmrSha, lastBackflowVmrSha);
-        bool isForwardOlder = await IsOlderCommit(lastBackflowVmrSha, lastForwardVmrSha);
-
-        if (isBackwardOlder == isForwardOlder)
-        {
-            throw new Exception($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({lastForwardVmrSha}, {lastBackflowVmrSha})");
-        };
-
-        // Source commit of last backflow is older than target commit of last forward flow => forward flow was last
-        return new CodeflowInfo(
-            IsBackflow: true,
-            LastForwardFlow: new FlowInfo(lastForwardRepoSha, lastForwardVmrSha),
-            LastBackflow: new FlowInfo(lastBackflowVmrSha, lastForwardRepoSha));
+        return new LastForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
     }
 
     private async Task<bool> IsOlderCommit(string firstSha, string secondSha)
@@ -255,57 +267,4 @@ public class VmrBackflowManager : IVmrBackflowManager
 
         throw new Exception($"Failed to blame file {filePath}");
     }
-
-    /*public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(
-        IVersionedSourceComponent repo,
-        string vmrSourceSha,
-        string vmrTargetSha,
-        CancellationToken cancellationToken)
-    {
-        string mappingName = repo.Path;
-
-        if (_vmrPatchHandler.GetVmrPatches(mappingName).Any())
-        {
-            throw new InvalidOperationException($"Cannot backflow commit that contains VMR patches");
-        }
-
-        if (vmrSourceSha == vmrTargetSha)
-        {
-            _logger.LogInformation("No changes to synchronize, {repo} was just synchronized into the VMR ({sha})", mappingName, vmrTargetSha);
-            return new();
-        }
-
-        _logger.LogDebug($"VMR range to be synchronized: {{sourceSha}} {Constants.Arrow} {{targetSha}}", vmrSourceSha, vmrTargetSha);
-
-        var patchName = $"{Commit.GetShortSha(vmrSourceSha)}-{Commit.GetShortSha(vmrTargetSha)}";
-        var workBranchName = $"backflow/" + patchName;
-        patchName = $"{mappingName}.{patchName}.patch";
-
-        // Ignore all submodules
-        List<string> ignoredPaths = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + '/'))
-            .Select(s => s.Path.Substring(mappingName.Length + 1))
-            .Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}")
-            .ToList();
-
-        // Create patches
-        var patches = await _vmrPatchHandler.CreatePatches(
-            _vmrInfo.TmpPath / patchName,
-            vmrSourceSha,
-            vmrTargetSha,
-            path: null,
-            ignoredPaths,
-            relativePaths: true, // Relative paths so that we can apply the patch on repo's root
-            workingDir: _vmrInfo.GetRepoSourcesPath(mappingName),
-            applicationPath: null, // We will apply this onto the repo root
-            cancellationToken);
-
-        if (patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
-        {
-            _logger.LogInformation($"There are no new changes between the VMR and {mappingName}");
-            return new();
-        }
-
-        return patches;
-    }*/
 }
