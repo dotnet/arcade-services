@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -125,7 +126,7 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);
     }
 
-    public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
+    public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
     {
         if (!string.IsNullOrEmpty(branch))
         {
@@ -156,7 +157,8 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch)
     {
-        var existingDependencies = await ParseVersionDetailsXmlAsync(repoUri, branch);
+        var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
+        var existingDependencies = versionDetails.Dependencies;
         if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new DependencyException($"Dependency {dependency.Name} already exists in this repository");
@@ -1006,14 +1008,14 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>Async task</returns>
     public async Task<bool> Verify(string repo, string branch)
     {
-        Task<IEnumerable<DependencyDetail>> dependencyDetails;
+        Task<VersionDetails> versionDetails;
         Task<XmlDocument> versionProps;
         Task<JObject> globalJson;
         Task<JObject> dotnetToolsJson;
 
         try
         {
-            dependencyDetails = ParseVersionDetailsXmlAsync(repo, branch);
+            versionDetails = ParseVersionDetailsXmlAsync(repo, branch);
         }
         catch (Exception e)
         {
@@ -1054,28 +1056,28 @@ public class DependencyFileManager : IDependencyFileManager
         List<Task<bool>> verificationTasks = new List<Task<bool>>()
         {
             VerifyNoDuplicatedProperties(await versionProps),
-            VerifyNoDuplicatedDependencies(await dependencyDetails),
+            VerifyNoDuplicatedDependencies((await versionDetails).Dependencies),
             VerifyMatchingVersionProps(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await versionProps,
                 out Task<HashSet<string>> utilizedVersionPropsDependencies),
             VerifyMatchingGlobalJson(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await globalJson,
                 out Task<HashSet<string>> utilizedGlobalJsonDependencies),
             VerifyUtilizedDependencies(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 new List<HashSet<string>>
                 {
                     await utilizedVersionPropsDependencies,
                     await utilizedGlobalJsonDependencies
                 }),
             VerifyMatchingDotNetToolsJson(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await dotnetToolsJson)
         };
 
-        var results = await Task.WhenAll<bool>(verificationTasks);
+        var results = await Task.WhenAll(verificationTasks);
         return results.All(result => result);
     }
 

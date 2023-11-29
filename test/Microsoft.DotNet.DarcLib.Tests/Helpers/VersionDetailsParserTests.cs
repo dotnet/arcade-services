@@ -38,10 +38,10 @@ public class VersionDetailsParserTests
             """;
 
         var parser = new VersionDetailsParser();
-        var dependencies = parser.ParseVersionDetailsXml(VersionDetailsXml);
+        var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
-        dependencies.Should().HaveCount(3);
-        dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
+        versionDetails.Dependencies.Should().HaveCount(3);
+        versionDetails.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
             && d.Version == "2.1.0"
             && d.RepoUri == "https://github.com/dotnet/core-setup"
             && d.Commit == "7d57652f33493fa022125b7f63aad0d70c52d810"
@@ -50,7 +50,7 @@ public class VersionDetailsParserTests
             && d.SourceBuild == null
             && d.Type == DependencyType.Product);
 
-        dependencies.Should().Contain(d => d.Name == "NuGet.Build.Tasks"
+        versionDetails.Dependencies.Should().Contain(d => d.Name == "NuGet.Build.Tasks"
             && d.Version == "6.4.0-preview.1.51"
             && d.RepoUri == "https://github.com/nuget/nuget.client"
             && d.Commit == "745617ea6fc239737c80abb424e13faca4249bf1"
@@ -61,7 +61,7 @@ public class VersionDetailsParserTests
             && !d.SourceBuild.ManagedOnly
             && d.Type == DependencyType.Product);
 
-        dependencies.Should().Contain(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
+        versionDetails.Dependencies.Should().Contain(d => d.Name == "Microsoft.DotNet.Arcade.Sdk"
             && d.Version == "7.0.0-beta.22426.1"
             && d.RepoUri == "https://github.com/dotnet/arcade"
             && d.Commit == "692746db3f08766bc29e91e826ff15e5e8a82b44"
@@ -84,8 +84,8 @@ public class VersionDetailsParserTests
             """;
 
         var parser = new VersionDetailsParser();
-        var dependencies = parser.ParseVersionDetailsXml(VersionDetailsXml);
-        dependencies.Should().BeEmpty();
+        var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
+        versionDetails.Dependencies.Should().BeEmpty();
     }
 
     [Test]
@@ -130,5 +130,78 @@ public class VersionDetailsParserTests
         var parser = new VersionDetailsParser();
         var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
         action.Should().Throw<DarcException>().WithMessage("*is not a valid boolean*");
+    }
+
+    [Test]
+    public void IsVmrCodeflowParsedTest()
+    {
+        const string VersionDetailsXml =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <VmrCodeflow Name="nuget-client">
+                <Outflow>
+                  <Exclude>src/NuGet.Clients/NuGet.VisualStudio.Client</Exclude>
+                  <Exclude>tests/**/*</Exclude>
+                </Outflow>
+                <Inflow Uri="https://github.com/NuGet/NuGet.Client" Sha="86ba5fba7c39323011c2bfc6b713142affc76171">
+                  <IgnoredPackage>Microsoft.DotNet.Arcade.Sdk</IgnoredPackage>
+                  <IgnoredPackage>Microsoft.DotNet.Helix.Sdk</IgnoredPackage>
+                </Inflow>
+              </VmrCodeflow>
+              <ProductDependencies>
+                <Dependency Name="NETStandard.Library.Ref" Version="2.1.0" Pinned="true">
+                  <Uri>https://github.com/dotnet/core-setup</Uri>
+                  <Sha>7d57652f33493fa022125b7f63aad0d70c52d810</Sha>
+                </Dependency>
+                <Dependency Name="NuGet.Build.Tasks" Version="6.4.0-preview.1.51" CoherentParentDependency="Microsoft.NET.Sdk">
+                  <Uri>https://github.com/nuget/nuget.client</Uri>
+                  <Sha>745617ea6fc239737c80abb424e13faca4249bf1</Sha>
+                  <SourceBuildTarball RepoName="nuget-client" />
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies>
+                <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="7.0.0-beta.22426.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>692746db3f08766bc29e91e826ff15e5e8a82b44</Sha>
+                  <SourceBuild RepoName="arcade" ManagedOnly="true" TarballOnly="true" />
+                </Dependency>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        var parser = new VersionDetailsParser();
+        var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
+
+        versionDetails.VmrCodeflow.Should().NotBeNull();
+        versionDetails.VmrCodeflow.Name.Should().Be("nuget-client");
+        versionDetails.VmrCodeflow.Outflow.Should().NotBeNull();
+        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().HaveCount(2);
+        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().Contain("src/NuGet.Clients/NuGet.VisualStudio.Client");
+        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().Contain("tests/**/*");
+        versionDetails.VmrCodeflow.Inflow.Should().NotBeNull();
+        versionDetails.VmrCodeflow.Inflow.Uri.Should().Be("https://github.com/NuGet/NuGet.Client");
+        versionDetails.VmrCodeflow.Inflow.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
+    }
+
+    [Test]
+    public void InvalidVmrCodeflowRecognizedTest()
+    {
+        const string VersionDetailsXml =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <VmrCodeflow>
+                <Inflow Uri="https://github.com/NuGet/NuGet.Client" Sha="86ba5fba7c39323011c2bfc6b713142affc76171">
+                  <IgnoredPackage>Microsoft.DotNet.Arcade.Sdk</IgnoredPackage>
+                  <IgnoredPackage>Microsoft.DotNet.Helix.Sdk</IgnoredPackage>
+                </Inflow>
+              </VmrCodeflow>
+            </Dependencies>
+            """;
+
+        var parser = new VersionDetailsParser();
+        var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
+        action.Should().Throw<DarcException>().WithMessage("*Name attribute*");
     }
 }

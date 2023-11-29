@@ -100,7 +100,7 @@ internal class DependencyTestDriver
     {
         string testVersionDetailsXmlPath = Path.Combine(RootExpectedOutputsPath, VersionFiles.VersionDetailsXml);
         string versionDetailsContents = File.ReadAllText(testVersionDetailsXmlPath);
-        IEnumerable<DependencyDetail> dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents, false);
+        IEnumerable<DependencyDetail> dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContents, false).Dependencies;
 
         GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,

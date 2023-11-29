@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -1215,8 +1216,9 @@ public sealed class Remote : IRemote
         bool loadAssetLocations = false)
     {
         CheckForValidGitClient();
-        var dependencies = (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit)).Where(
-            dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit);
+        var dependencies = versionDetails.Dependencies
+            .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         if (loadAssetLocations)
         {

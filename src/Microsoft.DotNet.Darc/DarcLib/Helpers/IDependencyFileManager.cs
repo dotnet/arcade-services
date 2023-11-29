@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Xml;
+using Microsoft.DotNet.DarcLib.Models;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
@@ -22,7 +23,7 @@ public interface IDependencyFileManager
 
     List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null);
 
-    Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true);
+    Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true);
 
     Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch);
 

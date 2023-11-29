@@ -5,15 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface IVersionDetailsParser
 {
-    IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true);
+    VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true);
 
-    IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true);
+    VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true);
 }
 
 public class VersionDetailsParser : IVersionDetailsParser
@@ -40,14 +42,19 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string RepoNameAttributeName = "RepoName";
     public const string ManagedOnlyAttributeName = "ManagedOnly";
     public const string TarballOnlyAttributeName = "TarballOnly";
-    
-    public IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
+    public const string VmrCodeflowElementName = "VmrCodeflow";
+    public const string InflowElementName = "Inflow";
+    public const string OutflowElementName = "Outflow";
+    public const string ExcludeElementName = "Exclude";
+    public const string IgnoredPackageElementName = "IgnoredPackage";
+
+    public VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
         XmlDocument document = GetXmlDocument(fileContents);
         return ParseVersionDetailsXml(document, includePinned: includePinned);
     }
 
-    public IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
+    public VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
         XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
         if (dependencyNodes == null)
@@ -56,13 +63,18 @@ public class VersionDetailsParser : IVersionDetailsParser
                 $"Look for exceptions above.");
         }
 
-        var dependencies = ParseDependencyDetails(dependencyNodes);
-        return includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+        List<DependencyDetail> dependencies = ParseDependencyDetails(dependencyNodes);
+        dependencies = includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+
+        // Parse the VMR codeflow if it exists
+        VmrCodeflow? vmrCodeflow = ParseVmrCodeflow(document?.DocumentElement?.SelectSingleNode($"//{VmrCodeflowElementName}"));
+
+        return new VersionDetails(dependencies, vmrCodeflow);
     }
 
     private static List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
     {
-        List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
+        List<DependencyDetail> dependencyDetails = [];
 
         foreach (XmlNode dependency in dependencies)
         {
@@ -126,6 +138,37 @@ public class VersionDetailsParser : IVersionDetailsParser
         }
 
         return dependencyDetails;
+    }
+
+    private static VmrCodeflow? ParseVmrCodeflow(XmlNode? vmrCodeflow)
+    {
+        if (vmrCodeflow is null)
+        {
+            return null;
+        }
+
+        var name = vmrCodeflow.Attributes?[NameAttributeName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {NameAttributeName} attribute");
+
+        XmlNode inflow = vmrCodeflow.SelectSingleNode($"//{InflowElementName}")
+            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {InflowElementName} child node");
+
+        var uri = inflow.Attributes?[UriElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {UriElementName} attribute");
+
+        var sha = inflow.Attributes[ShaElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {ShaElementName} attribute");
+
+        List<string> ignoredPackages = inflow != null
+            ? inflow.SelectNodes($"//{IgnoredPackageElementName}")!.OfType<XmlElement>().Select(e => e.InnerText.Trim()).ToList()
+            : [];
+
+        XmlNode? outflow = vmrCodeflow.SelectSingleNode($"//{OutflowElementName}");
+        List<string> excludedFiles = outflow != null
+            ? outflow.SelectNodes($"//{ExcludeElementName}")!.OfType<XmlElement>().Select(e => e.InnerText.Trim()).ToList()
+            : [];
+
+        return new VmrCodeflow(name, new Outflow(excludedFiles), new Inflow(uri, sha, ignoredPackages));
     }
     
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)
