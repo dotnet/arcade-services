@@ -182,6 +182,9 @@ public class VersionDetailsParserTests
         versionDetails.VmrCodeflow.Inflow.Should().NotBeNull();
         versionDetails.VmrCodeflow.Inflow.Uri.Should().Be("https://github.com/NuGet/NuGet.Client");
         versionDetails.VmrCodeflow.Inflow.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
+        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().HaveCount(2);
+        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().Contain("Microsoft.DotNet.Arcade.Sdk");
+        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().Contain("Microsoft.DotNet.Helix.Sdk");
     }
 
     [Test]
