@@ -72,6 +72,8 @@ public class VersionDetailsParserTests
             && d.SourceBuild.ManagedOnly
             && d.SourceBuild.TarballOnly
             && d.Type == DependencyType.Toolset);
+
+        versionDetails.Source.Should().BeNull();
     }
 
     [Test]
@@ -139,16 +141,7 @@ public class VersionDetailsParserTests
             """
             <?xml version="1.0" encoding="utf-8"?>
             <Dependencies>
-              <VmrCodeflow Name="nuget-client">
-                <Outflow>
-                  <Exclude>src/NuGet.Clients/NuGet.VisualStudio.Client</Exclude>
-                  <Exclude>tests/**/*</Exclude>
-                </Outflow>
-                <Inflow Uri="https://github.com/NuGet/NuGet.Client" Sha="86ba5fba7c39323011c2bfc6b713142affc76171">
-                  <IgnoredPackage>Microsoft.DotNet.Arcade.Sdk</IgnoredPackage>
-                  <IgnoredPackage>Microsoft.DotNet.Helix.Sdk</IgnoredPackage>
-                </Inflow>
-              </VmrCodeflow>
+              <Source Uri="https://github.com/dotnet/dotnet" Sha="86ba5fba7c39323011c2bfc6b713142affc76171" />
               <ProductDependencies>
                 <Dependency Name="NETStandard.Library.Ref" Version="2.1.0" Pinned="true">
                   <Uri>https://github.com/dotnet/core-setup</Uri>
@@ -173,38 +166,8 @@ public class VersionDetailsParserTests
         var parser = new VersionDetailsParser();
         var versionDetails = parser.ParseVersionDetailsXml(VersionDetailsXml);
 
-        versionDetails.VmrCodeflow.Should().NotBeNull();
-        versionDetails.VmrCodeflow.Name.Should().Be("nuget-client");
-        versionDetails.VmrCodeflow.Outflow.Should().NotBeNull();
-        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().HaveCount(2);
-        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().Contain("src/NuGet.Clients/NuGet.VisualStudio.Client");
-        versionDetails.VmrCodeflow.Outflow.ExcludedFiles.Should().Contain("tests/**/*");
-        versionDetails.VmrCodeflow.Inflow.Should().NotBeNull();
-        versionDetails.VmrCodeflow.Inflow.Uri.Should().Be("https://github.com/NuGet/NuGet.Client");
-        versionDetails.VmrCodeflow.Inflow.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
-        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().HaveCount(2);
-        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().Contain("Microsoft.DotNet.Arcade.Sdk");
-        versionDetails.VmrCodeflow.Inflow.IgnoredPackages.Should().Contain("Microsoft.DotNet.Helix.Sdk");
-    }
-
-    [Test]
-    public void InvalidVmrCodeflowRecognizedTest()
-    {
-        const string VersionDetailsXml =
-            """
-            <?xml version="1.0" encoding="utf-8"?>
-            <Dependencies>
-              <VmrCodeflow>
-                <Inflow Uri="https://github.com/NuGet/NuGet.Client" Sha="86ba5fba7c39323011c2bfc6b713142affc76171">
-                  <IgnoredPackage>Microsoft.DotNet.Arcade.Sdk</IgnoredPackage>
-                  <IgnoredPackage>Microsoft.DotNet.Helix.Sdk</IgnoredPackage>
-                </Inflow>
-              </VmrCodeflow>
-            </Dependencies>
-            """;
-
-        var parser = new VersionDetailsParser();
-        var action = () => parser.ParseVersionDetailsXml(VersionDetailsXml);
-        action.Should().Throw<DarcException>().WithMessage("*Name attribute*");
+        versionDetails.Source.Should().NotBeNull();
+        versionDetails.Source.Uri.Should().Be("https://github.com/dotnet/dotnet");
+        versionDetails.Source.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
     }
 }

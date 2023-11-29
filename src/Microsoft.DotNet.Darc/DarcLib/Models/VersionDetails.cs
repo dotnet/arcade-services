@@ -8,17 +8,7 @@ namespace Microsoft.DotNet.DarcLib.Models;
 
 public record VersionDetails(
     IReadOnlyCollection<DependencyDetail> Dependencies,
-    VmrCodeflow? VmrCodeflow);
+    SourceDependency? Source);
 
-public record VmrCodeflow(
-    string Name,
-    Outflow Outflow,
-    Inflow Inflow);
+public record SourceDependency(string Uri, string Sha);
 
-public record Outflow(
-    IReadOnlyCollection<string> ExcludedFiles);
-
-public record Inflow(
-    string Uri,
-    string Sha,
-    IReadOnlyCollection<string> IgnoredPackages);

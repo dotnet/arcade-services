@@ -42,11 +42,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string RepoNameAttributeName = "RepoName";
     public const string ManagedOnlyAttributeName = "ManagedOnly";
     public const string TarballOnlyAttributeName = "TarballOnly";
-    public const string VmrCodeflowElementName = "VmrCodeflow";
-    public const string InflowElementName = "Inflow";
-    public const string OutflowElementName = "Outflow";
-    public const string ExcludeElementName = "Exclude";
-    public const string IgnoredPackageElementName = "IgnoredPackage";
+    public const string SourceElementName = "Source";
 
     public VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
@@ -67,7 +63,7 @@ public class VersionDetailsParser : IVersionDetailsParser
         dependencies = includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
 
         // Parse the VMR codeflow if it exists
-        VmrCodeflow? vmrCodeflow = ParseVmrCodeflow(document?.DocumentElement?.SelectSingleNode($"//{VmrCodeflowElementName}"));
+        SourceDependency? vmrCodeflow = ParseSourceSection(document?.DocumentElement?.SelectSingleNode($"//{SourceElementName}"));
 
         return new VersionDetails(dependencies, vmrCodeflow);
     }
@@ -140,35 +136,20 @@ public class VersionDetailsParser : IVersionDetailsParser
         return dependencyDetails;
     }
 
-    private static VmrCodeflow? ParseVmrCodeflow(XmlNode? vmrCodeflow)
+    private static SourceDependency? ParseSourceSection(XmlNode? sourceNode)
     {
-        if (vmrCodeflow is null)
+        if (sourceNode is null)
         {
             return null;
         }
 
-        var name = vmrCodeflow.Attributes?[NameAttributeName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {NameAttributeName} attribute");
+        var uri = sourceNode.Attributes?[UriElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {UriElementName} attribute");
 
-        XmlNode inflow = vmrCodeflow.SelectSingleNode($"//{InflowElementName}")
-            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {InflowElementName} child node");
+        var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
 
-        var uri = inflow.Attributes?[UriElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {UriElementName} attribute");
-
-        var sha = inflow.Attributes[ShaElementName]?.Value?.Trim()
-            ?? throw new DarcException($"Malformed {VmrCodeflowElementName} section - expected {ShaElementName} attribute");
-
-        List<string> ignoredPackages = inflow != null
-            ? inflow.SelectNodes($"//{IgnoredPackageElementName}")!.OfType<XmlElement>().Select(e => e.InnerText.Trim()).ToList()
-            : [];
-
-        XmlNode? outflow = vmrCodeflow.SelectSingleNode($"//{OutflowElementName}");
-        List<string> excludedFiles = outflow != null
-            ? outflow.SelectNodes($"//{ExcludeElementName}")!.OfType<XmlElement>().Select(e => e.InnerText.Trim()).ToList()
-            : [];
-
-        return new VmrCodeflow(name, new Outflow(excludedFiles), new Inflow(uri, sha, ignoredPackages));
+        return new SourceDependency(uri, sha);
     }
     
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)

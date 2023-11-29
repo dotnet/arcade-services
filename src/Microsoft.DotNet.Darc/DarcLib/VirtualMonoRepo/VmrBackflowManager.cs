@@ -207,13 +207,13 @@ public class VmrBackflowManager : IVmrBackflowManager
     private async Task<LastBackflow?> GetLastBackflow(NativePath repoPath)
     {
         // Last backflow SHA comes from Version.Details.xml in the repo
-        VmrCodeflow? codeflowInformation = _versionDetailsParser.ParseVersionDetailsXml(repoPath).VmrCodeflow;
-        if (codeflowInformation is null)
+        SourceDependency? source = _versionDetailsParser.ParseVersionDetailsXml(repoPath).Source;
+        if (source is null)
         {
             return null;
         }
 
-        string lastBackflowVmrSha = codeflowInformation.Inflow.Sha;
+        string lastBackflowVmrSha = source.Sha;
         string lastBackflowRepoSha = await BlameLineAsync(
             repoPath / VersionFiles.VersionDetailsXml,
             line => line.Contains("Inflow") && line.Contains(lastBackflowVmrSha));
