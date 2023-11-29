@@ -20,9 +20,6 @@ internal class BackflowCommandLineOptions : VmrCommandLineOptions, IBaseVmrComma
         "Path can be ommitted when --repository-dirs is supplied.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("action", Required = false, HelpText = "Backflow action to perform with the target repo. One of <create-patches|apply-patches>. Defaults to create-patches")]
-    public string Action { get; set; } = "create-patches";
-
     [Option("repository-dirs", Required = false, HelpText = "Path to where all repositories are checked out to (directory names must match mapping names). " +
         "Substitutes the need to specify path for every backflown repository")]
     public string RepositoryDirectory { get; set; }

@@ -5,80 +5,85 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrBackflower
-{
-    Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(string mappingName, CancellationToken cancellationToken);
+internal record FlowInfo(string SourceSha, string TargetSha);
+internal record CodeflowInfo(bool IsBackflow, FlowInfo LastForwardFlow, FlowInfo? LastBackflow);
 
+public interface IVmrBackflowManager
+{
     Task BackflowAsync(
-        BackflowAction action,
-        string repoName,
+        string mapping,
         NativePath targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
-}
-
-public enum BackflowAction
-{
-    CreatePatches,
-    ApplyPatches,
 }
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
 /// It only makes patches/changes locally, no other effects are done.
 /// </summary>
-public class CodeBackflower : IVmrBackflower
+public class VmrBackflowManager : IVmrBackflowManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly ILocalGitClient _localGitClient;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
+    private readonly IProcessManager _processManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<CodeBackflower> _logger;
+    private readonly ILogger<VmrBackflowManager> _logger;
 
-    public CodeBackflower(
+    public VmrBackflowManager(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         ILocalGitClient localGitClient,
+        IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler vmrPatchHandler,
+        IProcessManager processManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        ILogger<CodeBackflower> logger)
+        ILogger<VmrBackflowManager> logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _localGitClient = localGitClient;
+        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
+        _processManager = processManager;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(string mappingName, CancellationToken cancellationToken)
-    {
-        (string vmrSourceSha, string vmrTargetSha, IVersionedSourceComponent repo) = await GetMappingInformation(mappingName);
-        return await CreateBackflowPatchesAsync(repo, vmrSourceSha, vmrTargetSha, cancellationToken);
-    }
-
     public async Task BackflowAsync(
-        BackflowAction action,
         string mappingName,
-        NativePath repoDirectory,
+        NativePath repoPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        (string vmrSourceSha, string vmrTargetSha, IVersionedSourceComponent repo) = await GetMappingInformation(mappingName);
+        var flowInfo = await GetLastFlowInformationAsync(mappingName, repoPath);
+
+        if (flowInfo.IsBackflow)
+        {
+            await SimpleDiffFlow(mappingName, flowInfo);
+        }
+        else
+        {
+            await DeltaFlow(mappingName, flowInfo);
+        }
+
+
+        /*
 
         var patches = await CreateBackflowPatchesAsync(repo, vmrSourceSha, vmrTargetSha, cancellationToken);
         if (patches.Count == 0)
@@ -86,23 +91,18 @@ public class CodeBackflower : IVmrBackflower
             return;
         }
 
-        // When we only care about patch creation, we print the paths of the patches we have created and return
-        if (action == BackflowAction.CreatePatches)
+        var message = new StringBuilder();
+        message.AppendLine($"{patches.Count} patch{(patches.Count == 1 ? null : "es")} were created:");
+
+        var longestPath = patches.Max(p => p.Path.Length) + 4;
+
+        foreach (var patch in patches)
         {
-            var message = new StringBuilder();
-            message.AppendLine($"{patches.Count} patch{(patches.Count == 1 ? null : "es")} were created:");
-
-            var longestPath = patches.Max(p => p.Path.Length) + 4;
-
-            foreach (var patch in patches)
-            {
-                message.Append(patch.Path.PadRight(longestPath));
-                message.AppendLine(patch.ApplicationPath ?? string.Empty);
-            }
-
-            Console.WriteLine(message);
-            return;
+            message.Append(patch.Path.PadRight(longestPath));
+            message.AppendLine(patch.ApplicationPath ?? string.Empty);
         }
+
+        _logger.LogDebug(message.ToString());
 
         // Let's apply the patches onto the target repo
         _logger.LogInformation("Synchronizing {repo} from {repoSourceSha}", mappingName, repo.CommitSha);
@@ -151,10 +151,112 @@ public class CodeBackflower : IVmrBackflower
 
         await _localGitClient.CommitAsync(repoDirectory, commitMessage, allowEmpty: false, ((string, string)?)null, cancellationToken: cancellationToken);
 
-        _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);
+        _logger.LogInformation("New branch {branch} with backflown code is ready in {repoDir}", branchName, repoDirectory);*/
     }
 
-    public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(
+    private async Task SimpleDiffFlow(string mappingName, CodeflowInfo flowInfo)
+    {
+        var currentVmrSha = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
+
+        if (currentVmrSha == flowInfo.LastBackflow?.SourceSha)
+        {
+            _logger.LogInformation("No changes to synchronize, {repo} was already synchronized to {sha}", _vmrInfo.VmrPath, currentVmrSha);
+            return;
+        }
+
+        _logger.LogInformation("Backflowing {sha} from VMR to {repoName}", currentVmrSha, mappingName);
+
+
+    }
+
+    private async Task DeltaFlow(string mappingName, CodeflowInfo flowInfo)
+    {
+        await Task.CompletedTask;
+    }
+
+    private async Task<CodeflowInfo> GetLastFlowInformationAsync(string mappingName, NativePath repoPath)
+    {
+        IVersionedSourceComponent repoInVmr = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
+            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
+
+        // Last forward flow SHAs come from source-manifest.json in the VMR
+        string lastForwardRepoSha = repoInVmr.CommitSha;
+        string lastForwardVmrSha = await BlameLineAsync(
+            _vmrInfo.GetSourceManifestPath(),
+            line => line.Contains(lastForwardRepoSha));
+
+        // Last backflow SHA comes from Version.Details.xml in the repo
+        VmrCodeflow? codeflowInformation = _versionDetailsParser.ParseVersionDetailsXml(repoPath).VmrCodeflow;
+        if (codeflowInformation is null)
+        {
+            return new CodeflowInfo(
+                IsBackflow: true,
+                LastForwardFlow: new FlowInfo(lastForwardRepoSha, lastForwardVmrSha),
+                LastBackflow: null);
+        }
+
+        string lastBackflowVmrSha = codeflowInformation.Inflow.Sha;
+        string lastBackflowRepoSha = await BlameLineAsync(
+            repoPath / VersionFiles.VersionDetailsXml,
+            line => line.Contains("Inflow") && line.Contains(lastBackflowVmrSha));
+
+        string objectType1 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastForwardVmrSha);
+        string objectType2 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, lastForwardVmrSha);
+
+        if (objectType1 != "commit" || objectType2 != "commit")
+        {
+            throw new Exception($"Failed to find commits {lastBackflowVmrSha}, {lastForwardVmrSha} in {_vmrInfo.VmrPath}");
+        }
+
+        bool isBackwardOlder = await IsOlderCommit(lastForwardVmrSha, lastBackflowVmrSha);
+        bool isForwardOlder = await IsOlderCommit(lastBackflowVmrSha, lastForwardVmrSha);
+
+        if (isBackwardOlder == isForwardOlder)
+        {
+            throw new Exception($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({lastForwardVmrSha}, {lastBackflowVmrSha})");
+        };
+
+        // Source commit of last backflow is older than target commit of last forward flow => forward flow was last
+        return new CodeflowInfo(
+            IsBackflow: true,
+            LastForwardFlow: new FlowInfo(lastForwardRepoSha, lastForwardVmrSha),
+            LastBackflow: new FlowInfo(lastBackflowVmrSha, lastForwardRepoSha));
+    }
+
+    private async Task<bool> IsOlderCommit(string firstSha, string secondSha)
+    {
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["merge-base", "--is-ancestor", firstSha, secondSha]);
+
+        if (!string.IsNullOrEmpty(result.StandardError))
+        {
+            result.ThrowIfFailed($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({firstSha}, {secondSha})");
+        }
+
+        return result.ExitCode == 0;
+    }
+
+    private async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine)
+    {
+        using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
+        using (var reader = new StreamReader(stream))
+        {
+            string? line;
+            int lineNumber = 1;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (isTargetLine(line))
+                {
+                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber);
+                }
+
+                lineNumber++;
+            }
+        }
+
+        throw new Exception($"Failed to blame file {filePath}");
+    }
+
+    /*public async Task<List<VmrIngestionPatch>> CreateBackflowPatchesAsync(
         IVersionedSourceComponent repo,
         string vmrSourceSha,
         string vmrTargetSha,
@@ -205,39 +307,5 @@ public class CodeBackflower : IVmrBackflower
         }
 
         return patches;
-    }
-
-    private async Task<string> GetShaOfLastSyncForRepo(IVersionedSourceComponent repo)
-    {
-        var manifestPath = _vmrInfo.GetSourceManifestPath();
-
-        using (var stream = _fileSystem.GetFileStream(manifestPath, FileMode.Open, FileAccess.Read))
-        using (var reader = new StreamReader(stream))
-        {
-            string? line;
-            int lineNumber = 1;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                if (line.Contains(repo.CommitSha))
-                {
-                    return await _localGitClient.BlameLineAsync(_vmrInfo.VmrPath, manifestPath, lineNumber);
-                }
-
-                lineNumber++;
-            }
-        }
-
-        throw new Exception($"Failed to find {repo.Path}'s revision {repo.CommitSha} in {manifestPath}");
-    }
-
-    private async Task<(string VmrSourceSha, string VmrTargetSha, IVersionedSourceComponent Repo)> GetMappingInformation(string mappingName)
-    {
-        IVersionedSourceComponent repo = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
-            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
-
-        string vmrSourceSha = await GetShaOfLastSyncForRepo(repo);
-        string vmrTargetSha = await _localGitClient.GetGitCommitAsync(_vmrInfo.VmrPath);
-
-        return (vmrSourceSha, vmrTargetSha, repo);
-    }
+    }*/
 }
