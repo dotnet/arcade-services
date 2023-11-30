@@ -35,7 +35,7 @@ public class Local : ILocal
     {
         _logger = logger;
         _versionDetailsParser = new VersionDetailsParser();
-        _gitClient = new LocalLibGit2Client(remoteConfiguration, new ProcessManager(logger, GitExecutable), logger);
+        _gitClient = new LocalLibGit2Client(remoteConfiguration, new ProcessManager(logger, GitExecutable), new FileSystem(), logger);
         _fileManager = new DependencyFileManager(_gitClient, _versionDetailsParser, logger);
 
         _repoRootDir = new(() => overrideRootPath ?? _gitClient.GetRootDirAsync().GetAwaiter().GetResult(), LazyThreadSafetyMode.PublicationOnly);
@@ -80,7 +80,7 @@ public class Local : ILocal
             targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
-        var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
+        var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
         List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
         if (arcadeItem != null)

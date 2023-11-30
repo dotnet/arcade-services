@@ -52,6 +52,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
         services.TryAddTransient<VmrBinaryFileScanner>();
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.AddHttpClient("GraphQL", httpClient =>
         {
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");

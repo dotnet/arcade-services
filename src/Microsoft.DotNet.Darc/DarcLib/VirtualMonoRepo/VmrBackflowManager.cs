@@ -38,6 +38,7 @@ public class VmrBackflowManager : IVmrBackflowManager
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
@@ -50,6 +51,7 @@ public class VmrBackflowManager : IVmrBackflowManager
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
+        IDependencyFileManager dependencyFileManager,
         ILocalGitClient localGitClient,
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler vmrPatchHandler,
@@ -61,6 +63,7 @@ public class VmrBackflowManager : IVmrBackflowManager
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
+        _dependencyFileManager = dependencyFileManager;
         _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
@@ -100,6 +103,20 @@ public class VmrBackflowManager : IVmrBackflowManager
         {
             await DeltaFlow(mappingName, currentVmrSha, repoPath, (LastForwardFlow)lastFlow, cancellationToken);
         }
+
+        // TODO: Do a proper full update of all dependencies, not just V.D.xml
+        var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repoPath / VersionFiles.VersionDetailsXml));
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+        // TODO: Error handling
+        _dependencyFileManager.UpdateVersionDetails(
+            versionDetailsXml,
+            itemsToUpdate: [],
+            // TODO: Fix the URL with the URI of the BAR build we're processing
+            new SourceDependency("https://github.com/dotnet/dotnet", currentVmrSha),
+            oldDependencies: versionDetails.Dependencies);
+
+        await _localGitClient.StageAsync(repoPath, [VersionFiles.VersionDetailsXml], cancellationToken);
+        await _localGitClient.CommitAsync(repoPath, $"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }
 
     private async Task SimpleDiffFlow(

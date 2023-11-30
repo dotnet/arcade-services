@@ -65,7 +65,7 @@ internal class DependencyTestDriver
 
         // Set up a git file manager
         var processManager = new ProcessManager(NullLogger.Instance, "git");
-        GitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, NullLogger.Instance);
+        GitClient = new LocalLibGit2Client(new RemoteConfiguration(), processManager, new FileSystem(), NullLogger.Instance);
         _versionDetailsParser = new VersionDetailsParser();
         DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
@@ -88,6 +88,7 @@ internal class DependencyTestDriver
     {
         GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
+            sourceDependency: null,
             TemporaryRepositoryPath,
             null,
             null,
@@ -104,6 +105,7 @@ internal class DependencyTestDriver
 
         GitFileContentContainer container = await DependencyFileManager.UpdateDependencyFiles(
             dependencies,
+            sourceDependency: null,
             TemporaryRepositoryPath,
             null,
             null,

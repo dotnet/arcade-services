@@ -957,7 +957,7 @@ public sealed class Remote : IRemote
         }
 
         GitFileContentContainer fileContainer =
-            await _fileManager.UpdateDependencyFiles(itemsToUpdate, repoUri, branch, oldDependencies, targetDotNetVersion);
+            await _fileManager.UpdateDependencyFiles(itemsToUpdate, sourceDependency: null, repoUri, branch, oldDependencies, targetDotNetVersion);
         List<GitFile> filesToCommit = new List<GitFile>();
 
         if (mayNeedArcadeUpdate)

@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 /// <summary>
@@ -21,7 +22,7 @@ public interface IDependencyFileManager
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
-    List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null);
+    List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool>? filter = null);
 
     Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true);
 
@@ -35,8 +36,15 @@ public interface IDependencyFileManager
 
     Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch);
 
+    void UpdateVersionDetails(
+        XmlDocument versionDetails,
+        IEnumerable<DependencyDetail> itemsToUpdate,
+        SourceDependency sourceDependency,
+        IEnumerable<DependencyDetail> oldDependencies);
+
     Task<GitFileContentContainer> UpdateDependencyFiles(
         IEnumerable<DependencyDetail> itemsToUpdate,
+        SourceDependency? sourceDependency,
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
