@@ -105,6 +105,17 @@ public class GitOperationsHelper
         return ProcessManager.ExecuteGit(repo, "submodule", "set-url", submodulePath, newUrl);
     }
 
+    public async Task MergePrBranch(NativePath repo, string branch, string targetBranch = "main")
+    {
+        var result = await ProcessManager.ExecuteGit(repo, "checkout", targetBranch);
+        result.ThrowIfFailed($"Could not checkout main branch in {repo}");
+
+        result = await ProcessManager.ExecuteGit(repo, "merge", "--squash", branch);
+        result.ThrowIfFailed($"Could not merge branch {branch} to {targetBranch} in {repo}");
+
+        await CommitAll(repo, $"Merged branch {branch} into {targetBranch}");
+    }
+
     private async Task ConfigureGit(NativePath repo)
     {
         await ProcessManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);

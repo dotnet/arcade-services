@@ -163,6 +163,12 @@ public abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
+    protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath)
+    {
+        var backflowManager = _serviceProvider.Value.GetRequiredService<IVmrBackflowManager>();
+        return await backflowManager.BackflowAsync(mappingName, repoPath, [], _cancellationToken.Token);
+    }
+
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {
         var cloakedFileScanner = _serviceProvider.Value.GetRequiredService<VmrCloakedFileScanner>();
