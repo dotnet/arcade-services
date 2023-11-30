@@ -85,7 +85,7 @@ public class VmrBackflowManager : IVmrBackflowManager
         var lastFlow = await GetLastFlowAsync(mappingName, repoPath);
 
         var currentVmrSha = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
-        if (currentVmrSha == lastFlow.TargetSha)
+        if (currentVmrSha == lastFlow.TargetSha || currentVmrSha == lastFlow.SourceSha)
         {
             _logger.LogInformation("No changes to synchronize, {repo} was already synchronized to {sha}", _vmrInfo.VmrPath, currentVmrSha);
             return null;
@@ -125,9 +125,6 @@ public class VmrBackflowManager : IVmrBackflowManager
         CancellationToken cancellationToken)
     {
         await _localGitClient.CheckoutAsync(repoPath, lastFlow.RepoSha);
-        var shortShas = $"{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentVmrSha)}";
-        var branchName = $"backflow/{shortShas}";
-        var patchName = _vmrInfo.TmpPath / (mappingName + "-backflow-" + shortShas + ".patch");
 
         // Ignore all submodules
         var ignoredPaths = _sourceManifest.Submodules
@@ -136,8 +133,10 @@ public class VmrBackflowManager : IVmrBackflowManager
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
+        var shortShas = $"{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentVmrSha)}";
+
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
-            patchName,
+            _vmrInfo.TmpPath / (mappingName + "-backflow-" + shortShas + ".patch"),
             lastFlow.VmrSha,
             currentVmrSha,
             VmrInfo.GetRelativeRepoSourcesPath(mappingName),
@@ -168,14 +167,15 @@ public class VmrBackflowManager : IVmrBackflowManager
 
         _logger.LogDebug(message.ToString());
 
-        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
-        _logger.LogInformation("Created branch {branchName} in {repoDir}", branchName, repoPath);
+        var branchName = $"backflow/{shortShas}";
+        await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
 
         try
         {
             foreach (VmrIngestionPatch patch in patches)
             {
                 await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
+                // TODO: Discard patches
             }
         }
         catch (Exception)
@@ -187,6 +187,7 @@ public class VmrBackflowManager : IVmrBackflowManager
             //foreach (VmrIngestionPatch patch in patches)
             //{
             //    await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
+            // TODO: Discard patches
             //}
             throw new NotImplementedException();
         }
@@ -266,6 +267,7 @@ public class VmrBackflowManager : IVmrBackflowManager
         {
             // TODO: Handle exceptions
             await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
+            // TODO: Discard patches
         }
 
         // TODO: Commit message
@@ -294,8 +296,8 @@ public class VmrBackflowManager : IVmrBackflowManager
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
-        bool isBackwardOlder = await IsOlderCommit(lastForwardFlow.VmrSha, lastBackflow.VmrSha);
-        bool isForwardOlder = await IsOlderCommit(lastBackflow.VmrSha, lastForwardFlow.VmrSha);
+        bool isForwardOlder = await IsAncestorCommit(lastForwardFlow.VmrSha, lastBackflow.VmrSha);
+        bool isBackwardOlder = await IsAncestorCommit(lastBackflow.VmrSha, lastForwardFlow.VmrSha);
 
         // Commits not comparable
         if (isBackwardOlder == isForwardOlder)
@@ -338,13 +340,13 @@ public class VmrBackflowManager : IVmrBackflowManager
         return new LastForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
     }
 
-    private async Task<bool> IsOlderCommit(string firstSha, string secondSha)
+    private async Task<bool> IsAncestorCommit(string parent, string ancestor)
     {
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["merge-base", "--is-ancestor", firstSha, secondSha]);
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["merge-base", "--is-ancestor", parent, ancestor]);
 
         if (!string.IsNullOrEmpty(result.StandardError))
         {
-            result.ThrowIfFailed($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({firstSha}, {secondSha})");
+            result.ThrowIfFailed($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({parent}, {ancestor})");
         }
 
         return result.ExitCode == 0;
