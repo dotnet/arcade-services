@@ -296,7 +296,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         result.ThrowIfFailed($"Failed to apply the patch {_fileSystem.GetFileName(patch.Path)} for {patch.ApplicationPath ?? "/"}");
         _logger.LogDebug("{output}", result.ToString());
 
-        await ResetWorkingTreeDirectory(targetDirectory, patch.ApplicationPath ?? new UnixPath("."));
+        await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
     }
 
     /// <summary>
@@ -586,33 +586,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             tmpPath,
             new UnixPath(submodulePath),
             cancellationToken);
-    }
-
-    private async Task ResetWorkingTreeDirectory(NativePath repoPath, UnixPath relativePath)
-    {
-        // After we apply the diff to the index, working tree won't have the files so they will be missing
-        // We have to reset working tree to the index then
-        // This will end up having the working tree match what is staged
-        _logger.LogInformation("Cleaning the working tree directory {path}...", repoPath/relativePath);
-        var args = new string[] { "checkout", relativePath };
-        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
-        
-        if (result.Succeeded)
-        {
-            _logger.LogDebug("{output}", result.ToString());
-        }
-        else if (result.StandardError.Contains($"pathspec '{relativePath}' did not match any file(s) known to git"))
-        {
-            // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-            // We can just remove the working tree folder then
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
-            _fileSystem.DeleteDirectory(repoPath / relativePath, true);
-        }
-
-        // Also remove untracked files (in case files were removed in index)
-        args = new string[] { "clean", "-df", relativePath };
-        result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
     public IReadOnlyCollection<string> GetVmrPatches(string mappingName)

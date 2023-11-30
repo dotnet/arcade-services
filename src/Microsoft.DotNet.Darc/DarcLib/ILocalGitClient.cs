@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -39,6 +40,13 @@ public interface ILocalGitClient
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
     Task CheckoutAsync(string repoPath, string refToCheckout);
+
+    /// <summary>
+    /// Resets the working tree (or a given subpath) to match the index.
+    /// </summary>
+    /// <param name="repoPath">Path to the root of the repo</param>
+    /// <param name="relativePath">Relative path inside of the repo to reset only (or none if the whole repo)</param>
+    Task ResetWorkingTree(NativePath repoPath, UnixPath? relativePath = null);
 
     /// <summary>
     ///     Commits files by calling git commit (not through Libgit2sharp)
