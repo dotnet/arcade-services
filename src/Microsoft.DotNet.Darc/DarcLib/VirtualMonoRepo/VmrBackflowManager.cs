@@ -16,9 +16,16 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-internal abstract record LastCodeflow(bool IsBackflow, string SourceSha, string TargetSha);
-internal record LastForwardFlow(string VmrSha, string RepoSha) : LastCodeflow(false, RepoSha, VmrSha);
-internal record LastBackflow(string VmrSha, string RepoSha) : LastCodeflow(true, VmrSha, RepoSha);
+internal abstract record LastCodeflow(string SourceSha, string TargetSha)
+{
+    public abstract string RepoSha { get; init; }
+
+    public abstract string VmrSha { get; init; }
+}
+
+internal record LastForwardFlow(string VmrSha, string RepoSha) : LastCodeflow(RepoSha, VmrSha);
+
+internal record LastBackflow(string VmrSha, string RepoSha) : LastCodeflow(VmrSha, RepoSha);
 
 public interface IVmrBackflowManager
 {
