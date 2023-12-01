@@ -26,17 +26,28 @@ internal class GetRepoVersionOperation : Operation
     {
         var repositories = _options.Repositories.ToList();
 
+        // If there are no repositories, list all.
         if (!repositories.Any())
         {
-            Logger.LogError("Please specify at least one repository to synchronize");
+            var dependencyTracker = Provider.GetRequiredService<IVmrDependencyTracker>();
+            await dependencyTracker.InitializeSourceMappings();
+
+            repositories = dependencyTracker.Mappings.Select(m => m.Name).ToList();
+        }
+
+        if (!repositories.Any())
+        {
+            Logger.LogError("No repositories found in the VMR.");
             return Constants.ErrorCode;
         }
 
         var vmrManager = Provider.GetRequiredService<IVmrRepoVersionResolver>();
 
+        var maxRepoNameLength = repositories.Max(r => r.Length);
         foreach (var repo in repositories)
         {
-            Console.WriteLine(await vmrManager.GetVersion(repo));
+            var paddedRepoName = repo.PadRight(maxRepoNameLength);
+            Console.WriteLine($"{paddedRepoName} {await vmrManager.GetVersion(repo)}");
         }
 
         return 0;
