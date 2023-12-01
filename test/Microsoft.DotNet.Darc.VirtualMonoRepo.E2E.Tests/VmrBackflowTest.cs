@@ -17,13 +17,15 @@ public class VmrBackflowTest :  VmrTestsBase
 {
     private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
     private NativePath _productRepoVmrPath = null!;
+    private NativePath _productRepoVmrFilePath = null!;
     private NativePath _productRepoFilePath = null!;
 
     [SetUp]
     public void SetUp()
     {
         _productRepoVmrPath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName;
-        _productRepoFilePath = _productRepoVmrPath / _productRepoFileName;
+        _productRepoVmrFilePath = _productRepoVmrPath / _productRepoFileName;
+        _productRepoFilePath = ProductRepoPath / _productRepoFileName;
     }
 
     [Test]
@@ -39,34 +41,37 @@ public class VmrBackflowTest :  VmrTestsBase
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            [_productRepoFilePath]
+            [_productRepoVmrFilePath]
         );
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        CheckFileContents(_productRepoFilePath, "Test changes in repo file");
+        CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Make a change in the VMR
-        File.WriteAllText(_productRepoVmrPath / _productRepoFileName, "New content in the VMR");
+        File.WriteAllText(_productRepoVmrPath / _productRepoFileName, "New content from the VMR");
         await GitOperations.CommitAll(VmrPath, "Changing a file in the VMR");
 
         // Backflow
         var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().NotBeNullOrEmpty();
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
-        CheckFileContents(_productRepoFilePath, "New content in the VMR");
+        CheckFileContents(_productRepoVmrFilePath, "New content from the VMR");
+        CheckFileContents(_productRepoFilePath, "New content from the VMR");
 
         // Backflow again - should be a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().BeNull();
 
         // Make a change in the VMR again
-        File.WriteAllText(_productRepoVmrPath / _productRepoFileName, "New content in the VMR again");
+        File.WriteAllText(_productRepoVmrPath / _productRepoFileName, "New content from the VMR again");
         await GitOperations.CommitAll(VmrPath, "Changing a file in the VMR again");
 
         // Second backflow in a row
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().NotBeNullOrEmpty();
+        CheckFileContents(_productRepoVmrFilePath, "New content from the VMR again");
+        CheckFileContents(_productRepoFilePath, "New content from the VMR again");
 
         // Make an additional change in the PR branch before merging
         File.WriteAllText(_productRepoFilePath, "Change that happened in the PR");
@@ -119,7 +124,7 @@ public class VmrBackflowTest :  VmrTestsBase
 
         var expectedFilesFromRepos = new List<LocalPath>
         {
-            _productRepoFilePath
+            _productRepoVmrFilePath
         };
 
         var expectedFiles = GetExpectedFilesInVmr(
@@ -129,7 +134,7 @@ public class VmrBackflowTest :  VmrTestsBase
         );
 
         CheckDirectoryContents(VmrPath, expectedFiles);
-        CompareFileContents(_productRepoFilePath, _productRepoFileName);
+        CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 }

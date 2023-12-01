@@ -73,7 +73,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task ResetWorkingTree(NativePath repoPath, UnixPath? relativePath = null)
     {
-        relativePath ??= new UnixPath(".");
+        relativePath ??= UnixPath.CurrentDir;
 
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
@@ -88,10 +88,18 @@ public class LocalGitClient : ILocalGitClient
         }
         else if (result.StandardError.Contains($"pathspec '{relativePath}' did not match any file(s) known to git"))
         {
-            // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-            // We can just remove the working tree folder then
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
-            _fileSystem.DeleteDirectory(repoPath / relativePath, true);
+            // No files in the directory
+            if (relativePath == UnixPath.CurrentDir)
+            {
+                _logger.LogDebug("Failed to reset working tree of {repo} as it was empty", repoPath);
+            }
+            else
+            {
+                // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+                // We can just remove the working tree folder then
+                _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
+                _fileSystem.DeleteDirectory(repoPath / relativePath, true);
+            }
         }
 
         // Also remove untracked files (in case files were removed in index)

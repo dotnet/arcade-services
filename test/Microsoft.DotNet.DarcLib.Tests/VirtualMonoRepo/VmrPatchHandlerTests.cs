@@ -44,7 +44,7 @@ public class VmrPatchHandlerTests
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<IVmrDependencyTracker> _dependencyTracker = new();
-    private readonly Mock<ILocalLibGit2Client> _localGitRepo = new();
+    private readonly Mock<ILocalGitClient> _localGitRepo = new();
     private readonly Mock<IRepositoryCloneManager> _cloneManager = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
@@ -155,12 +155,12 @@ public class VmrPatchHandlerTests
             RepoVmrPath,
             patch.Path,
         });
-        
-        VerifyGitCall(new string[]
-        {
-            "checkout",
-            RepoVmrPath,
-        });
+
+        _localGitRepo.Verify(x =>
+            x.ResetWorkingTree(
+                It.Is<NativePath>(p => p == _vmrInfo.Object.VmrPath),
+                It.Is<UnixPath?>(p => p == patch.ApplicationPath)),
+            Times.AtLeastOnce);
     }
 
     [Test]
@@ -861,12 +861,11 @@ public class VmrPatchHandlerTests
         },
         _vmrPath / "/");
 
-        VerifyGitCall(new string[]
-        {
-            "checkout",
-            RepoVmrPath,
-        },
-        _vmrPath / "/");
+        _localGitRepo.Verify(x =>
+            x.ResetWorkingTree(
+                It.Is<NativePath>(p => p == _vmrInfo.Object.VmrPath),
+                It.Is<UnixPath?>(p => p == patch.ApplicationPath)),
+            Times.AtLeastOnce);
     }
 
     [Test]

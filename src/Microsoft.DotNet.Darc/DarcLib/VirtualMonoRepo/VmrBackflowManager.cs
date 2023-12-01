@@ -82,6 +82,8 @@ public class VmrBackflowManager : IVmrBackflowManager
     {
         await _dependencyTracker.InitializeSourceMappings();
 
+        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
+
         var lastFlow = await GetLastFlowAsync(mappingName, repoPath);
 
         var currentVmrSha = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
@@ -99,11 +101,11 @@ public class VmrBackflowManager : IVmrBackflowManager
         string? branchName;
         if (lastFlow is LastBackflow lastBackflow)
         {
-            branchName = await SimpleDiffFlow(mappingName, currentVmrSha, repoPath, lastBackflow, cancellationToken);
+            branchName = await SimpleDiffFlow(mapping, currentVmrSha, repoPath, lastBackflow, cancellationToken);
         }
         else
         {
-            branchName = await DeltaFlow(mappingName, currentVmrSha, repoPath, (LastForwardFlow)lastFlow, cancellationToken);
+            branchName = await DeltaFlow(mapping, currentVmrSha, repoPath, (LastForwardFlow)lastFlow, cancellationToken);
         }
 
         if (branchName == null)
@@ -118,7 +120,7 @@ public class VmrBackflowManager : IVmrBackflowManager
     }
 
     private async Task<string?> SimpleDiffFlow(
-        string mappingName,
+        SourceMapping mapping,
         string currentVmrSha,
         NativePath repoPath,
         LastBackflow lastFlow,
@@ -128,28 +130,28 @@ public class VmrBackflowManager : IVmrBackflowManager
 
         // Ignore all submodules
         var ignoredPaths = _sourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + '/'))
-            .Select(s => s.Path.Substring(mappingName.Length + 1))
+            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
         var shortShas = $"{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentVmrSha)}";
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
-            _vmrInfo.TmpPath / (mappingName + "-backflow-" + shortShas + ".patch"),
+            _vmrInfo.TmpPath / (mapping.Name + "-backflow-" + shortShas + ".patch"),
             lastFlow.VmrSha,
             currentVmrSha,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName),
+            path: null,
             filters: ignoredPaths,
             relativePaths: true,
-            workingDir: _vmrInfo.VmrPath,
+            workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             cancellationToken);
 
         if (patches.Count == 0)
         {
             _logger.LogInformation("There are no new changes for {mappingName} between {sha1} and {sha2}",
-                mappingName,
+                mapping.Name,
                 lastFlow.VmrSha,
                 currentVmrSha);
             return null;
@@ -187,7 +189,7 @@ public class VmrBackflowManager : IVmrBackflowManager
             //foreach (VmrIngestionPatch patch in patches)
             //{
             //    await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
-            // TODO: Discard patches
+                  // TODO: Discard patches
             //}
             throw new NotImplementedException();
         }
@@ -206,17 +208,15 @@ public class VmrBackflowManager : IVmrBackflowManager
     }
 
     private async Task<string?> DeltaFlow(
-        string mappingName,
+        SourceMapping mapping,
         string currentVmrSha,
         NativePath repoPath,
         LastForwardFlow lastFlow,
         CancellationToken cancellationToken)
     {
-        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
-
         await _localGitClient.CheckoutAsync(repoPath, lastFlow.RepoSha);
         var shortShas = $"{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentVmrSha)}";
-        var patchName = _vmrInfo.TmpPath / (mappingName + "-backflow-" + shortShas + ".patch");
+        var patchName = _vmrInfo.TmpPath / (mapping.Name + "-backflow-" + shortShas + ".patch");
 
         // Let's create a patch representing files in the VMR so that we can apply it to the repo
         // TODO: This might be an extra work - we could possibly just copy the contents of the VMR folder
@@ -230,17 +230,17 @@ public class VmrBackflowManager : IVmrBackflowManager
             patchName,
             Constants.EmptyGitObject,
             currentVmrSha,
-            _vmrInfo.GetRepoSourcesPath(mapping),
+            path: null,
             submoduleExclusions,
             relativePaths: true,
-            _vmrInfo.GetRepoSourcesPath(mapping),
+            workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             cancellationToken);
 
         if (patches.Count == 0)
         {
             _logger.LogInformation("There are no new changes for {mappingName} between {sha1} and {sha2}",
-                mappingName,
+                mapping.Name,
                 lastFlow.VmrSha,
                 currentVmrSha);
             return null;

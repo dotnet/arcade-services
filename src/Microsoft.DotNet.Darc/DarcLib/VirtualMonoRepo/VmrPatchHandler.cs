@@ -159,7 +159,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             patchName = destDir / $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
-            string path = ".";
+            var path = UnixPath.CurrentDir;
 
             // We take the content path from the VMR config and map it onto the cloned repo
             var contentDir = repoPath / relativeClonePath;
@@ -169,7 +169,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             if (_fileSystem.FileExists(contentDir)
                 || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
             {
-                path = fileName;
+                path = new UnixPath(fileName);
                 
                 var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
@@ -336,7 +336,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchName,
         string sha1,
         string sha2,
-        string? path,
+        UnixPath? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
         NativePath workingDir,
@@ -377,7 +377,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 newPatchname,
                 sha1,
                 sha2,
-                ".",
+                UnixPath.CurrentDir,
                 filters,
                 true,
                 workingDir / dirName,
@@ -388,7 +388,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         // Add a patch for each file
         for (var i = 0; i < files.Length; i++)
         {
-            var fileName = files[i].Substring(workingDir.Length + 1);
+            var fileName = new UnixPath(files[i].Substring(workingDir.Length + 1));
             var newPatchname = $"{patchName}.{i + directories.Length + 1}";
 
             patch = await CreatePatch(
@@ -422,7 +422,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchName,
         string sha1,
         string sha2,
-        string? path,
+        UnixPath? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
         NativePath workingDir,
@@ -604,7 +604,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
 
-    public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.KeepAttribute}){path}";
+    public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";
 
     public static string GetExclusionRule(string path) => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){path}";
 
