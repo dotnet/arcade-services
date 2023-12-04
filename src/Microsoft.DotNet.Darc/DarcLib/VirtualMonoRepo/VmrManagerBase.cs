@@ -62,7 +62,7 @@ public abstract class VmrManagerBase
         _fileSystem = fileSystem;
     }
 
-    protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
+    public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         NativePath clonePath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,

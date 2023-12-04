@@ -29,24 +29,9 @@ public class VmrBackflowTest :  VmrTestsBase
     }
 
     [Test]
-    public async Task FileAreBackflownTest()
+    public async Task OnlyBackflowsTest()
     {
         await EnsureTestRepoIsInitialized();
-
-        File.WriteAllText(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
-        await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo");
-
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        var expectedFiles = GetExpectedFilesInVmr(
-            VmrPath,
-            [Constants.ProductRepoName],
-            [_productRepoVmrFilePath]
-        );
-
-        CheckDirectoryContents(VmrPath, expectedFiles);
-        CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");
-        await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Make a change in the VMR
         File.WriteAllText(_productRepoVmrPath / _productRepoFileName, "New content from the VMR");
@@ -79,6 +64,48 @@ public class VmrBackflowTest :  VmrTestsBase
 
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
         CheckFileContents(_productRepoFilePath, "Change that happened in the PR");
+
+        // TODO: One more backflow that will have a conflict
+    }
+
+    [Test]
+    public async Task OnlyForwardflowsTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        // Make a change in the repo
+        File.WriteAllText(ProductRepoPath / _productRepoFileName, "New content in the individual repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo");
+
+        // Forward flow
+        var branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().NotBeNullOrEmpty();
+        await GitOperations.MergePrBranch(VmrPath, branch!);
+        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
+        CheckFileContents(_productRepoFilePath, "New content in the individual repo");
+
+        // Backflow again - should be a no-op
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().BeNull();
+
+        // Make a change in the VMR again
+        File.WriteAllText(ProductRepoPath / _productRepoFileName, "New content in the individual repo again");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo again");
+
+        // Second backflow in a row
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().NotBeNullOrEmpty();
+        CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
+        CheckFileContents(_productRepoFilePath, "New content in the individual repo again");
+
+        // Make an additional change in the PR branch before merging
+        File.WriteAllText(_productRepoVmrFilePath, "Change that happened in the PR");
+        await GitOperations.CommitAll(VmrPath, "Extra commit in the PR");
+
+        await GitOperations.MergePrBranch(VmrPath, branch!);
+        CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
+
+        // TODO: One more backflow that will have a conflict
     }
 
     protected override async Task CopyReposForCurrentTest()
@@ -135,6 +162,22 @@ public class VmrBackflowTest :  VmrTestsBase
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+
+        File.WriteAllText(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo");
+
+        // Perform last VMR-lite-like forward flow
+        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
+
+        expectedFiles = GetExpectedFilesInVmr(
+            VmrPath,
+            [Constants.ProductRepoName],
+            [_productRepoVmrFilePath]
+        );
+
+        CheckDirectoryContents(VmrPath, expectedFiles);
+        CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 }

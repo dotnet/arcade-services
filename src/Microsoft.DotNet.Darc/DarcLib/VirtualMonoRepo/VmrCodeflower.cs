@@ -34,6 +34,7 @@ public class VmrCodeflower : IVmrCodeflower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitClient _localGitClient;
@@ -47,6 +48,7 @@ public class VmrCodeflower : IVmrCodeflower
     public VmrCodeflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
+        IVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitClient localGitClient,
@@ -59,6 +61,7 @@ public class VmrCodeflower : IVmrCodeflower
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
+        _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _dependencyFileManager = dependencyFileManager;
         _localGitClient = localGitClient;
@@ -77,11 +80,17 @@ public class VmrCodeflower : IVmrCodeflower
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
     {
-        shaToFlow ??= await _localGitClient.GetShaForRefAsync(sourceRepo, "HEAD");
+        if (shaToFlow is null)
+        {
+            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, "HEAD");
+        }
+        else
+        {
+            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
+        }
 
         await _dependencyTracker.InitializeSourceMappings();
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
-        await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
 
         var branchName = IsVmr(sourceRepo)
             ? await BackflowAsync(mapping, shaToFlow, targetRepo, cancellationToken)
@@ -107,6 +116,8 @@ public class VmrCodeflower : IVmrCodeflower
     {
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
+        // TODO: Log
+
         var branchName = lastFlow is Backflow
             ? await SameDirectionFlowAsync(mapping, shaToFlow, targetRepo, lastFlow, cancellationToken)
             : await OppositeDirectionFlowAsync(mapping, shaToFlow, targetRepo, lastFlow, cancellationToken);
@@ -130,9 +141,19 @@ public class VmrCodeflower : IVmrCodeflower
     {
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
-        return lastFlow is Backflow
-            ? await SameDirectionFlowAsync(mapping, shaToFlow, sourceRepo, lastFlow, cancellationToken)
-            : await OppositeDirectionFlowAsync(mapping, shaToFlow, sourceRepo, lastFlow, cancellationToken);
+        // TODO: Log
+
+        var branchName = lastFlow is Backflow
+            ? await OppositeDirectionFlowAsync(mapping, shaToFlow, sourceRepo, lastFlow, cancellationToken)
+            : await SameDirectionFlowAsync(mapping, shaToFlow, sourceRepo, lastFlow, cancellationToken);
+
+        if (branchName is null)
+        {
+            // TODO: Do something here?
+            return null;
+        }
+
+        return branchName;
     }
 
     // TODO: Docs
@@ -144,8 +165,30 @@ public class VmrCodeflower : IVmrCodeflower
         CancellationToken cancellationToken)
     {
         var isBackflow = lastFlow is Backflow;
-
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
+        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
+        var targetRepo = isBackflow ? repoPath : _vmrInfo.VmrPath;
+
+        if (!isBackflow)
+        {
+            await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
+
+            // TODO: Detect if no changes
+            var updated = await _vmrUpdater.UpdateRepository(
+                mapping.Name,
+                shaToFlow,
+                "1.2.3",
+                updateDependencies: false,
+                // TODO
+                additionalRemotes: Array.Empty<AdditionalRemote>(),
+                readmeTemplatePath: null,
+                tpnTemplatePath: null,
+                generateCodeowners: true,
+                discardPatches: false,
+                cancellationToken);
+
+            return updated ? branchName : null;
+        }
 
         List<VmrIngestionPatch> patches;
 
@@ -175,7 +218,7 @@ public class VmrCodeflower : IVmrCodeflower
             patches = await _vmrPatchHandler.CreatePatches(
                 mapping,
                 repoPath,
-                lastFlow.RepoSha,
+                lastFlow.SourceSha,
                 shaToFlow,
                 _vmrInfo.TmpPath,
                 _vmrInfo.TmpPath,
@@ -194,11 +237,8 @@ public class VmrCodeflower : IVmrCodeflower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        var branchName = $"codeflow/{lastFlow.GetType().Name}/{shortShas}";
-        var targetRepo = isBackflow ? repoPath : _vmrInfo.VmrPath;
-
         await _localGitClient.CheckoutAsync(targetRepo, lastFlow.TargetSha);
-        await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
+        await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
 
         try
         {
@@ -228,7 +268,8 @@ public class VmrCodeflower : IVmrCodeflower
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(repoPath, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await _localGitClient.CommitAsync(targetRepo, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await _localGitClient.ResetWorkingTree(targetRepo);
 
         _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", branchName, repoPath);
 
@@ -314,7 +355,7 @@ public class VmrCodeflower : IVmrCodeflower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        var branchName = $"codeflow/{lastFlow.GetType().Name}/{shortShas}";
+        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, repoPath);
 
@@ -350,8 +391,8 @@ public class VmrCodeflower : IVmrCodeflower
             return null;
         }
 
-        await _localGitClient.CommitAsync(repoPath, commitMessage, false, cancellationToken: cancellationToken);
-        await _localGitClient.ResetWorkingTree(repoPath);
+        await _localGitClient.CommitAsync(targetRepo, commitMessage, false, cancellationToken: cancellationToken);
+        await _localGitClient.ResetWorkingTree(targetRepo);
 
         return branchName;
     }

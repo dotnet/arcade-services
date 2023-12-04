@@ -169,7 +169,7 @@ public abstract class VmrTestsBase
         return await codeflower.FlowCodeAsync(VmrPath, repoPath, mappingName, cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<string?> CallDarcCodeflow(string mappingName, NativePath repoPath)
+    protected async Task<string?> CallDarcForwardflow(string mappingName, NativePath repoPath)
     {
         var codeflower = _serviceProvider.Value.GetRequiredService<IVmrCodeflower>();
         return await codeflower.FlowCodeAsync(repoPath, VmrPath, mappingName, cancellationToken: _cancellationToken.Token);

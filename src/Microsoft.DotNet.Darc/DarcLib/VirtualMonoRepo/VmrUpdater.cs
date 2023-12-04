@@ -90,7 +90,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _workBranchFactory = workBranchFactory;
     }
 
-    public async Task UpdateRepository(
+    public async Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
         string? targetVersion,
@@ -126,7 +126,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (updateDependencies)
         {
-            await UpdateRepositoryRecursively(
+            return await UpdateRepositoryRecursively(
                 dependencyUpdate,
                 additionalRemotes,
                 readmeTemplatePath,
@@ -137,15 +137,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await UpdateRepositoryInternal(
-                dependencyUpdate,
-                reapplyVmrPatches: true,
-                additionalRemotes,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
+            try
+            {
+                await UpdateRepositoryInternal(
+                        dependencyUpdate,
+                        reapplyVmrPatches: true,
+                        additionalRemotes,
+                        readmeTemplatePath,
+                        tpnTemplatePath,
+                        generateCodeowners,
+                        discardPatches,
+                        cancellationToken);
+                return true;
+            }
+            catch (EmptySyncException e)
+            {
+                _logger.LogInformation(e.Message);
+                return false;
+            }
         }
     }
 
@@ -179,13 +188,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
-            }
-            else
-            {
-                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
+                return Array.Empty<VmrIngestionPatch>();
             }
 
-            return Array.Empty<VmrIngestionPatch>();
+            throw new EmptySyncException($"Repository {update.Mapping} is already at {update.TargetRevision}");
         }
 
         // Sort remotes so that we go Local -> GitHub -> AzDO
@@ -251,7 +257,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// Updates a repository and all of it's dependencies recursively starting with a given mapping.
     /// Always updates to the first version found per repository in the dependency tree.
     /// </summary>
-    private async Task UpdateRepositoryRecursively(
+    private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -261,6 +267,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
+
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootUpdate.Mapping.Name,
             Commit.GetShortSha(originalRootSha),
@@ -337,7 +344,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     discardPatches,
                     cancellationToken);
             }
-            catch(Exception)
+            catch (EmptySyncException e)
+            {
+                _logger.LogWarning(e.Message);
+                return false;
+            }
+            catch (Exception)
             {
                 _logger.LogWarning(
                     InterruptedSyncExceptionMessage,
@@ -411,6 +423,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             rootUpdate.Mapping.Name,
             Environment.NewLine,
             summaryMessage);
+
+        return updatedDependencies.Any();
     }
 
     /// <summary>
