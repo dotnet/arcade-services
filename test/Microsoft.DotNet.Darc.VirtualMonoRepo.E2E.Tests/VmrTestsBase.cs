@@ -165,8 +165,14 @@ public abstract class VmrTestsBase
 
     protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath)
     {
-        var backflowManager = _serviceProvider.Value.GetRequiredService<IVmrBackflowManager>();
-        return await backflowManager.BackflowAsync(mappingName, repoPath, [], _cancellationToken.Token);
+        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrCodeflower>();
+        return await codeflower.FlowCodeAsync(VmrPath, repoPath, mappingName, cancellationToken: _cancellationToken.Token);
+    }
+
+    protected async Task<string?> CallDarcCodeflow(string mappingName, NativePath repoPath)
+    {
+        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrCodeflower>();
+        return await codeflower.FlowCodeAsync(repoPath, VmrPath, mappingName, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
