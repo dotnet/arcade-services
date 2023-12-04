@@ -139,7 +139,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             try
             {
-                await UpdateRepositoryInternal(
+                var patchesToReapply = await UpdateRepositoryInternal(
                         dependencyUpdate,
                         reapplyVmrPatches: true,
                         additionalRemotes,
@@ -152,6 +152,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             catch (EmptySyncException e)
             {
+                // TODO: Clean up the work branch?
                 _logger.LogInformation(e.Message);
                 return false;
             }
@@ -171,12 +172,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
-        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
-            update.Mapping.Name,
-            currentVersion.Sha,
-            update.RemoteUri,
-            update.TargetRevision);
-
         // Do we need to change anything?
         if (currentVersion.Sha == update.TargetRevision)
         {
@@ -193,6 +188,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
             throw new EmptySyncException($"Repository {update.Mapping} is already at {update.TargetRevision}");
         }
+
+        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
+            update.Mapping.Name,
+            currentVersion.Sha,
+            update.RemoteUri,
+            update.TargetRevision);
 
         // Sort remotes so that we go Local -> GitHub -> AzDO
         // This makes the synchronization work even for cases when we can't access internal repos
@@ -221,12 +222,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
-
-        if (currentVersion.Sha == update.TargetRevision)
-        {
-            _logger.LogInformation("No new commits found to synchronize");
-            return Array.Empty<VmrIngestionPatch>();
-        }
 
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
             update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.TargetRevision));
@@ -792,11 +787,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             ?? throw new Exception($"No mapping named '{mapping.Name}' found");
     }
 
-    private class RepositoryNotInitializedException : Exception
+    private class RepositoryNotInitializedException(string message) : Exception(message)
     {
-        public RepositoryNotInitializedException(string message)
-            : base(message)
-        {
-        }
     }
 }
