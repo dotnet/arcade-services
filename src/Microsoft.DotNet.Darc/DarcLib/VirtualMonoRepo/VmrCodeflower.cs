@@ -291,75 +291,91 @@ public class VmrCodeflower : IVmrCodeflower
 
         await _localGitClient.CheckoutAsync(targetRepo, lastFlow.SourceSha);
 
-        List<VmrIngestionPatch> patches;
+        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
+        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
+        _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, repoPath);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         List<string> removalFilters;
+        List<VmrIngestionPatch> patches = null!; // TODO
+        ProcessExecutionResult result;
 
         // Let's create a patch representing files in the source repo (zero commit -> HEAD)
         // Using a patch will allow us to cloak well
         // TODO: This might be an extra work - we could possibly just copy the contents of the VMR folder (minus cloaking)
-        if (isBackflow)
+        if (!isBackflow)
         {
-            // We leave the inlined submodules in the VMR
-            var submoduleExclusions = _sourceManifest.Submodules
-                .Where(s => s.Path.StartsWith(mapping.Name + '/'))
-                .Select(s => s.Path.Substring(mapping.Name.Length + 1))
-                .Select(VmrPatchHandler.GetExclusionRule)
-                .ToList();
-
-            patches = await _vmrPatchHandler.CreatePatches(
-                patchName,
-                Constants.EmptyGitObject,
-                shaToFlow,
-                path: null,
-                submoduleExclusions,
-                relativePaths: true,
-                workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
-                applicationPath: null,
-                cancellationToken);
-
-            // When flowing to a repo, we remove all repo files but submodules and cloaked files
-            removalFilters =
-            [
-                .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-                .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-                .. submoduleExclusions,
-            ];
-        }
-        else
-        {
-            patches = await _vmrPatchHandler.CreatePatches(
-                mapping,
-                repoPath,
-                Constants.EmptyGitObject,
-                shaToFlow,
-                _vmrInfo.TmpPath,
-                _vmrInfo.TmpPath,
-                cancellationToken);
-
             var submodules = await _localGitClient.GetGitSubmodulesAsync(repoPath, shaToFlow);
-            var submoduleExclusions = submodules
-                .Select(s => s.Path)
-                .Select(VmrPatchHandler.GetExclusionRule)
-                .ToList();
 
             // When flowing to the VMR, we remove all files but sobmodules and cloaked files
             removalFilters =
             [
                 .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
                 .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-                .. submoduleExclusions,
+                .. submodules.Select(s => s.Path).Select(VmrPatchHandler.GetExclusionRule),
             ];
+
+            result = await _processManager.Execute(
+                _processManager.GitExecutable,
+                ["rm", "-r", "-q", "--", .. removalFilters],
+                workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
+                cancellationToken: cancellationToken);
+
+            result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
+
+            _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
+                mapping,
+                repoPath, // TODO
+                Constants.EmptyGitObject,
+                _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
+                null));
+
+            // TODO: Detect if no changes
+            var updated = await _vmrUpdater.UpdateRepository(
+                mapping.Name,
+                shaToFlow,
+                "1.2.3",
+                updateDependencies: false,
+                // TODO
+                additionalRemotes: Array.Empty<AdditionalRemote>(),
+                readmeTemplatePath: null,
+                tpnTemplatePath: null,
+                generateCodeowners: true,
+                discardPatches: false,
+                cancellationToken);
+
+            return updated ? branchName : null;
         }
+
+        // We leave the inlined submodules in the VMR
+        var submoduleExclusions = _sourceManifest.Submodules
+            .Where(s => s.Path.StartsWith(mapping.Name + '/'))
+            .Select(s => s.Path.Substring(mapping.Name.Length + 1))
+            .Select(VmrPatchHandler.GetExclusionRule)
+            .ToList();
+
+        patches = await _vmrPatchHandler.CreatePatches(
+            patchName,
+            Constants.EmptyGitObject,
+            shaToFlow,
+            path: null,
+            submoduleExclusions,
+            relativePaths: true,
+            workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
+            applicationPath: null,
+            cancellationToken);
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
-        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
-        _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, repoPath);
+        // When flowing to a repo, we remove all repo files but submodules and cloaked files
+        removalFilters =
+        [
+            .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+            .. submoduleExclusions,
+        ];
 
-        var result = await _processManager.ExecuteGit(targetRepo, ["rm", "-r", "-q", "--", .. removalFilters]);
+        result = await _processManager.ExecuteGit(targetRepo, ["rm", "-r", "-q", "--", .. removalFilters]);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files
@@ -369,12 +385,6 @@ public class VmrCodeflower : IVmrCodeflower
             await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
             // TODO: Discard patches
         }
-
-        var commitMessage = $"""
-            [{(isBackflow ? "VMR" : mapping.Name)}] Codeflow {shortShas}
-
-            {Constants.AUTOMATION_COMMIT_TAG}
-            """;
 
         // TODO: Check if there are any changes and only commit if there are
         result = await _processManager.ExecuteGit(
@@ -390,6 +400,12 @@ public class VmrCodeflower : IVmrCodeflower
                 shaToFlow);
             return null;
         }
+
+        var commitMessage = $"""
+            [{(isBackflow ? "VMR" : mapping.Name)}] Codeflow {shortShas}
+
+            {Constants.AUTOMATION_COMMIT_TAG}
+            """;
 
         await _localGitClient.CommitAsync(targetRepo, commitMessage, false, cancellationToken: cancellationToken);
         await _localGitClient.ResetWorkingTree(targetRepo);
@@ -407,26 +423,35 @@ public class VmrCodeflower : IVmrCodeflower
             return lastForwardFlow;
         }
 
-        (string BackwardSha, string ForwardSha) commitsToCompare = currentIsBackflow
-            ? (lastBackflow.VmrSha, lastForwardFlow.VmrSha)
-            : (lastBackflow.RepoSha, lastForwardFlow.RepoSha);
+        string backwardSha, forwardSha;
+        NativePath sourceRepo;
+        if (currentIsBackflow)
+        {
+            (backwardSha, forwardSha) = (lastBackflow.VmrSha, lastForwardFlow.VmrSha);
+            sourceRepo = _vmrInfo.VmrPath;
+        }
+        else
+        {
+            (backwardSha, forwardSha) = (lastBackflow.RepoSha, lastForwardFlow.RepoSha);
+            sourceRepo = repoPath;
+        }
 
-        string objectType1 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, commitsToCompare.BackwardSha);
-        string objectType2 = await _localGitClient.GetObjectTypeAsync(_vmrInfo.VmrPath, commitsToCompare.ForwardSha);
+        string objectType1 = await _localGitClient.GetObjectTypeAsync(sourceRepo, backwardSha);
+        string objectType2 = await _localGitClient.GetObjectTypeAsync(sourceRepo, forwardSha);
 
         if (objectType1 != "commit" || objectType2 != "commit")
         {
-            throw new Exception($"Failed to find commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {_vmrInfo.VmrPath}");
+            throw new Exception($"Failed to find commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
-        bool isForwardOlder = await IsAncestorCommit(commitsToCompare.ForwardSha, commitsToCompare.BackwardSha);
-        bool isBackwardOlder = await IsAncestorCommit(commitsToCompare.BackwardSha, commitsToCompare.ForwardSha);
+        bool isForwardOlder = await IsAncestorCommit(sourceRepo, forwardSha, backwardSha);
+        bool isBackwardOlder = await IsAncestorCommit(sourceRepo, backwardSha, forwardSha);
 
         // Commits not comparable
         if (isBackwardOlder == isForwardOlder)
         {
-            throw new Exception($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
+            throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
         };
 
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
@@ -464,13 +489,13 @@ public class VmrCodeflower : IVmrCodeflower
         return new ForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
     }
 
-    private async Task<bool> IsAncestorCommit(string parent, string ancestor)
+    private async Task<bool> IsAncestorCommit(NativePath repoPath, string parent, string ancestor)
     {
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["merge-base", "--is-ancestor", parent, ancestor]);
+        var result = await _processManager.ExecuteGit(repoPath, ["merge-base", "--is-ancestor", parent, ancestor]);
 
         if (!string.IsNullOrEmpty(result.StandardError))
         {
-            result.ThrowIfFailed($"Failed to determine which commit of {_vmrInfo.VmrPath} is older ({parent}, {ancestor})");
+            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
         }
 
         return result.ExitCode == 0;
