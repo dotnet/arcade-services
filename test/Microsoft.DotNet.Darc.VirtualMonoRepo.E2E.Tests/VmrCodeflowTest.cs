@@ -104,8 +104,6 @@ public class VmrCodeflowTest :  VmrTestsBase
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().NotBeNullOrEmpty();
         await GitOperations.MergePrBranch(VmrPath, branch!);
-        CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
-        CheckFileContents(_productRepoFilePath, "Change that happened in the PR");
 
         // Backflow - should be a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);

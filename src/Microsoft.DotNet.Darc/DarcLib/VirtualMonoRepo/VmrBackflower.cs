@@ -68,7 +68,20 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         NativePath targetRepo,
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
-        => await PickFlowStrategyAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
+    {
+        shaToFlow ??= await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
+
+        var branchName = await PickFlowStrategyAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
+
+        if (branchName is null)
+        {
+            // TODO: We should still probably update package versions or at least try?
+            return null;
+        }
+
+        await UpdateVersionDetailsXml(targetRepo, shaToFlow, cancellationToken);
+        return branchName;
+    }
 
     protected override async Task<string?> SameDirectionFlowAsync(
         SourceMapping mapping,
@@ -167,11 +180,6 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
 
-        // We will remove everything not-cloaked and replace it with current contents of the source repo
-        List<string> removalFilters;
-        List<VmrIngestionPatch> patches = null!; // TODO
-        ProcessExecutionResult result;
-
         // We leave the inlined submodules in the VMR
         var submoduleExclusions = _sourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mapping.Name + '/'))
@@ -179,7 +187,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
-        patches = await _vmrPatchHandler.CreatePatches(
+        List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
             shaToFlow,
@@ -192,15 +200,16 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
+        // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to a repo, we remove all repo files but submodules and cloaked files
-        removalFilters =
+        List<string> removalFilters =
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
             .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
             .. submoduleExclusions,
         ];
 
-        result = await _processManager.ExecuteGit(targetRepo, ["rm", "-r", "-q", "--", .. removalFilters]);
+        ProcessExecutionResult result = await _processManager.ExecuteGit(targetRepo, ["rm", "-r", "-q", "--", .. removalFilters]);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files

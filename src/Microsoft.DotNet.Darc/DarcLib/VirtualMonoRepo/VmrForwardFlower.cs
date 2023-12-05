@@ -60,7 +60,12 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         NativePath sourceRepo,
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
-        => await PickFlowStrategyAsync(isBackflow: false, sourceRepo, mapping, shaToFlow, cancellationToken);
+        => await PickFlowStrategyAsync(
+            isBackflow: false,
+            sourceRepo,
+            mapping,
+            shaToFlow ?? await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD),
+            cancellationToken);
 
     // TODO: Docs
     protected override async Task<string?> SameDirectionFlowAsync(

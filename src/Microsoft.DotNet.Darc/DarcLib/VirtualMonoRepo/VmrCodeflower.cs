@@ -67,22 +67,12 @@ internal abstract class VmrCodeflower
         bool isBackflow,
         NativePath repoPath,
         string mappingName,
-        string? shaToFlow = null,
+        string shaToFlow,
         CancellationToken cancellationToken = default)
     {
-        var sourceRepo = isBackflow ? _vmrInfo.VmrPath : repoPath;
-        if (shaToFlow is null)
-        {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD);
-        }
-        else
-        {
-            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
-        }
-
         await _dependencyTracker.InitializeSourceMappings();
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, currentIsBackflow: false);
+        Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, isBackflow);
 
         _logger.LogInformation("Last flow was {type} {sourceSha} -> {targetSha}",
             lastFlow.GetType().Name.ToLower(),
@@ -104,7 +94,7 @@ internal abstract class VmrCodeflower
         if (branchName is null)
         {
             // TODO: Clean up repos?
-            _logger.LogInformation("Nothing to flow from {sourceRepo}", sourceRepo);
+            _logger.LogInformation("Nothing to flow from {sourceRepo}", isBackflow ? "VMR" : mapping);
         }
 
         return branchName;
