@@ -71,11 +71,12 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
     {
         shaToFlow ??= await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
 
-        var branchName = await PickFlowStrategyAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
+        var branchName = await FlowCodeAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
 
         if (branchName is null)
         {
             // TODO: We should still probably update package versions or at least try?
+            // Should we clean up the repos?
             return null;
         }
 
@@ -228,7 +229,6 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
 
         if (result.ExitCode == 0)
         {
-            _logger.LogInformation("There are no new changes in VMR between {sha1} and {sha2}", lastFlow.SourceSha, shaToFlow);
             return null;
         }
 

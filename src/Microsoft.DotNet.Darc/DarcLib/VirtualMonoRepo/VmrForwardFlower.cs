@@ -60,7 +60,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         NativePath sourceRepo,
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
-        => await PickFlowStrategyAsync(
+        => await FlowCodeAsync(
             isBackflow: false,
             sourceRepo,
             mapping,
@@ -75,28 +75,25 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         Codeflow lastFlow,
         CancellationToken cancellationToken)
     {
-        var isBackflow = lastFlow is Backflow;
-        var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
-        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
-        var targetRepo = isBackflow ? repoPath : _vmrInfo.VmrPath;
+        var branchName = $"codeflow/forward/{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
 
-        await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
+        await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
 
         // TODO: Detect if no changes
-        var updated = await _vmrUpdater.UpdateRepository(
+        var hadUpdates = await _vmrUpdater.UpdateRepository(
             mapping.Name,
             shaToFlow,
-            "1.2.3",
+            "1.2.3", // TODO
             updateDependencies: false,
-            // TODO
+            // TODO - all parameters below should come from BAR build / options
             additionalRemotes: Array.Empty<AdditionalRemote>(),
             readmeTemplatePath: null,
             tpnTemplatePath: null,
             generateCodeowners: true,
-            discardPatches: false,
+            discardPatches: true,
             cancellationToken);
 
-        return updated ? branchName : null;
+        return hadUpdates ? branchName : null;
     }
 
     // TODO: Docs
@@ -107,15 +104,13 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         Codeflow lastFlow,
         CancellationToken cancellationToken)
     {
-        var isBackflow = lastFlow is ForwardFlow;
-        var targetRepo = isBackflow ? repoPath : _vmrInfo.VmrPath;
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{(isBackflow ? "backflow" : "forwardflow")}-{shortShas}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-backflow-{shortShas}.patch";
 
-        await _localGitClient.CheckoutAsync(targetRepo, lastFlow.SourceSha);
+        await _localGitClient.CheckoutAsync(repoPath, lastFlow.SourceSha);
 
-        var branchName = $"codeflow/{lastFlow.GetType().Name.ToLower()}/{shortShas}";
-        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
+        var branchName = $"codeflow/forward/{shortShas}";
+        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, repoPath);
         var submodules = await _localGitClient.GetGitSubmodulesAsync(repoPath, shaToFlow);
 
@@ -134,22 +129,23 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             cancellationToken: cancellationToken);
 
-        result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
+        result.ThrowIfFailed($"Failed to remove files from {repoPath}");
 
+        // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            repoPath, // TODO
+            repoPath, // TODO = URL from BAR build
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
-            null));
+            Parent: null));
 
         // TODO: Detect if no changes
-        var updated = await _vmrUpdater.UpdateRepository(
+        var hadUpdates = await _vmrUpdater.UpdateRepository(
             mapping.Name,
             shaToFlow,
             "1.2.3",
             updateDependencies: false,
-            // TODO
+            // TODO - all parameters below should come from BAR build / options
             additionalRemotes: Array.Empty<AdditionalRemote>(),
             readmeTemplatePath: null,
             tpnTemplatePath: null,
@@ -157,6 +153,6 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             discardPatches: false,
             cancellationToken);
 
-        return updated ? branchName : null;
+        return hadUpdates ? branchName : null;
     }
 }

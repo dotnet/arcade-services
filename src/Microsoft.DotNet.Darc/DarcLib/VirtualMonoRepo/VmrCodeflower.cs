@@ -63,7 +63,8 @@ internal abstract class VmrCodeflower
         Codeflow lastFlow,
         CancellationToken cancellationToken);
 
-    protected async Task<string?> PickFlowStrategyAsync(
+    // TODO: Docs
+    protected async Task<string?> FlowCodeAsync(
         bool isBackflow,
         NativePath repoPath,
         string mappingName,
@@ -73,6 +74,12 @@ internal abstract class VmrCodeflower
         await _dependencyTracker.InitializeSourceMappings();
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, isBackflow);
+
+        if (lastFlow.SourceSha == shaToFlow)
+        {
+            _logger.LogInformation("No new commits to flow from {sourceRepo}", isBackflow ? "VMR" : mapping);
+            return null;
+        }
 
         _logger.LogInformation("Last flow was {type} {sourceSha} -> {targetSha}",
             lastFlow.GetType().Name.ToLower(),
@@ -138,6 +145,7 @@ internal abstract class VmrCodeflower
         // Commits not comparable
         if (isBackwardOlder == isForwardOlder)
         {
+            // TODO: Figure out when this can happen and what to do about it
             throw new Exception($"Failed to determine which commit of {sourceRepo} is older ({lastForwardFlow.VmrSha}, {lastBackflow.VmrSha})");
         };
 
