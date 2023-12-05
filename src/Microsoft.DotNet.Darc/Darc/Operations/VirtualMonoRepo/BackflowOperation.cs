@@ -13,7 +13,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase<IVmrCodeflower>
+internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
 {
     private readonly BackflowCommandLineOptions _options;
 
@@ -24,7 +24,7 @@ internal class BackflowOperation : VmrOperationBase<IVmrCodeflower>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrCodeflower vmrBackflower,
+        IVmrBackflower vmrBackflower,
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -39,10 +39,9 @@ internal class BackflowOperation : VmrOperationBase<IVmrCodeflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.FlowCodeAsync(
-            new NativePath(_options.VmrPath),
-            new NativePath(targetDirectory),
+        await vmrBackflower.FlowBackAsync(
             repoName,
+            new NativePath(targetDirectory),
             cancellationToken: cancellationToken);
     }
 }

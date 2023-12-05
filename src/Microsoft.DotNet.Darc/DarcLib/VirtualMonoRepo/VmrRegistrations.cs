@@ -40,7 +40,8 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
-        services.TryAddTransient<IVmrCodeflower, VmrCodeflower>();
+        services.TryAddTransient<IVmrBackflower, VmrBackflower>();
+        services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
