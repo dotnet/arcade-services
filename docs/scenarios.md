@@ -24,8 +24,8 @@ https://github.com/dotnet/arcade-services/blob/master/src/Maestro/Maestro.Web.Te
 ## Manual testing
 We don't have scenario or unit tests for older versions of this controller/API.
 Making POST requests to:
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2018-07-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2019-01-16
+* https://maestro.int-dot.net/api/builds/15357?api-version=2018-07-16
+* https://maestro.int-dot.net/api/builds/15357?api-version=2019-01-16
 
 with the following body:
 ```json
@@ -135,8 +135,8 @@ The brunt of Barviz validation is performed manually:
     ![builds view](./Images/build-view.png)
 
   Some example URLs to visit:
-  * https://maestro-int.westus2.cloudapp.azure.com/9/graph
-  * https://maestro-int.westus2.cloudapp.azure.com/9/https:%2F%2Fdev.azure.com%2Fdnceng%2Finternal%2F_git%2Fdotnet-arcade/latest/graph
+  * https://maestro.int-dot.net/9/graph
+  * https://maestro.int-dot.net/9/https:%2F%2Fdev.azure.com%2Fdnceng%2Finternal%2F_git%2Fdotnet-arcade/latest/graph
 
 If any errors are visible, the browser console should reveal which API is
 returning the errors: Making GET requests to these APIs will also reveal any
@@ -144,26 +144,26 @@ problem with the queries that Barviz uses:
 
 #### Build Details
 
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2018-07-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2019-01-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2020-02-20
+* https://maestro.int-dot.net/api/builds/15357?api-version=2018-07-16
+* https://maestro.int-dot.net/api/builds/15357?api-version=2019-01-16
+* https://maestro.int-dot.net/api/builds/15357?api-version=2020-02-20
 
 #### Build graph
 
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357/graph?api-version=2018-07-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357/graph?api-version=2019-01-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357/graph?api-version=2020-02-20
+* https://maestro.int-dot.net/api/builds/15357/graph?api-version=2018-07-16
+* https://maestro.int-dot.net/api/builds/15357/graph?api-version=2019-01-16
+* https://maestro.int-dot.net/api/builds/15357/graph?api-version=2020-02-20
 
 #### Channel graph
 
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/graph?api-version=2018-07-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/graph?api-version=2019-01-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/graph?api-version=2020-02-20
+* https://maestro.int-dot.net/api/channels/9/graph?api-version=2018-07-16
+* https://maestro.int-dot.net/api/channels/9/graph?api-version=2019-01-16
+* https://maestro.int-dot.net/api/channels/9/graph?api-version=2020-02-20
 
 ### Channel Repositories
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/repositories?api-version=2018-07-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/repositories?api-version=2019-01-16
-* https://maestro-int.westus2.cloudapp.azure.com/api/channels/9/repositories?api-version=2020-02-20
+* https://maestro.int-dot.net/api/channels/9/repositories?api-version=2018-07-16
+* https://maestro.int-dot.net/api/channels/9/repositories?api-version=2019-01-16
+* https://maestro.int-dot.net/api/channels/9/repositories?api-version=2020-02-20
 
 ### Additional usage of the Maestro API (Unknown Scenarios)
 

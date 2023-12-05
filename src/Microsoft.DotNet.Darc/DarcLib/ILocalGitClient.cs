@@ -133,4 +133,11 @@ public interface ILocalGitClient
         string repoPath,
         IEnumerable<string> pathsToStage,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Add the authorization header to the git command line arguments and environment variables.
+    /// </summary>
+    /// <param name="args">Where to add the new argument into</param>
+    /// <param name="envVars">Where to add the new variables into</param>
+    public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
 }

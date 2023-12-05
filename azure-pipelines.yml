@@ -254,7 +254,7 @@ stages:
         VariableGroup: MaestroInt KeyVault
       ${{ else }}:
         DeploymentEnvironment: Production
-        MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
         PublishProfile: Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
