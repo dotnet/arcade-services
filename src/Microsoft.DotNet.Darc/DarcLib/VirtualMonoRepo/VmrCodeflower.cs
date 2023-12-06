@@ -68,9 +68,19 @@ internal abstract class VmrCodeflower
         bool isBackflow,
         NativePath repoPath,
         string mappingName,
-        string shaToFlow,
+        string? shaToFlow = null,
         CancellationToken cancellationToken = default)
     {
+        var sourceRepo = isBackflow ? _vmrInfo.VmrPath : repoPath;
+        if (shaToFlow is null)
+        {
+            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD);
+        }
+        else
+        {
+            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
+        }
+
         await _dependencyTracker.InitializeSourceMappings();
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, isBackflow);
@@ -196,7 +206,13 @@ internal abstract class VmrCodeflower
         return result.ExitCode == 0;
     }
 
-    private async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine)
+    /// <summary>
+    /// Finds a given line in a file and returns the SHA of the commit that last changed it.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <param name="isTargetLine">Predicate to tell the line in question</param>
+    /// <param name="blameFromCommit">Blame older commits than a given one</param>
+    protected async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
     {
         using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
         using (var reader = new StreamReader(stream))
@@ -207,7 +223,7 @@ internal abstract class VmrCodeflower
             {
                 if (isTargetLine(line))
                 {
-                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber);
+                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber, blameFromCommit);
                 }
 
                 lineNumber++;

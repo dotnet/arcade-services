@@ -50,7 +50,10 @@ public class VmrCodeflowTest :  VmrTestsBase
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
 
-        // TODO: One more backflow that will have a conflict
+        // Make a conflicting change in the VMR
+        branch = await ChangeVmrFileAndFlowIt("A completely different change");
+        branch.Should().NotBeNullOrEmpty();
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, branch!, expectedFileInConflict: _productRepoFileName);
     }
 
     [Test]
@@ -117,7 +120,6 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         var branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         CheckFileContents(_productRepoVmrFilePath, newContent);
-        CheckFileContents(_productRepoFilePath, newContent);
         return branch;
     }
 
@@ -127,7 +129,6 @@ public class VmrCodeflowTest :  VmrTestsBase
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'", true);
 
         var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
-        CheckFileContents(_productRepoVmrFilePath, newContent);
         CheckFileContents(_productRepoFilePath, newContent);
         return branch;
     }

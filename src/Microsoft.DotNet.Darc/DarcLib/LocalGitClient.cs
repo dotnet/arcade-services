@@ -376,12 +376,13 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput;
     }
 
-    public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line)
+    public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line, string? blameFromCommit = null)
     {
-        var args = new[]
+        var args = new List<string>
         {
             "blame",
             "--first-parent",
+            blameFromCommit != null ? blameFromCommit + '^' : Constants.HEAD,
             "-slL",
             $"{line},{line}",
             relativeFilePath,

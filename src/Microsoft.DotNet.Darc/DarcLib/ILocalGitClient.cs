@@ -28,11 +28,13 @@ public interface ILocalGitClient
     /// <param name="repoPath">Path to the repository</param>
     /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>
     /// <param name="line">Line to blame</param>
+    /// <param name="blameFromCommit">Blame older commits than a given one</param>
     /// <returns>SHA of the commit that last changed the given line in the given file</returns>
     Task<string> BlameLineAsync(
         string repoPath,
         string relativeFilePath,
-        int line);
+        int line,
+        string? blameFromCommit = null);
 
     /// <summary>
     ///     Checkout the repo to the specified state.

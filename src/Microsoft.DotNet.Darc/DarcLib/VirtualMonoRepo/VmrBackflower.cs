@@ -69,10 +69,16 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
     {
-        shaToFlow ??= await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
+        if (shaToFlow is null)
+        {
+            shaToFlow = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath, Constants.HEAD);
+        }
+        else
+        {
+            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, shaToFlow);
+        }
 
         var branchName = await FlowCodeAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
-
         if (branchName is null)
         {
             // TODO: We should still probably update package versions or at least try?
@@ -136,18 +142,27 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
                 // TODO: Discard patches
             }
         }
-        catch (Exception)
+        catch (Exception) // TODO: Scope exception better
         {
-            // Go one step back and prepare the previous branch
-            // TODO: Reset and try from an earlier commit
-            //await BackflowAsync(mappingName, repoPath,);
+            _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-            //foreach (VmrIngestionPatch patch in patches)
-            //{
-            //    await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
-            // TODO: Discard patches
-            //}
-            throw new NotImplementedException();
+            // Find the last target commit in the repo
+            var previousRepoSha = await BlameLineAsync(
+                repoPath / VersionFiles.VersionDetailsXml,
+                line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
+                lastFlow.TargetSha);
+            await _localGitClient.CheckoutAsync(targetRepo, previousRepoSha);
+
+            // Flow the last commit again
+            branchName = await FlowCodeAsync(true, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
+
+            // The current patches should apply now
+            // TODO: Catch exceptions?
+            foreach (VmrIngestionPatch patch in patches)
+            {
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo, cancellationToken);
+                // TODO: Discard patches
+            }
         }
 
         // TODO: Remove VMR patches

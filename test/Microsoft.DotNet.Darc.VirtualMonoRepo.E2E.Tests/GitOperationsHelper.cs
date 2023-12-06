@@ -121,4 +121,25 @@ public class GitOperationsHelper
         await ProcessManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
         await ProcessManager.ExecuteGit(repo, "config", "user.name", DarcLib.Constants.DarcBotName);
     }
+
+    public async Task VerifyMergeConflict(
+        NativePath repo,
+        string branch,
+        string? expectedFileInConflict = null,
+        string targetBranch = "main")
+    {
+        var result = await ProcessManager.ExecuteGit(repo, "checkout", targetBranch);
+        result.ThrowIfFailed($"Could not checkout main branch in {repo}");
+
+        result = await ProcessManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
+        result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
+
+        if (expectedFileInConflict != null)
+        {
+            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedFileInConflict}");
+        }
+
+        result = await ProcessManager.ExecuteGit(repo, "merge", "--abort");
+        result.ThrowIfFailed($"Failed to abort merge in {repo}");
+    }
 }
