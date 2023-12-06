@@ -78,7 +78,10 @@ public class VmrCodeflowTest :  VmrTestsBase
         await GitOperations.CommitAll(VmrPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
-        // TODO: One more backflow that will have a conflict
+        // Make a conflicting change in the VMR
+        branch = await ChangeRepoFileAndFlowIt("A completely different change");
+        branch.Should().NotBeNullOrEmpty();
+        await GitOperations.VerifyMergeConflict(VmrPath, branch!, expectedFileInConflict: VmrInfo.SourcesDir / _productRepoFileName);
     }
 
     [Test]

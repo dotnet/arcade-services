@@ -142,9 +142,12 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
                 // TODO: Discard patches
             }
         }
-        catch (Exception) // TODO: Scope exception better
+        catch (Exception e) when (e.Message.Contains("Failed to apply the patch")) // TODO: Scope exception better
         {
+            // This happens when a conflicting change was made in the last backflow PR (before merging)
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
+
+            // TODO: Rather check out the repo at the previous flow's source sha to read the right version of VD.xml?
 
             // Find the last target commit in the repo
             var previousRepoSha = await BlameLineAsync(
@@ -153,8 +156,8 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
                 lastFlow.TargetSha);
             await _localGitClient.CheckoutAsync(targetRepo, previousRepoSha);
 
-            // Flow the last commit again
-            branchName = await FlowCodeAsync(true, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
+            // Reconstruct the previous flow's branch
+            branchName = await FlowCodeAsync(isBackflow: true, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
 
             // The current patches should apply now
             // TODO: Catch exceptions?

@@ -74,19 +74,55 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
 
         await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
-        // TODO: Detect if no changes
-        var hadUpdates = await _vmrUpdater.UpdateRepository(
-            mapping.Name,
-            shaToFlow,
-            "1.2.3", // TODO
-            updateDependencies: false,
-            // TODO - all parameters below should come from BAR build / options
-            additionalRemotes: Array.Empty<AdditionalRemote>(),
-            readmeTemplatePath: null,
-            tpnTemplatePath: null,
-            generateCodeowners: true,
-            discardPatches: true,
-            cancellationToken);
+        bool hadUpdates;
+
+        try
+        {
+            hadUpdates = await _vmrUpdater.UpdateRepository(
+                mapping.Name,
+                shaToFlow,
+                "1.2.3", // TODO
+                updateDependencies: false,
+                // TODO - all parameters below should come from BAR build / options
+                additionalRemotes: Array.Empty<AdditionalRemote>(),
+                readmeTemplatePath: null,
+                tpnTemplatePath: null,
+                generateCodeowners: true,
+                discardPatches: true,
+                cancellationToken);
+        }
+        catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
+        {
+            // This happens when a conflicting change was made in the last forward-flow PR (before merging)
+            _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
+
+            // TODO: Rather check out the repo at the previous flow's source sha to read the right version of source-manifest.xml?
+
+            // Find the last target commit in the repo
+            var previousFlowTargetSha = await BlameLineAsync(
+                _vmrInfo.GetSourceManifestPath(),
+                line => line.Contains(lastFlow.SourceSha),
+                lastFlow.TargetSha);
+            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, previousFlowTargetSha);
+
+            // Reconstruct the previous flow's branch
+            branchName = await FlowCodeAsync(isBackflow: false, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
+
+            // We apply the current changes on top again - they should apply now
+            // TODO: Handle exceptions
+            hadUpdates = await _vmrUpdater.UpdateRepository(
+                mapping.Name,
+                shaToFlow,
+                "1.2.3", // TODO
+                updateDependencies: false,
+                // TODO - all parameters below should come from BAR build / options
+                additionalRemotes: Array.Empty<AdditionalRemote>(),
+                readmeTemplatePath: null,
+                tpnTemplatePath: null,
+                generateCodeowners: true,
+                discardPatches: true,
+                cancellationToken);
+        }
 
         return hadUpdates ? branchName : null;
     }
