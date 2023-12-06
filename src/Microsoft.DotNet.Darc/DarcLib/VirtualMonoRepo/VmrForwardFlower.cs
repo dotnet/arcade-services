@@ -77,7 +77,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
     {
         var branchName = $"codeflow/forward/{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
 
-        await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
+        await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
         // TODO: Detect if no changes
         var hadUpdates = await _vmrUpdater.UpdateRepository(
@@ -107,11 +107,12 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-backflow-{shortShas}.patch";
 
-        await _localGitClient.CheckoutAsync(repoPath, lastFlow.SourceSha);
+        await _localGitClient.CheckoutAsync(repoPath, lastFlow.TargetSha);
 
         var branchName = $"codeflow/forward/{shortShas}";
-        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
-        _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, repoPath);
+        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
+
+        // TODO: Make sure we need to take account submodules both from old and new commits
         var submodules = await _localGitClient.GetGitSubmodulesAsync(repoPath, shaToFlow);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo

@@ -150,6 +150,8 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             throw new NotImplementedException();
         }
 
+        // TODO: Remove VMR patches
+
         var commitMessage = $"""
             [{(isBackflow ? "VMR" : mapping.Name)}] Codeflow {shortShas}
 
@@ -188,6 +190,8 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
+        // TODO: Remove VMR patches
+
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
@@ -224,11 +228,12 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         // TODO: Check if there are any changes and only commit if there are
         result = await _processManager.ExecuteGit(
             targetRepo,
-            ["git", "diff-index", "--quiet", "--cached", "HEAD", "--"],
+            ["diff-index", "--quiet", "--cached", "HEAD", "--"],
             cancellationToken: cancellationToken);
 
         if (result.ExitCode == 0)
         {
+            // TODO: Clean up the work branch
             return null;
         }
 
