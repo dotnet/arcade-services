@@ -46,7 +46,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         branch.Should().NotBeNullOrEmpty();
 
         // Make an additional change in the PR branch before merging
-        File.WriteAllText(_productRepoFilePath, "Change that happened in the PR");
+        await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
 
@@ -74,7 +74,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         branch.Should().NotBeNullOrEmpty();
 
         // Make an additional change in the PR branch before merging
-        File.WriteAllText(_productRepoVmrFilePath, "Change that happened in the PR");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(VmrPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
@@ -87,29 +87,49 @@ public class VmrCodeflowTest :  VmrTestsBase
     [Test]
     public async Task ZigZagCodeflowTest()
     {
+        const string aFileContent = "Added a new file in the VMR";
+        const string bFileContent = "Added a new file in the product repo in the meantime";
+        const string bFileContent2 = "New content for the b file";
+
         await EnsureTestRepoIsInitialized();
 
         var branch = await ChangeRepoFileAndFlowIt("New content in the individual repo");
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
         // Make a change in the VMR
+        await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
+        await GitOperations.CommitAll(ProductRepoPath, aFileContent);
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR");
         branch.Should().NotBeNullOrEmpty();
+
+        // Before we merge the PR branch, make a change in the product repo
+        await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent);
+        await GitOperations.CommitAll(ProductRepoPath, bFileContent);
+
+        // Merge the backflow branch and verify files
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
+        CheckFileContents(ProductRepoPath / "a.txt", aFileContent);
+        CheckFileContents(ProductRepoPath / "b.txt", bFileContent);
+        CheckFileContents(_productRepoFilePath, "New content from the VMR");
 
         // Make a change in the VMR again
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR again");
         branch.Should().NotBeNullOrEmpty();
 
         // Make an additional change in the PR branch before merging
-        File.WriteAllText(_productRepoFilePath, "Change that happened in the PR");
+        await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
 
         // Forward flow
+        await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent2);
+        await GitOperations.CommitAll(ProductRepoPath, bFileContent2);
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().NotBeNullOrEmpty();
         await GitOperations.MergePrBranch(VmrPath, branch!);
+        CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
+        CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
+        CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
 
         // Backflow - should be a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
@@ -118,7 +138,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
     private async Task<string?> ChangeRepoFileAndFlowIt(string newContent)
     {
-        File.WriteAllText(_productRepoFilePath, newContent);
+        await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'", true);
 
         var branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
@@ -128,7 +148,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
     private async Task<string?> ChangeVmrFileAndFlowIt(string newContent)
     {
-        File.WriteAllText(_productRepoVmrPath / _productRepoFileName, newContent);
+        await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'", true);
 
         var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
@@ -192,7 +212,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
-        File.WriteAllText(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
+        await File.WriteAllTextAsync(ProductRepoPath / _productRepoFileName, "Test changes in repo file");
         await GitOperations.CommitAll(ProductRepoPath, "Changing a file in the repo");
 
         // Perform last VMR-lite-like forward flow
