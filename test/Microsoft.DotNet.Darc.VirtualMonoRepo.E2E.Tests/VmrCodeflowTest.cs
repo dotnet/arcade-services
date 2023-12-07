@@ -34,7 +34,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         await EnsureTestRepoIsInitialized();
 
         var branch = await ChangeVmrFileAndFlowIt("New content from the VMR");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
 
         // Backflow again - should be a no-op
@@ -43,7 +43,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Make a change in the VMR again
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR again");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
@@ -52,7 +52,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Make a conflicting change in the VMR
         branch = await ChangeVmrFileAndFlowIt("A completely different change");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branch!,
             expectedFileInConflict: _productRepoFileName);
     }
@@ -63,7 +63,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         await EnsureTestRepoIsInitialized();
 
         var branch = await ChangeRepoFileAndFlowIt("New content in the individual repo");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
         // Backflow again - should be a no-op
@@ -72,7 +72,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Make a change in the repo again
         branch = await ChangeRepoFileAndFlowIt("New content in the individual repo again");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "Change that happened in the PR");
@@ -81,11 +81,9 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Make a conflicting change in the VMR
         branch = await ChangeRepoFileAndFlowIt("A completely different change");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
         await GitOperations.VerifyMergeConflict(VmrPath, branch!,
             expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
-
-
     }
 
     [Test]
@@ -107,7 +105,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Flow unrelated changes from the VMR
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
 
         // Before we merge the PR branch, make a change in the product repo
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent);
@@ -121,7 +119,7 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Make a change in the VMR again
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR again");
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
@@ -132,7 +130,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent2);
         await GitOperations.CommitAll(ProductRepoPath, bFileContent2);
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
-        branch.Should().NotBeNullOrEmpty();
+        branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(VmrPath, branch!);
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
@@ -143,6 +141,38 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         // Backflow - should be a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().BeNull();
+    }
+
+    [Test]
+    public async Task SubmoduleCodeFlowTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var submodulePath = new UnixPath("externals/external-repo");
+        await GitOperations.InitializeSubmodule(ProductRepoPath, "second-repo", SecondRepoPath, submodulePath);
+        await GitOperations.CommitAll(ProductRepoPath, "Added a submodule");
+
+        var _submoduleFileVmrPath = _productRepoVmrPath / submodulePath / Constants.GetRepoFileName(Constants.SecondRepoName);
+
+        var branch = await ChangeVmrFileAndFlowIt("New content in the VMR repo");
+        branch.Should().NotBeNull();
+        await GitOperations.MergePrBranch(ProductRepoPath, branch!);
+
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().NotBeNull();
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+        await GitOperations.MergePrBranch(VmrPath, branch!);
+        CheckFileContents(_submoduleFileVmrPath, "File in product-repo2");
+
+        // Make an "invalid" change to the submodule in the VMR
+        // This will be forbidden in the future but we need to test this
+        await File.WriteAllLinesAsync(_submoduleFileVmrPath, new[] { "Invalid change" });
+        await GitOperations.CommitAll(VmrPath, "Invalid change in the VMR");
+        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         branch.Should().BeNull();
     }
 
@@ -171,6 +201,8 @@ public class VmrCodeflowTest :  VmrTestsBase
     protected override async Task CopyReposForCurrentTest()
     {
         Dictionary<string, List<string>> dependenciesMap = [];
+
+        CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);
 
         await CopyRepoAndCreateVersionDetails(
             CurrentTestDirectory,
