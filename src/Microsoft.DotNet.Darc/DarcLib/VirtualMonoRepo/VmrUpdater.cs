@@ -644,7 +644,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             DeleteRepository(repo.Path);
         }
 
-        var sourceManifestPath = _vmrInfo.GetSourceManifestPath();
+        var sourceManifestPath = _vmrInfo.SourceManifestPath;
         _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
 
         if (readmeTemplatePath != null)
@@ -676,7 +676,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         _sourceManifest.RemoveRepository(repo);
-        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
+        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.SourceManifestPath);
 
         if (_dependencyTracker.RemoveRepositoryVersion(repo))
         {
@@ -716,7 +716,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var filesToAdd = new List<string>
         {
             VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath()
+            _vmrInfo.SourceManifestPath
         };
 
         cancellationToken.ThrowIfCancellationRequested();

@@ -68,20 +68,12 @@ internal abstract class VmrCodeflower
         bool isBackflow,
         NativePath repoPath,
         string mappingName,
-        string? shaToFlow = null,
+        string shaToFlow,
         CancellationToken cancellationToken = default)
     {
-        var sourceRepo = isBackflow ? _vmrInfo.VmrPath : repoPath;
-        if (shaToFlow is null)
-        {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD);
-        }
-        else
-        {
-            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
-        }
-
         await _dependencyTracker.InitializeSourceMappings();
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, isBackflow);
 
@@ -115,6 +107,40 @@ internal abstract class VmrCodeflower
         }
 
         return branchName;
+    }
+
+    /// <summary>
+    /// Finds a given line in a file and returns the SHA of the commit that last changed it.
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <param name="isTargetLine">Predicate to tell the line in question</param>
+    /// <param name="blameFromCommit">Blame older commits than a given one</param>
+    protected async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
+    {
+        using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
+        using (var reader = new StreamReader(stream))
+        {
+            string? line;
+            int lineNumber = 1;
+            while ((line = await reader.ReadLineAsync()) != null)
+            {
+                if (isTargetLine(line))
+                {
+                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber, blameFromCommit);
+                }
+
+                lineNumber++;
+            }
+        }
+
+        throw new Exception($"Failed to blame file {filePath} - no matching line found");
+    }
+
+    protected async Task CheckOutVmr(string gitRef)
+    {
+        await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, gitRef);
+        await _dependencyTracker.InitializeSourceMappings();
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
     }
 
     private async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, NativePath repoPath, bool currentIsBackflow)
@@ -188,7 +214,7 @@ internal abstract class VmrCodeflower
         // Last forward flow SHAs come from source-manifest.json in the VMR
         string lastForwardRepoSha = repoInVmr.CommitSha;
         string lastForwardVmrSha = await BlameLineAsync(
-            _vmrInfo.GetSourceManifestPath(),
+            _vmrInfo.SourceManifestPath,
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
@@ -204,33 +230,6 @@ internal abstract class VmrCodeflower
         }
 
         return result.ExitCode == 0;
-    }
-
-    /// <summary>
-    /// Finds a given line in a file and returns the SHA of the commit that last changed it.
-    /// </summary>
-    /// <param name="filePath">Path to the file</param>
-    /// <param name="isTargetLine">Predicate to tell the line in question</param>
-    /// <param name="blameFromCommit">Blame older commits than a given one</param>
-    protected async Task<string> BlameLineAsync(string filePath, Func<string, bool> isTargetLine, string? blameFromCommit = null)
-    {
-        using (var stream = _fileSystem.GetFileStream(filePath, FileMode.Open, FileAccess.Read))
-        using (var reader = new StreamReader(stream))
-        {
-            string? line;
-            int lineNumber = 1;
-            while ((line = await reader.ReadLineAsync()) != null)
-            {
-                if (isTargetLine(line))
-                {
-                    return await _localGitClient.BlameLineAsync(_fileSystem.GetDirectoryName(filePath)!, filePath, lineNumber, blameFromCommit);
-                }
-
-                lineNumber++;
-            }
-        }
-
-        throw new Exception($"Failed to blame file {filePath} - no matching line found");
     }
 
     protected abstract record Codeflow(string SourceSha, string TargetSha)

@@ -26,6 +26,7 @@ public interface IVmrForwardFlower
 internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
+    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
@@ -47,6 +48,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, versionDetailsParser, processManager, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
+        _sourceManifest = sourceManifest;
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
@@ -60,7 +62,18 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         NativePath sourceRepo,
         string? shaToFlow = null,
         CancellationToken cancellationToken = default)
-        => await FlowCodeAsync(isBackflow: false, sourceRepo, mapping, shaToFlow, cancellationToken);
+    {
+        if (shaToFlow is null)
+        {
+            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD);
+        }
+        else
+        {
+            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
+        }
+
+        return await FlowCodeAsync(isBackflow: false, sourceRepo, mapping, shaToFlow, cancellationToken);
+    }
 
     // TODO: Docs
     protected override async Task<string?> SameDirectionFlowAsync(
@@ -100,10 +113,10 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
 
             // Find the last target commit in the repo
             var previousFlowTargetSha = await BlameLineAsync(
-                _vmrInfo.GetSourceManifestPath(),
+                _vmrInfo.SourceManifestPath,
                 line => line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, previousFlowTargetSha);
+            await CheckOutVmr(previousFlowTargetSha);
 
             // Reconstruct the previous flow's branch
             branchName = await FlowCodeAsync(isBackflow: false, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
@@ -119,7 +132,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
                 additionalRemotes: Array.Empty<AdditionalRemote>(),
                 readmeTemplatePath: null,
                 tpnTemplatePath: null,
-                generateCodeowners: true,
+                generateCodeowners: false,
                 discardPatches: true,
                 cancellationToken);
         }
@@ -131,20 +144,20 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
     protected override async Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,
-        NativePath repoPath,
+        NativePath sourceRepo,
         Codeflow lastFlow,
         CancellationToken cancellationToken)
     {
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-backflow-{shortShas}.patch";
 
-        await _localGitClient.CheckoutAsync(repoPath, lastFlow.TargetSha);
+        await _localGitClient.CheckoutAsync(sourceRepo, lastFlow.TargetSha);
 
         var branchName = $"codeflow/forward/{shortShas}";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
         // TODO: Make sure we need to take account submodules both from old and new commits
-        var submodules = await _localGitClient.GetGitSubmodulesAsync(repoPath, shaToFlow);
+        var submodules = await _localGitClient.GetGitSubmodulesAsync(sourceRepo, shaToFlow);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but sobmodules and cloaked files
@@ -161,12 +174,12 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             cancellationToken: cancellationToken);
 
-        result.ThrowIfFailed($"Failed to remove files from {repoPath}");
+        result.ThrowIfFailed($"Failed to remove files from {sourceRepo}");
 
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            repoPath, // TODO = URL from BAR build
+            sourceRepo, // TODO = URL from BAR build
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
             Parent: null));
@@ -181,7 +194,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             additionalRemotes: Array.Empty<AdditionalRemote>(),
             readmeTemplatePath: null,
             tpnTemplatePath: null,
-            generateCodeowners: true,
+            generateCodeowners: false,
             discardPatches: false,
             cancellationToken);
 

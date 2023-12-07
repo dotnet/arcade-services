@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -75,7 +76,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         }
         else
         {
-            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, shaToFlow);
+            await CheckOutVmr(shaToFlow);
         }
 
         var branchName = await FlowCodeAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);

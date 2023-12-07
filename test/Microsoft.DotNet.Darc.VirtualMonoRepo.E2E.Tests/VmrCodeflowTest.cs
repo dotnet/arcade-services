@@ -81,7 +81,7 @@ public class VmrCodeflowTest :  VmrTestsBase
         // Make a conflicting change in the VMR
         branch = await ChangeRepoFileAndFlowIt("A completely different change");
         branch.Should().NotBeNullOrEmpty();
-        await GitOperations.VerifyMergeConflict(VmrPath, branch!, expectedFileInConflict: VmrInfo.SourcesDir / _productRepoFileName);
+        await GitOperations.VerifyMergeConflict(VmrPath, branch!, expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
     }
 
     [Test]

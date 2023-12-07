@@ -34,6 +34,11 @@ public interface IVmrInfo
     string? SourceMappingsPath { get; set; }
 
     /// <summary>
+    /// Gets a full path leading to the source manifest JSON file.
+    /// </summary>
+    NativePath SourceManifestPath { get; }
+
+    /// <summary>
     /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
     /// Paths are UNIX style and relative.
     /// Example: ("src/installer/eng/common", "eng/common")
@@ -49,11 +54,6 @@ public interface IVmrInfo
     /// Gets a full path leading to sources belonging to a given repo
     /// </summary>
     NativePath GetRepoSourcesPath(string mappingName);
-
-    /// <summary>
-    /// Gets a full path leading to the source manifest JSON file.
-    /// </summary>
-    NativePath GetSourceManifestPath();
 }
 
 public class VmrInfo : IVmrInfo
@@ -93,6 +93,7 @@ public class VmrInfo : IVmrInfo
     {
         VmrPath = vmrPath;
         TmpPath = tmpPath;
+        SourceManifestPath = vmrPath / SourcesDir / SourceManifestFileName;
     }
 
     public VmrInfo(string vmrPath, string tmpPath) : this(new NativePath(vmrPath), new NativePath(tmpPath))
@@ -107,5 +108,5 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
 
-    public NativePath GetSourceManifestPath() => VmrPath / SourcesDir / SourceManifestFileName;
+    public NativePath SourceManifestPath { get; }
 }

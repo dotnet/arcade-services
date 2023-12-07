@@ -121,7 +121,7 @@ public abstract class VmrManagerBase
         var filesToAdd = new List<string>
         {
             VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath()
+            _vmrInfo.SourceManifestPath
         };
 
         if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))

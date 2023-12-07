@@ -80,7 +80,7 @@ public static class VmrRegistrations
         services.TryAddSingleton<ISourceManifest>(sp =>
         {
             var configuration = sp.GetRequiredService<IVmrInfo>();
-            return SourceManifest.FromJson(configuration.GetSourceManifestPath());
+            return SourceManifest.FromJson(configuration.SourceManifestPath);
         });
 
         return services;
