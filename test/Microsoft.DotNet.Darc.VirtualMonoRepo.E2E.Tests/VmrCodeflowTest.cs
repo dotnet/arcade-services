@@ -53,7 +53,8 @@ public class VmrCodeflowTest :  VmrTestsBase
         // Make a conflicting change in the VMR
         branch = await ChangeVmrFileAndFlowIt("A completely different change");
         branch.Should().NotBeNullOrEmpty();
-        await GitOperations.VerifyMergeConflict(ProductRepoPath, branch!, expectedFileInConflict: _productRepoFileName);
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, branch!,
+            expectedFileInConflict: _productRepoFileName);
     }
 
     [Test]
@@ -81,7 +82,10 @@ public class VmrCodeflowTest :  VmrTestsBase
         // Make a conflicting change in the VMR
         branch = await ChangeRepoFileAndFlowIt("A completely different change");
         branch.Should().NotBeNullOrEmpty();
-        await GitOperations.VerifyMergeConflict(VmrPath, branch!, expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+        await GitOperations.VerifyMergeConflict(VmrPath, branch!,
+            expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+
+
     }
 
     [Test]
@@ -96,9 +100,12 @@ public class VmrCodeflowTest :  VmrTestsBase
         var branch = await ChangeRepoFileAndFlowIt("New content in the individual repo");
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
-        // Make a change in the VMR
+        // Make some changes in the product repo
         await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
+        await File.WriteAllTextAsync(ProductRepoPath / "cloaked.dll", "A cloaked file");
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
+
+        // Flow unrelated changes from the VMR
         branch = await ChangeVmrFileAndFlowIt("New content from the VMR");
         branch.Should().NotBeNullOrEmpty();
 
@@ -130,6 +137,9 @@ public class VmrCodeflowTest :  VmrTestsBase
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
+        File.Exists(_productRepoVmrPath / "cloaked.dll").Should().BeFalse();
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
         // Backflow - should be a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
@@ -143,6 +153,8 @@ public class VmrCodeflowTest :  VmrTestsBase
 
         var branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         CheckFileContents(_productRepoVmrFilePath, newContent);
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         return branch;
     }
 
