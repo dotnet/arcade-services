@@ -54,7 +54,12 @@ public class VmrCodeflowTest :  VmrTestsBase
         branch = await ChangeVmrFileAndFlowIt("A completely different change");
         branch.Should().NotBeNull();
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branch!,
+            mergeTheirs: true,
             expectedFileInConflict: _productRepoFileName);
+
+        // We used the changes from the VMR - let's verify flowing there is a no-op
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
     [Test]
@@ -83,7 +88,12 @@ public class VmrCodeflowTest :  VmrTestsBase
         branch = await ChangeRepoFileAndFlowIt("A completely different change");
         branch.Should().NotBeNull();
         await GitOperations.VerifyMergeConflict(VmrPath, branch!,
+            mergeTheirs: true,
             expectedFileInConflict: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+
+        // We used the changes from the repo - let's verify flowing back is a no-op
+        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().BeNull();
     }
 
     [Test]

@@ -198,6 +198,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             discardPatches: false,
             cancellationToken);
 
+        // TODO: Technically, if we only changed metadata files, there are no updates still
         return hadUpdates ? branchName : null;
     }
 }

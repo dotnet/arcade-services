@@ -122,10 +122,15 @@ public class GitOperationsHelper
         await ProcessManager.ExecuteGit(repo, "config", "user.name", DarcLib.Constants.DarcBotName);
     }
 
+    // mergeTheirs behaviour:
+    //     null: abort merge
+    //     true: merge using theirs
+    //     false: merge using ours
     public async Task VerifyMergeConflict(
         NativePath repo,
         string branch,
         string? expectedFileInConflict = null,
+        bool? mergeTheirs = null,
         string targetBranch = "main")
     {
         var result = await ProcessManager.ExecuteGit(repo, "checkout", targetBranch);
@@ -139,7 +144,16 @@ public class GitOperationsHelper
             result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedFileInConflict}");
         }
 
-        result = await ProcessManager.ExecuteGit(repo, "merge", "--abort");
-        result.ThrowIfFailed($"Failed to abort merge in {repo}");
+        if (mergeTheirs.HasValue)
+        {
+            result = await ProcessManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", ".");
+            result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {repo}");
+            await CommitAll(repo, $"Merged {branch} into {targetBranch} {(mergeTheirs.Value ? "using " + targetBranch : "using " + targetBranch)}");
+        }
+        else
+        {
+            result = await ProcessManager.ExecuteGit(repo, "merge", "--abort");
+            result.ThrowIfFailed($"Failed to abort merge in {repo}");
+        }
     }
 }
