@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrRepoDeletionTest : VmrTestsBase
+internal class VmrRepoDeletionTest : VmrTestsBase
 {
     private SourceMappingFile _sourceMappings = null!;
     private readonly JsonSerializerOptions _jsonSettings;

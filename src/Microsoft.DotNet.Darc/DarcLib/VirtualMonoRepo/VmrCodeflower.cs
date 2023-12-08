@@ -84,7 +84,7 @@ internal abstract class VmrCodeflower
         }
 
         _logger.LogInformation("Last flow was {type} {sourceSha} -> {targetSha}",
-            lastFlow.GetType().Name.ToLower(),
+            isBackflow ? "backflow" : "forward flow",
             lastFlow.SourceSha,
             lastFlow.TargetSha);
 

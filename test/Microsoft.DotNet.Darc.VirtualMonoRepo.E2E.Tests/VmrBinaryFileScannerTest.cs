@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrBinaryFileScannerTest : VmrTestsBase
+internal class VmrBinaryFileScannerTest : VmrTestsBase
 {
     [Test]
     public async Task VmrBinaryFileScannerTests()
