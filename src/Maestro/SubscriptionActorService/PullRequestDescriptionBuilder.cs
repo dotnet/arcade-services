@@ -178,18 +178,9 @@ public class PullRequestDescriptionBuilder
 
     public static string GetChangesURI(string repoURI, string fromSha, string toSha)
     {
-        if (repoURI == null)
-        {
-            throw new ArgumentNullException(nameof(repoURI));
-        }
-        if (fromSha == null)
-        {
-            throw new ArgumentNullException(nameof(fromSha));
-        }
-        if (toSha == null)
-        {
-            throw new ArgumentNullException(nameof(toSha));
-        }
+        ArgumentNullException.ThrowIfNull(repoURI);
+        ArgumentNullException.ThrowIfNull(fromSha);
+        ArgumentNullException.ThrowIfNull(toSha);
 
         if (repoURI.Contains("github.com"))
         {
