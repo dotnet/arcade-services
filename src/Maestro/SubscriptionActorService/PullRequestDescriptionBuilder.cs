@@ -176,28 +176,29 @@ public class PullRequestDescriptionBuilder
         return regex.Matches(_description.ToString()).Select(m => Int32.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
     }
 
-    public static string GetChangesURI(string repoURI, string from, string to)
+    public static string GetChangesURI(string repoURI, string fromSha, string toSha)
     {
         if (repoURI == null)
         {
             throw new ArgumentNullException(nameof(repoURI));
         }
-        if (from == null)
+        if (fromSha == null)
         {
-            throw new ArgumentNullException(nameof(from));
+            throw new ArgumentNullException(nameof(fromSha));
         }
-        if (to == null)
+        if (toSha == null)
         {
-            throw new ArgumentNullException(nameof(to));
+            throw new ArgumentNullException(nameof(toSha));
         }
-
-        string fromSha = from.Length > _comparisonShaLength ? from.Substring(0, _comparisonShaLength) : from;
-        string toSha = to.Length > _comparisonShaLength ? to.Substring(0, _comparisonShaLength) : to;
 
         if (repoURI.Contains("github.com"))
         {
-            return $"{repoURI}/compare/{fromSha}...{toSha}";
+            string fromShortSha = fromSha.Length > _comparisonShaLength ? fromSha.Substring(0, _comparisonShaLength) : fromSha;
+            string toShortSha = toSha.Length > _comparisonShaLength ? toSha.Substring(0, _comparisonShaLength) : toSha;
+        
+            return $"{repoURI}/compare/{fromShortSha}...{toShortSha}";
         }
+
         return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
     }
 
