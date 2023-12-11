@@ -49,6 +49,11 @@ internal abstract class VmrCodeflower
         _logger = logger;
     }
 
+    /// <summary>
+    /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
+    /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
+    /// </summary>
+    /// <returns>Name of the PR branch that was created for the changes</returns>
     protected abstract Task<string?> SameDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,
@@ -56,6 +61,11 @@ internal abstract class VmrCodeflower
         Codeflow lastFlow,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
+    /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
+    /// </summary>
+    /// <returns>Name of the PR branch that was created for the changes</returns>
     protected abstract Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,
@@ -63,7 +73,10 @@ internal abstract class VmrCodeflower
         Codeflow lastFlow,
         CancellationToken cancellationToken);
 
-    // TODO: Docs
+    /// <summary>
+    /// Main common entrypoint method that loads information about the last flow and calls the appropriate flow method.
+    /// </summary>
+    /// <returns>Name of the PR branch that was created for the changes</returns>
     protected async Task<string?> FlowCodeAsync(
         bool isBackflow,
         NativePath repoPath,
@@ -136,6 +149,9 @@ internal abstract class VmrCodeflower
         throw new Exception($"Failed to blame file {filePath} - no matching line found");
     }
 
+    /// <summary>
+    /// Checks out a given git ref in the VMR and refreshes the VMR-related information.
+    /// </summary>
     protected async Task CheckOutVmr(string gitRef)
     {
         await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, gitRef);
@@ -143,6 +159,9 @@ internal abstract class VmrCodeflower
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
     }
 
+    /// <summary>
+    /// Checks the last flows between a repo and a VMR and returns the most recent one.
+    /// </summary>
     private async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, NativePath repoPath, bool currentIsBackflow)
     {
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
@@ -188,6 +207,9 @@ internal abstract class VmrCodeflower
         return isBackwardOlder ? lastForwardFlow : lastBackflow;
     }
 
+    /// <summary>
+    /// Finds the last backflow between a repo and a VMR.
+    /// </summary>
     private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
     {
         // Last backflow SHA comes from Version.Details.xml in the repo
@@ -206,6 +228,9 @@ internal abstract class VmrCodeflower
         return new Backflow(lastBackflowVmrSha, lastBackflowRepoSha);
     }
 
+    /// <summary>
+    /// Finds the last forward flow between a repo and a VMR.
+    /// </summary>
     private async Task<ForwardFlow> GetLastForwardFlow(string mappingName)
     {
         IVersionedSourceComponent repoInVmr = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
@@ -220,6 +245,9 @@ internal abstract class VmrCodeflower
         return new ForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
     }
 
+    /// <summary>
+    /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
+    /// </summary>
     private async Task<bool> IsAncestorCommit(NativePath repoPath, string parent, string ancestor)
     {
         var result = await _processManager.ExecuteGit(repoPath, ["merge-base", "--is-ancestor", parent, ancestor]);

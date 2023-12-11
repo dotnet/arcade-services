@@ -10,14 +10,12 @@ using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrBackflower
 {
-    // TODO: Docs
     Task<string?> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -145,6 +143,8 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         }
         catch (Exception e) when (e.Message.Contains("Failed to apply the patch")) // TODO: Scope exception better
         {
+            // TODO: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
+
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
@@ -185,7 +185,6 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         return branchName;
     }
 
-    // TODO: Docs
     protected override async Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,

@@ -15,7 +15,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrForwardFlower
 {
-    // TODO: Docs
     Task<string?> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
@@ -75,7 +74,6 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         return await FlowCodeAsync(isBackflow: false, sourceRepo, mapping, shaToFlow, cancellationToken);
     }
 
-    // TODO: Docs
     protected override async Task<string?> SameDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,
@@ -109,8 +107,6 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             // This happens when a conflicting change was made in the last forward-flow PR (before merging)
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-            // TODO: Rather check out the repo at the previous flow's source sha to read the right version of source-manifest.xml?
-
             // Find the last target commit in the repo
             var previousFlowTargetSha = await BlameLineAsync(
                 _vmrInfo.SourceManifestPath,
@@ -140,7 +136,6 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         return hadUpdates ? branchName : null;
     }
 
-    // TODO: Docs
     protected override async Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         string shaToFlow,
@@ -165,7 +160,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
             .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-            .. submodules.Select(s => s.Path).Select(VmrPatchHandler.GetExclusionRule),
+            .. submodules.Select(s => s.Path).Distinct().Select(VmrPatchHandler.GetExclusionRule),
         ];
 
         var result = await _processManager.Execute(
