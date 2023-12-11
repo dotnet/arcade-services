@@ -9,23 +9,22 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
+internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
 {
-    private readonly BackflowCommandLineOptions _options;
+    private readonly ForwardFlowCommandLineOptions _options;
 
-    public BackflowOperation(BackflowCommandLineOptions options)
+    public ForwardFlowOperation(ForwardFlowCommandLineOptions options)
         : base(options)
     {
         _options = options;
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrBackflower vmrBackflower,
+        IVmrForwardFlower vmrBackflower,
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -40,13 +39,7 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        if (_options.RepositoryDirectory is not null)
-        {
-            var vmrInfo = Provider.GetRequiredService<IVmrInfo>();
-            vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
-        }
-
-        await vmrBackflower.FlowBackAsync(
+        await vmrBackflower.FlowForwardAsync(
             repoName,
             new NativePath(targetDirectory),
             cancellationToken: cancellationToken);
