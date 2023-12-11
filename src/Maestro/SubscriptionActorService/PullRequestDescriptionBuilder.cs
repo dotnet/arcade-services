@@ -30,7 +30,7 @@ public class PullRequestDescriptionBuilder
 
     private readonly StringBuilder _description;
 
-    private const int _comparisonShaLength = 10;
+    public const int GitHubComparisonShaLength = 10;
 
     private int _startingReferenceId;
 
@@ -193,12 +193,13 @@ public class PullRequestDescriptionBuilder
 
         if (repoURI.Contains("github.com"))
         {
-            string fromShortSha = fromSha.Length > _comparisonShaLength ? fromSha.Substring(0, _comparisonShaLength) : fromSha;
-            string toShortSha = toSha.Length > _comparisonShaLength ? toSha.Substring(0, _comparisonShaLength) : toSha;
+            string fromShortSha = fromSha.Length > GitHubComparisonShaLength ? fromSha.Substring(0, GitHubComparisonShaLength) : fromSha;
+            string toShortSha = toSha.Length > GitHubComparisonShaLength ? toSha.Substring(0, GitHubComparisonShaLength) : toSha;
         
             return $"{repoURI}/compare/{fromShortSha}...{toShortSha}";
         }
 
+        // Azdo commit comparison doesn't work with short shas
         return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
     }
 
