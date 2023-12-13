@@ -70,6 +70,8 @@ public abstract class LocalPath
 /// </summary>
 public class NativePath : LocalPath
 {
+    public static readonly NativePath CurrentDir = new(".");
+
     public NativePath(string path) : this(path, true)
     {
     }
@@ -95,6 +97,8 @@ public class NativePath : LocalPath
 /// </summary>
 public class UnixPath : LocalPath
 {
+    public static readonly UnixPath CurrentDir = new(".");
+
     public UnixPath(string path) : this(path, true)
     {
     }

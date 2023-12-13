@@ -123,9 +123,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             };
         }
 
-        var filters = new List<string>();
-        filters.AddRange(mapping.Include.Select(p => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){p}"));
-        filters.AddRange(mapping.Exclude.Select(p => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){p}"));
+        List<string> filters =
+        [
+            .. mapping.Include.Select(GetInclusionRule),
+            .. mapping.Exclude.Select(GetExclusionRule),
+        ];
 
         // Ignore submodules in the diff, they will be inlined via their own diffs
         if (submoduleChanges.Any())
@@ -157,7 +159,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             patchName = destDir / $"{(destination != null ? destination.Replace('/', '_') : "root")}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
 
-            string path = ".";
+            var path = UnixPath.CurrentDir;
 
             // We take the content path from the VMR config and map it onto the cloned repo
             var contentDir = repoPath / relativeClonePath;
@@ -167,7 +169,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             if (_fileSystem.FileExists(contentDir)
                 || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
             {
-                path = fileName;
+                path = new UnixPath(fileName);
                 
                 var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
                     ?? throw new Exception($"Invalid source path {source} in mapping.");
@@ -294,7 +296,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         result.ThrowIfFailed($"Failed to apply the patch {_fileSystem.GetFileName(patch.Path)} for {patch.ApplicationPath ?? "/"}");
         _logger.LogDebug("{output}", result.ToString());
 
-        await ResetWorkingTreeDirectory(targetDirectory, patch.ApplicationPath ?? new UnixPath("."));
+        await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
     }
 
     /// <summary>
@@ -334,7 +336,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchName,
         string sha1,
         string sha2,
-        string? path,
+        UnixPath? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
         NativePath workingDir,
@@ -375,7 +377,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 newPatchname,
                 sha1,
                 sha2,
-                ".",
+                UnixPath.CurrentDir,
                 filters,
                 true,
                 workingDir / dirName,
@@ -386,7 +388,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         // Add a patch for each file
         for (var i = 0; i < files.Length; i++)
         {
-            var fileName = files[i].Substring(workingDir.Length + 1);
+            var fileName = new UnixPath(files[i].Substring(workingDir.Length + 1));
             var newPatchname = $"{patchName}.{i + directories.Length + 1}";
 
             patch = await CreatePatch(
@@ -395,7 +397,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 sha2,
                 fileName,
                 // Ignore all files except the one we're currently processing
-                filters?.Except(new[] { ":(glob,attr:!vmr-ignore)**/*" }).ToArray(),
+                [.. filters?.Except([GetInclusionRule("**/*")]) ],
                 true,
                 workingDir,
                 applicationPath,
@@ -420,7 +422,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string patchName,
         string sha1,
         string sha2,
-        string? path,
+        UnixPath? path,
         IReadOnlyCollection<string>? filters,
         bool relativePaths,
         NativePath workingDir,
@@ -586,33 +588,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             cancellationToken);
     }
 
-    private async Task ResetWorkingTreeDirectory(NativePath repoPath, UnixPath relativePath)
-    {
-        // After we apply the diff to the index, working tree won't have the files so they will be missing
-        // We have to reset working tree to the index then
-        // This will end up having the working tree match what is staged
-        _logger.LogInformation("Cleaning the working tree directory {path}...", repoPath/relativePath);
-        var args = new string[] { "checkout", relativePath };
-        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
-        
-        if (result.Succeeded)
-        {
-            _logger.LogDebug("{output}", result.ToString());
-        }
-        else if (result.StandardError.Contains($"pathspec '{relativePath}' did not match any file(s) known to git"))
-        {
-            // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
-            // We can just remove the working tree folder then
-            _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
-            _fileSystem.DeleteDirectory(repoPath / relativePath, true);
-        }
-
-        // Also remove untracked files (in case files were removed in index)
-        args = new string[] { "clean", "-df", relativePath };
-        result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed("Failed to clean the working tree!");
-    }
-
     public IReadOnlyCollection<string> GetVmrPatches(string mappingName)
     {
         if (_vmrInfo.PatchesPath is null)
@@ -628,6 +603,10 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         return _fileSystem.GetFiles(mappingPatchesPath);
     }
+
+    public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";
+
+    public static string GetExclusionRule(string path) => $":(exclude,glob,attr:!{VmrInfo.KeepAttribute}){path}";
 
     private record SubmoduleChange(string Name, string Path, string Url, string Before, string After);
 }

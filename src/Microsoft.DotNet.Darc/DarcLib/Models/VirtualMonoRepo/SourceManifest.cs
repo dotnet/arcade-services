@@ -22,6 +22,7 @@ public interface ISourceManifest
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string? packageVersion);
     VmrDependencyVersion? GetVersion(string repository);
+    void Refresh(string sourceManifestPath);
 }
 
 /// <summary>
@@ -30,10 +31,11 @@ public interface ISourceManifest
 /// </summary>
 public class SourceManifest : ISourceManifest
 {
-    private readonly SortedSet<RepositoryRecord> _repositories;
-    private readonly SortedSet<SubmoduleRecord> _submodules;
+    private SortedSet<RepositoryRecord> _repositories;
+    private SortedSet<SubmoduleRecord> _submodules;
 
     public IReadOnlyCollection<IVersionedSourceComponent> Repositories => _repositories;
+
     public IReadOnlyCollection<ISourceComponent> Submodules => _submodules;
 
     public SourceManifest(IEnumerable<RepositoryRecord> repositories, IEnumerable<SubmoduleRecord> submodules)
@@ -111,6 +113,13 @@ public class SourceManifest : ISourceManifest
         };
 
         return JsonSerializer.Serialize(data, options);
+    }
+
+    public void Refresh(string sourceManifestPath)
+    {
+        var newManifst = FromJson(sourceManifestPath);
+        _repositories = newManifst._repositories;
+        _submodules = newManifst._submodules;
     }
 
     public static SourceManifest FromJson(string path)

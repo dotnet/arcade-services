@@ -13,7 +13,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
-public class LoadSourceMappingsFromInstallerTest : VmrTestsBase
+internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 {
     private SourceMappingFile _sourceMappings = null!;
     private readonly JsonSerializerOptions _jsonSettings;
