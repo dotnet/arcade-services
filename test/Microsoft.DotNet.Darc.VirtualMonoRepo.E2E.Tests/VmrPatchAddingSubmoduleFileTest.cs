@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
+internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
 {
     public VmrPatchAddingSubmoduleFileTest() : base("add-submodule-file.patch")
     {

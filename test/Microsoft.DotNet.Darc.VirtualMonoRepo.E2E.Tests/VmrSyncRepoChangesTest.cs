@@ -15,7 +15,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrSyncRepoChangesTest :  VmrTestsBase
+internal class VmrSyncRepoChangesTest :  VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
     private string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);

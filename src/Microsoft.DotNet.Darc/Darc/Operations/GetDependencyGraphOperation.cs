@@ -21,13 +21,12 @@ internal class GetDependencyGraphOperation : Operation
 {
     private readonly GetDependencyGraphCommandLineOptions _options;
     private readonly LocalLibGit2Client _gitClient;
-    private readonly HashSet<string> _flatList = new();
 
     public GetDependencyGraphOperation(GetDependencyGraphCommandLineOptions options)
         : base(options)
     {
         _options = options;
-        _gitClient = new LocalLibGit2Client(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), Logger);
+        _gitClient = new LocalLibGit2Client(options.GetRemoteConfiguration(), new ProcessManager(Logger, _options.GitLocation), new FileSystem(), Logger);
     }
 
     public override async Task<int> ExecuteAsync()

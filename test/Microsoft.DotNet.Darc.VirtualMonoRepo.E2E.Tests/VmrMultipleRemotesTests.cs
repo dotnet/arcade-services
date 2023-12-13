@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
-public class VmrMultipleRemotesTests : VmrTestsBase
+internal class VmrMultipleRemotesTests : VmrTestsBase
 {
     private NativePath FirstDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "1");
     private NativePath SecondDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "2");
