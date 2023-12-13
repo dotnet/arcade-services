@@ -152,7 +152,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
             catch (EmptySyncException e)
             {
-                // TODO: Clean up the work branch?
                 _logger.LogInformation(e.Message);
                 return false;
             }
