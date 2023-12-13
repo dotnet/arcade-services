@@ -23,12 +23,18 @@ public class LocalGitClient : ILocalGitClient
 {
     private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
-    public LocalGitClient(RemoteConfiguration remoteConfiguration, IProcessManager processManager, ILogger logger)
+    public LocalGitClient(
+        RemoteConfiguration remoteConfiguration,
+        IProcessManager processManager,
+        IFileSystem fileSystem,
+        ILogger logger)
     {
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -63,6 +69,42 @@ public class LocalGitClient : ILocalGitClient
     {
         var result = await _processManager.ExecuteGit(repoPath, new[] { "checkout", refToCheckout });
         result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoPath}");
+    }
+
+    public async Task ResetWorkingTree(NativePath repoPath, UnixPath? relativePath = null)
+    {
+        relativePath ??= UnixPath.CurrentDir;
+
+        // After we apply the diff to the index, working tree won't have the files so they will be missing
+        // We have to reset working tree to the index then
+        // This will end up having the working tree match what is staged
+        _logger.LogInformation("Cleaning the working tree directory {path}...", repoPath / relativePath);
+        var args = new string[] { "checkout", relativePath };
+        var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
+
+        if (result.Succeeded)
+        {
+            _logger.LogDebug("{output}", result.ToString());
+        }
+        else if (result.StandardError.Contains($"pathspec '{relativePath}' did not match any file(s) known to git"))
+        {
+            // No files in the directory
+            if (relativePath == UnixPath.CurrentDir)
+            {
+                _logger.LogDebug("Failed to reset working tree of {repo} as it was empty", repoPath);
+            }
+            else
+            {
+                // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
+                // We can just remove the working tree folder then
+                _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
+                _fileSystem.DeleteDirectory(repoPath / relativePath, true);
+            }
+        }
+
+        // Also remove untracked files (in case files were removed in index)
+        result = await _processManager.ExecuteGit(repoPath, ["clean", "-df", relativePath], cancellationToken: CancellationToken.None);
+        result.ThrowIfFailed("Failed to clean the working tree!");
     }
 
     public async Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false)
@@ -334,12 +376,13 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput;
     }
 
-    public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line)
+    public async Task<string> BlameLineAsync(string repoPath, string relativeFilePath, int line, string? blameFromCommit = null)
     {
-        var args = new[]
+        var args = new List<string>
         {
             "blame",
             "--first-parent",
+            blameFromCommit != null ? blameFromCommit + '^' : Constants.HEAD,
             "-slL",
             $"{line},{line}",
             relativeFilePath,

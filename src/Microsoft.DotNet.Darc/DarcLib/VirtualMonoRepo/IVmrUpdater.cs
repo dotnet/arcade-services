@@ -23,7 +23,7 @@ public interface IVmrUpdater
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
-    Task UpdateRepository(
+    Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
         string? targetVersion,

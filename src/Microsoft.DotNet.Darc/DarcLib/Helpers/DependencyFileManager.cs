@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -125,7 +126,7 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);
     }
 
-    public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
+    public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
     {
         if (!string.IsNullOrEmpty(branch))
         {
@@ -156,7 +157,8 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch)
     {
-        var existingDependencies = await ParseVersionDetailsXmlAsync(repoUri, branch);
+        var versionDetails = await ParseVersionDetailsXmlAsync(repoUri, branch);
+        var existingDependencies = versionDetails.Dependencies;
         if (existingDependencies.Any(dep => dep.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new DependencyException($"Dependency {dependency.Name} already exists in this repository");
@@ -205,27 +207,27 @@ public class DependencyFileManager : IDependencyFileManager
         return element;
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="itemsToUpdate"></param>
-    /// <param name="repoUri"></param>
-    /// <param name="branch"></param>
-    /// <param name="oldDependencies"></param>
-    /// <param name="incomingDotNetSdkVersion"></param>
-    /// <returns></returns>
-    public async Task<GitFileContentContainer> UpdateDependencyFiles(
+    // TODO: This is a hack to make the PoC work but eventually we should update dependencies properly
+    public void UpdateVersionDetails(
+        XmlDocument versionDetails,
         IEnumerable<DependencyDetail> itemsToUpdate,
-        string repoUri,
-        string branch,
-        IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion)
+        SourceDependency sourceDependency,
+        IEnumerable<DependencyDetail> oldDependencies)
     {
-        XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
-        XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
-        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
-        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
-        XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
+        // Adds/updates the <Source> element
+        if (sourceDependency != null)
+        {
+            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
+            if (sourceNode == null)
+            {
+                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
+                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
+                dependenciesNode.PrependChild(sourceNode);
+            }
+
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
+        }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
@@ -234,8 +236,7 @@ public class DependencyFileManager : IDependencyFileManager
                 string.IsNullOrEmpty(itemToUpdate.Commit) ||
                 string.IsNullOrEmpty(itemToUpdate.RepoUri))
             {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
-                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' was empty.");
             }
 
             // Double check that the dependency is not pinned
@@ -267,8 +268,53 @@ public class DependencyFileManager : IDependencyFileManager
             SetAttribute(versionDetails, nodeToUpdate, VersionDetailsParser.NameAttributeName, itemToUpdate.Name);
             SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.ShaElementName, itemToUpdate.Commit);
             SetElement(versionDetails, nodeToUpdate, VersionDetailsParser.UriElementName, itemToUpdate.RepoUri);
+        }
+    }
+
+    public async Task<GitFileContentContainer> UpdateDependencyFiles(
+        IEnumerable<DependencyDetail> itemsToUpdate,
+        SourceDependency sourceDependency,
+        string repoUri,
+        string branch,
+        IEnumerable<DependencyDetail> oldDependencies,
+        SemanticVersion incomingDotNetSdkVersion)
+    {
+        XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
+        XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
+        JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
+        XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
+
+        // Adds/updates the <Source> element
+        if (sourceDependency != null)
+        {
+            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
+            if (sourceNode == null)
+            {
+                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
+                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
+                dependenciesNode.PrependChild(sourceNode);
+            }
+
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
+        }
+
+        foreach (DependencyDetail itemToUpdate in itemsToUpdate)
+        {
+            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
+                string.IsNullOrEmpty(itemToUpdate.Name) ||
+                string.IsNullOrEmpty(itemToUpdate.Commit) ||
+                string.IsNullOrEmpty(itemToUpdate.RepoUri))
+            {
+                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
+                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+            }
+
             UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
         }
+
+        UpdateVersionDetails(versionDetails, itemsToUpdate, sourceDependency, oldDependencies);
 
         // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
         // prefer that one over the old dependencies
@@ -1006,14 +1052,14 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>Async task</returns>
     public async Task<bool> Verify(string repo, string branch)
     {
-        Task<IEnumerable<DependencyDetail>> dependencyDetails;
+        Task<VersionDetails> versionDetails;
         Task<XmlDocument> versionProps;
         Task<JObject> globalJson;
         Task<JObject> dotnetToolsJson;
 
         try
         {
-            dependencyDetails = ParseVersionDetailsXmlAsync(repo, branch);
+            versionDetails = ParseVersionDetailsXmlAsync(repo, branch);
         }
         catch (Exception e)
         {
@@ -1054,28 +1100,28 @@ public class DependencyFileManager : IDependencyFileManager
         List<Task<bool>> verificationTasks = new List<Task<bool>>()
         {
             VerifyNoDuplicatedProperties(await versionProps),
-            VerifyNoDuplicatedDependencies(await dependencyDetails),
+            VerifyNoDuplicatedDependencies((await versionDetails).Dependencies),
             VerifyMatchingVersionProps(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await versionProps,
                 out Task<HashSet<string>> utilizedVersionPropsDependencies),
             VerifyMatchingGlobalJson(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await globalJson,
                 out Task<HashSet<string>> utilizedGlobalJsonDependencies),
             VerifyUtilizedDependencies(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 new List<HashSet<string>>
                 {
                     await utilizedVersionPropsDependencies,
                     await utilizedGlobalJsonDependencies
                 }),
             VerifyMatchingDotNetToolsJson(
-                await dependencyDetails,
+                (await versionDetails).Dependencies,
                 await dotnetToolsJson)
         };
 
-        var results = await Task.WhenAll<bool>(verificationTasks);
+        var results = await Task.WhenAll(verificationTasks);
         return results.All(result => result);
     }
 

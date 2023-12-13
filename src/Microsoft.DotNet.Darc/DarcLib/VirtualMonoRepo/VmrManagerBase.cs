@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -61,7 +62,7 @@ public abstract class VmrManagerBase
         _fileSystem = fileSystem;
     }
 
-    protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
+    public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         NativePath clonePath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -120,7 +121,7 @@ public abstract class VmrManagerBase
         var filesToAdd = new List<string>
         {
             VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath()
+            _vmrInfo.SourceManifestPath
         };
 
         if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
@@ -294,10 +295,11 @@ public abstract class VmrManagerBase
         {
             var path = _vmrInfo.VmrPath / VmrInfo.RelativeSourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
             var content = await _fileSystem.ReadAllTextAsync(path);
-            return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
+            return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true).Dependencies;
         }
 
-        return await _dependencyFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        VersionDetails versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        return versionDetails.Dependencies;
     }
 
     protected async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)

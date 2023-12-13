@@ -79,7 +79,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _repoVersions.SerializeToXml(_allVersionsFilePath);
 
         _sourceManifest.UpdateVersion(update.Mapping.Name, update.RemoteUri, update.TargetRevision, update.TargetVersion);
-        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
         // Root repository of an update does not have a package version associated with it
         // For installer, we leave whatever was there (e.g. 8.0.100)
@@ -136,7 +136,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             }
         }
 
-        _fileSystem.WriteToFile(_vmrInfo.GetSourceManifestPath(), _sourceManifest.ToJson());
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
     }
 
     private string GetGitInfoFilePath(SourceMapping mapping) => GetGitInfoFilePath(mapping.Name);
