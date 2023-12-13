@@ -17,7 +17,6 @@
     <Parameter Name="PullRequestActorService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="PullRequestActorService_TargetReplicaSetSize" DefaultValue="3" />
     <Parameter Name="FeedCleanerService_InstanceCount" DefaultValue="1" />
-    <Parameter Name="WebCertName" DefaultValue="" />
     <Parameter Name="WebProtocol" DefaultValue="http" />
     <Parameter Name="WebPort" DefaultValue="8088" />
   </Parameters>
@@ -131,7 +130,4 @@
   <Policies>
     <DefaultRunAsPolicy UserRef="MaestroUser" />
   </Policies>
-  <Certificates>
-    <EndpointCertificate X509FindType="FindBySubjectName" X509FindValue="[WebCertName]" Name="WebSslCert" />
-  </Certificates>
 </ApplicationManifest>
