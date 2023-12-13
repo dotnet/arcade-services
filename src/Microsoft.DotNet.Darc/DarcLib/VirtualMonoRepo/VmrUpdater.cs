@@ -186,7 +186,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 return Array.Empty<VmrIngestionPatch>();
             }
 
-            throw new EmptySyncException($"Repository {update.Mapping} is already at {update.TargetRevision}");
+            throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.TargetRevision}");
         }
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
@@ -342,7 +342,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             catch (EmptySyncException e)
             {
                 _logger.LogWarning(e.Message);
-                return false;
+                continue;
             }
             catch (Exception)
             {
