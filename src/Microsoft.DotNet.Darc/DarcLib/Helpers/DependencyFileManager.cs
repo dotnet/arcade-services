@@ -207,7 +207,6 @@ public class DependencyFileManager : IDependencyFileManager
         return element;
     }
 
-    // TODO: This is a hack to make the PoC work but eventually we should update dependencies properly
     public void UpdateVersionDetails(
         XmlDocument versionDetails,
         IEnumerable<DependencyDetail> itemsToUpdate,
