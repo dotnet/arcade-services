@@ -230,13 +230,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
-            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
-                string.IsNullOrEmpty(itemToUpdate.Name) ||
-                string.IsNullOrEmpty(itemToUpdate.Commit) ||
-                string.IsNullOrEmpty(itemToUpdate.RepoUri))
-            {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' was empty.");
-            }
+            itemToUpdate.Validate();
 
             // Double check that the dependency is not pinned
             if (itemToUpdate.Pinned)
@@ -286,13 +280,13 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
-            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
-                string.IsNullOrEmpty(itemToUpdate.Name) ||
-                string.IsNullOrEmpty(itemToUpdate.Commit) ||
-                string.IsNullOrEmpty(itemToUpdate.RepoUri))
+            try
             {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
-                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+                itemToUpdate.Validate();
+            }
+            catch (DarcException e)
+            {
+                throw new DarcException(e.Message + $" in repo '{repoUri}' and branch '{branch}'", e);
             }
 
             UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
