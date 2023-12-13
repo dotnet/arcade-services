@@ -284,21 +284,6 @@ public class DependencyFileManager : IDependencyFileManager
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
-        // Adds/updates the <Source> element
-        if (sourceDependency != null)
-        {
-            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
-            if (sourceNode == null)
-            {
-                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
-                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
-                dependenciesNode.PrependChild(sourceNode);
-            }
-
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
-        }
-
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
             if (string.IsNullOrEmpty(itemToUpdate.Version) ||
