@@ -41,7 +41,7 @@ public class SourceMappingParser : ISourceMappingParser
         if (!mappingFile.Exists)
         {
             throw new FileNotFoundException(
-                $"Failed to find {VmrInfo.SourceMappingsFileName} file.",
+                $"Failed to find {VmrInfo.SourceMappingsFileName} file. Please ensure this repo is a VMR.",
                 mappingFilePath);
         }
 

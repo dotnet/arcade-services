@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial class MaestroApiOptions : ClientOptions
     {
         public MaestroApiOptions()
-            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com/"))
+            : this(new Uri("https://maestro.int-dot.net/"))
         {
         }
 
@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         public MaestroApiOptions(TokenCredential credentials)
-            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com/"), credentials)
+            : this(new Uri("https://maestro.int-dot.net/"), credentials)
         {
         }
 

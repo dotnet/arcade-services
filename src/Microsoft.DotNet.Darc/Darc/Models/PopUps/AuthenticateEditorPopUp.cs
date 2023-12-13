@@ -38,7 +38,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         // Initialize line contents.
         Contents = new ReadOnlyCollection<Line>(new List<Line>
         {
-            new Line("Create new BAR tokens at https://maestro-prod.westus2.cloudapp.azure.com/Account/Tokens", isComment: true),
+            new Line("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
             new Line($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
             new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
             new Line($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
