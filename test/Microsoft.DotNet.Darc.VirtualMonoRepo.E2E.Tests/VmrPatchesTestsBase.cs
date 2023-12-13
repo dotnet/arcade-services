@@ -11,7 +11,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
-public class VmrPatchesTestsBase : VmrTestsBase
+internal class VmrPatchesTestsBase : VmrTestsBase
 {
     protected string PatchFileName { get; private set; } = null!;
     protected NativePath InstallerPatchesDir { get; private set; } = null!;

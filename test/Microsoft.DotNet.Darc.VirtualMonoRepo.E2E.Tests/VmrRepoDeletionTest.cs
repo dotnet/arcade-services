@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrRepoDeletionTest : VmrTestsBase
+internal class VmrRepoDeletionTest : VmrTestsBase
 {
     private SourceMappingFile _sourceMappings = null!;
     private readonly JsonSerializerOptions _jsonSettings;
@@ -50,7 +50,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            [Constants.InstallerRepoName, Constants.ProductRepoName],
+            new[] { Constants.InstallerRepoName, Constants.ProductRepoName },
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -82,13 +82,13 @@ public class VmrRepoDeletionTest : VmrTestsBase
 
         expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            [Constants.InstallerRepoName],
+            new[] { Constants.InstallerRepoName },
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
-        versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
+        versions.Versions.Keys.Should().BeEquivalentTo(new string[] { "installerGitCommitHash" });
 
         var sourceManifest = SourceManifest.FromJson(Info.SourceManifestPath);
         sourceManifest.Repositories.Should().HaveCount(1);
@@ -106,16 +106,16 @@ public class VmrRepoDeletionTest : VmrTestsBase
         {
             PatchesPath = "src/installer/patches/",
             SourceMappingsPath = "src/installer/src/SourceBuild/content/source-mappings.json",
-            AdditionalMappings =
-            [
+            AdditionalMappings = new List<AdditionalMappingSetting>
+            {
                 new AdditionalMappingSetting
                 {
                     Source = "src/installer/src/SourceBuild/content/source-mappings.json",
                     Destination = "src"
                 }
-            ],
-            Mappings =
-            [
+            },
+            Mappings = new List<SourceMappingSetting>
+            {
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -126,7 +126,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath,
                 },
-            ]
+            }
         };
 
         Directory.CreateDirectory(InstallerRepoPath / "src" / "SourceBuild" / "content");

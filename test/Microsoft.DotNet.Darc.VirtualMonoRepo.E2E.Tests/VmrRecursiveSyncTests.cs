@@ -11,10 +11,9 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
-public class VmrRecursiveSyncTests : VmrTestsBase
+internal class VmrRecursiveSyncTests : VmrTestsBase
 {
     [Test]
     public async Task RecursiveUpdatePreservesDependencyVersionTest()
