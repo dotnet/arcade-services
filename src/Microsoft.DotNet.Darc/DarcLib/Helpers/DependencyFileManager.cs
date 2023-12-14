@@ -207,7 +207,6 @@ public class DependencyFileManager : IDependencyFileManager
         return element;
     }
 
-    // TODO: This is a hack to make the PoC work but eventually we should update dependencies properly
     public void UpdateVersionDetails(
         XmlDocument versionDetails,
         IEnumerable<DependencyDetail> itemsToUpdate,
@@ -231,13 +230,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
-            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
-                string.IsNullOrEmpty(itemToUpdate.Name) ||
-                string.IsNullOrEmpty(itemToUpdate.Commit) ||
-                string.IsNullOrEmpty(itemToUpdate.RepoUri))
-            {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' was empty.");
-            }
+            itemToUpdate.Validate();
 
             // Double check that the dependency is not pinned
             if (itemToUpdate.Pinned)
@@ -285,30 +278,15 @@ public class DependencyFileManager : IDependencyFileManager
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
         XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
-        // Adds/updates the <Source> element
-        if (sourceDependency != null)
-        {
-            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
-            if (sourceNode == null)
-            {
-                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
-                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
-                dependenciesNode.PrependChild(sourceNode);
-            }
-
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
-        }
-
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
-            if (string.IsNullOrEmpty(itemToUpdate.Version) ||
-                string.IsNullOrEmpty(itemToUpdate.Name) ||
-                string.IsNullOrEmpty(itemToUpdate.Commit) ||
-                string.IsNullOrEmpty(itemToUpdate.RepoUri))
+            try
             {
-                throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
-                                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+                itemToUpdate.Validate();
+            }
+            catch (DarcException e)
+            {
+                throw new DarcException(e.Message + $" in repo '{repoUri}' and branch '{branch}'", e);
             }
 
             UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);

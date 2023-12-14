@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 internal class VmrRecursiveSyncTests : VmrTestsBase
@@ -26,15 +25,15 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         var dependencyFilePath = vmrSourcesDir / Constants.DependencyRepoName / Constants.GetRepoFileName(Constants.DependencyRepoName);
 
         /* 
-         *  the dependency tree looks like:
-         *  
+         *  The dependency tree looks like:
+         *
          *  └── installer           1.0.0 *
-         *      ├── test-repo       1.0.0 *
+         *      ├── product-repo1   1.0.0 *
          *      │   └── dependency  1.0.0 *
-         *      └── external-repo   1.0.0 *
+         *      └── product-repo2   1.0.0 *
          *          └── dependency  1.0.0
-         *          
-         *  (* marks which version is in the VMR)    
+         *
+         *  (* marks which version will be in the VMR)
          */
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
@@ -49,30 +48,29 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] 
-            { 
+            [ 
                 Constants.InstallerRepoName, 
                 Constants.ProductRepoName, 
                 Constants.SecondRepoName, 
                 Constants.DependencyRepoName 
-            },
+            ],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
-        // create new version of dependency repo
+        // Create new version of dependency repo
 
         File.WriteAllText(
             DependencyRepoPath / Constants.GetRepoFileName(Constants.DependencyRepoName), 
             "New version of the file");
         await GitOperations.CommitAll(DependencyRepoPath, "change the file in dependency repo");
 
-        // the second repo depends on the new version, first repo depends on the old one
+        // The second repo depends on the new version, first repo depends on the old one
 
         var sha = await GitOperations.GetRepoLastCommit(DependencyRepoPath);
         var dependencyString = string.Format(
             Constants.DependencyTemplate, 
-            new[] { Constants.DependencyRepoName, DependencyRepoPath, sha });
+            Constants.DependencyRepoName, DependencyRepoPath, sha);
 
         var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependencyString);
         File.WriteAllText(SecondRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
@@ -81,17 +79,17 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             "New version of product-repo2 file");
         await GitOperations.CommitAll(SecondRepoPath, "update version details");
 
-        // update installers Version.Details
+        // Update installers Version.Details
 
         var newSecondRepoSha = await GitOperations.GetRepoLastCommit(SecondRepoPath);
         var productRepoSha = await GitOperations.GetRepoLastCommit(ProductRepoPath);
         var productRepoDependency = string.Format(
             Constants.DependencyTemplate, 
-            new[] { Constants.ProductRepoName, ProductRepoPath, productRepoSha });
+            Constants.ProductRepoName, ProductRepoPath, productRepoSha);
 
         var secondRepoDependency = string.Format(
             Constants.DependencyTemplate, 
-            new[] { Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha });
+            Constants.SecondRepoName, SecondRepoPath, newSecondRepoSha);
 
         versionDetails = string.Format(
             Constants.VersionDetailsTemplate, 
@@ -104,14 +102,13 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         await GitOperations.CommitAll(InstallerRepoPath, "update version details");
 
         /* 
-         *  the dependency tree should look like :
-         *    
+         *  The dependency tree should look like this:
+         *
          *    └── installer           1.0.1 *
-         *        ├── test-repo       1.0.0 *
+         *        ├── product-repo1   1.0.0 *
          *        │   └── dependency  1.0.0 *
-         *        └── external-repo   1.0.1 *
-         *            └── dependency  1.0.1
-         *  
+         *        └── product-repo2   1.0.1 *
+         *            └── dependency  1.0.1     < This bump is ignored because product-repo1 depends on 1.0.0
         */
 
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
@@ -120,7 +117,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         CheckFileContents(secondRepoFilePath, "New version of product-repo2 file");
         CompareFileContents(firstRepoFilePath, Constants.GetRepoFileName(Constants.ProductRepoName));
 
-        // the new version of dependency shouldn't be pulled in the vmr
+        // The new version of dependency shouldn't be pulled in the VMR
 
         CheckFileContents(dependencyFilePath, "File in dependency");
     }
@@ -131,14 +128,13 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
         {
             {
                 Constants.InstallerRepoName,
-                new List<string>
-                {
+                [
                     Constants.ProductRepoName, 
                     Constants.SecondRepoName
-                }
+                ]
             },
-            { Constants.ProductRepoName, new List<string> {Constants.DependencyRepoName} },
-            { Constants.SecondRepoName, new List<string> {Constants.DependencyRepoName }},
+            { Constants.ProductRepoName, [Constants.DependencyRepoName] },
+            { Constants.SecondRepoName, [Constants.DependencyRepoName] },
         };
 
         await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
@@ -150,8 +146,8 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -172,7 +168,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
                     Name = Constants.DependencyRepoName,
                     DefaultRemote = DependencyRepoPath
                 }
-            },
+            ],
             PatchesPath = "src/installer/patches/"
         };
 
