@@ -42,6 +42,7 @@ internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
         await vmrBackflower.FlowForwardAsync(
             repoName,
             new NativePath(targetDirectory),
+            _options.DiscardPatches,
             cancellationToken: cancellationToken);
     }
 }

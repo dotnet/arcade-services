@@ -59,6 +59,7 @@ internal abstract class VmrCodeflower
         string shaToFlow,
         NativePath repoPath,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -71,6 +72,7 @@ internal abstract class VmrCodeflower
         string shaToFlow,
         NativePath repoPath,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -82,6 +84,7 @@ internal abstract class VmrCodeflower
         NativePath repoPath,
         string mappingName,
         string shaToFlow,
+        bool discardPatches,
         CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.InitializeSourceMappings();
@@ -105,12 +108,12 @@ internal abstract class VmrCodeflower
         if ((lastFlow is Backflow) == isBackflow)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            branchName = await SameDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, cancellationToken);
+            branchName = await SameDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, discardPatches, cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            branchName = await OppositeDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, cancellationToken);
+            branchName = await OppositeDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, discardPatches, cancellationToken);
         }
 
         if (branchName is null)

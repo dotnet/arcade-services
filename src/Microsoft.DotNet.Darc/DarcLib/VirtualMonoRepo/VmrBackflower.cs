@@ -20,6 +20,7 @@ public interface IVmrBackflower
         string mapping,
         NativePath targetRepo,
         string? shaToFlow = null,
+        bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -66,6 +67,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         string mapping,
         NativePath targetRepo,
         string? shaToFlow = null,
+        bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
         if (shaToFlow is null)
@@ -77,7 +79,14 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             await CheckOutVmr(shaToFlow);
         }
 
-        var branchName = await FlowCodeAsync(isBackflow: true, targetRepo, mapping, shaToFlow, cancellationToken);
+        var branchName = await FlowCodeAsync(
+            isBackflow: true,
+            targetRepo,
+            mapping,
+            shaToFlow,
+            discardPatches,
+            cancellationToken);
+
         if (branchName is null)
         {
             // TODO: We should still probably update package versions or at least try?
@@ -94,6 +103,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         string shaToFlow,
         NativePath repoPath,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         var isBackflow = lastFlow is Backflow;
@@ -120,11 +130,19 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
 
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
         {
-            // TODO: Remove empty patches
             _logger.LogInformation("There are no new changes for {mappingName} between {sha1} and {sha2}",
                 isBackflow ? "VMR" : mapping.Name,
                 lastFlow.SourceSha,
                 shaToFlow);
+
+            if (discardPatches)
+            {
+                foreach (VmrIngestionPatch patch in patches)
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
+            }
+
             return null;
         }
 
@@ -133,12 +151,19 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         await _localGitClient.CheckoutAsync(targetRepo, lastFlow.TargetSha);
         await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
 
+
+        // TODO: Remove VMR patches before we create the patches
+
         try
         {
             foreach (VmrIngestionPatch patch in patches)
             {
                 await _vmrPatchHandler.ApplyPatch(patch, targetRepo, cancellationToken);
-                // TODO: Discard patches
+
+                if (discardPatches)
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
             }
         }
         catch (Exception e) when (e.Message.Contains("Failed to apply the patch")) // TODO: Scope exception better
@@ -147,8 +172,6 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
-
-            // TODO: Rather check out the repo at the previous flow's source sha to read the right version of VD.xml?
 
             // Find the last target commit in the repo
             var previousRepoSha = await BlameLineAsync(
@@ -161,15 +184,17 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             branchName = await FlowCodeAsync(isBackflow: true, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
 
             // The current patches should apply now
-            // TODO: Catch exceptions?
             foreach (VmrIngestionPatch patch in patches)
             {
+                // TODO: Catch exceptions?
                 await _vmrPatchHandler.ApplyPatch(patch, targetRepo, cancellationToken);
-                // TODO: Discard patches
+
+                if (discardPatches)
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
             }
         }
-
-        // TODO: Remove VMR patches
 
         var commitMessage = $"""
             [{(isBackflow ? "VMR" : mapping.Name)}] Codeflow {shortShas}
@@ -190,6 +215,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         string shaToFlow,
         NativePath targetRepo,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
@@ -208,7 +234,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
-        // TODO: Remove VMR patches
+        // TODO: Remove VMR patches before we create the patches
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
@@ -240,7 +266,11 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         {
             // TODO: Handle exceptions
             await _vmrPatchHandler.ApplyPatch(patch, targetRepo, cancellationToken);
-            // TODO: Discard patches
+
+            if (discardPatches)
+            {
+                _fileSystem.DeleteFile(patch.Path);
+            }
         }
 
         // TODO: Check if there are any changes and only commit if there are
@@ -251,7 +281,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
 
         if (result.ExitCode == 0)
         {
-            // TODO: Clean up the work branch
+            // TODO: Handle + clean up the work branch
             return null;
         }
 

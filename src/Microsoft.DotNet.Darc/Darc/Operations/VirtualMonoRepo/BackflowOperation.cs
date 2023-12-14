@@ -49,6 +49,7 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
         await vmrBackflower.FlowBackAsync(
             repoName,
             new NativePath(targetDirectory),
+            _options.DiscardPatches,
             cancellationToken: cancellationToken);
     }
 }

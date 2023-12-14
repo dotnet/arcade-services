@@ -19,6 +19,7 @@ public interface IVmrForwardFlower
         string mapping,
         NativePath sourceRepo,
         string? shaToFlow = null,
+        bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -60,6 +61,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         string mapping,
         NativePath sourceRepo,
         string? shaToFlow = null,
+        bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
         if (shaToFlow is null)
@@ -71,7 +73,13 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
         }
 
-        return await FlowCodeAsync(isBackflow: false, sourceRepo, mapping, shaToFlow, cancellationToken);
+        return await FlowCodeAsync(
+            isBackflow: false,
+            sourceRepo,
+            mapping,
+            shaToFlow,
+            discardPatches,
+            cancellationToken);
     }
 
     protected override async Task<string?> SameDirectionFlowAsync(
@@ -79,6 +87,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         string shaToFlow,
         NativePath repoPath,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         var branchName = $"codeflow/forward/{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
@@ -99,7 +108,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
                 readmeTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: true,
-                discardPatches: true,
+                discardPatches,
                 cancellationToken);
         }
         catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
@@ -115,21 +124,27 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             await CheckOutVmr(previousFlowTargetSha);
 
             // Reconstruct the previous flow's branch
-            branchName = await FlowCodeAsync(isBackflow: false, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
+            branchName = await FlowCodeAsync(
+                isBackflow: false,
+                repoPath,
+                mapping.Name,
+                lastFlow.SourceSha,
+                discardPatches,
+                cancellationToken);
 
             // We apply the current changes on top again - they should apply now
             // TODO: Handle exceptions
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
                 shaToFlow,
-                "1.2.3", // TODO
-                updateDependencies: false,
                 // TODO - all parameters below should come from BAR build / options
+                "1.2.3",
+                updateDependencies: false,
                 additionalRemotes: Array.Empty<AdditionalRemote>(),
                 readmeTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: false,
-                discardPatches: true,
+                discardPatches,
                 cancellationToken);
         }
 
@@ -141,6 +156,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         string shaToFlow,
         NativePath sourceRepo,
         Codeflow lastFlow,
+        bool discardPatches,
         CancellationToken cancellationToken)
     {
         var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
@@ -190,7 +206,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             readmeTemplatePath: null,
             tpnTemplatePath: null,
             generateCodeowners: false,
-            discardPatches: false,
+            discardPatches,
             cancellationToken);
 
         // TODO: Technically, if we only changed metadata files, there are no updates still
