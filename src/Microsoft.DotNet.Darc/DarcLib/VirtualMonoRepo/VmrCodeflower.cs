@@ -50,33 +50,9 @@ internal abstract class VmrCodeflower
     }
 
     /// <summary>
-    /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
-    /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
-    /// </summary>
-    /// <returns>Name of the PR branch that was created for the changes</returns>
-    protected abstract Task<string?> SameDirectionFlowAsync(
-        SourceMapping mapping,
-        string shaToFlow,
-        NativePath repoPath,
-        Codeflow lastFlow,
-        bool discardPatches,
-        CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
-    /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
-    /// </summary>
-    /// <returns>Name of the PR branch that was created for the changes</returns>
-    protected abstract Task<string?> OppositeDirectionFlowAsync(
-        SourceMapping mapping,
-        string shaToFlow,
-        NativePath repoPath,
-        Codeflow lastFlow,
-        bool discardPatches,
-        CancellationToken cancellationToken);
-
-    /// <summary>
     /// Main common entrypoint method that loads information about the last flow and calls the appropriate flow method.
+    /// The algorithm is described in depth in the Unified Build documentation
+    /// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#the-code-flow-algorithm
     /// </summary>
     /// <returns>Name of the PR branch that was created for the changes</returns>
     protected async Task<string?> FlowCodeAsync(
@@ -124,6 +100,32 @@ internal abstract class VmrCodeflower
 
         return branchName;
     }
+
+    /// <summary>
+    /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
+    /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
+    /// </summary>
+    /// <returns>Name of the PR branch that was created for the changes</returns>
+    protected abstract Task<string?> SameDirectionFlowAsync(
+        SourceMapping mapping,
+        string shaToFlow,
+        NativePath repoPath,
+        Codeflow lastFlow,
+        bool discardPatches,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
+    /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
+    /// </summary>
+    /// <returns>Name of the PR branch that was created for the changes</returns>
+    protected abstract Task<string?> OppositeDirectionFlowAsync(
+        SourceMapping mapping,
+        string shaToFlow,
+        NativePath repoPath,
+        Codeflow lastFlow,
+        bool discardPatches,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Finds a given line in a file and returns the SHA of the commit that last changed it.

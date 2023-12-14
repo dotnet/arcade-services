@@ -171,6 +171,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             // TODO: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
+            // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
             _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
             // Find the last target commit in the repo
