@@ -166,7 +166,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
                 }
             }
         }
-        catch (Exception e) when (e.Message.Contains("Failed to apply the patch")) // TODO: Scope exception better
+        catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
         {
             // TODO: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
 
@@ -181,7 +181,13 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
             await _localGitClient.CheckoutAsync(targetRepo, previousRepoSha);
 
             // Reconstruct the previous flow's branch
-            branchName = await FlowCodeAsync(isBackflow: true, repoPath, mapping.Name, lastFlow.SourceSha, cancellationToken);
+            branchName = await FlowCodeAsync(
+                isBackflow: true,
+                repoPath,
+                mapping.Name,
+                lastFlow.SourceSha,
+                discardPatches,
+                cancellationToken);
 
             // The current patches should apply now
             foreach (VmrIngestionPatch patch in patches)

@@ -42,6 +42,7 @@ internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
         await vmrBackflower.FlowForwardAsync(
             repoName,
             new NativePath(targetDirectory),
+            shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
             _options.DiscardPatches,
             cancellationToken: cancellationToken);
     }
