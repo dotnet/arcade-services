@@ -16,11 +16,10 @@ resource appType 'Microsoft.ServiceFabric/clusters/applicationTypes@2021-06-01' 
 }
 
 resource appVersion 'Microsoft.ServiceFabric/clusters/applicationTypes/versions@2021-06-01' = {
-  name: '${clusterName}/${applicationTypeName}/${applicationTypeVersion}'
+  parent: appType
+  name: applicationTypeVersion
   location: location
-  dependsOn: [
-    appType
-  ]
+
   properties: {
     appPackageUrl: applicationPackageUrl
   }

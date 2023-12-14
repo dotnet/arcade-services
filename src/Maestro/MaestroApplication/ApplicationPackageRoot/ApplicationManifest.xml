@@ -61,9 +61,6 @@
     <EnvironmentOverrides CodePackageRef="Code">
       <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />
     </EnvironmentOverrides>
-    <Policies>
-      <EndpointBindingPolicy EndpointRef="ServiceEndpoint" CertificateRef="WebSslCert" />
-    </Policies>
   </ServiceManifestImport>
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="FeedCleanerServicePkg" ServiceManifestVersion="1.0.42" />
