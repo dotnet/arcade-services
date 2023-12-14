@@ -7,11 +7,12 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
+internal class InitializeOperation : VmrOperationBase
 {
     private readonly InitializeCommandLineOptions _options;
 
@@ -22,22 +23,21 @@ internal class InitializeOperation : VmrOperationBase<IVmrInitializer>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrInitializer vmrManager,
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        =>
-        await vmrManager.InitializeRepository(
-            repoName,
-            targetRevision,
-            null,
-            _options.Recursive,
-            new NativePath(_options.SourceMappings),
-            additionalRemotes,
-            _options.ReadMeTemplate,
-            _options.TpnTemplate,
-            _options.GenerateCodeowners,
-            _options.DiscardPatches,
-            cancellationToken);
+        => await Provider.GetRequiredService<IVmrInitializer>()
+            .InitializeRepository(
+                repoName,
+                targetRevision,
+                null,
+                _options.Recursive,
+                new NativePath(_options.SourceMappings),
+                additionalRemotes,
+                _options.ReadMeTemplate,
+                _options.TpnTemplate,
+                _options.GenerateCodeowners,
+                _options.DiscardPatches,
+                cancellationToken);
 }

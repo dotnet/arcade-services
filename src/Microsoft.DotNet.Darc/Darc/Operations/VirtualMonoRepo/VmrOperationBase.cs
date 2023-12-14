@@ -9,13 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrManager : notnull
+internal abstract class VmrOperationBase : Operation
 {
     private readonly IBaseVmrCommandLineOptions _options;
 
@@ -37,8 +36,6 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             Logger.LogError("Please specify at least one repository to synchronize");
             return Constants.ErrorCode;
         }
-
-        TVmrManager vmrManager = Provider.GetRequiredService<TVmrManager>();
 
         IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
             .Select(a => a.Split(':', 2) is string[] parts && parts.Length == 2
@@ -65,7 +62,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
             foreach (var (repoName, revision) in repoNamesWithRevisions)
             {
                 listener.Token.ThrowIfCancellationRequested();
-                success &= await ExecuteAsync(vmrManager, repoName, revision, additionalRemotes, listener.Token);
+                success &= await ExecuteAsync(repoName, revision, additionalRemotes, listener.Token);
             }
         }
         catch (OperationCanceledException)
@@ -82,14 +79,12 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
     }
 
     protected abstract Task ExecuteInternalAsync(
-        TVmrManager vmrManager,
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken);
 
     private async Task<bool> ExecuteAsync(
-        TVmrManager vmrManager,
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -99,7 +94,7 @@ internal abstract class VmrOperationBase<TVmrManager> : Operation where TVmrMana
         {
             try
             {
-                await ExecuteInternalAsync(vmrManager, repoName, targetRevision, additionalRemotes, cancellationToken);
+                await ExecuteInternalAsync(repoName, targetRevision, additionalRemotes, cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)

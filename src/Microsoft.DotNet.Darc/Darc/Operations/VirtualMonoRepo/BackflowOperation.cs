@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
+internal class BackflowOperation : VmrOperationBase
 {
     private readonly BackflowCommandLineOptions _options;
 
@@ -25,7 +25,6 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrBackflower vmrBackflower,
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -46,7 +45,9 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
-        await vmrBackflower.FlowBackAsync(
+        var backflower = Provider.GetRequiredService<IVmrBackflower>();
+
+        await backflower.FlowBackAsync(
             repoName,
             new NativePath(targetDirectory),
             shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline

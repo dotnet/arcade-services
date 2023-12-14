@@ -9,11 +9,12 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
+internal class ForwardFlowOperation : VmrOperationBase
 {
     private readonly ForwardFlowCommandLineOptions _options;
 
@@ -24,7 +25,6 @@ internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrForwardFlower vmrBackflower,
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -39,7 +39,9 @@ internal class ForwardFlowOperation : VmrOperationBase<IVmrForwardFlower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.FlowForwardAsync(
+        var forwardFlower = Provider.GetRequiredService<IVmrForwardFlower>();
+
+        await forwardFlower.FlowForwardAsync(
             repoName,
             new NativePath(targetDirectory),
             shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
