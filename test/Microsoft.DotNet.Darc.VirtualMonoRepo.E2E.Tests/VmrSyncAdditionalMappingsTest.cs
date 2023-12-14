@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrSyncAdditionalMappingsTest : VmrTestsBase
+internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 {
     private readonly string _fileName = "special-file.txt";
     private readonly string _fileRelativePath = new NativePath("content") / "special-file.txt";

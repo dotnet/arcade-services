@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrRepoDeletionTest : VmrTestsBase
+internal class VmrRepoDeletionTest : VmrTestsBase
 {
     private SourceMappingFile _sourceMappings = null!;
     private readonly JsonSerializerOptions _jsonSettings;
@@ -90,7 +90,7 @@ public class VmrRepoDeletionTest : VmrTestsBase
         var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
         versions.Versions.Keys.Should().BeEquivalentTo(new string[] { "installerGitCommitHash" });
 
-        var sourceManifest = SourceManifest.FromJson(Info.GetSourceManifestPath());
+        var sourceManifest = SourceManifest.FromJson(Info.SourceManifestPath);
         sourceManifest.Repositories.Should().HaveCount(1);
         sourceManifest.Repositories.First().Path.Should().Be("installer");
 

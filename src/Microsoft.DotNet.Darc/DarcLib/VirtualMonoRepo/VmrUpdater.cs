@@ -90,7 +90,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _workBranchFactory = workBranchFactory;
     }
 
-    public async Task UpdateRepository(
+    public async Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
         string? targetVersion,
@@ -126,7 +126,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (updateDependencies)
         {
-            await UpdateRepositoryRecursively(
+            return await UpdateRepositoryRecursively(
                 dependencyUpdate,
                 additionalRemotes,
                 readmeTemplatePath,
@@ -137,15 +137,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
         else
         {
-            await UpdateRepositoryInternal(
-                dependencyUpdate,
-                reapplyVmrPatches: true,
-                additionalRemotes,
-                readmeTemplatePath,
-                tpnTemplatePath,
-                generateCodeowners,
-                discardPatches,
-                cancellationToken);
+            try
+            {
+                var patchesToReapply = await UpdateRepositoryInternal(
+                        dependencyUpdate,
+                        reapplyVmrPatches: true,
+                        additionalRemotes,
+                        readmeTemplatePath,
+                        tpnTemplatePath,
+                        generateCodeowners,
+                        discardPatches,
+                        cancellationToken);
+                return true;
+            }
+            catch (EmptySyncException e)
+            {
+                _logger.LogInformation(e.Message);
+                return false;
+            }
         }
     }
 
@@ -162,12 +171,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
             ?? throw new Exception($"Failed to find current version for {update.Mapping.Name}");
 
-        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
-            update.Mapping.Name,
-            currentVersion.Sha,
-            update.RemoteUri,
-            update.TargetRevision);
-
         // Do we need to change anything?
         if (currentVersion.Sha == update.TargetRevision)
         {
@@ -179,14 +182,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update.Mapping,
                     currentVersion,
                     cancellationToken);
-            }
-            else
-            {
-                _logger.LogInformation("Repository {repo} is already at {sha}", update.Mapping.Name, update.TargetRevision);
+                return Array.Empty<VmrIngestionPatch>();
             }
 
-            return Array.Empty<VmrIngestionPatch>();
+            throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.TargetRevision}");
         }
+
+        _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
+            update.Mapping.Name,
+            currentVersion.Sha,
+            update.RemoteUri,
+            update.TargetRevision);
 
         // Sort remotes so that we go Local -> GitHub -> AzDO
         // This makes the synchronization work even for cases when we can't access internal repos
@@ -215,12 +221,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
         };
-
-        if (currentVersion.Sha == update.TargetRevision)
-        {
-            _logger.LogInformation("No new commits found to synchronize");
-            return Array.Empty<VmrIngestionPatch>();
-        }
 
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
             update.Mapping.Name, Commit.GetShortSha(currentVersion.Sha), Commit.GetShortSha(update.TargetRevision));
@@ -251,7 +251,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     /// Updates a repository and all of it's dependencies recursively starting with a given mapping.
     /// Always updates to the first version found per repository in the dependency tree.
     /// </summary>
-    private async Task UpdateRepositoryRecursively(
+    private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string? readmeTemplatePath,
@@ -261,6 +261,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         CancellationToken cancellationToken)
     {
         string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
+
         _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
             rootUpdate.Mapping.Name,
             Commit.GetShortSha(originalRootSha),
@@ -337,7 +338,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     discardPatches,
                     cancellationToken);
             }
-            catch(Exception)
+            catch (EmptySyncException e)
+            {
+                _logger.LogWarning(e.Message);
+                continue;
+            }
+            catch (Exception)
             {
                 _logger.LogWarning(
                     InterruptedSyncExceptionMessage,
@@ -411,6 +417,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             rootUpdate.Mapping.Name,
             Environment.NewLine,
             summaryMessage);
+
+        return updatedDependencies.Any();
     }
 
     /// <summary>
@@ -635,7 +643,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             DeleteRepository(repo.Path);
         }
 
-        var sourceManifestPath = _vmrInfo.GetSourceManifestPath();
+        var sourceManifestPath = _vmrInfo.SourceManifestPath;
         _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
 
         if (readmeTemplatePath != null)
@@ -667,7 +675,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         _sourceManifest.RemoveRepository(repo);
-        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.GetSourceManifestPath());
+        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.SourceManifestPath);
 
         if (_dependencyTracker.RemoveRepositoryVersion(repo))
         {
@@ -707,7 +715,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var filesToAdd = new List<string>
         {
             VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.GetSourceManifestPath()
+            _vmrInfo.SourceManifestPath
         };
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -778,11 +786,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             ?? throw new Exception($"No mapping named '{mapping.Name}' found");
     }
 
-    private class RepositoryNotInitializedException : Exception
+    private class RepositoryNotInitializedException(string message) : Exception(message)
     {
-        public RepositoryNotInitializedException(string message)
-            : base(message)
-        {
-        }
     }
 }

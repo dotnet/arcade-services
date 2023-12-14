@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -97,4 +98,13 @@ public class DependencyDetail
     /// Information whether dependency is needed for source-build.
     /// </summary>
     public SourceBuildInfo SourceBuild { get; set; }
+
+    public void Validate()
+    {
+        const string Message = "{0} of the dependency detail record is empty";
+        _ = Version ?? throw new DarcException(string.Format(Message, nameof(Version)));
+        _ = Name ?? throw new DarcException(string.Format(Message, nameof(Name)));
+        _ = Commit ?? throw new DarcException(string.Format(Message, nameof(Commit)));
+        _ = RepoUri ?? throw new DarcException(string.Format(Message, nameof(RepoUri)));
+    }
 }
