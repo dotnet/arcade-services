@@ -37,11 +37,14 @@ internal abstract class VmrOperationBase : Operation
             return Constants.ErrorCode;
         }
 
+        // Repository names are in the form of NAME or NAME:REVISION where REVISION is a git ref
+        // No REVISION means synchronizing the current HEAD
         IEnumerable<(string Name, string? Revision)> repoNamesWithRevisions = repositories
             .Select(a => a.Split(':', 2) is string[] parts && parts.Length == 2
                 ? (Name: parts[0], Revision: parts[1])
                 : (a, null));
 
+        // Additional remotes are in the form of [mapping name]:[remote URI]
         IReadOnlyCollection<AdditionalRemote> additionalRemotes = Array.Empty<AdditionalRemote>();
         if (_options.AdditionalRemotes != null)
         {
