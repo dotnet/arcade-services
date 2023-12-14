@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -27,19 +28,27 @@ public interface ISourceComponent
     {
         var url = RemoteUri;
 
-        if (url.EndsWith(".git"))
+        switch (GitRepoUrlParser.ParseTypeFromUri(url))
         {
-            url = url[..^4];
+            case GitRepoType.GitHub:
+                if (url.EndsWith(".git"))
+                {
+                    url = url[..^4];
+                }
+
+                if (!url.EndsWith('/'))
+                {
+                    url += '/';
+                }
+
+                url += "tree/" + CommitSha;
+
+                return url;
+            case GitRepoType.AzureDevOps:
+                return url + "/?version=GC" + CommitSha;
+            default:
+                return url;
         }
-
-        if (!url.EndsWith('/'))
-        {
-            url += '/';
-        }
-
-        url += "commit/" + CommitSha;
-
-        return url;
     }
 }
 
