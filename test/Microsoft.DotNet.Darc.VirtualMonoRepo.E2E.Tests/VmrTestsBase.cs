@@ -163,7 +163,7 @@ internal abstract class VmrTestsBase
 
     protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath)
     {
-        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrBackflower>();
+        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrBackFlower>();
         return await codeflower.FlowBackAsync(mappingName, repoPath, cancellationToken: _cancellationToken.Token);
     }
 

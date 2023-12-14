@@ -45,7 +45,7 @@ internal class BackflowOperation : VmrOperationBase
             vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
-        var backflower = Provider.GetRequiredService<IVmrBackflower>();
+        var backflower = Provider.GetRequiredService<IVmrBackFlower>();
 
         await backflower.FlowBackAsync(
             repoName,

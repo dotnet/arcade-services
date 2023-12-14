@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrBackflower
+public interface IVmrBackFlower
 {
     Task<string?> FlowBackAsync(
         string mapping,
@@ -24,7 +24,7 @@ public interface IVmrBackflower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrBackflower : VmrCodeflower, IVmrBackflower
+internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -37,7 +37,7 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeflower> _logger;
 
-    public VmrBackflower(
+    public VmrBackFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
