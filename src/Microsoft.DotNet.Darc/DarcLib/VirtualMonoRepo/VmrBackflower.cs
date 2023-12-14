@@ -302,7 +302,6 @@ internal class VmrBackflower : VmrCodeflower, IVmrBackflower
         // TODO: Do a proper full update of all dependencies, not just V.D.xml
         var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repoPath / VersionFiles.VersionDetailsXml));
         var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        // TODO: Error handling
         _dependencyFileManager.UpdateVersionDetails(
             versionDetailsXml,
             itemsToUpdate: [],

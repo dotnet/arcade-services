@@ -167,8 +167,11 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         var branchName = $"codeflow/forward/{shortShas}";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
-        // TODO: Make sure we need to take account submodules both from old and new commits
-        var submodules = await _localGitClient.GetGitSubmodulesAsync(sourceRepo, shaToFlow);
+        List<GitSubmoduleInfo> submodules =
+        [
+            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, lastFlow.RepoSha),
+            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, shaToFlow),
+        ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but sobmodules and cloaked files
