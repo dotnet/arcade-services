@@ -27,13 +27,14 @@ public interface ISourceComponent
     public string GetPublicUrl()
     {
         var url = RemoteUri;
+        const string GitSuffix = ".git";
 
         switch (GitRepoUrlParser.ParseTypeFromUri(url))
         {
             case GitRepoType.GitHub:
-                if (url.EndsWith(".git"))
+                if (url.EndsWith(GitSuffix))
                 {
-                    url = url[..^4];
+                    url = url[..^GitSuffix.Length];
                 }
 
                 if (!url.EndsWith('/'))
