@@ -24,7 +24,6 @@ public class MergePolicy
 
     public string Name { get; set; }
 
-    [CanBeNull]
     public IImmutableDictionary<string, JToken> Properties { get; set; }
 
     public MergePolicyDefinition ToDb()
