@@ -9,7 +9,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models;
 
 public class Build
 {
-    public Build([NotNull] Data.Models.Build other)
+    public Build(Data.Models.Build other)
     {
         ArgumentNullException.ThrowIfNull(other);
 
