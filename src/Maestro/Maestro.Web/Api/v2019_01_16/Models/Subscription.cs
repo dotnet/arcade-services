@@ -2,18 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using JetBrains.Annotations;
 
 namespace Maestro.Web.Api.v2019_01_16.Models;
 
 public class Subscription
 {
-    public Subscription([NotNull] Data.Models.Subscription other)
+    public Subscription(Data.Models.Subscription other)
     {
-        if (other == null)
-        {
-            throw new ArgumentNullException(nameof(other));
-        }
+        ArgumentNullException.ThrowIfNull(other);
 
         Id = other.Id;
         Channel = other.Channel == null ? null : new v2018_07_16.Models.Channel(other.Channel);

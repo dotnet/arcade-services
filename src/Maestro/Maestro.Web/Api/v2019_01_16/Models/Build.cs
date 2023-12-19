@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using JetBrains.Annotations;
 
 namespace Maestro.Web.Api.v2019_01_16.Models;
 
@@ -12,10 +11,7 @@ public class Build
 {
     public Build([NotNull] Data.Models.Build other)
     {
-        if (other == null)
-        {
-            throw new ArgumentNullException(nameof(other));
-        }
+        ArgumentNullException.ThrowIfNull(other);
 
         Id = other.Id;
         Commit = other.Commit;

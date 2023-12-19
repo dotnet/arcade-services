@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System;
@@ -25,7 +24,10 @@ public static class SqlServerDbContextOptionsExtensions
     //
     // Returns:
     //     The options builder so that further configuration can be chained.
-    public static DbContextOptionsBuilder UseSqlServerWithRetry([NotNullAttribute] this DbContextOptionsBuilder optionsBuilder, [NotNullAttribute] string connectionString, [CanBeNullAttribute] Action<SqlServerDbContextOptionsBuilder> sqlServerOptionsAction = null)
+    public static DbContextOptionsBuilder UseSqlServerWithRetry(
+        this DbContextOptionsBuilder optionsBuilder,
+        string connectionString,
+        Action<SqlServerDbContextOptionsBuilder> sqlServerOptionsAction = null)
     {
         return optionsBuilder.UseSqlServer(connectionString, opts =>
         {

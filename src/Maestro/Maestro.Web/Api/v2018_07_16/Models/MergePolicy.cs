@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Linq;
-using JetBrains.Annotations;
 using Maestro.Data.Models;
 using Newtonsoft.Json.Linq;
 
@@ -17,6 +16,8 @@ public class MergePolicy
 
     public MergePolicy(MergePolicyDefinition other)
     {
+        ArgumentNullException.ThrowIfNull(other);
+
         Name = other.Name;
         Properties = other.Properties?.ToImmutableDictionary();
     }
