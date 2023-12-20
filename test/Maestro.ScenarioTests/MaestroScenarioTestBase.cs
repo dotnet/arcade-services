@@ -242,7 +242,7 @@ namespace Maestro.ScenarioTests
                 await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
                 : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-            expectedPRTitles.Should().Contain(pullRequest.Title);
+            pullRequest.Title.Should().BeOneOf(expectedPRTitles);
 
             using (ChangeDirectory(repoDirectory))
             {
@@ -260,8 +260,12 @@ namespace Maestro.ScenarioTests
         public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
+            string[] expectedPRTitles =
+            [
+                $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}",
+                $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName}",
+            ];
+            await CheckAzDoPullRequest(expectedPRTitles, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
         }
 
         public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
@@ -269,10 +273,10 @@ namespace Maestro.ScenarioTests
             string[] expectedFeeds = null, string[] notExpectedFeeds = null)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+            await CheckAzDoPullRequest([expectedPRTitle], targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
         }
 
-        public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
+        public async Task CheckAzDoPullRequest(string[] expectedPRTitles, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated,
             string[] expectedFeeds, string[] notExpectedFeeds)
         {
@@ -282,7 +286,7 @@ namespace Maestro.ScenarioTests
             await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
             string trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
-            StringAssert.AreEqualIgnoringCase(expectedPRTitle, trimmedTitle);
+            trimmedTitle.Should().BeOneOf(expectedPRTitles);
 
             Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
             var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
