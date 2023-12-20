@@ -178,7 +178,7 @@ namespace Maestro.ScenarioTests
 
             if (expectedPRTitles == null)
             {
-                throw new Exception("ExpectedPRTitle must be defined for AzDo PRs that require an update.");
+                throw new Exception($"{nameof(expectedPRTitles)} must be defined for AzDo PRs that require an update");
             }
 
             for (int tries = 10; tries > 0; tries--)
