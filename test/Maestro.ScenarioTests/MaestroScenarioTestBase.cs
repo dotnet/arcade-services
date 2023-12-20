@@ -257,13 +257,22 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
+        public async Task CheckBatchedAzDoPullRequest(
+            string source1RepoName,
+            string source2RepoName,
+            string targetRepoName,
+            string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+            string repoDirectory,
+            bool complete = false)
         {
+            string prefix = $"[{targetBranch}] Update dependencies from";
+            string repo1 = $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName}";
+            string repo2 = $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}";
             string[] expectedPRTitles =
             [
-                $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}",
-                $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName}",
+                $"{prefix} {repo1} {repo2}",
+                $"{prefix} {repo2} {repo1}",
             ];
             await CheckAzDoPullRequest(expectedPRTitles, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
         }
