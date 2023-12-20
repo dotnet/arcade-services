@@ -3,18 +3,14 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
-using JetBrains.Annotations;
 
 namespace Maestro.Web.Api.v2018_07_16.Models;
 
 public class DefaultChannel
 {
-    public DefaultChannel([NotNull] Data.Models.DefaultChannel other)
+    public DefaultChannel(Data.Models.DefaultChannel other)
     {
-        if (other == null)
-        {
-            throw new ArgumentNullException(nameof(other));
-        }
+        ArgumentNullException.ThrowIfNull(other);
 
         Id = other.Id;
         Repository = other.Repository;

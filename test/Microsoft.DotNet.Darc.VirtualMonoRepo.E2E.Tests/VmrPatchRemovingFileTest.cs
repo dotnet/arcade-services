@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrPatchRemovingFileTest : VmrPatchesTestsBase
+internal class VmrPatchRemovingFileTest : VmrPatchesTestsBase
 {
     public VmrPatchRemovingFileTest() : base("remove-file.patch")
     {

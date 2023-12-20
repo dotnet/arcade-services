@@ -209,7 +209,7 @@ public class CodeBackflower : IVmrBackflower
 
     private async Task<string> GetShaOfLastSyncForRepo(IVersionedSourceComponent repo)
     {
-        var manifestPath = _vmrInfo.GetSourceManifestPath();
+        var manifestPath = _vmrInfo.SourceManifestPath;
 
         using (var stream = _fileSystem.GetFileStream(manifestPath, FileMode.Open, FileAccess.Read))
         using (var reader = new StreamReader(stream))

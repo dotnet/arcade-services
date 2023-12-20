@@ -5,15 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface IVersionDetailsParser
 {
-    IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true);
+    VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true);
 
-    IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true);
+    VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true);
 }
 
 public class VersionDetailsParser : IVersionDetailsParser
@@ -40,14 +42,15 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string RepoNameAttributeName = "RepoName";
     public const string ManagedOnlyAttributeName = "ManagedOnly";
     public const string TarballOnlyAttributeName = "TarballOnly";
-    
-    public IList<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
+    public const string SourceElementName = "Source";
+
+    public VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
         XmlDocument document = GetXmlDocument(fileContents);
         return ParseVersionDetailsXml(document, includePinned: includePinned);
     }
 
-    public IList<DependencyDetail> ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
+    public VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
         XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
         if (dependencyNodes == null)
@@ -56,13 +59,18 @@ public class VersionDetailsParser : IVersionDetailsParser
                 $"Look for exceptions above.");
         }
 
-        var dependencies = ParseDependencyDetails(dependencyNodes);
-        return includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+        List<DependencyDetail> dependencies = ParseDependencyDetails(dependencyNodes);
+        dependencies = includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+
+        // Parse the VMR codeflow if it exists
+        SourceDependency? vmrCodeflow = ParseSourceSection(document?.DocumentElement?.SelectSingleNode($"//{SourceElementName}"));
+
+        return new VersionDetails(dependencies, vmrCodeflow);
     }
 
     private static List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
     {
-        List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
+        List<DependencyDetail> dependencyDetails = [];
 
         foreach (XmlNode dependency in dependencies)
         {
@@ -126,6 +134,22 @@ public class VersionDetailsParser : IVersionDetailsParser
         }
 
         return dependencyDetails;
+    }
+
+    private static SourceDependency? ParseSourceSection(XmlNode? sourceNode)
+    {
+        if (sourceNode is null)
+        {
+            return null;
+        }
+
+        var uri = sourceNode.Attributes?[UriElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {UriElementName} attribute");
+
+        var sha = sourceNode.Attributes[ShaElementName]?.Value?.Trim()
+            ?? throw new DarcException($"Malformed {SourceElementName} section - expected {ShaElementName} attribute");
+
+        return new SourceDependency(uri, sha);
     }
     
     private static bool ParseBooleanAttribute(XmlAttributeCollection attributes, string attributeName)

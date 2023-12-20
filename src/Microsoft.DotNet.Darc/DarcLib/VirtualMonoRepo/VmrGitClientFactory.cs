@@ -18,17 +18,20 @@ public class VmrGitClientFactory : IGitRepoFactory
     private readonly IVmrInfo _vmrInfo;
     private readonly RemoteConfiguration _remoteConfiguration;
     private readonly IProcessManager _processManager;
+    private readonly IFileSystem _fileSystem;
     private readonly ILoggerFactory _loggerFactory;
 
     public VmrGitClientFactory(
         IVmrInfo vmrInfo,
         RemoteConfiguration remoteConfiguration,
         IProcessManager processManager,
+        IFileSystem fileSystem,
         ILoggerFactory loggerFactory)
     {
         _vmrInfo = vmrInfo;
         _remoteConfiguration = remoteConfiguration;
         _processManager = processManager;
+        _fileSystem = fileSystem;
         _loggerFactory = loggerFactory;
     }
 
@@ -48,7 +51,7 @@ public class VmrGitClientFactory : IGitRepoFactory
             // Caching not in use for Darc local client.
             null),
 
-        GitRepoType.Local => new LocalLibGit2Client(_remoteConfiguration, _processManager, _loggerFactory.CreateLogger<LocalGitClient>()),
+        GitRepoType.Local => new LocalLibGit2Client(_remoteConfiguration, _processManager, _fileSystem, _loggerFactory.CreateLogger<LocalGitClient>()),
 
         _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
     };

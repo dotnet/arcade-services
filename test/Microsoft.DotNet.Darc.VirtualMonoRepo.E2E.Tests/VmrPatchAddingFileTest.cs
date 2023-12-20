@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 [TestFixture]
-public class VmrPatchAddingFileTest : VmrPatchesTestsBase
+internal class VmrPatchAddingFileTest : VmrPatchesTestsBase
 {
     private readonly string _productRepoNewFile = "new-file.txt";
 
