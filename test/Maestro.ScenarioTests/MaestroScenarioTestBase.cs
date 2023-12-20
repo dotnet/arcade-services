@@ -219,18 +219,22 @@ namespace Maestro.ScenarioTests
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
             string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
-            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
+            string[] expectedPRTitles = [
+                $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}",
+                $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source2RepoName} {_parameters.GitHubTestOrg}/{source1RepoName}",
+            ];
+
+            await CheckGitHubPullRequest(expectedPRTitles, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
         }
 
         public async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
+            await CheckGitHubPullRequest([expectedPRTitle], targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
         }
 
-        public async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
+        public async Task CheckGitHubPullRequest(string[] expectedPRTitles, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
@@ -238,7 +242,7 @@ namespace Maestro.ScenarioTests
                 await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
                 : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-            StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
+            expectedPRTitles.Should().Contain(pullRequest.Title);
 
             using (ChangeDirectory(repoDirectory))
             {
