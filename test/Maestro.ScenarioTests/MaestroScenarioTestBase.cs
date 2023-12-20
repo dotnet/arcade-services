@@ -170,15 +170,15 @@ namespace Maestro.ScenarioTests
             return prs;
         }
 
-        internal async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string[] expectedPRTitles = null)
+        internal async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
         {
             string repoUri = GetAzDoRepoUrl(targetRepoName);
             (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
             string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
 
-            if (expectedPRTitles == null)
+            if (string.IsNullOrEmpty(expectedPRTitle))
             {
-                throw new Exception($"{nameof(expectedPRTitles)} must be defined for AzDo PRs that require an update");
+                throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
             }
 
             for (int tries = 10; tries > 0; tries--)
@@ -186,7 +186,7 @@ namespace Maestro.ScenarioTests
                 Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
                 string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
-                if (!isUpdated || expectedPRTitles.Contains(trimmedTitle))
+                if (!isUpdated || trimmedTitle == expectedPRTitle)
                 {
                     return AsyncDisposableValue.Create(pr, async () =>
                     {
@@ -216,33 +216,33 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
         }
 
-        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
+        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string[] sourceRepoNames,
             string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
-            string[] expectedPRTitles = [
-                $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}",
-                $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source2RepoName} {_parameters.GitHubTestOrg}/{source1RepoName}",
-            ];
+            var repoNames = sourceRepoNames
+                .Select(name => $"{_parameters.GitHubTestOrg}/{name}")
+                .OrderBy(s => s);
 
-            await CheckGitHubPullRequest(expectedPRTitles, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
         }
 
         public async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckGitHubPullRequest([expectedPRTitle], targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
         }
 
-        public async Task CheckGitHubPullRequest(string[] expectedPRTitles, string targetRepoName, string targetBranch,
+        public async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
-            PullRequest pullRequest = isUpdated ?
-                await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
+            PullRequest pullRequest = isUpdated
+                ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
                 : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-            pullRequest.Title.Should().BeOneOf(expectedPRTitles);
+            pullRequest.Title.Should().Be(expectedPRTitle);
 
             using (ChangeDirectory(repoDirectory))
             {
@@ -258,23 +258,19 @@ namespace Maestro.ScenarioTests
         }
 
         public async Task CheckBatchedAzDoPullRequest(
-            string source1RepoName,
-            string source2RepoName,
+            string[] sourceRepoNames,
             string targetRepoName,
             string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
             string repoDirectory,
             bool complete = false)
         {
-            string prefix = $"[{targetBranch}] Update dependencies from";
-            string repo1 = $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName}";
-            string repo2 = $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}";
-            string[] expectedPRTitles =
-            [
-                $"{prefix} {repo1} {repo2}",
-                $"{prefix} {repo2} {repo1}",
-            ];
-            await CheckAzDoPullRequest(expectedPRTitles, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
+            var repoNames = sourceRepoNames
+                .Select(n => $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{n}")
+                .OrderBy(s => s);
+
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
         }
 
         public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
@@ -282,20 +278,20 @@ namespace Maestro.ScenarioTests
             string[] expectedFeeds = null, string[] notExpectedFeeds = null)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
-            await CheckAzDoPullRequest([expectedPRTitle], targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
         }
 
-        public async Task CheckAzDoPullRequest(string[] expectedPRTitles, string targetRepoName, string targetBranch,
+        public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated,
             string[] expectedFeeds, string[] notExpectedFeeds)
         {
             string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
             int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-            await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitles);
+            await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
             string trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
-            trimmedTitle.Should().BeOneOf(expectedPRTitles);
+            trimmedTitle.Should().Be(expectedPRTitle);
 
             Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
             var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");

@@ -686,48 +686,45 @@ namespace SubscriptionActorService
             // Get the unique subscription IDs. It may be possible for a coherency update
             // to not have any contained subscription.  In this case
             // we return a different title.
-            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions.Select(
-                subscription => subscription.SubscriptionId).ToHashSet();
+            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions
+                .Select(subscription => subscription.SubscriptionId)
+                .Distinct()
+                .ToArray();
 
-            if (uniqueSubscriptionIds.Count > 0)
-            {
-                // We'll either list out the repos involved (in a shortened form)
-                // or we'll list out the number of repos that are involved.
-                // Start building up the list. If we reach a max length, then backtrack and
-                // just note the number of input subscriptions.
-                string baseTitle = $"[{targetBranch}] Update dependencies from";
-                StringBuilder titleBuilder = new StringBuilder(baseTitle);
-                bool prefixComma = false;
-                // Github title limit -348 
-                // Azdo title limit - 419 
-                // maxTitleLength = 150 to fit 2/3 repo names in the title. 
-                const int maxTitleLength = 150;
-                foreach (Guid subscriptionId in uniqueSubscriptionIds)
-                {
-                    string repoName = await GetSourceRepositoryAsync(subscriptionId);
-
-                    // Strip down repo name.
-                    repoName = repoName?.Replace("https://github.com/", "");
-                    repoName = repoName?.Replace("https://dev.azure.com/", "");
-                    repoName = repoName?.Replace("_git/", "");
-                    string repoNameForTitle = prefixComma ? $", {repoName}" : repoName;
-
-                    if (titleBuilder.Length + repoNameForTitle?.Length > maxTitleLength)
-                    {
-                        return $"{baseTitle} {uniqueSubscriptionIds.Count} repositories";
-                    }
-                    else
-                    {
-                        titleBuilder.Append(" " + repoNameForTitle);
-                    }
-                }
-
-                return titleBuilder.ToString();
-            }
-            else
+            if (uniqueSubscriptionIds.Length == 0)
             {
                 return $"[{targetBranch}] Update dependencies to ensure coherency";
             }
+
+            // We'll either list out the repos involved (in a shortened form)
+            // or we'll list out the number of repos that are involved.
+            string baseTitle = $"[{targetBranch}] Update dependencies from";
+
+            // Github title limit - 348 
+            // Azdo title limit - 419 
+            // maxTitleLength = 150 to fit 2/3 repo names in the title
+            const int maxTitleLength = 150;
+            var maxRepoListLength = maxTitleLength - baseTitle.Length;
+            const string delimiter = ", ";
+
+            var repoNames = new List<string>();
+            foreach (Guid subscriptionId in uniqueSubscriptionIds)
+            {
+                string repoName = await GetSourceRepositoryAsync(subscriptionId);
+
+                // Strip down repo name.
+                repoName = repoName?.Replace("https://github.com/", null);
+                repoName = repoName?.Replace("https://dev.azure.com/", null);
+                repoName = repoName?.Replace("_git/", null);
+                repoNames.Add(repoName);
+
+                if (repoNames.Sum(n => n.Length + delimiter.Length) > maxRepoListLength)
+                {
+                    return $"{baseTitle} {uniqueSubscriptionIds.Length} repositories";
+                }
+            }
+
+            return $"{baseTitle} {string.Join(delimiter, repoNames.OrderBy(s => s))}";
         }
 
         /// <summary>
