@@ -708,6 +708,7 @@ namespace SubscriptionActorService
             const string delimiter = ", ";
 
             var repoNames = new List<string>();
+            int titleLength = 0;
             foreach (Guid subscriptionId in uniqueSubscriptionIds)
             {
                 string repoName = await GetSourceRepositoryAsync(subscriptionId);
@@ -718,7 +719,8 @@ namespace SubscriptionActorService
                 repoName = repoName?.Replace("_git/", null);
                 repoNames.Add(repoName);
 
-                if (repoNames.Sum(n => n.Length + delimiter.Length) > maxRepoListLength)
+                titleLength += repoName.Length + delimiter.Length;
+                if (titleLength > maxRepoListLength)
                 {
                     return $"{baseTitle} {uniqueSubscriptionIds.Length} repositories";
                 }
