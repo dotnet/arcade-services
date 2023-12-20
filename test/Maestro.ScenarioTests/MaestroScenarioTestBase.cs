@@ -170,15 +170,15 @@ namespace Maestro.ScenarioTests
             return prs;
         }
 
-        internal async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
+        internal async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string[] expectedPRTitles = null)
         {
             string repoUri = GetAzDoRepoUrl(targetRepoName);
             (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
             string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
 
-            if (string.IsNullOrEmpty(expectedPRTitle))
+            if (expectedPRTitles == null)
             {
-                throw new ArgumentNullException(expectedPRTitle, "ExpectedPRTitle must be defined for AzDo PRs that require an update.");
+                throw new Exception("ExpectedPRTitle must be defined for AzDo PRs that require an update.");
             }
 
             for (int tries = 10; tries > 0; tries--)
@@ -186,7 +186,7 @@ namespace Maestro.ScenarioTests
                 Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
                 string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
-                if (!isUpdated || trimmedTitle == expectedPRTitle)
+                if (!isUpdated || expectedPRTitles.Contains(trimmedTitle))
                 {
                     return AsyncDisposableValue.Create(pr, async () =>
                     {
@@ -283,7 +283,7 @@ namespace Maestro.ScenarioTests
             string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
             int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-            await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+            await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitles);
 
             string trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
             trimmedTitle.Should().BeOneOf(expectedPRTitles);
