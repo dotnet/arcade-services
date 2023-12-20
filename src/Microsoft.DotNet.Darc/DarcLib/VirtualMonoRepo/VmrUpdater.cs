@@ -53,7 +53,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly IComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
@@ -64,7 +64,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
+        IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
         IDependencyFileManager dependencyFileManager,
@@ -648,7 +648,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         if (readmeTemplatePath != null)
         {
-            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _readmeComponentListGenerator.UpdateComponentList(readmeTemplatePath);
         }
 
         if (tpnTemplatePath != null)

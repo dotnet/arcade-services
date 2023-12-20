@@ -27,7 +27,7 @@ public abstract class VmrManagerBase
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly IComponentListGenerator _readmeComponentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IDependencyFileManager _dependencyFileManager;
@@ -41,7 +41,7 @@ public abstract class VmrManagerBase
         IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
+        IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
         IDependencyFileManager dependencyFileManager,
@@ -115,7 +115,7 @@ public abstract class VmrManagerBase
 
         if (readmeTemplatePath != null)
         {
-            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _readmeComponentListGenerator.UpdateComponentList(readmeTemplatePath);
         }
 
         var filesToAdd = new List<string>
@@ -124,9 +124,9 @@ public abstract class VmrManagerBase
             _vmrInfo.SourceManifestPath
         };
 
-        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
+        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ComponentListPath))
         {
-            filesToAdd.Add(VmrInfo.ReadmeFileName);
+            filesToAdd.Add(VmrInfo.ComponentListPath);
         }
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
