@@ -263,7 +263,7 @@ namespace Maestro.ScenarioTests
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
                             string expectedPRTitle = $"[{targetBranch}] Update dependencies to ensure coherency";
-                            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                            await CheckGitHubPullRequest([expectedPRTitle], targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
                         }
                     }
                 }
