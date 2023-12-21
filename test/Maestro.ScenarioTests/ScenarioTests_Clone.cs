@@ -169,8 +169,8 @@ class ScenarioTests_Clone : MaestroScenarioTestBase
             TestContext.WriteLine("Ensure the presence of the cloned repo directories");
             var allRepos = Directory.GetDirectories(clonedReposFolder);
             IEnumerable<string> reposFolderNames = allRepos.Select(Path.GetFileName);
-            var actualRepos = reposFolderNames.Where(fn => fn.Contains(".")).ToList();
-            var actualMasterRepos = reposFolderNames.Where(fn => !fn.Contains(".")).ToList();
+            var actualRepos = reposFolderNames.Where(fn => fn.Contains('.')).ToList();
+            var actualMasterRepos = reposFolderNames.Where(fn => !fn.Contains('.')).ToList();
 
             actualRepos.Should().HaveCount(expectedRepos.Count);
             actualRepos.Should().BeEquivalentTo(expectedRepos.Keys);

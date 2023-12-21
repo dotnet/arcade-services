@@ -72,7 +72,7 @@ public class TestParameters : IDisposable
             toolInstallArgs.Add("--add-source");
             toolInstallArgs.Add(darcPackageSource);
         }
-        await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
+        await TestHelpers.RunExecutableAsync(dotnetExe, [.. toolInstallArgs]);
 
         string darcExe = Path.Join(testDirSharedWrapper.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 

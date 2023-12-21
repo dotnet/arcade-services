@@ -10,11 +10,6 @@ namespace Maestro.ScenarioTests.ObjectHelpers;
 
 public class BuildRefComparer : IEqualityComparer<BuildRef>, IComparer
 {
-    public int Compare(BuildRef x, BuildRef y)
-    {
-        return x.BuildId.CompareTo(y.BuildId);
-    }
-
     public int Compare(object x, object y)
     {
         return ((BuildRef)x).BuildId.CompareTo(((BuildRef)y).BuildId);
