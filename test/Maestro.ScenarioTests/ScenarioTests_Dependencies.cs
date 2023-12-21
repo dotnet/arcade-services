@@ -4,10 +4,12 @@
 using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+using NUnit.Framework.Legacy;
 
 namespace Maestro.ScenarioTests;
 
@@ -83,8 +85,8 @@ internal class ScenarioTests_Dependencies : MaestroScenarioTestBase
         Build retrievedBuild1 = await MaestroApi.Builds.GetBuildAsync(targetBuild1.Id);
         Build retrievedBuild2 = await MaestroApi.Builds.GetBuildAsync(targetBuild2.Id);
 
-        Assert.AreEqual(newTargetBuild1.Dependencies.Count, retrievedBuild1.Dependencies.Count);
-        Assert.AreEqual(newTargetBuild2.Dependencies.Count, retrievedBuild2.Dependencies.Count);
+        retrievedBuild1.Dependencies.Should().HaveCount(newTargetBuild1.Dependencies.Count);
+        retrievedBuild2.Dependencies.Should().HaveCount(newTargetBuild2.Dependencies.Count);
 
         var buildRefComparer = new BuildRefComparer();
 

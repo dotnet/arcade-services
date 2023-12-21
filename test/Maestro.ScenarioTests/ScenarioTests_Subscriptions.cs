@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Darc;
@@ -115,7 +116,7 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                 // Re-enable
                 TestContext.WriteLine("Enable the third subscription by id");
                 await SetSubscriptionStatusById(true, subscription3Id.Value);
-                StringAssert.Contains("Enabled: True", await GetSubscriptionInfo(subscription3Id.Value), $"Expected subscription {subscription3Id} to be enabled");
+                (await GetSubscriptionInfo(subscription3Id.Value)).Should().Be("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
 
                 // Mass delete the subscriptions. Delete the first two but not the third.
                 TestContext.WriteLine("Delete the subscriptions for test channel 1");
@@ -261,6 +262,6 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
     private async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-        StringAssert.AreEqualIgnoringCase(expectedSubscriptionInfo, subscriptionInfo);
+        subscriptionInfo.Should().BeEquivalentTo(expectedSubscriptionInfo);
     }
 }

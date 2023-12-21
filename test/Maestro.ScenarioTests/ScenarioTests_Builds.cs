@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
@@ -54,11 +55,11 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
         // Create a build for the source repo
         Build build = await CreateBuildAsync(repoUrl, SourceBranch, SourceCommit, SourceBuildNumber, sourceAssets);
         Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id);
-        Assert.IsFalse(retrievedBuild.Released, "Retrieved build has Released set to true when it should be false");
+        retrievedBuild.Released.Should().BeFalse("Retrieved build has Released set to true when it should be false");
 
         // Release the build; gather-drop does not fetch anything unless the flag '--include-released' is included in its arguments (which the next operation does set)
         Build updatedBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = true }, build.Id);
-        Assert.IsTrue(updatedBuild.Released, "Retrieved build has Released set to false when it should be true");
+        updatedBuild.Released.Should().BeTrue("Retrieved build has Released set to false when it should be true");
 
         // Gather a drop with release included
         string gatherWithReleasedDir = Path.Combine(scenarioDirectory, "gather-with-released");
@@ -68,10 +69,10 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
 
         gatherDropOutput = await GatherDrop(build.Id, gatherWithReleasedDir, true, string.Empty);
 
-        StringAssert.Contains($"Gathering drop for build {SourceBuildNumber}", gatherDropOutput, "Gather with released 1");
-        StringAssert.Contains("Downloading asset Bar@2.1.0", gatherDropOutput, "Gather with released 1");
-        StringAssert.Contains("Downloading asset Foo@1.1.0", gatherDropOutput, "Gather with released 1");
-        StringAssert.DoesNotContain("always-download assets in build", gatherDropOutput, "Gather with released 1");
+        gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather with released 1");
+        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather with released 1");
+        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather with released 1");
+        gatherDropOutput.Should().NotContain("always-download assets in build", "Gather with released 1");
 
         // Gather with release excluded (default behavior). Gather-drop should throw an error.
         TestContext.WriteLine("Starting 'Gather with release excluded' - gather-drop should throw an error.");
@@ -81,26 +82,26 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
 
         // Unrelease the build
         Build unreleaseBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = false }, build.Id);
-        Assert.IsFalse(unreleaseBuild.Released);
+        unreleaseBuild.Released.Should().BeFalse();
 
         // Gather with release excluded again (default behavior)
         string gatherWithNoReleased2Dir = Path.Combine(scenarioDirectory, "gather-no-released-2");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased2Dir);
         gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased2Dir, false, string.Empty);
 
-        StringAssert.Contains($"Gathering drop for build {SourceBuildNumber}", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.Contains("Downloading asset Bar@2.1.0", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.Contains("Downloading asset Foo@1.1.0", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.DoesNotContain("always-download assets in build", gatherDropOutput, "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().NotContain("always-download assets in build", "Gather unreleased with release excluded");
 
         // Gather with release excluded again, but specify --always-download-asset-filters
         string gatherWithNoReleased3Dir = Path.Combine(scenarioDirectory, "gather-no-released-3");
         TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased3Dir);
         gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased3Dir, false, $"B.*r$");
 
-        StringAssert.Contains($"Gathering drop for build {SourceBuildNumber}", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.Contains("Downloading asset Bar@2.1.0", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.Contains("Downloading asset Foo@1.1.0", gatherDropOutput, "Gather unreleased with release excluded");
-        StringAssert.Contains("Found 1 always-download asset(s) in build", gatherDropOutput, "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain($"Gathering drop for build {SourceBuildNumber}", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain("Downloading asset Bar@2.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain("Downloading asset Foo@1.1.0", "Gather unreleased with release excluded");
+        gatherDropOutput.Should().Contain("Found 1 always-download asset(s) in build", "Gather unreleased with release excluded");
     }
 }

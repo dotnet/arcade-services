@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Maestro.ScenarioTests;
@@ -12,7 +13,7 @@ public class TestHelpersTests
     {
         var formatted = TestHelpers.FormatExecutableCall("darc.exe");
 
-        Assert.AreEqual("darc.exe", formatted);
+        formatted.Should().Be("darc.exe");
     }
 
     [Test]
@@ -20,7 +21,7 @@ public class TestHelpersTests
     {
         var formatted = TestHelpers.FormatExecutableCall("darc.exe", ["add-channel", "--name", "what-a-channel"]);
 
-        Assert.AreEqual("darc.exe \"add-channel\" \"--name\" \"what-a-channel\"", formatted);
+        formatted.Should().Be("darc.exe \"add-channel\" \"--name\" \"what-a-channel\"");
     }
 
     [Test]
@@ -28,6 +29,6 @@ public class TestHelpersTests
     {
         var formatted = TestHelpers.FormatExecutableCall("darc.exe", ["-p", "secret", "add-channel", "--github-pat", "another secret", "--name", "what-a-channel"]);
 
-        Assert.AreEqual("darc.exe \"-p\" \"***\" \"add-channel\" \"--github-pat\" \"***\" \"--name\" \"what-a-channel\"", formatted);
+        formatted.Should().Be("darc.exe \"-p\" \"***\" \"add-channel\" \"--github-pat\" \"***\" \"--name\" \"what-a-channel\"");
     }
 }

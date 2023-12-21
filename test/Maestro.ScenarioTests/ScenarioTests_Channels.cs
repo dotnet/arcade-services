@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace Maestro.ScenarioTests;
@@ -33,14 +34,14 @@ internal class ScenarioTests_Channels : MaestroScenarioTestBase
         {
             // Get the channel and make sure it's there
             string returnedChannel = await GetTestChannelsAsync().ConfigureAwait(false);
-            StringAssert.Contains(testChannelName, returnedChannel, "Channel was not created or could not be retrieved");
+            returnedChannel.Should().Contain(testChannelName, "Channel was not created or could not be retrieved");
 
             // Delete the channel
             await DeleteTestChannelAsync(testChannelName).ConfigureAwait(false);
 
             // Get the channel and make sure it was deleted
             string returnedChannel2 = await GetTestChannelsAsync().ConfigureAwait(false);
-            StringAssert.DoesNotContain(testChannelName, returnedChannel2, "Channel was not deleted");
+            returnedChannel2.Should().NotContain(testChannelName, "Channel was not deleted");
         }
     }
 }

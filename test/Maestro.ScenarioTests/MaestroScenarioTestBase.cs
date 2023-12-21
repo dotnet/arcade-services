@@ -309,7 +309,7 @@ internal class MaestroScenarioTestBase
 
         Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
         var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
-        Assert.AreEqual(expectedPRState, prStatus);
+        prStatus.Should().Be(expectedPRState);
 
         using (ChangeDirectory(repoDirectory))
         {
@@ -340,7 +340,7 @@ internal class MaestroScenarioTestBase
             var actualDependencies = await RunDarcAsync("get-dependencies");
             var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
-            Assert.AreEqual(expectedDependenciesString, actualDependencies, $"Expected: {expectedDependenciesString} \r\n Actual: {actualDependencies}");
+            actualDependencies.Should().Be(expectedDependenciesString);
         }
     }
 

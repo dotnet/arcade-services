@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using Octokit;
@@ -65,21 +66,21 @@ internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
 
             PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
-            StringAssert.AreEqualIgnoringCase($"[{targetBranch}] Update dependencies from dotnet/arcade", pr.Title);
+            pr.Title.Should().BeEquivalentTo($"[{targetBranch}] Update dependencies from dotnet/arcade");
 
             await CheckoutRemoteRefAsync(pr.MergeCommitSha);
 
             string dependencies = await RunDarcAsync("get-dependencies");
             string[] dependencyLines = dependencies.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            Assert.AreEqual(new[]
-            {
-                "Name:             Microsoft.DotNet.Arcade.Sdk",
-                "Version:          2.1.0",
-                $"Repo:             {sourceRepoUri}",
-                $"Commit:           {sourceCommit}",
-                "Type:             Toolset",
-                "Pinned:           False",
-            }, dependencyLines);
+            dependencyLines.Should().BeEquivalentTo(
+                [
+                    "Name:             Microsoft.DotNet.Arcade.Sdk",
+                    "Version:          2.1.0",
+                    $"Repo:             {sourceRepoUri}",
+                    $"Commit:           {sourceCommit}",
+                    "Type:             Toolset",
+                    "Pinned:           False",
+                ]);
 
             using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync("dotnet", sourceRepo);
             using (ChangeDirectory(arcadeRepo.Directory))
@@ -96,8 +97,7 @@ internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
                 .Select(s => s.Substring(repo.Directory.Length))
                 .ToHashSet();
 
-            Assert.IsEmpty(arcadeFiles.Except(repoFiles));
-            Assert.IsEmpty(repoFiles.Except(arcadeFiles));
+            arcadeFiles.Except(repoFiles).Should().BeEmpty();
         }
     }
 }

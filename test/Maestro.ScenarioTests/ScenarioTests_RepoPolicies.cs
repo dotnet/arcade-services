@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 
@@ -40,13 +41,13 @@ internal class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
         await SetRepositoryPolicies(repoUrl, branchName);
         string emptyPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         string expectedEmpty = $"{repoUrl} @ {branchName}\r\n- Merge Policies: []\r\n";
-        StringAssert.AreEqualIgnoringCase(expectedEmpty, emptyPolicies, "Repository merge policy is not empty");
+        emptyPolicies.Should().BeEquivalentTo(expectedEmpty, "Repository merge policy is not empty");
 
         TestContext.WriteLine("Setting repository merge policy to standard");
         await SetRepositoryPolicies(repoUrl, branchName, ["--standard-automerge"]);
         string standardPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         string expectedStandard = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  Standard\r\n";
-        StringAssert.AreEqualIgnoringCase(expectedStandard, standardPolicies, "Repository policy not set to standard");
+        standardPolicies.Should().BeEquivalentTo(expectedStandard, "Repository policy not set to standard");
 
         TestContext.WriteLine("Setting repository merge policy to all checks successful");
         await SetRepositoryPolicies(repoUrl, branchName, ["--all-checks-passed", "--ignore-checks", "A,B"]);
@@ -56,6 +57,6 @@ internal class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
             "                     \"A\",\r\n" +
             "                     \"B\"\r\n" +
             "                   ]\r\n";
-        StringAssert.AreEqualIgnoringCase(expectedAllChecksPolicies, allChecksPolicies, "Repository policy is incorrect for all checks successful case");
+        allChecksPolicies.Should().BeEquivalentTo(expectedAllChecksPolicies, "Repository policy is incorrect for all checks successful case");
     }
 }

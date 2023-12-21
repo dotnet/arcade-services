@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using Build = Microsoft.DotNet.Maestro.Client.Models.Build;
@@ -125,7 +126,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
 
             TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
             bool testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch);
-            Assert.IsTrue(testResult);
+            testResult.Should().BeTrue();
         }
     }
 }
