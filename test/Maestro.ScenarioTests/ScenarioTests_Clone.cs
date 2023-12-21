@@ -26,7 +26,7 @@ namespace Maestro.ScenarioTests
 
             string sourceRepoName = "core-sdk";
             string sourceRepoVersion = "v3.0.100-preview4-011223";
-            string sourceRepoUri = GetRepoUrl(sourceRepoName);
+            string sourceRepoUri = GetGitHubRepoUrl(sourceRepoName);
 
             // these repos are not currently clonable for us due to auth
             string reposToIgnore = "https://dev.azure.com/dnceng/internal/_git/dotnet-optimization;https://dev.azure.com/devdiv/DevDiv/_git/DotNet-Trusted;https://devdiv.visualstudio.com/DevDiv/_git/DotNet-Trusted";
