@@ -97,7 +97,7 @@ internal class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
                 .Select(s => s.Substring(repo.Directory.Length))
                 .ToHashSet();
 
-            arcadeFiles.Except(repoFiles).Should().BeEmpty();
+            arcadeFiles.Should().BeEquivalentTo(repoFiles);
         }
     }
 }

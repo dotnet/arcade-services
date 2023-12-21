@@ -175,7 +175,7 @@ class ScenarioTests_Clone : MaestroScenarioTestBase
             actualRepos.Should().HaveCount(expectedRepos.Count);
             actualRepos.Should().BeEquivalentTo(expectedRepos.Keys);
 
-            actualMasterRepos.Count.Should().Be(expectedMasterRepos.Length);
+            actualMasterRepos.Should().HaveCount(expectedMasterRepos.Length);
             actualMasterRepos.Should().BeEquivalentTo(expectedMasterRepos);
 
             TestContext.WriteLine("Validating the existence and content of the git directories");

@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+using NUnit.Framework.Legacy;
 
 namespace Maestro.ScenarioTests;
 
@@ -116,7 +117,8 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                 // Re-enable
                 TestContext.WriteLine("Enable the third subscription by id");
                 await SetSubscriptionStatusById(true, subscription3Id.Value);
-                (await GetSubscriptionInfo(subscription3Id.Value)).Should().Be("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
+
+                (await GetSubscriptionInfo(subscription3Id.Value)).Should().Contain("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
 
                 // Mass delete the subscriptions. Delete the first two but not the third.
                 TestContext.WriteLine("Delete the subscriptions for test channel 1");
