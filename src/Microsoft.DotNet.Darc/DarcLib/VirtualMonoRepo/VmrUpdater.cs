@@ -342,6 +342,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 if (update.Mapping == rootUpdate.Mapping)
                 {
+                    _logger.LogWarning(e.Message);
+                }
+                else
+                {
                     _logger.LogInformation(e.Message);
                 }
 
