@@ -18,26 +18,26 @@ namespace Maestro.ScenarioTests;
 [Category("PostDeployment")]
 internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
 {
-    private readonly IImmutableList<AssetData> source1Assets;
-    private readonly IImmutableList<AssetData> source2Assets;
-    private readonly IImmutableList<AssetData> source1AssetsUpdated;
-    private readonly List<DependencyDetail> expectedDependenciesSource1;
-    private readonly List<DependencyDetail> expectedDependenciesSource2;
-    private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
+    private readonly IImmutableList<AssetData> _source1Assets;
+    private readonly IImmutableList<AssetData> _source2Assets;
+    private readonly IImmutableList<AssetData> _source1AssetsUpdated;
+    private readonly List<DependencyDetail> _expectedDependenciesSource1;
+    private readonly List<DependencyDetail> _expectedDependenciesSource2;
+    private readonly List<DependencyDetail> _expectedDependenciesSource1Updated;
 
     public ScenarioTests_GitHubFlow()
     {
         using TestParameters parameters = TestParameters.GetAsync().Result;
         SetTestParameters(parameters);
 
-        source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
-        source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
+        _source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        _source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
+        _source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
 
         var sourceRepoUri = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var source2RepoUri = GetGitHubRepoUrl(TestRepository.TestRepo3Name);
 
-        expectedDependenciesSource1 =
+        _expectedDependenciesSource1 =
         [
             new DependencyDetail
             {
@@ -59,7 +59,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
             }
         ];
 
-        expectedDependenciesSource2 =
+        _expectedDependenciesSource2 =
         [
             new DependencyDetail
             {
@@ -81,7 +81,7 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
             }
         ];
 
-        expectedDependenciesSource1Updated =
+        _expectedDependenciesSource1Updated =
         [
             new DependencyDetail
             {
@@ -111,13 +111,13 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
 
         using TestParameters parameters = await TestParameters.GetAsync();
         var testLogic = new EndToEndFlowLogic(parameters);
-        var expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
+        var expectedDependencies = _expectedDependenciesSource1.Concat(_expectedDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
             $"GitHub_BatchedTestBranch_{Environment.MachineName}",
             $"GitHub Batched Channel {Environment.MachineName}",
-            source1Assets,
-            source2Assets,
+            _source1Assets,
+            _source2Assets,
             expectedDependencies,
             false).ConfigureAwait(false);
     }
@@ -133,10 +133,10 @@ internal class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
         await testLogic.NonBatchedUpdatingGitHubFlowTestBase(
             $"GitHub_NonBatchedTestBranch_{Environment.MachineName}",
             $"GitHub Non-Batched Channel {Environment.MachineName}",
-            source1Assets,
-            source1AssetsUpdated,
-            expectedDependenciesSource1,
-            expectedDependenciesSource1Updated).ConfigureAwait(false);
+            _source1Assets,
+            _source1AssetsUpdated,
+            _expectedDependenciesSource1,
+            _expectedDependenciesSource1Updated).ConfigureAwait(false);
     }
 
     [Test]

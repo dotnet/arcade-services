@@ -50,7 +50,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         string testChannelName = GetTestChannelName();
         var targetBranch = GetTargetBranch();
 
-        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
+        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, ["--all-checks-passed"]);
     }
 
     [Test]
@@ -58,7 +58,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         string testChannelName = GetTestChannelName();
         var targetBranch = GetTargetBranch();
 
-        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, new List<string> { "--validate-coherency" });
+        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, ["--validate-coherency"]);
     }
 
     [Test]
@@ -67,7 +67,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         string testChannelName = GetTestChannelName();
         var targetBranch = GetTargetBranch();
 
-        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
+        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, ["--standard-automerge"]);
     }
 
     [Test]
@@ -76,7 +76,7 @@ internal class ScenarioTests_MergePolicies : MaestroScenarioTestBase
         string testChannelName = GetTestChannelName();
         var targetBranch = GetTargetBranch();
 
-        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
+        await AutoMergeFlowTestBase(TargetRepo, SourceRepo, targetBranch, testChannelName, ["--no-requested-changes"]);
     }
 
     public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, List<string> args)

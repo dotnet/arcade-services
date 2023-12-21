@@ -22,6 +22,7 @@ using NuGet.Configuration;
 using NUnit.Framework;
 using Octokit;
 
+#nullable enable
 namespace Maestro.ScenarioTests;
 
 internal class MaestroScenarioTestBase
@@ -36,6 +37,7 @@ internal class MaestroScenarioTestBase
 
     public MaestroScenarioTestBase()
     {
+        _parameters = null!;
     }
 
     public void SetTestParameters(TestParameters parameters)
@@ -113,11 +115,10 @@ internal class MaestroScenarioTestBase
 
     private async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
     {
-        string searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
-        string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+        var searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
         IEnumerable<int> prs = new List<int>();
 
-        int attempts = 10;
+        var attempts = 10;
         while (attempts-- > 0)
         {
             try
@@ -127,7 +128,7 @@ internal class MaestroScenarioTestBase
             catch (HttpRequestException ex)
             {
                 // Returning a 404 is expected before the PR has been created
-                NUnitLogger logger = new NUnitLogger();
+                var logger = new NUnitLogger();
                 logger.LogInformation($"Searching for AzDo pull requests returned an error: {ex.Message}");
             }
 
@@ -149,7 +150,7 @@ internal class MaestroScenarioTestBase
 
     private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
     {
-        (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+        (var accountName, var projectName, var repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
         var query = new StringBuilder();
 
         Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus prStatus = Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus.Active;
@@ -164,26 +165,26 @@ internal class MaestroScenarioTestBase
             new NUnitLogger()
             );
 
-        IEnumerable<int> prs = content.Value<JArray>("value").Select(r => r.Value<int>("pullRequestId"));
+        IEnumerable<int> prs = content.Value<JArray>("value")!.Select(r => r.Value<int>("pullRequestId"));
 
         return prs;
     }
 
-    private async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
+    private async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string? expectedPRTitle = null)
     {
-        string repoUri = GetAzDoRepoUrl(targetRepoName);
-        (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
-        string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+        var repoUri = GetAzDoRepoUrl(targetRepoName);
+        (var accountName, var projectName, var repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+        var apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
 
         if (string.IsNullOrEmpty(expectedPRTitle))
         {
             throw new Exception($"{nameof(expectedPRTitle)} must be defined for AzDo PRs that require an update");
         }
 
-        for (int tries = 10; tries > 0; tries--)
+        for (var tries = 10; tries > 0; tries--)
         {
             Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
-            string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
+            var trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
             if (!isUpdated || trimmedTitle == expectedPRTitle)
             {
@@ -222,14 +223,14 @@ internal class MaestroScenarioTestBase
             .Select(name => $"{_parameters.GitHubTestOrg}/{name}")
             .OrderBy(s => s);
 
-        string expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
     }
 
     protected async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
         List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
     {
-        string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
         await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
     }
 
@@ -245,7 +246,7 @@ internal class MaestroScenarioTestBase
 
         using (ChangeDirectory(repoDirectory))
         {
-            await ValidatePullRequestDependencies(targetRepoName, pullRequest.Head.Ref, expectedDependencies);
+            await ValidatePullRequestDependencies(pullRequest.Head.Ref, expectedDependencies);
 
             if (isCompleted)
             {
@@ -268,28 +269,42 @@ internal class MaestroScenarioTestBase
             .Select(n => $"{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{n}")
             .OrderBy(s => s);
 
-        string expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {string.Join(", ", repoNames)}";
         await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
     }
 
-    protected async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false,
-        string[] expectedFeeds = null, string[] notExpectedFeeds = null)
+    protected async Task CheckNonBatchedAzDoPullRequest(
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted = false,
+        bool isUpdated = false,
+        string[]? expectedFeeds = null,
+        string[]? notExpectedFeeds = null)
     {
-        string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+        var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
+        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
-    protected async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated,
-        string[] expectedFeeds, string[] notExpectedFeeds)
+    private async Task CheckAzDoPullRequest(
+        string expectedPRTitle,
+        string targetRepoName,
+        string targetBranch,
+        List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies,
+        string repoDirectory,
+        bool isCompleted,
+        bool isUpdated,
+        string[]? expectedFeeds,
+        string[]? notExpectedFeeds)
     {
-        string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
+        var targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
         TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-        int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
+        var pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
         await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
-        string trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
+        var trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
         trimmedTitle.Should().Be(expectedPRTitle);
 
         Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
@@ -298,14 +313,14 @@ internal class MaestroScenarioTestBase
 
         using (ChangeDirectory(repoDirectory))
         {
-            await ValidatePullRequestDependencies(targetRepoName, pullRequest.Value.HeadBranch, expectedDependencies);
+            await ValidatePullRequestDependencies(pullRequest.Value.HeadBranch, expectedDependencies);
 
             if (expectedFeeds != null && notExpectedFeeds != null)
             {
                 TestContext.WriteLine("Validating Nuget feeds in PR branch");
 
                 ISettings settings = Settings.LoadSpecificSettings(@"./", "nuget.config");
-                PackageSourceProvider packageSourceProvider = new PackageSourceProvider(settings);
+                var packageSourceProvider = new PackageSourceProvider(settings);
                 IEnumerable<string> sources = packageSourceProvider.LoadPackageSources().Select(p => p.Source);
 
                 sources.Should().Contain(expectedFeeds);
@@ -314,16 +329,16 @@ internal class MaestroScenarioTestBase
         }
     }
 
-    protected async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
+    private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
     {
-        int triesRemaining = tries;
+        var triesRemaining = tries;
         while (triesRemaining-- > 0)
         {
             await CheckoutRemoteBranchAsync(pullRequestBaseBranch);
             await RunGitAsync("pull");
 
-            string actualDependencies = await RunDarcAsync("get-dependencies");
-            string expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
+            var actualDependencies = await RunDarcAsync("get-dependencies");
+            var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
             Assert.AreEqual(expectedDependenciesString, actualDependencies, $"Expected: {expectedDependenciesString} \r\n Actual: {actualDependencies}");
         }
@@ -384,24 +399,26 @@ internal class MaestroScenarioTestBase
 
     protected Task<string> RunDarcAsyncWithInput(string input, params string[] args)
     {
-        return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
-        {
+        return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input,
+        [
+            .. args,
             "-p", _parameters.MaestroToken,
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
             "--azdev-pat", _parameters.AzDoToken,
-        }).ToArray());
+        ]);
     }
 
     protected Task<string> RunDarcAsync(params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
-        {
+        return TestHelpers.RunExecutableAsync(_parameters.DarcExePath,
+        [
+            .. args,
             "-p", _parameters.MaestroToken,
             "--bar-uri", _parameters.MaestroBaseUri,
             "--github-pat", _parameters.GitHubToken,
             "--azdev-pat", _parameters.AzDoToken,
-        }).ToArray());
+        ]);
     }
 
     protected Task<string> RunGitAsync(params string[] args)
@@ -411,7 +428,7 @@ internal class MaestroScenarioTestBase
 
     protected async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
     {
-        string message = "";
+        var message = "";
 
         try
         {
@@ -440,7 +457,7 @@ internal class MaestroScenarioTestBase
             TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
             try
             {
-                string doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName);
+                var doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName);
             }
             catch (MaestroTestException)
             {
@@ -453,7 +470,7 @@ internal class MaestroScenarioTestBase
     {
         using (ChangeDirectory(repoPath))
         {
-            await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1" });
+            await RunDarcAsync(["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
         }
     }
     protected async Task<string> GetTestChannelsAsync()
@@ -488,28 +505,27 @@ internal class MaestroScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg = "dotnet",
-        List<string> additionalOptions = null,
+        List<string>? additionalOptions = null,
         bool sourceIsAzDo = false,
         bool targetIsAzDo = false,
         bool trigger = false)
     {
-        string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
-        string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetGitHubRepoUrl(targetRepo);
+        var sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
+        var targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetGitHubRepoUrl(targetRepo);
 
-        string[] command = {"add-subscription", "-q",
+        string[] command =
+         [
+            "add-subscription", "-q",
             "--channel", sourceChannelName,
             "--source-repo", sourceUrl,
             "--target-repo", targetUrl,
             "--target-branch", targetBranch,
             "--update-frequency", updateFrequency,
-            trigger? "--trigger" : "--no-trigger"};
+            trigger? "--trigger" : "--no-trigger",
+            .. additionalOptions ?? []
+        ];
 
-        if (additionalOptions != null)
-        {
-            command = command.Concat(additionalOptions).ToArray();
-        }
-
-        string output = await RunDarcAsync(command);
+        var output = await RunDarcAsync(command);
 
         Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
         if (!match.Success)
@@ -517,7 +533,7 @@ internal class MaestroScenarioTestBase
             throw new MaestroTestException("Unable to create subscription.");
         }
 
-        string subscriptionId = match.Groups[1].Value;
+        var subscriptionId = match.Groups[1].Value;
         return AsyncDisposableValue.Create(subscriptionId, async () =>
         {
             TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
@@ -534,12 +550,12 @@ internal class MaestroScenarioTestBase
 
     protected async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
     {
-        string output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger");
+        var output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger");
 
         Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
         if (match.Success)
         {
-            string subscriptionId = match.Groups[1].Value;
+            var subscriptionId = match.Groups[1].Value;
             return AsyncDisposableValue.Create(subscriptionId, async () =>
             {
                 TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
@@ -567,24 +583,14 @@ internal class MaestroScenarioTestBase
         return await RunDarcAsync("get-subscriptions", "--channel", channelName);
     }
 
-    protected async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
+    protected async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
     {
-        string subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-        StringAssert.AreEqualIgnoringCase(expectedSubscriptionInfo, subscriptionInfo);
+        await RunDarcAsync("subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
     }
 
-    protected async Task SetSubscriptionStatus(bool enableSub, string subscriptionId = null, string channelName = null)
+    protected async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
     {
-        string actionToTake = enableSub ? "--enable" : "-d";
-
-        if (channelName != null)
-        {
-            await RunDarcAsync("subscription-status", actionToTake, "--channel", channelName, "--quiet");
-        }
-        else
-        {
-            await RunDarcAsync("subscription-status", "--id", subscriptionId, actionToTake, "--quiet");
-        }
+        await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
     }
 
     protected async Task<string> DeleteSubscriptionsForChannel(string channelName)
@@ -627,13 +633,13 @@ internal class MaestroScenarioTestBase
 
     protected async Task<string> GetDarcBuildAsync(int buildId)
     {
-        string buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
+        var buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
         return buildString;
     }
 
     protected async Task<string> UpdateBuildAsync(int buildId, string updateParams)
     {
-        string buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
+        var buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
         return buildString;
     }
 
@@ -643,14 +649,14 @@ internal class MaestroScenarioTestBase
         {
             foreach (AssetData asset in dependencies)
             {
-                List<string> parameters = new List<string>() { "add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri };
+                List<string> parameters = ["add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri];
 
-                if (!String.IsNullOrEmpty(coherentParent))
+                if (!string.IsNullOrEmpty(coherentParent))
                 {
                     parameters.Add("--coherent-parent");
                     parameters.Add(coherentParent);
                 }
-                string[] parameterArr = parameters.ToArray();
+                var parameterArr = parameters.ToArray();
 
                 await RunDarcAsync(parameterArr);
             }
@@ -659,16 +665,16 @@ internal class MaestroScenarioTestBase
 
     protected async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
     {
-        string[] args = new[] { "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir };
+        string[] args = [ "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir ];
 
         if (includeReleased)
         {
-            args = args.Append("--include-released").ToArray();
+            args = [.. args, "--include-released"];
         }
 
         if (!string.IsNullOrEmpty(extraAssetsRegex))
         {
-            args = args.Append($"--always-download-asset-filters").Append(extraAssetsRegex).ToArray();
+            args = [.. args, "--always-download-asset-filters", extraAssetsRegex];
         }
 
         return await RunDarcAsync(args);
@@ -696,7 +702,7 @@ internal class MaestroScenarioTestBase
 
     protected static IDisposable ChangeDirectory(string directory)
     {
-        string old = Directory.GetCurrentDirectory();
+        var old = Directory.GetCurrentDirectory();
         TestContext.WriteLine($"Switching to directory {directory}");
         Directory.SetCurrentDirectory(directory);
         return Disposable.Create(() =>
@@ -714,9 +720,9 @@ internal class MaestroScenarioTestBase
     protected async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
     {
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
-        string directory = shareable.Peek()!.Directory;
+        var directory = shareable.Peek()!.Directory;
 
-        string fetchUrl = GetRepoFetchUrl(org, repository);
+        var fetchUrl = GetRepoFetchUrl(org, repository);
         await RunGitAsync("clone", "--quiet", fetchUrl, directory);
 
         using (ChangeDirectory(directory))
@@ -739,10 +745,10 @@ internal class MaestroScenarioTestBase
     protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName, string targetBranch)
     {
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
-        string directory = shareable.Peek()!.Directory;
+        var directory = shareable.Peek()!.Directory;
 
-        string authUrl = GetAzDoRepoAuthUrl(repoName);
-        await RunGitAsync("clone", "--quiet", authUrl, directory);
+        var authUrl = GetAzDoRepoAuthUrl(repoName);
+        await RunGitAsync("clone", "-b", targetBranch, "--quiet", authUrl, directory);
 
         using (ChangeDirectory(directory))
         {
@@ -757,13 +763,13 @@ internal class MaestroScenarioTestBase
 
     protected async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
     {
-        string sourceRepoUri = GetRepoUrl("dotnet", repoName);
+        var sourceRepoUri = GetRepoUrl("dotnet", repoName);
 
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
-        string directory = shareable.Peek().Directory;
+        var directory = shareable.Peek().Directory;
 
-        string reposFolder = Path.Join(directory, "cloned-repos");
-        string gitDirFolder = Path.Join(directory, "git-dirs");
+        var reposFolder = Path.Join(directory, "cloned-repos");
+        var gitDirFolder = Path.Join(directory, "git-dirs");
 
         // Clone repo
         await RunDarcAsync("clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(), includeToolset ? "--include-toolset" : "");
@@ -807,9 +813,9 @@ internal class MaestroScenarioTestBase
         await RunGitAsync("push", "origin", "--delete", branchName);
     }
 
-    protected IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
+    protected static IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
     {
-        string location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json";
+        var location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json";
         LocationType locationType = LocationType.NugetFeed;
 
         AssetData asset1 = GetAssetDataWithLocations(asset1Name, asset1Version, location, locationType);
@@ -824,23 +830,23 @@ internal class MaestroScenarioTestBase
         string assetVersion,
         string assetLocation1,
         LocationType assetLocationType1,
-        string assetLocation2 = null,
+        string? assetLocation2 = null,
         LocationType assetLocationType2 = LocationType.None)
     {
         var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
 
-        AssetLocationData location1 = new AssetLocationData(assetLocationType1)
+        var location1 = new AssetLocationData(assetLocationType1)
         { Location = assetLocation1 };
         locationsListBuilder.Add(location1);
 
         if (assetLocation2 != null && assetLocationType2 != LocationType.None)
         {
-            AssetLocationData location2 = new AssetLocationData(assetLocationType2)
+            var location2 = new AssetLocationData(assetLocationType2)
             { Location = assetLocation2 };
             locationsListBuilder.Add(location2);
         }
 
-        AssetData asset = new AssetData(false)
+        var asset = new AssetData(false)
         {
             Name = assetName,
             Version = assetVersion,
@@ -852,7 +858,7 @@ internal class MaestroScenarioTestBase
 
     protected static IImmutableList<AssetData> GetSingleAssetData(string assetName, string assetVersion)
     {
-        AssetData asset = new AssetData(false)
+        var asset = new AssetData(false)
         {
             Name = assetName,
             Version = assetVersion,
@@ -863,14 +869,9 @@ internal class MaestroScenarioTestBase
         return ImmutableList.Create(asset);
     }
 
-    protected async Task SetRepositoryPolicies(string repoUri, string branchName, string[] policyParams = null)
+    protected async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
     {
-        string[] commandParams = { "set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName };
-
-        if (policyParams != null)
-        {
-            commandParams = commandParams.Concat(policyParams).ToArray();
-        }
+        string[] commandParams = ["set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName, .. policyParams ?? []];
 
         await RunDarcAsync(commandParams);
     }
@@ -913,7 +914,7 @@ internal class MaestroScenarioTestBase
         await Task.Delay(TimeSpan.FromMinutes(5));
         TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
         CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
-        int cnt = 0;
+        var cnt = 0;
         foreach (var checkRun in existingCheckRuns.CheckRuns)
         {
             if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))

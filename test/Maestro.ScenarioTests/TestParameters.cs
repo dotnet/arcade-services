@@ -15,126 +15,125 @@ using Microsoft.Extensions.Configuration;
 using Octokit;
 using Octokit.Internal;
 
-namespace Maestro.ScenarioTests
+namespace Maestro.ScenarioTests;
+
+public class TestParameters : IDisposable
 {
-    public class TestParameters : IDisposable
+    internal readonly TemporaryDirectory _dir;
+
+    private static readonly string[] maestroBaseUris;
+    private static readonly string maestroToken;
+    private static readonly string githubToken;
+    private static readonly string darcPackageSource;
+    private static readonly string azdoToken;
+
+    static TestParameters()
     {
-        internal readonly TemporaryDirectory _dir;
+        IConfiguration userSecrets = new ConfigurationBuilder()
+            .AddUserSecrets<TestParameters>()
+            .Build();
 
-        private static readonly string[] maestroBaseUris;
-        private static readonly string maestroToken;
-        private static readonly string githubToken;
-        private static readonly string darcPackageSource;
-        private static readonly string azdoToken;
+        maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
+                ?? userSecrets["MAESTRO_BASEURIS"]
+                ?? "https://maestro.int-dot.net")
+                .Split(',');
+        maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
+        githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
+        darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+        azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
+    }
 
-        static TestParameters()
+    /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
+    public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
+    {
+        var testDir = TemporaryDirectory.Get();
+        var testDirSharedWrapper = Shareable.Create(testDir);
+
+        var maestroBaseUri = useNonPrimaryEndpoint
+            ? maestroBaseUris.Last()
+            : maestroBaseUris.First();
+
+        IMaestroApi maestroApi = maestroToken == null
+            ? ApiFactory.GetAnonymous(maestroBaseUri)
+            : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
+
+        string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
+        string dotnetExe = await TestHelpers.Which("dotnet");
+
+        var toolInstallArgs = new List<string>
         {
-            IConfiguration userSecrets = new ConfigurationBuilder()
-                .AddUserSecrets<TestParameters>()
-                .Build();
-
-            maestroBaseUris = (Environment.GetEnvironmentVariable("MAESTRO_BASEURIS")
-                    ?? userSecrets["MAESTRO_BASEURIS"]
-                    ?? "https://maestro.int-dot.net")
-                    .Split(',');
-            maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
-            githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
-            darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
-            azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
-        }
-
-        /// <param name="useNonPrimaryEndpoint">If set to true, the test will attempt to use the non primary endpoint, if provided</param>
-        public static async Task<TestParameters> GetAsync(bool useNonPrimaryEndpoint = false)
+            "tool", "install",
+            "--tool-path", testDirSharedWrapper.Peek()!.Directory,
+            "--version", darcVersion,
+            "Microsoft.DotNet.Darc",
+        };
+        if (!string.IsNullOrEmpty(darcPackageSource))
         {
-            var testDir = TemporaryDirectory.Get();
-            var testDirSharedWrapper = Shareable.Create(testDir);
-
-            var maestroBaseUri = useNonPrimaryEndpoint
-                ? maestroBaseUris.Last()
-                : maestroBaseUris.First();
-
-            IMaestroApi maestroApi = maestroToken == null
-                ? ApiFactory.GetAnonymous(maestroBaseUri)
-                : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
-
-            string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
-            string dotnetExe = await TestHelpers.Which("dotnet");
-
-            var toolInstallArgs = new List<string>
-            {
-                "tool", "install",
-                "--tool-path", testDirSharedWrapper.Peek()!.Directory,
-                "--version", darcVersion,
-                "Microsoft.DotNet.Darc",
-            };
-            if (!string.IsNullOrEmpty(darcPackageSource))
-            {
-                toolInstallArgs.Add("--add-source");
-                toolInstallArgs.Add(darcPackageSource);
-            }
-            await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
-
-            string darcExe = Path.Join(testDirSharedWrapper.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
-
-            Assembly assembly = typeof(TestParameters).Assembly;
-            var githubApi =
-                new GitHubClient(
-                    new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
-                    new InMemoryCredentialStore(new Credentials(githubToken)));
-            var azDoClient =
-                new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
-
-            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken);
+            toolInstallArgs.Add("--add-source");
+            toolInstallArgs.Add(darcPackageSource);
         }
+        await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
 
-        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,
-            IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken)
-        {
-            _dir = dir;
-            DarcExePath = darcExePath;
-            GitExePath = gitExePath;
-            MaestroBaseUri = maestroBaseUri;
-            MaestroToken = maestroToken;
-            GitHubToken = gitHubToken;
-            MaestroApi = maestroApi;
-            GitHubApi = gitHubApi;
-            AzDoClient = azdoClient;
-            AzDoToken = azdoToken;
-        }
+        string darcExe = Path.Join(testDirSharedWrapper.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 
-        public string DarcExePath { get; }
+        Assembly assembly = typeof(TestParameters).Assembly;
+        var githubApi =
+            new GitHubClient(
+                new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+                new InMemoryCredentialStore(new Credentials(githubToken)));
+        var azDoClient =
+            new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, new NUnitLogger(), testDirSharedWrapper.TryTake()!.Directory);
 
-        public string GitExePath { get; }
+        return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir, azdoToken);
+    }
 
-        public string GitHubUser { get; } = "dotnet-maestro-bot";
+    private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,
+        IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken)
+    {
+        _dir = dir;
+        DarcExePath = darcExePath;
+        GitExePath = gitExePath;
+        MaestroBaseUri = maestroBaseUri;
+        MaestroToken = maestroToken;
+        GitHubToken = gitHubToken;
+        MaestroApi = maestroApi;
+        GitHubApi = gitHubApi;
+        AzDoClient = azdoClient;
+        AzDoToken = azdoToken;
+    }
 
-        public string GitHubTestOrg { get; } = "maestro-auth-test";
+    public string DarcExePath { get; }
 
-        public string MaestroBaseUri { get; }
+    public string GitExePath { get; }
 
-        public string MaestroToken { get; }
+    public string GitHubUser { get; } = "dotnet-maestro-bot";
 
-        public string GitHubToken { get; }
+    public string GitHubTestOrg { get; } = "maestro-auth-test";
 
-        public IMaestroApi MaestroApi { get; }
+    public string MaestroBaseUri { get; }
 
-        public GitHubClient GitHubApi { get; }
+    public string MaestroToken { get; }
 
-        public Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient { get; }
+    public string GitHubToken { get; }
 
-        public int AzureDevOpsBuildDefinitionId { get; } = 6;
+    public IMaestroApi MaestroApi { get; }
 
-        public int AzureDevOpsBuildId { get; } = 144618;
+    public GitHubClient GitHubApi { get; }
 
-        public string AzureDevOpsAccount { get; } = "dnceng";
+    public Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient { get; }
 
-        public string AzureDevOpsProject { get; } = "internal";
+    public int AzureDevOpsBuildDefinitionId { get; } = 6;
 
-        public string AzDoToken { get; }
+    public int AzureDevOpsBuildId { get; } = 144618;
 
-        public void Dispose()
-        {
-            _dir?.Dispose();
-        }
+    public string AzureDevOpsAccount { get; } = "dnceng";
+
+    public string AzureDevOpsProject { get; } = "internal";
+
+    public string AzDoToken { get; }
+
+    public void Dispose()
+    {
+        _dir?.Dispose();
     }
 }

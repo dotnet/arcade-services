@@ -45,12 +45,12 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
 
         TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--batchable"],
             sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest);
 
         TestContext.WriteLine($"Adding a subscription from {source2RepoName} to {targetRepoName}");
         await using AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--batchable"],
             sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest);
 
         TestContext.WriteLine("Set up build1 for intake into target repository");
@@ -176,9 +176,9 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. sourceAssets], sourceRepoUri);
 
-                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, coherentParent);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. childSourceAssets], childSourceRepoUri, coherentParent);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");
@@ -218,7 +218,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             targetBranch,
             UpdateFrequency.None.ToString(),
             "maestro-auth-test",
-            additionalOptions: new List<string> { "--validate-coherency" },
+            additionalOptions: ["--validate-coherency"],
             trigger: true,
             sourceIsAzDo: false,
             targetIsAzDo: false);
@@ -257,7 +257,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
                     await RunGitAsync("checkout", targetBranch);
                     await RunGitAsync("pull", "origin", targetBranch);
 
-                    await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, coherentParent);
+                    await AddDependenciesToLocalRepo(reposFolder.Directory, [.. childSourceAssets], childSourceRepoUri, coherentParent);
                     await GitCommitAsync("Add dependencies 2");
 
                     await using (await PushGitBranchAsync("origin", targetBranch))
@@ -475,7 +475,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
                 targetBranch,
                 UpdateFrequency.None.ToString(),
                 "maestro-auth-test",
-                additionalOptions: new List<string> { "--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla" },
+                additionalOptions: ["--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla"],
                 trigger: true,
                 sourceIsAzDo: isAzDoTest,
                 targetIsAzDo: isAzDoTest);

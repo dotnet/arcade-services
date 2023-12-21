@@ -106,15 +106,15 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
 
                 // Disable the first two subscriptions, but not the third.
                 TestContext.WriteLine("Disable the subscriptions for test channel 1");
-                await SetSubscriptionStatus(false, channelName: channel1Name);
+                await SetSubscriptionStatusByChannel(false, channel1Name);
 
                 // Disable one by id (classic usage) to make sure that works
                 TestContext.WriteLine("Disable the third subscription by id");
-                await SetSubscriptionStatus(false, subscriptionId: subscription3Id.Value);
+                await SetSubscriptionStatusById(false, subscription3Id.Value);
 
                 // Re-enable
                 TestContext.WriteLine("Enable the third subscription by id");
-                await SetSubscriptionStatus(true, subscriptionId: subscription3Id.Value);
+                await SetSubscriptionStatusById(true, subscription3Id.Value);
                 StringAssert.Contains("Enabled: True", await GetSubscriptionInfo(subscription3Id.Value), $"Expected subscription {subscription3Id} to be enabled");
 
                 // Mass delete the subscriptions. Delete the first two but not the third.
@@ -256,5 +256,11 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                 TestContext.WriteLine("End of test case. Starting clean up.");
             }
         }
+    }
+
+    private async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
+    {
+        var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
+        StringAssert.AreEqualIgnoringCase(expectedSubscriptionInfo, subscriptionInfo);
     }
 }

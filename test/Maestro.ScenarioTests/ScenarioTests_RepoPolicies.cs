@@ -43,13 +43,13 @@ internal class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
         StringAssert.AreEqualIgnoringCase(expectedEmpty, emptyPolicies, "Repository merge policy is not empty");
 
         TestContext.WriteLine("Setting repository merge policy to standard");
-        await SetRepositoryPolicies(repoUrl, branchName, new string[] { "--standard-automerge" });
+        await SetRepositoryPolicies(repoUrl, branchName, ["--standard-automerge"]);
         string standardPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         string expectedStandard = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  Standard\r\n";
         StringAssert.AreEqualIgnoringCase(expectedStandard, standardPolicies, "Repository policy not set to standard");
 
         TestContext.WriteLine("Setting repository merge policy to all checks successful");
-        await SetRepositoryPolicies(repoUrl, branchName, new string[] { "--all-checks-passed", "--ignore-checks", "A,B" });
+        await SetRepositoryPolicies(repoUrl, branchName, ["--all-checks-passed", "--ignore-checks", "A,B"]);
         string allChecksPolicies = await GetRepositoryPolicies(repoUrl, branchName);
         string expectedAllChecksPolicies = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
             "                   [\r\n" +
