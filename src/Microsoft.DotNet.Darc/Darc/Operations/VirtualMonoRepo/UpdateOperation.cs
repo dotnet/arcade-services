@@ -33,7 +33,7 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
             targetVersion: null,
             _options.Recursive,
             additionalRemotes,
-            _options.ReadMeTemplate,
+            _options.ComponentTemplate,
             _options.TpnTemplate,
             _options.GenerateCodeowners,
             _options.DiscardPatches,
