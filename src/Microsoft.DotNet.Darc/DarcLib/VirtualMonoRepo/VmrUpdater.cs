@@ -338,6 +338,19 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     discardPatches,
                     cancellationToken);
             }
+            catch (EmptySyncException e) when (e.Message.Contains("is already at"))
+            {
+                if (update.Mapping == rootUpdate.Mapping)
+                {
+                    _logger.LogWarning(e.Message);
+                }
+                else
+                {
+                    _logger.LogInformation(e.Message);
+                }
+
+                continue;
+            }
             catch (EmptySyncException e)
             {
                 _logger.LogWarning(e.Message);
