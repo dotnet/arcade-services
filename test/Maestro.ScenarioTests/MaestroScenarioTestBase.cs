@@ -748,7 +748,7 @@ internal class MaestroScenarioTestBase
         var directory = shareable.Peek()!.Directory;
 
         var authUrl = GetAzDoRepoAuthUrl(repoName);
-        await RunGitAsync("clone", "-b", targetBranch, "--quiet", authUrl, directory);
+        await RunGitAsync("clone", "--quiet", authUrl, directory);
 
         using (ChangeDirectory(directory))
         {
