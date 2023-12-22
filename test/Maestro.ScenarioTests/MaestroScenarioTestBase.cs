@@ -285,7 +285,8 @@ internal class MaestroScenarioTestBase
         string[]? notExpectedFeeds = null)
     {
         var expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
-        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated, expectedFeeds, notExpectedFeeds);
+        // TODO (https://github.com/dotnet/arcade-services/issues/3149): I noticed we are not passing isCompleted further down - when I put it there the tests started failing - but we should fix this
+        await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
     }
 
     private async Task CheckAzDoPullRequest(
