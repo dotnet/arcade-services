@@ -6,7 +6,7 @@ stages:
       - job: Publish
         displayName: Publish Conductor
         pool:
-          vmImage: windows-latest
+          vmImage: ubuntu-latest
 
         steps:
           - checkout: self
