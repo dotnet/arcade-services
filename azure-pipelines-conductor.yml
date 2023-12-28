@@ -1,0 +1,19 @@
+stages:
+  - stage: PublishConductor
+    displayName: Publish Conductor
+    dependsOn: []
+    jobs:
+      - job: Publish
+        displayName: Publish Conductor
+        pool:
+          vmImage: windows-latest
+
+        steps:
+          - checkout: self
+
+          - task: Docker@2
+            displayName: Build Docker Image
+            inputs:
+              command: build
+              Dockerfile: '**/Dockerfile'
+              tags: $(Build.SourceVersion)
