@@ -11,6 +11,9 @@ stages:
         steps:
           - checkout: self
 
+          - task: powershell
+            script: dir
+
           - task: Docker@2
             displayName: Build Docker Image
             inputs:
