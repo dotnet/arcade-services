@@ -3,4 +3,6 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
+builder.AddProject<Projects.Conductor_Api>("conductor.api");
+
 builder.Build().Run();

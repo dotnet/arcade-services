@@ -12,4 +12,8 @@
     <PackageReference Include="Aspire.Hosting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Conductor.Api\Conductor.Api.csproj" />
+  </ItemGroup>
+
 </Project>
