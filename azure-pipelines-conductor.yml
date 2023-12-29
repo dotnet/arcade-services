@@ -11,12 +11,4 @@ stages:
         steps:
           - checkout: self
 
-          - powershell: dir
-            displayName: List Files
-
-          - task: Docker@2
-            displayName: Build Docker Image
-            inputs:
-              command: build
-              Dockerfile: '**/Dockerfile'
-              tags: $(Build.SourceVersion)
+          - powershell: docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile
