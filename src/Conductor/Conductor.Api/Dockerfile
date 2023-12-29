@@ -9,15 +9,20 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Conductor.Api.csproj", "/src/Conductor/Conductor.Api/"]
-RUN dotnet restore "./Conductor/Conductor.Api/Conductor.Api.csproj"
-COPY . .
-WORKDIR "/src/src/Conductor/Conductor.Api"
-RUN dotnet build "./Conductor.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
+COPY ["Directory.Packages.props", "."]
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Build.targets", "."]
+COPY ["NuGet.config", "."]
+COPY ["global.json", "."]
+COPY ["/src/Conductor/Conductor/Conductor.ServiceDefaults/Conductor.ServiceDefaults.csproj", "/src/Conductor/Conductor/Conductor.ServiceDefaults/"]
+COPY ["src/Conductor/Conductor.Api/Conductor.Api.csproj", "/src/Conductor/Conductor.Api/"]
+RUN dotnet restore "/src/Conductor/Conductor.Api/Conductor.Api.csproj"
+COPY ["src/Conductor", "/src"]
+RUN dotnet build "/src/Conductor.Api/Conductor.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Conductor.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "/src/Conductor.Api/Conductor.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
