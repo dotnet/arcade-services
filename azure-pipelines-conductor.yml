@@ -8,7 +8,12 @@ stages:
         pool:
           vmImage: ubuntu-latest
 
+        variables:
+          - group: dkurepa-test
+
         steps:
           - checkout: self
 
-          - powershell: docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile
+          - powershell: |
+              docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile
+              echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin "dkurepaacr.azurecr.io"
