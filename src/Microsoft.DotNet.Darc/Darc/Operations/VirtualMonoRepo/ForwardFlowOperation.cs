@@ -30,20 +30,20 @@ internal class ForwardFlowOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        targetDirectory ??= Path.Combine(
-            _options.RepositoryDirectory ?? throw new ArgumentException($"No target directory specified for repository {repoName}"),
-            repoName);
+        ArgumentNullException.ThrowIfNull(targetDirectory);
 
-        if (!Directory.Exists(targetDirectory))
+        var targetDir = new NativePath(targetDirectory) / repoName;
+
+        if (!Directory.Exists(targetDir))
         {
-            throw new FileNotFoundException($"Could not find directory {targetDirectory}");
+            throw new FileNotFoundException($"Could not find directory {targetDir}");
         }
 
         var forwardFlower = Provider.GetRequiredService<IVmrForwardFlower>();
 
         await forwardFlower.FlowForwardAsync(
             repoName,
-            new NativePath(targetDirectory),
+            targetDir,
             shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
             _options.DiscardPatches,
             cancellationToken: cancellationToken);
