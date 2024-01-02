@@ -218,8 +218,7 @@ internal abstract class VmrCodeflower
     private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
     {
         // Last backflow SHA comes from Version.Details.xml in the repo
-        var content = await _fileSystem.ReadAllTextAsync(repoPath / VersionFiles.VersionDetailsXml);
-        SourceDependency? source = _versionDetailsParser.ParseVersionDetailsXml(content).Source;
+        SourceDependency? source = _versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml).Source;
         if (source is null)
         {
             return null;
@@ -257,7 +256,10 @@ internal abstract class VmrCodeflower
     {
         var result = await _processManager.ExecuteGit(repoPath, ["merge-base", "--is-ancestor", parent, ancestor]);
 
-        if (!string.IsNullOrEmpty(result.StandardError))
+        // 0 - is ancestor
+        // 1 - is not ancestor
+        // other - invalid objects, other errors
+        if (result.ExitCode > 1)
         {
             result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
         }
