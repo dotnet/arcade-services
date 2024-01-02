@@ -27,7 +27,7 @@ public abstract class VmrManagerBase
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly IComponentListGenerator _componentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IDependencyFileManager _dependencyFileManager;
@@ -41,7 +41,7 @@ public abstract class VmrManagerBase
         IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
+        IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
         IDependencyFileManager dependencyFileManager,
@@ -55,7 +55,7 @@ public abstract class VmrManagerBase
         _patchHandler = vmrPatchHandler;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _readmeComponentListGenerator = readmeComponentListGenerator;
+        _componentListGenerator = componentListGenerator;
         _codeownersGenerator = codeownersGenerator;
         _localGitClient = localGitClient;
         _dependencyFileManager = dependencyFileManager;
@@ -70,7 +70,7 @@ public abstract class VmrManagerBase
         (string Name, string Email)? author,
         string commitMessage,
         bool reapplyVmrPatches,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
@@ -113,9 +113,9 @@ public abstract class VmrManagerBase
 
         _dependencyInfo.UpdateDependencyVersion(update);
 
-        if (readmeTemplatePath != null)
+        if (componentTemplatePath != null)
         {
-            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _componentListGenerator.UpdateComponentList(componentTemplatePath);
         }
 
         var filesToAdd = new List<string>
@@ -124,9 +124,9 @@ public abstract class VmrManagerBase
             _vmrInfo.SourceManifestPath
         };
 
-        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
+        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ComponentListPath))
         {
-            filesToAdd.Add(VmrInfo.ReadmeFileName);
+            filesToAdd.Add(VmrInfo.ComponentListPath);
         }
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);

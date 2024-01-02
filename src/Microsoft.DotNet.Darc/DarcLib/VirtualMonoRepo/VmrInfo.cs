@@ -69,7 +69,7 @@ public class VmrInfo : IVmrInfo
     public const string KeepAttribute = "vmr-preserve";
     public const string IgnoreAttribute = "vmr-ignore";
 
-    public const string ReadmeFileName = "README.md";
+    public const string ComponentListPath = "Components.md";
     public const string ThirdPartyNoticesFileName = "THIRD-PARTY-NOTICES.txt";
     public const string CodeownersFileName = "CODEOWNERS";
 

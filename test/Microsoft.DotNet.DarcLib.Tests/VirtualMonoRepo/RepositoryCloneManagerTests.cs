@@ -126,8 +126,8 @@ public class RepositoryCloneManagerTests
 
         void ResetCalls()
         {
-            _repoCloner.ResetCalls();
-            _localGitRepo.ResetCalls();
+            _repoCloner.Invocations.Clear();
+            _localGitRepo.Invocations.Clear();
         }
 
         // Clone for the first time

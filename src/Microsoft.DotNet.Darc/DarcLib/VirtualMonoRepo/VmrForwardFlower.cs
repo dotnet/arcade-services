@@ -105,7 +105,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
                 updateDependencies: false,
                 // TODO - all parameters below should come from BAR build / options
                 additionalRemotes: Array.Empty<AdditionalRemote>(),
-                readmeTemplatePath: null,
+                componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: true,
                 discardPatches,
@@ -144,7 +144,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
                 "1.2.3",
                 updateDependencies: false,
                 additionalRemotes: Array.Empty<AdditionalRemote>(),
-                readmeTemplatePath: null,
+                componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: false,
                 discardPatches,
@@ -209,7 +209,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             updateDependencies: false,
             // TODO - all parameters below should come from BAR build / options
             additionalRemotes: Array.Empty<AdditionalRemote>(),
-            readmeTemplatePath: null,
+            componentTemplatePath: null,
             tpnTemplatePath: null,
             generateCodeowners: false,
             discardPatches,

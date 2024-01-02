@@ -204,4 +204,32 @@ matches
         new object[] { regexTestString3, 1},
         new object [] { regexTestString4, 5},
     };
+
+    public void ShouldReturnCorrectChangesURIForGitHub()
+    {
+        var repoURI = "https://github.com/dotnet/arcade-services";
+        var fromSha = "c0b723ce00a751db0dcf93789abd58577bad155a";
+        var fromShortSha = fromSha.Substring(0, PullRequestDescriptionBuilder.GitHubComparisonShaLength);
+        var toSha = "7455af499329f6a5ed6ef3fc2a5c794ea86933d3";
+        var toShortSha = toSha.Substring(0, PullRequestDescriptionBuilder.GitHubComparisonShaLength);
+
+        var changesUrl = PullRequestDescriptionBuilder.GetChangesURI(repoURI, fromSha, toSha);
+
+        var expectedChangeUrl = $"{repoURI}/compare/{fromShortSha}...{toShortSha}";
+
+        changesUrl.Should().Be(expectedChangeUrl);
+    }
+
+    public void ShouldReturnCorrectChangesURIForAzDo()
+    {
+        var repoURI = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services";
+        var fromSha = "689a78855b241afedff9919529d812b1f08f6f76";
+        var toSha = "d0adee0f8bfebd04a6fb7ad7f9fb1d53b1ed8ac9";
+
+        var changesUrl = PullRequestDescriptionBuilder.GetChangesURI(repoURI, fromSha, toSha);
+
+        var expectedChangesUrl = $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
+
+        changesUrl.Should().Be(expectedChangesUrl);
+    }
 }

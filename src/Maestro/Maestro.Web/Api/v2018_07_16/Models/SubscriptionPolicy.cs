@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using JetBrains.Annotations;
 using Maestro.Data.Models;
 
 namespace Maestro.Web.Api.v2018_07_16.Models;
@@ -17,12 +16,9 @@ public class SubscriptionPolicy : IValidatableObject
     {
     }
 
-    public SubscriptionPolicy([NotNull] Data.Models.SubscriptionPolicy other)
+    public SubscriptionPolicy(Data.Models.SubscriptionPolicy other)
     {
-        if (other == null)
-        {
-            throw new ArgumentNullException(nameof(other));
-        }
+        ArgumentNullException.ThrowIfNull(other);
 
         Batchable = other.Batchable;
         UpdateFrequency = (UpdateFrequency) (int) other.UpdateFrequency;
