@@ -297,7 +297,12 @@ public class VmrPatchHandler : IVmrPatchHandler
         args.Add(patch.Path);
 
         var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
-        result.ThrowIfFailed($"Failed to apply the patch {_fileSystem.GetFileName(patch.Path)} for {patch.ApplicationPath ?? "/"}");
+
+        if (!result.Succeeded)
+        {
+            throw new PatchApplicationFailedException(patch, result);
+        }
+
         _logger.LogDebug("{output}", result.ToString());
 
         if (removePatchAfter)

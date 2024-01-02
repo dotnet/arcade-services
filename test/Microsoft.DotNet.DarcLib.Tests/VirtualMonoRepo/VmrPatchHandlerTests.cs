@@ -136,14 +136,14 @@ public class VmrPatchHandlerTests
     }
 
     [Test]
-    public async Task CreatePatchesTest()
+    public async Task ApplyPatchesTest()
     {
         // Setup
         var patch = new VmrIngestionPatch(_patchDir / "test-repo.patch", RepoVmrPath);
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
-        await _patchHandler.ApplyPatch(patch, _vmrInfo.Object.VmrPath, new CancellationToken());
+        await _patchHandler.ApplyPatch(patch, _vmrInfo.Object.VmrPath, true, new CancellationToken());
 
         // Verify
         VerifyGitCall(new List<string>
@@ -161,6 +161,8 @@ public class VmrPatchHandlerTests
                 It.Is<NativePath>(p => p == _vmrInfo.Object.VmrPath),
                 It.Is<UnixPath?>(p => p == patch.ApplicationPath)),
             Times.AtLeastOnce);
+
+        _fileSystem.Verify(x => x.DeleteFile(patch.Path), Times.Once);
     }
 
     [Test]
@@ -847,7 +849,7 @@ public class VmrPatchHandlerTests
         _fileSystem.SetReturnsDefault(Mock.Of<IFileInfo>(x => x.Exists == true && x.Length == 1243));
 
         // Act
-        await _patchHandler.ApplyPatch(patch, _vmrInfo.Object.VmrPath, new CancellationToken());
+        await _patchHandler.ApplyPatch(patch, _vmrInfo.Object.VmrPath, false, new CancellationToken());
 
         // Verify
         VerifyGitCall(new List<string>

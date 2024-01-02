@@ -163,8 +163,10 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
                 await _vmrPatchHandler.ApplyPatch(patch, repoPath, discardPatches, cancellationToken);
             }
         }
-        catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
+        catch (PatchApplicationFailedException e)
         {
+            _logger.LogInformation(e.Message);
+
             // TODO: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
