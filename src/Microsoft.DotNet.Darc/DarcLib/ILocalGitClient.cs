@@ -125,7 +125,7 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="objectSha">SHA of the object</param>
-    Task<string> GetObjectTypeAsync(string repoPath, string objectSha);
+    Task<GitObjectType> GetObjectTypeAsync(string repoPath, string objectSha);
 
     /// <summary>
     ///     Returns a list of modified staged files.

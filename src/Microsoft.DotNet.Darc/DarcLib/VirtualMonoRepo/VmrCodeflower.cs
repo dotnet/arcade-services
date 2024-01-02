@@ -190,12 +190,12 @@ internal abstract class VmrCodeflower
             sourceRepo = repoPath;
         }
 
-        string objectType1 = await _localGitClient.GetObjectTypeAsync(sourceRepo, backwardSha);
-        string objectType2 = await _localGitClient.GetObjectTypeAsync(sourceRepo, forwardSha);
+        GitObjectType objectType1 = await _localGitClient.GetObjectTypeAsync(sourceRepo, backwardSha);
+        GitObjectType objectType2 = await _localGitClient.GetObjectTypeAsync(sourceRepo, forwardSha);
 
-        if (objectType1 != "commit" || objectType2 != "commit")
+        if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
-            throw new Exception($"Failed to find commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
+            throw new Exception($"Failed to find one or both commits {lastBackflow.VmrSha}, {lastForwardFlow.VmrSha} in {sourceRepo}");
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow

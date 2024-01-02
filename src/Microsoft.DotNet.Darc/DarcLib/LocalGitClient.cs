@@ -182,7 +182,7 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim();
     }
 
-    public async Task<string> GetObjectTypeAsync(string repoPath, string objectSha)
+    public async Task<GitObjectType> GetObjectTypeAsync(string repoPath, string objectSha)
     {
         var args = new[]
         {
@@ -194,7 +194,14 @@ public class LocalGitClient : ILocalGitClient
         var result = await _processManager.ExecuteGit(repoPath, args);
         result.ThrowIfFailed($"Failed to find object {objectSha} in {repoPath}");
 
-        return result.StandardOutput.Trim();
+        return result.StandardOutput.Trim() switch
+        {
+            "commit" => GitObjectType.Commit,
+            "blob" => GitObjectType.Blob,
+            "tree" => GitObjectType.Tree,
+            "tag" => GitObjectType.Tag,
+            _ => GitObjectType.Unknown,
+        };
     }
 
     /// <summary>
