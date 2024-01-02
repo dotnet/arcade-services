@@ -93,22 +93,8 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (discardPatches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, $"Failed to delete patch file {patch.Path}");
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
@@ -177,7 +163,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 

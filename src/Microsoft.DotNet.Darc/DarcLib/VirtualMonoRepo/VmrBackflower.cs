@@ -160,12 +160,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         {
             foreach (VmrIngestionPatch patch in patches)
             {
-                await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
-
-                if (discardPatches)
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
+                await _vmrPatchHandler.ApplyPatch(patch, repoPath, discardPatches, cancellationToken);
             }
         }
         catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
@@ -198,12 +193,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             foreach (VmrIngestionPatch patch in patches)
             {
                 // TODO: Catch exceptions?
-                await _vmrPatchHandler.ApplyPatch(patch, repoPath, cancellationToken);
-
-                if (discardPatches)
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
+                await _vmrPatchHandler.ApplyPatch(patch, repoPath, discardPatches, cancellationToken);
             }
         }
 
@@ -274,12 +264,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         foreach (var patch in patches)
         {
             // TODO: Handle exceptions
-            await _vmrPatchHandler.ApplyPatch(patch, targetRepo, cancellationToken);
-
-            if (discardPatches)
-            {
-                _fileSystem.DeleteFile(patch.Path);
-            }
+            await _vmrPatchHandler.ApplyPatch(patch, targetRepo, discardPatches, cancellationToken);
         }
 
         // TODO: Check if there are any changes and only commit if there are

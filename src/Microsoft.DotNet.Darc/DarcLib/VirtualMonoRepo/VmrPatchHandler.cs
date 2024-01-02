@@ -242,7 +242,11 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    public async Task ApplyPatch(VmrIngestionPatch patch, NativePath targetDirectory, CancellationToken cancellationToken)
+    public async Task ApplyPatch(
+        VmrIngestionPatch patch,
+        NativePath targetDirectory,
+        bool removePatchAfter,
+        CancellationToken cancellationToken)
     {
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
@@ -295,6 +299,11 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
         result.ThrowIfFailed($"Failed to apply the patch {_fileSystem.GetFileName(patch.Path)} for {patch.ApplicationPath ?? "/"}");
         _logger.LogDebug("{output}", result.ToString());
+
+        if (removePatchAfter)
+        {
+            _fileSystem.DeleteFile(patch.Path);
+        }
 
         await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
     }
