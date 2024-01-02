@@ -56,46 +56,40 @@ internal abstract class VmrCodeflower
     /// </summary>
     /// <returns>Name of the PR branch that was created for the changes</returns>
     protected async Task<string?> FlowCodeAsync(
-        bool isBackflow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         NativePath repoPath,
-        string mappingName,
-        string shaToFlow,
+        SourceMapping mapping,
         bool discardPatches,
         CancellationToken cancellationToken = default)
     {
-        await _dependencyTracker.InitializeSourceMappings();
-        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
-
-        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
-        Codeflow lastFlow = await GetLastFlowAsync(mapping, repoPath, isBackflow);
-
-        if (lastFlow.SourceSha == shaToFlow)
+        if (lastFlow.SourceSha == currentFlow.TargetSha)
         {
-            _logger.LogInformation("No new commits to flow from {sourceRepo}", isBackflow ? "VMR" : mapping);
+            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return null;
         }
 
-        _logger.LogInformation("Last flow was {type} {sourceSha} -> {targetSha}",
-            isBackflow ? "backflow" : "forward flow",
+        _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
+            currentFlow.Name,
             lastFlow.SourceSha,
             lastFlow.TargetSha);
 
         string? branchName;
-        if ((lastFlow is Backflow) == isBackflow)
+        if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            branchName = await SameDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, discardPatches, cancellationToken);
+            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repoPath, discardPatches, cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            branchName = await OppositeDirectionFlowAsync(mapping, shaToFlow, repoPath, lastFlow, discardPatches, cancellationToken);
+            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repoPath, discardPatches, cancellationToken);
         }
 
         if (branchName is null)
         {
             // TODO: Clean up repos?
-            _logger.LogInformation("Nothing to flow from {sourceRepo}", isBackflow ? "VMR" : mapping);
+            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
         }
 
         return branchName;
@@ -108,9 +102,9 @@ internal abstract class VmrCodeflower
     /// <returns>Name of the PR branch that was created for the changes</returns>
     protected abstract Task<string?> SameDirectionFlowAsync(
         SourceMapping mapping,
-        string shaToFlow,
-        NativePath repoPath,
         Codeflow lastFlow,
+        Codeflow currentFlow,
+        NativePath repoPath,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -121,9 +115,9 @@ internal abstract class VmrCodeflower
     /// <returns>Name of the PR branch that was created for the changes</returns>
     protected abstract Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        string shaToFlow,
-        NativePath repoPath,
         Codeflow lastFlow,
+        Codeflow currentFlow,
+        NativePath repoPath,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -167,8 +161,11 @@ internal abstract class VmrCodeflower
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
-    private async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, NativePath repoPath, bool currentIsBackflow)
+    protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, NativePath repoPath, bool currentIsBackflow)
     {
+        await _dependencyTracker.InitializeSourceMappings();
+        _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
+
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
         Backflow? lastBackflow = await GetLastBackflow(repoPath);
 
@@ -272,9 +269,19 @@ internal abstract class VmrCodeflower
         public abstract string RepoSha { get; init; }
 
         public abstract string VmrSha { get; init; }
+
+        public string GetBranchName() => $"codeflow/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
+
+        public abstract string Name { get; }
     }
 
-    protected record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha);
+    protected record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha)
+    {
+        public override string Name { get; } = "forward";
+    }
 
-    protected record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha);
+    protected record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
+    {
+        public override string Name { get; } = "back";
+    }
 }

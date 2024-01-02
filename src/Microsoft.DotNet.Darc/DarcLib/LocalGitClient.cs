@@ -163,7 +163,7 @@ public class LocalGitClient : ILocalGitClient
         return result.StandardOutput.Trim();
     }
 
-    public async Task<string> GetShaForRefAsync(string repoPath, string? gitRef)
+    public async Task<string> GetShaForRefAsync(string repoPath, string? gitRef = null)
     {
         if (gitRef != null && Constants.EmptyGitObject.StartsWith(gitRef))
         {

@@ -58,7 +58,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
     }
 
     public async Task<string?> FlowForwardAsync(
-        string mapping,
+        string mappingName,
         NativePath sourceRepo,
         string? shaToFlow = null,
         bool discardPatches = false,
@@ -66,32 +66,34 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
     {
         if (shaToFlow is null)
         {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo, Constants.HEAD);
+            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo);
         }
         else
         {
             await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
         }
 
+        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
+        Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
+
         return await FlowCodeAsync(
-            isBackflow: false,
+            lastFlow,
+            new ForwardFlow(lastFlow.TargetSha, shaToFlow),
             sourceRepo,
             mapping,
-            shaToFlow,
             discardPatches,
             cancellationToken);
     }
 
     protected override async Task<string?> SameDirectionFlowAsync(
         SourceMapping mapping,
-        string shaToFlow,
-        NativePath repoPath,
         Codeflow lastFlow,
+        Codeflow currentFlow,
+        NativePath sourceRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var branchName = $"codeflow/forward/{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
-
+        var branchName = currentFlow.GetBranchName();
         await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
         bool hadUpdates;
@@ -100,7 +102,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         {
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
-                shaToFlow,
+                currentFlow.TargetSha,
                 "1.2.3", // TODO
                 updateDependencies: false,
                 // TODO - all parameters below should come from BAR build / options
@@ -127,11 +129,12 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             await CheckOutVmr(previousFlowTargetSha);
 
             // Reconstruct the previous flow's branch
+            var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
             branchName = await FlowCodeAsync(
-                isBackflow: false,
-                repoPath,
-                mapping.Name,
-                lastFlow.SourceSha,
+                lastLastFlow,
+                new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
+                sourceRepo,
+                mapping,
                 discardPatches,
                 cancellationToken);
 
@@ -139,7 +142,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
             // TODO: Handle exceptions
             hadUpdates = await _vmrUpdater.UpdateRepository(
                 mapping.Name,
-                shaToFlow,
+                currentFlow.TargetSha,
                 // TODO - all parameters below should come from BAR build / options
                 "1.2.3",
                 updateDependencies: false,
@@ -156,24 +159,22 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
 
     protected override async Task<string?> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        string shaToFlow,
-        NativePath sourceRepo,
         Codeflow lastFlow,
+        Codeflow currentFlow,
+        NativePath sourceRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var shortShas = $"{Commit.GetShortSha(lastFlow.SourceSha)}-{Commit.GetShortSha(shaToFlow)}";
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-backflow-{shortShas}.patch";
-
         await _localGitClient.CheckoutAsync(sourceRepo, lastFlow.TargetSha);
 
-        var branchName = $"codeflow/forward/{shortShas}";
+        var branchName = currentFlow.GetBranchName();
+        var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
 
         List<GitSubmoduleInfo> submodules =
         [
             .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, lastFlow.RepoSha),
-            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, shaToFlow),
+            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, currentFlow.TargetSha),
         ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
@@ -204,7 +205,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         // TODO: Detect if no changes
         var hadUpdates = await _vmrUpdater.UpdateRepository(
             mapping.Name,
-            shaToFlow,
+            currentFlow.TargetSha,
             "1.2.3",
             updateDependencies: false,
             // TODO - all parameters below should come from BAR build / options

@@ -118,7 +118,7 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="gitRef">Git reference to resolve or HEAD when null</param>
-    Task<string> GetShaForRefAsync(string repoPath, string gitRef);
+    Task<string> GetShaForRefAsync(string repoPath, string? gitRef = null);
 
     /// <summary>
     ///     Gets the type of a git object (e.g. commit, tree..).
