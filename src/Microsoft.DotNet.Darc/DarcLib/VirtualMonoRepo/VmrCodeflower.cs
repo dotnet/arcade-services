@@ -247,7 +247,7 @@ internal abstract class VmrCodeflower
             _vmrInfo.SourceManifestPath,
             line => line.Contains(lastForwardRepoSha));
 
-        return new ForwardFlow(lastForwardVmrSha, lastForwardRepoSha);
+        return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
     }
 
     /// <summary>
@@ -272,7 +272,7 @@ internal abstract class VmrCodeflower
         public abstract string VmrSha { get; init; }
     }
 
-    protected record ForwardFlow(string VmrSha, string RepoSha) : Codeflow(RepoSha, VmrSha);
+    protected record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha);
 
     protected record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha);
 }
