@@ -53,7 +53,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly IComponentListGenerator _readmeComponentListGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
@@ -64,7 +64,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
+        IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
         IDependencyFileManager dependencyFileManager,
@@ -96,7 +96,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? targetVersion,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
@@ -129,7 +129,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             return await UpdateRepositoryRecursively(
                 dependencyUpdate,
                 additionalRemotes,
-                readmeTemplatePath,
+                componentTemplatePath,
                 tpnTemplatePath,
                 generateCodeowners,
                 discardPatches,
@@ -140,14 +140,14 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             try
             {
                 var patchesToReapply = await UpdateRepositoryInternal(
-                        dependencyUpdate,
-                        reapplyVmrPatches: true,
-                        additionalRemotes,
-                        readmeTemplatePath,
-                        tpnTemplatePath,
-                        generateCodeowners,
-                        discardPatches,
-                        cancellationToken);
+                    dependencyUpdate,
+                    reapplyVmrPatches: true,
+                    additionalRemotes,
+                    componentTemplatePath,
+                    tpnTemplatePath,
+                    generateCodeowners,
+                    discardPatches,
+                    cancellationToken);
                 return true;
             }
             catch (EmptySyncException e)
@@ -162,7 +162,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         VmrDependencyUpdate update,
         bool reapplyVmrPatches,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
@@ -240,7 +240,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             author: null,
             commitMessage,
             reapplyVmrPatches,
-            readmeTemplatePath,
+            componentTemplatePath,
             tpnTemplatePath,
             generateCodeowners,
             discardPatches,
@@ -254,7 +254,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private async Task<bool> UpdateRepositoryRecursively(
         VmrDependencyUpdate rootUpdate,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
@@ -332,11 +332,24 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     update,
                     false,
                     additionalRemotes,
-                    readmeTemplatePath,
+                    componentTemplatePath,
                     tpnTemplatePath,
                     generateCodeowners,
                     discardPatches,
                     cancellationToken);
+            }
+            catch (EmptySyncException e) when (e.Message.Contains("is already at"))
+            {
+                if (update.Mapping == rootUpdate.Mapping)
+                {
+                    _logger.LogWarning(e.Message);
+                }
+                else
+                {
+                    _logger.LogInformation(e.Message);
+                }
+
+                continue;
             }
             catch (EmptySyncException e)
             {
@@ -401,7 +414,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             await CommitAsync("[VMR patches] Re-apply VMR patches");
         }
 
-        await CleanUpRemovedRepos(readmeTemplatePath, tpnTemplatePath);
+        await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);
 
         var commitMessage = PrepareCommitMessage(
             MergeCommitMessage,
@@ -625,7 +638,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         return version.Sha;
     }
 
-    private async Task CleanUpRemovedRepos(string? readmeTemplatePath, string? tpnTemplatePath)
+    private async Task CleanUpRemovedRepos(string? componentTemplatePath, string? tpnTemplatePath)
     {
         var deletedRepos = _sourceManifest
             .Repositories
@@ -646,9 +659,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         var sourceManifestPath = _vmrInfo.SourceManifestPath;
         _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
 
-        if (readmeTemplatePath != null)
+        if (componentTemplatePath != null)
         {
-            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _readmeComponentListGenerator.UpdateComponentList(componentTemplatePath);
         }
 
         if (tpnTemplatePath != null)

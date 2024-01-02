@@ -80,11 +80,11 @@ namespace Maestro.ScenarioTests
 
                         if (isAzDoTest)
                         {
-                            await CheckBatchedAzDoPullRequest(source1RepoName, source2RepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
+                            await CheckBatchedAzDoPullRequest([source1RepoName, source2RepoName], targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
                         }
                         else
                         {
-                            await CheckBatchedGitHubPullRequest(targetBranch, source1RepoName, source2RepoName, targetRepoName, expectedDependencies, reposFolder.Directory);
+                            await CheckBatchedGitHubPullRequest(targetBranch, [source1RepoName, source2RepoName], targetRepoName, expectedDependencies, reposFolder.Directory);
                         }
                     }
                 }
