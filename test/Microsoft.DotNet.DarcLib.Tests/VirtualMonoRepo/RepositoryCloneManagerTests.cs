@@ -24,6 +24,7 @@ public class RepositoryCloneManagerTests
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<ILocalGitClient> _localGitRepo = new();
+    private readonly Mock<ILocalGitRepoFactory> _localGitRepoFactory = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
     private readonly Mock<IGitRepoCloner> _repoCloner = new();
     private RepositoryCloneManager _manager = null!;
@@ -58,6 +59,7 @@ public class RepositoryCloneManagerTests
             _vmrInfo.Object,
             _repoCloner.Object,
             _localGitRepo.Object,
+            _localGitRepoFactory.Object,
             _fileSystem.Object,
             new NullLogger<VmrPatchHandler>());
     }

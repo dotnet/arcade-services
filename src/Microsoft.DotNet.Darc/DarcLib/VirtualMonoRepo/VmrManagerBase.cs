@@ -64,7 +64,7 @@ public abstract class VmrManagerBase
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
-        NativePath clonePath,
+        ILocalGitRepo clone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
         (string Name, string Email)? author,
@@ -78,7 +78,7 @@ public abstract class VmrManagerBase
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             update.Mapping,
-            clonePath,
+            clone,
             fromRevision,
             update.TargetRevision,
             _vmrInfo.TmpPath,

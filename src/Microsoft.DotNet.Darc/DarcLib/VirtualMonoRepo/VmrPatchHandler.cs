@@ -74,7 +74,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <returns>List of patch files that can be applied on the VMR</returns>
     public async Task<List<VmrIngestionPatch>> CreatePatches(
         SourceMapping mapping,
-        NativePath repoPath,
+        ILocalGitRepo clone,
         string sha1,
         string sha2,
         NativePath destDir,
@@ -83,7 +83,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
-        var patches = await CreatePatchesRecursive(mapping, repoPath, sha1, sha2, destDir, tmpPath, new UnixPath(mapping.Name), cancellationToken);
+        var patches = await CreatePatchesRecursive(mapping, clone, sha1, sha2, destDir, tmpPath, new UnixPath(mapping.Name), cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
@@ -92,7 +92,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
     private async Task<List<VmrIngestionPatch>> CreatePatchesRecursive(
         SourceMapping mapping,
-        NativePath repoPath,
+        ILocalGitRepo clone,
         string sha1,
         string sha2,
         NativePath destDir,
@@ -100,14 +100,15 @@ public class VmrPatchHandler : IVmrPatchHandler
         UnixPath relativePath,
         CancellationToken cancellationToken)
     {
-        if (_fileSystem.GetFileName(repoPath.Path) == ".git")
+        var repoPath = clone.Path;
+        if (_fileSystem.GetFileName(repoPath) == ".git")
         {
             repoPath = new NativePath(_fileSystem.GetDirectoryName(repoPath)!);
         }
 
         var patchName = destDir / $"{mapping.Name}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}.patch";
 
-        List<SubmoduleChange> submoduleChanges = await GetSubmoduleChanges(repoPath, sha1, sha2);
+        List<SubmoduleChange> submoduleChanges = await GetSubmoduleChanges(clone, sha1, sha2);
 
         var changedRecords = submoduleChanges
             .Select(c => new SubmoduleRecord(relativePath / c.Path, c.Url, c.After))
@@ -484,12 +485,11 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Finds all changes that happened for submodules between given commits.
     /// </summary>
-    /// <param name="repoPath">Path to the local git repository</param>
     /// <returns>A pair of submodules (state in SHA1, state in SHA2) where additions/removals are marked by EmptyGitObject</returns>
-    private async Task<List<SubmoduleChange>> GetSubmoduleChanges(string repoPath, string sha1, string sha2)
+    private static async Task<List<SubmoduleChange>> GetSubmoduleChanges(ILocalGitRepo clone, string sha1, string sha2)
     {
-        List<GitSubmoduleInfo> submodulesBefore = await _localGitClient.GetGitSubmodulesAsync(repoPath, sha1);
-        List<GitSubmoduleInfo> submodulesAfter = await _localGitClient.GetGitSubmodulesAsync(repoPath, sha2);
+        List<GitSubmoduleInfo> submodulesBefore = await clone.GetGitSubmodulesAsync(sha1);
+        List<GitSubmoduleInfo> submodulesAfter = await clone.GetGitSubmodulesAsync(sha2);
 
         var submodulePaths = submodulesBefore
             .Concat(submodulesAfter)

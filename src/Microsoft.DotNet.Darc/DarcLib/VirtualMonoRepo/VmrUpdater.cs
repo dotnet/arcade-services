@@ -210,7 +210,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
+        ILocalGitRepo clone = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
             requestedRefs: new[] { currentVersion.Sha, update.TargetRevision },
@@ -219,7 +219,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         update = update with
         {
-            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
+            TargetRevision = await clone.GetShaForRefAsync(update.TargetRevision)
         };
 
         _logger.LogInformation("Updating {repo} from {current} to {next}..",
@@ -234,7 +234,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         return await UpdateRepoToRevisionAsync(
             update,
-            clonePath,
+            clone,
             additionalRemotes,
             currentVersion.Sha,
             author: null,
@@ -516,7 +516,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 source.CommitSha);
 
             // If we are restoring from a mapped repo, we need to respect additional remotes and also use public/local repos first
-            NativePath clonePath;
+            ILocalGitRepo clone;
             if (source is IVersionedSourceComponent repo)
             {
                 var sourceMapping = _dependencyTracker.Mappings.First(m => m.Name == repo.Path);
@@ -529,19 +529,19 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     .Distinct()
                     .ToList();
 
-                clonePath = await _cloneManager.PrepareCloneAsync(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
+                clone = await _cloneManager.PrepareCloneAsync(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);
             }
             else
             {
-                clonePath = await _cloneManager.PrepareCloneAsync(source.RemoteUri, source.CommitSha, cancellationToken);
+                clone = await _cloneManager.PrepareCloneAsync(source.RemoteUri, source.CommitSha, cancellationToken);
             }
 
             foreach ((UnixPath repoPath, UnixPath pathInVmr) in group)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                LocalPath originalFile = clonePath / repoPath;
-                LocalPath destination = _vmrInfo.VmrPath / pathInVmr;
+                NativePath originalFile = clone.Path / repoPath;
+                NativePath destination = _vmrInfo.VmrPath / pathInVmr;
 
                 if (_fileSystem.FileExists(originalFile))
                 {

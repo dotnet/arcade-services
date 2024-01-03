@@ -12,6 +12,11 @@ namespace Microsoft.DotNet.DarcLib;
 public interface ILocalGitRepo
 {
     /// <summary>
+    ///    Path to the git repo.
+    /// </summary>
+    NativePath Path { get; }
+
+    /// <summary>
     ///     Add a remote to a local repo if does not already exist.
     /// </summary>
     /// <param name="repoUrl">URL of the remote to add</param>

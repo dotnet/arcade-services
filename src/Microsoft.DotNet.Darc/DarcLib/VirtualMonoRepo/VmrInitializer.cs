@@ -181,7 +181,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
+        ILocalGitRepo clone = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
             new[] { update.TargetRevision },
@@ -192,14 +192,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         update = update with
         {
-            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
+            TargetRevision = await clone.GetShaForRefAsync(update.TargetRevision)
         };
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
 
         await UpdateRepoToRevisionAsync(
             update,
-            clonePath,
+            clone,
             additionalRemotes,
             Constants.EmptyGitObject,
             author: null,

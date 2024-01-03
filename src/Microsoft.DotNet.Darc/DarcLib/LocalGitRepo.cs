@@ -12,11 +12,15 @@ namespace Microsoft.DotNet.DarcLib;
 /// <summary>
 /// This class can manage a specific local git repository.
 /// </summary>
-public class LocalGitRepo(string repoPath, ILocalGitClient localGitClient) : ILocalGitRepo
+public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient) : ILocalGitRepo
 {
-    public string Path { get; } = repoPath;
+    public NativePath Path { get; } = repoPath;
 
     private readonly ILocalGitClient _localGitClient = localGitClient;
+
+    public LocalGitRepo(string path, ILocalGitClient localGitClient) : this(new NativePath(path), localGitClient)
+    {
+    }
 
     public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri)
         => _localGitClient.AddGitAuthHeader(args, envVars, repoUri);
@@ -67,7 +71,12 @@ public class LocalGitRepo(string repoPath, ILocalGitClient localGitClient) : ILo
         => _localGitClient.UpdateRemoteAsync(Path, remoteName, cancellationToken);
 }
 
-public class LocalGitRepoFactory(ILocalGitClient localGitClient)
+public interface ILocalGitRepoFactory
+{
+    ILocalGitRepo Create(string repoPath);
+}
+
+public class LocalGitRepoFactory(ILocalGitClient localGitClient) : ILocalGitRepoFactory
 {
     public ILocalGitRepo Create(string repoPath) => new LocalGitRepo(repoPath, localGitClient);
 }
