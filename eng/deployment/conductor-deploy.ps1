@@ -8,7 +8,6 @@ param(
 )
 
 az extension add --name containerapp --upgrade
-az provider register --namespace Microsoft.App
 
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
@@ -67,6 +66,8 @@ Write-Host "Assigning label $inactiveLabel to the new revision"
 az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
 
 # TODO tests..
+
+az containerapp ingress traffic set --help
 
 # transfer all traffiic to the new revision
 az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100 | Out-Null
