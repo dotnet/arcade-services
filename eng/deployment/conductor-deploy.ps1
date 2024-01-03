@@ -3,8 +3,11 @@ param(
     [Parameter(Mandatory=$true)][string]$containerappName,
     [Parameter(Mandatory=$true)][string]$commitSha,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
-    [Parameter(Mandatory=$true)][string]$imageName
+    [Parameter(Mandatory=$true)][string]$imageName,
+    [Parameter(Mandatory=$true)][string]$subscriptionName
 )
+
+az extension add --name containerapp --upgrade
 
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
@@ -40,7 +43,7 @@ else
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
 Write-Host "Deploying new image $newImage"
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha | Out-Null
 
 $newRevisionName = "$containerappName--$commitSha"
 
