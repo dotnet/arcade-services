@@ -71,7 +71,7 @@ public class VmrPatchHandlerTests
     {
         _vmrPath = new NativePath("/data/vmr");
         _patchDir = TmpDir / "patch";
-        _clone = new LocalGitRepo(TmpDir / IndividualRepoName, _localGitRepo.Object);
+        _clone = new LocalGitRepo(TmpDir / IndividualRepoName, _localGitRepo.Object, _processManager.Object);
     }
     
     [SetUp]
@@ -99,7 +99,7 @@ public class VmrPatchHandlerTests
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareCloneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string uri, string _, CancellationToken _) => new LocalGitRepo(TmpDir / "" + uri.Split("/").Last(), _localGitRepo.Object));
+            .ReturnsAsync((string uri, string _, CancellationToken _) => new LocalGitRepo(TmpDir / uri.Split("/").Last(), _localGitRepo.Object, _processManager.Object));
 
         _processManager.Reset();
         _processManager
@@ -120,7 +120,7 @@ public class VmrPatchHandlerTests
             .Returns((string first, string second) => (first + "/" + second).Replace("//", null));
         _fileSystem
             .Setup(x => x.GetFiles($"{_vmrPath}/patches/{IndividualRepoName}"))
-            .Returns(_vmrPatches.ToArray());
+            .Returns([.. _vmrPatches]);
         _fileSystem
             .Setup(x => x.DirectoryExists($"{_vmrPath}/patches/{IndividualRepoName}"))
             .Returns(true);

@@ -17,6 +17,16 @@ public interface ILocalGitRepo
     NativePath Path { get; }
 
     /// <summary>
+    /// Executes git over the repo directory with specified arguments.
+    /// </summary>
+    Task<ProcessExecutionResult> ExecuteGitCommand(string[] args, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes git over the repo directory with specified arguments.
+    /// </summary>
+    Task<ProcessExecutionResult> ExecuteGitCommand(params string[] args);
+
+    /// <summary>
     ///     Add a remote to a local repo if does not already exist.
     /// </summary>
     /// <param name="repoUrl">URL of the remote to add</param>

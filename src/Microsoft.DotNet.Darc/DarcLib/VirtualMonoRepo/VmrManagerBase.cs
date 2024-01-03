@@ -34,6 +34,8 @@ public abstract class VmrManagerBase
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
+    protected ILocalGitRepo LocalVmr { get; }
+
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -44,6 +46,7 @@ public abstract class VmrManagerBase
         IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
@@ -60,6 +63,8 @@ public abstract class VmrManagerBase
         _localGitClient = localGitClient;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
+
+        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(

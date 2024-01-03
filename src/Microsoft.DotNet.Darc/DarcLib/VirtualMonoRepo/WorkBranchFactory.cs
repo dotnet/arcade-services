@@ -3,7 +3,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -11,29 +10,19 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IWorkBranchFactory
 {
-    Task<IWorkBranch> CreateWorkBranchAsync(string repoDir, string branchName);
+    Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName);
 }
 
-public class WorkBranchFactory : IWorkBranchFactory
+public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
 {
-    private readonly ILocalGitClient _localGitClient;
-    private readonly IProcessManager _processManager;
-    private readonly ILogger<WorkBranch> _logger;
+    private readonly ILogger<WorkBranch> _logger = logger;
 
-    public WorkBranchFactory(ILocalGitClient localGitClient, IProcessManager processManager, ILogger<WorkBranch> logger)
+    public async Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName)
     {
-        _localGitClient = localGitClient;
-        _processManager = processManager;
-        _logger = logger;
-    }
-
-    public async Task<IWorkBranch> CreateWorkBranchAsync(string repoDir, string branchName)
-    {
-        var result = await _processManager.ExecuteGit(repoDir, "rev-parse", "--abbrev-ref", "HEAD");
+        var result = await repo.ExecuteGitCommand("rev-parse", "--abbrev-ref", "HEAD");
         result.ThrowIfFailed("Failed to determine the current branch");
 
         var originalBranch = result.StandardOutput.Trim();
-
         if (originalBranch == branchName)
         {
             var message = $"You are already on branch {branchName}. " +
@@ -45,8 +34,8 @@ public class WorkBranchFactory : IWorkBranchFactory
 
         _logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
 
-        await _localGitClient.CreateBranchAsync(repoDir, branchName, overwriteExistingBranch: true);
+        await repo.CreateBranchAsync(branchName, overwriteExistingBranch: true);
 
-        return new WorkBranch(_localGitClient, _processManager, _logger, repoDir, originalBranch, branchName);
+        return new WorkBranch(repo, _logger, originalBranch, branchName);
     }
 }

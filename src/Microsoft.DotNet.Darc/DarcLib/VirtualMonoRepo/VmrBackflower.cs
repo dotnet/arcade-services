@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,7 +17,14 @@ public interface IVmrBackFlower
 {
     Task<string?> FlowBackAsync(
         string mapping,
-        NativePath targetRepo,
+        ILocalGitRepo targetRepo,
+        string? shaToFlow = null,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    Task<string?> FlowBackAsync(
+        string mapping,
+        NativePath targetRepoDir,
         string? shaToFlow = null,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
@@ -31,9 +37,9 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
-    private readonly IProcessManager _processManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeflower> _logger;
@@ -44,30 +50,38 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler vmrPatchHandler,
-        IProcessManager processManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrCodeflower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, versionDetailsParser, processManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _dependencyFileManager = dependencyFileManager;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
-        _processManager = processManager;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
+    public Task<string?> FlowBackAsync(
+        string mapping,
+        NativePath targetRepoDir,
+        string? shaToFlow = null,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoDir), shaToFlow, discardPatches, cancellationToken);
+
     public async Task<string?> FlowBackAsync(
         string mappingName,
-        NativePath targetRepo,
+        ILocalGitRepo targetRepo,
         string? shaToFlow = null,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
@@ -107,7 +121,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath repoPath,
+        ILocalGitRepo targetRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -151,8 +165,8 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        await _localGitClient.CheckoutAsync(repoPath, lastFlow.TargetSha);
-        await _workBranchFactory.CreateWorkBranchAsync(repoPath, branchName);
+        await targetRepo.CheckoutAsync(lastFlow.TargetSha);
+        await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
 
         // TODO: Remove VMR patches before we create the patches
 
@@ -160,7 +174,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         {
             foreach (VmrIngestionPatch patch in patches)
             {
-                await _vmrPatchHandler.ApplyPatch(patch, repoPath, discardPatches, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
             }
         }
         catch (PatchApplicationFailedException e)
@@ -175,18 +189,18 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
 
             // Find the last target commit in the repo
             var previousRepoSha = await BlameLineAsync(
-                repoPath / VersionFiles.VersionDetailsXml,
+                targetRepo.Path / VersionFiles.VersionDetailsXml,
                 line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
                 lastFlow.TargetSha);
-            await _localGitClient.CheckoutAsync(repoPath, previousRepoSha);
+            await targetRepo.CheckoutAsync(previousRepoSha);
 
             // Reconstruct the previous flow's branch
-            var lastLastFlow = await GetLastFlowAsync(mapping, repoPath, currentIsBackflow: true);
+            var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
             branchName = await FlowCodeAsync(
                 lastLastFlow,
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
-                repoPath,
+                targetRepo,
                 mapping,
                 discardPatches,
                 cancellationToken);
@@ -195,7 +209,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             foreach (VmrIngestionPatch patch in patches)
             {
                 // TODO: Catch exceptions?
-                await _vmrPatchHandler.ApplyPatch(patch, repoPath, discardPatches, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
             }
         }
 
@@ -205,10 +219,10 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(repoPath, commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
-        await _localGitClient.ResetWorkingTree(repoPath);
+        await targetRepo.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        await targetRepo.ResetWorkingTree();
 
-        _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", branchName, repoPath);
+        _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", branchName, targetRepo);
 
         return branchName;
     }
@@ -217,11 +231,11 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath targetRepo,
+        ILocalGitRepo targetRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        await _localGitClient.CheckoutAsync(targetRepo, lastFlow.SourceSha);
+        await targetRepo.CheckoutAsync(lastFlow.SourceSha);
 
         var branchName = currentFlow.GetBranchName();
         var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
@@ -259,21 +273,18 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             .. submoduleExclusions,
         ];
 
-        ProcessExecutionResult result = await _processManager.ExecuteGit(targetRepo, ["rm", "-r", "-q", "--", .. removalFilters]);
+        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(["rm", "-r", "-q", "--", .. removalFilters]);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files
         foreach (var patch in patches)
         {
             // TODO: Handle exceptions
-            await _vmrPatchHandler.ApplyPatch(patch, targetRepo, discardPatches, cancellationToken);
+            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
         }
 
         // TODO: Check if there are any changes and only commit if there are
-        result = await _processManager.ExecuteGit(
-            targetRepo,
-            ["diff-index", "--quiet", "--cached", "HEAD", "--"],
-            cancellationToken: cancellationToken);
+        result = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
 
         if (result.ExitCode == 0)
         {
@@ -287,16 +298,16 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             {Constants.AUTOMATION_COMMIT_TAG}
             """;
 
-        await _localGitClient.CommitAsync(targetRepo, commitMessage, false, cancellationToken: cancellationToken);
-        await _localGitClient.ResetWorkingTree(targetRepo);
+        await targetRepo.CommitAsync(commitMessage, false, cancellationToken: cancellationToken);
+        await targetRepo.ResetWorkingTree();
 
         return branchName;
     }
 
-    private async Task UpdateVersionDetailsXml(NativePath repoPath, string currentVmrSha, CancellationToken cancellationToken)
+    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, CancellationToken cancellationToken)
     {
         // TODO: Do a proper full update of all dependencies, not just V.D.xml
-        var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repoPath / VersionFiles.VersionDetailsXml));
+        var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repo.Path / VersionFiles.VersionDetailsXml));
         var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
         _dependencyFileManager.UpdateVersionDetails(
             versionDetailsXml,
@@ -305,8 +316,8 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             new SourceDependency("https://github.com/dotnet/dotnet", currentVmrSha),
             oldDependencies: versionDetails.Dependencies);
 
-        _fileSystem.WriteToFile(repoPath / VersionFiles.VersionDetailsXml, new GitFile(VersionFiles.VersionDetailsXml, versionDetailsXml).Content);
-        await _localGitClient.StageAsync(repoPath, [VersionFiles.VersionDetailsXml], cancellationToken);
-        await _localGitClient.CommitAsync(repoPath, $"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
+        _fileSystem.WriteToFile(repo.Path / VersionFiles.VersionDetailsXml, new GitFile(VersionFiles.VersionDetailsXml, versionDetailsXml).Content);
+        await repo.StageAsync([VersionFiles.VersionDetailsXml], cancellationToken);
+        await repo.CommitAsync($"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }
 }
