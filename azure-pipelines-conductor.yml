@@ -18,3 +18,17 @@ stages:
               docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile -t dkurepaacr.azurecr.io/conductor.api:$(Build.SourceVersion)
               echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin "dkurepaacr.azurecr.io"
               docker push "dkurepaacr.azurecr.io/conductor.api:$(Build.SourceVersion)"
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'dkurepa-test'
+              scriptType: 'ps'
+              scriptLocation: 'scriptPath'
+              scriptPath: '$(Build.SourcesDirectory)/eng/deployment/conductor-deploy.ps1'
+              arguments: |
+                -subscriptionName "dkurepa dev subscription"
+                -resourceGroupName "dkurepa-containers2"
+                -containerappName "apiservice"
+                -commitSha $(Build.SourceVersion)
+                -containerRegistryName "dkurepaacr"
+                -imageName "conductor.api"
