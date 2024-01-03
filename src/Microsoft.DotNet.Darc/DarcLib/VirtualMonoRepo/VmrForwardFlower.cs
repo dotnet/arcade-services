@@ -17,6 +17,13 @@ public interface IVmrForwardFlower
 {
     Task<string?> FlowForwardAsync(
         string mapping,
+        ILocalGitRepo sourceRepo,
+        string? shaToFlow = null,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    Task<string?> FlowForwardAsync(
+        string mapping,
         NativePath sourceRepo,
         string? shaToFlow = null,
         bool discardPatches = false,
@@ -26,10 +33,9 @@ public interface IVmrForwardFlower
 internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
-    private readonly ISourceManifest _sourceManifest;
     private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly ILogger<VmrCodeflower> _logger;
@@ -40,37 +46,45 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         IVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IProcessManager processManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrCodeflower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, versionDetailsParser, processManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
-        _sourceManifest = sourceManifest;
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
-        _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _processManager = processManager;
         _workBranchFactory = workBranchFactory;
         _logger = logger;
     }
 
-    public async Task<string?> FlowForwardAsync(
+    public Task<string?> FlowForwardAsync(
         string mappingName,
         NativePath sourceRepo,
+        string? shaToFlow = null,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default)
+        => FlowForwardAsync(mappingName, _localGitRepoFactory.Create(sourceRepo), shaToFlow, discardPatches, cancellationToken);
+
+    public async Task<string?> FlowForwardAsync(
+        string mappingName,
+        ILocalGitRepo sourceRepo,
         string? shaToFlow = null,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
         if (shaToFlow is null)
         {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(sourceRepo);
+            shaToFlow = await sourceRepo.GetShaForRefAsync();
         }
         else
         {
-            await _localGitClient.CheckoutAsync(sourceRepo, shaToFlow);
+            await sourceRepo.CheckoutAsync(shaToFlow);
         }
 
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
@@ -89,12 +103,12 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath sourceRepo,
+        ILocalGitRepo sourceRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         var branchName = currentFlow.GetBranchName();
-        await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
+        await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
         bool hadUpdates;
 
@@ -161,20 +175,20 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath sourceRepo,
+        ILocalGitRepo sourceRepo,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        await _localGitClient.CheckoutAsync(sourceRepo, lastFlow.TargetSha);
+        await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
 
         var branchName = currentFlow.GetBranchName();
         var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
-        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, branchName);
+        var prBanch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
         List<GitSubmoduleInfo> submodules =
         [
-            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, lastFlow.RepoSha),
-            .. await _localGitClient.GetGitSubmodulesAsync(sourceRepo, currentFlow.TargetSha),
+            .. await sourceRepo.GetGitSubmodulesAsync(lastFlow.RepoSha),
+            .. await sourceRepo.GetGitSubmodulesAsync(currentFlow.TargetSha),
         ];
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
@@ -197,7 +211,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
-            sourceRepo, // TODO = URL from BAR build
+            sourceRepo.Path, // TODO = URL from BAR build
             Constants.EmptyGitObject,
             _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
             Parent: null));

@@ -25,17 +25,18 @@ internal abstract class VmrCodeflower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeflower> _logger;
+
+    protected ILocalGitRepo LocalVmr { get; }
 
     protected VmrCodeflower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IProcessManager processManager,
         IFileSystem fileSystem,
         ILogger<VmrCodeflower> logger)
     {
@@ -44,9 +45,10 @@ internal abstract class VmrCodeflower
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
         _versionDetailsParser = versionDetailsParser;
-        _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
+
+        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     /// <summary>
@@ -58,7 +60,7 @@ internal abstract class VmrCodeflower
     protected async Task<string?> FlowCodeAsync(
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath repoPath,
+        ILocalGitRepo repo,
         SourceMapping mapping,
         bool discardPatches,
         CancellationToken cancellationToken = default)
@@ -78,12 +80,12 @@ internal abstract class VmrCodeflower
         if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repoPath, discardPatches, cancellationToken);
+            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, discardPatches, cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repoPath, discardPatches, cancellationToken);
+            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, discardPatches, cancellationToken);
         }
 
         if (branchName is null)
@@ -104,7 +106,7 @@ internal abstract class VmrCodeflower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath repoPath,
+        ILocalGitRepo repo,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -117,7 +119,7 @@ internal abstract class VmrCodeflower
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
-        NativePath repoPath,
+        ILocalGitRepo repo,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -153,7 +155,7 @@ internal abstract class VmrCodeflower
     /// </summary>
     protected async Task CheckOutVmr(string gitRef)
     {
-        await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, gitRef);
+        await LocalVmr.CheckoutAsync(gitRef);
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
     }
@@ -161,13 +163,13 @@ internal abstract class VmrCodeflower
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
-    protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, NativePath repoPath, bool currentIsBackflow)
+    protected async Task<Codeflow> GetLastFlowAsync(SourceMapping mapping, ILocalGitRepo repoClone, bool currentIsBackflow)
     {
         await _dependencyTracker.InitializeSourceMappings();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
-        Backflow? lastBackflow = await GetLastBackflow(repoPath);
+        Backflow? lastBackflow = await GetLastBackflow(repoClone.Path);
 
         if (lastBackflow is null)
         {
@@ -175,20 +177,20 @@ internal abstract class VmrCodeflower
         }
 
         string backwardSha, forwardSha;
-        NativePath sourceRepo;
+        ILocalGitRepo sourceRepo;
         if (currentIsBackflow)
         {
             (backwardSha, forwardSha) = (lastBackflow.VmrSha, lastForwardFlow.VmrSha);
-            sourceRepo = _vmrInfo.VmrPath;
+            sourceRepo = LocalVmr;
         }
         else
         {
             (backwardSha, forwardSha) = (lastBackflow.RepoSha, lastForwardFlow.RepoSha);
-            sourceRepo = repoPath;
+            sourceRepo = repoClone;
         }
 
-        GitObjectType objectType1 = await _localGitClient.GetObjectTypeAsync(sourceRepo, backwardSha);
-        GitObjectType objectType2 = await _localGitClient.GetObjectTypeAsync(sourceRepo, forwardSha);
+        GitObjectType objectType1 = await sourceRepo.GetObjectTypeAsync(backwardSha);
+        GitObjectType objectType2 = await sourceRepo.GetObjectTypeAsync(forwardSha);
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
@@ -249,16 +251,16 @@ internal abstract class VmrCodeflower
     /// <summary>
     /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
     /// </summary>
-    private async Task<bool> IsAncestorCommit(NativePath repoPath, string parent, string ancestor)
+    private async Task<bool> IsAncestorCommit(ILocalGitRepo repo, string parent, string ancestor)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["merge-base", "--is-ancestor", parent, ancestor]);
+        var result = await repo.ExecuteGitCommand("merge-base", "--is-ancestor", parent, ancestor);
 
         // 0 - is ancestor
         // 1 - is not ancestor
         // other - invalid objects, other errors
         if (result.ExitCode > 1)
         {
-            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
+            result.ThrowIfFailed($"Failed to determine which commit of {repo.Path} is older ({parent}, {ancestor})");
         }
 
         return result.ExitCode == 0;

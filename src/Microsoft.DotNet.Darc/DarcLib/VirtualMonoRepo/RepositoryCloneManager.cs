@@ -25,7 +25,7 @@ public interface IRepositoryCloneManager
     /// <param name="repoUri">Remote to fetch from</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
     /// <returns>Path to the clone</returns>
-    Task<NativePath> PrepareCloneAsync(
+    Task<ILocalGitRepo> PrepareCloneAsync(
         string repoUri,
         string checkoutRef,
         CancellationToken cancellationToken);
@@ -39,7 +39,7 @@ public interface IRepositoryCloneManager
     /// <param name="remotes">Remotes to fetch from</param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
     /// <returns>Path to the clone</returns>
-    Task<NativePath> PrepareCloneAsync(
+    Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remotes,
         string checkoutRef,
@@ -53,7 +53,7 @@ public interface IRepositoryCloneManager
     /// <param name="requestedRefs">List of commits that </param>
     /// <param name="checkoutRef">Ref to check out at the end</param>
     /// <returns>Path to the clone</returns>
-    Task<NativePath> PrepareCloneAsync(
+    Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
@@ -72,30 +72,33 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     private readonly IVmrInfo _vmrInfo;
     private readonly IGitRepoCloner _gitRepoCloner;
     private readonly ILocalGitClient _localGitRepo;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
     // Map of URI => dir name
-    private readonly Dictionary<string, NativePath> _clones = new();
+    private readonly Dictionary<string, NativePath> _clones = [];
 
     // Repos we have already pulled updates for during this run
-    private readonly List<string> _upToDateRepos = new();
+    private readonly List<string> _upToDateRepos = [];
 
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         IGitRepoCloner gitRepoCloner,
         ILocalGitClient localGitRepo,
+        ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
         _vmrInfo = vmrInfo;
         _gitRepoCloner = gitRepoCloner;
         _localGitRepo = localGitRepo;
+        _localGitRepoFactory = localGitRepoFactory;
         _fileSystem = fileSystem;
         _logger = logger;
     }
 
-    public async Task<NativePath> PrepareCloneAsync(
+    public async Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         string checkoutRef,
@@ -114,12 +117,12 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
         }
 
-        await _localGitRepo.CheckoutAsync(path, checkoutRef);
-
-        return path;
+        var repo = _localGitRepoFactory.Create(path);
+        await repo.CheckoutAsync(checkoutRef);
+        return repo;
     }
 
-    public async Task<NativePath> PrepareCloneAsync(
+    public async Task<ILocalGitRepo> PrepareCloneAsync(
         string repoUri,
         string checkoutRef,
         CancellationToken cancellationToken)
@@ -127,11 +130,12 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         // We store clones in directories named as a hash of the repo URI
         var cloneDir = StringUtils.GetXxHash64(repoUri);
         var path = await PrepareCloneInternal(repoUri, cloneDir, cancellationToken);
-        await _localGitRepo.CheckoutAsync(path, checkoutRef);
-        return path;
+        var repo = _localGitRepoFactory.Create(path);
+        await repo.CheckoutAsync(checkoutRef);
+        return repo;
     }
 
-    public async Task<NativePath> PrepareCloneAsync(
+    public async Task<ILocalGitRepo> PrepareCloneAsync(
         SourceMapping mapping,
         IReadOnlyCollection<string> remoteUris,
         IReadOnlyCollection<string> requestedRefs,
@@ -190,9 +194,10 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        await _localGitRepo.CheckoutAsync(path, checkoutRef);
 
-        return path;
+        var repo = _localGitRepoFactory.Create(path);
+        await repo.CheckoutAsync(checkoutRef);
+        return repo;
     }
 
     private async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
