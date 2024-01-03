@@ -8,6 +8,7 @@ param(
 )
 
 az extension add --name containerapp --upgrade
+az provider register --namespace Microsoft.App
 
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
