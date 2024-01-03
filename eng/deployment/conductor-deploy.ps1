@@ -6,10 +6,12 @@ param(
     [Parameter(Mandatory=$true)][string]$imageName
 )
 
+Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
-
 # find the currently active revision
 $activeRevision = $containerappTraffic | Where-Object { $_.weight -eq 100 } 
+
+Write-Host "Currently active revision: $($activeRevision.revisionName) with label $($activeRevision.label)"
 
 # detirmine the label of the inactive revision
 if ($activeRevision.label -eq "blue") {
@@ -18,35 +20,47 @@ if ($activeRevision.label -eq "blue") {
     $inactiveLabel = "blue"
 }
 
+Write-Host "Next revision will be deployed with label $inactiveLabel"
+Write-Host "Removing label $inactiveLabel from the inactive revision"
 # remove the label from the inactive revision
-az containerapp revision label remove --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName
+az containerapp revision label remove --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName | Out-Null
 
-# deactivate the inactive revision
-$inactiveRevision = $containerappTraffic | Where-Object { $_.label -eq $inactiveLabel }
-
-az containerapp revision deactivate --revision $inactiveRevision.revisionName
-
-# deploy the new image
-$newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha
-
-$newRevisionName = "$containerappName--$commitSha"
-
-# wait for the new revision to become active
-$sleep = $false
-DO
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Couldn't find a revision with label $inactiveLabel. Skipping deactivation of inactive revision"
+} 
+else
 {
-    if ($sleep -eq $true) 
-    {
-        Start-Sleep -Seconds 60
-    }
+    Write-Host "Deactivating inactive revision"
+    # deactivate the inactive revision
 
-    $newRevisionStatus = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName --query "properties.active"
-    $sleep = $true
-} While ($newRevisionStatus -ne "true")
+    $inactiveRevision = $containerappTraffic | Where-Object { $_.label -eq $inactiveLabel }
 
-# assign the label to the new revision
-az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName
+    az containerapp revision deactivate --revision $inactiveRevision.revisionName --name $containerappName --resource-group $resourceGroupName
+}
+# # deploy the new image
+# $newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
+# Write-Host "Deploying new image $newImage"
+# az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha
 
-# transfer all traffiic to the new revision
-az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100
+# $newRevisionName = "$containerappName--$commitSha"
+
+# Write-Host "Waiting for new revision $newRevisionName to become active"
+# # wait for the new revision to become active
+# $sleep = $false
+# DO
+# {
+#     if ($sleep -eq $true) 
+#     {
+#         Start-Sleep -Seconds 60
+#     }
+#     $newRevisionStatus = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName --query "properties.active"
+#     Write-Host "New revision status: $newRevisionStatus"
+#     $sleep = $true
+# } While ($newRevisionStatus -ne "true")
+
+# Write-Host "Assigning label $inactiveLabel to the new revision"
+# # assign the label to the new revision
+# az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName
+
+# # transfer all traffiic to the new revision
+# az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100
