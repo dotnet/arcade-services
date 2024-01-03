@@ -23,9 +23,9 @@ if ($activeRevision.label -eq "blue") {
 Write-Host "Next revision will be deployed with label $inactiveLabel"
 Write-Host "Removing label $inactiveLabel from the inactive revision"
 # remove the label from the inactive revision
-az containerapp revision label remove --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName | Out-Null
+$revisionRemovalOutput = az containerapp revision label remove --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName 2>&1
 
-if ($LASTEXITCODE -ne 0) {
+if ($revisionRemovalOutput -match "Please specify a label name with an associated traffic weight") {
     Write-Host "Couldn't find a revision with label $inactiveLabel. Skipping deactivation of inactive revision"
 } 
 else
@@ -37,30 +37,30 @@ else
 
     az containerapp revision deactivate --revision $inactiveRevision.revisionName --name $containerappName --resource-group $resourceGroupName
 }
-# # deploy the new image
-# $newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
-# Write-Host "Deploying new image $newImage"
-# az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha
+# deploy the new image
+$newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
+Write-Host "Deploying new image $newImage"
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha
 
-# $newRevisionName = "$containerappName--$commitSha"
+$newRevisionName = "$containerappName--$commitSha"
 
-# Write-Host "Waiting for new revision $newRevisionName to become active"
-# # wait for the new revision to become active
-# $sleep = $false
-# DO
-# {
-#     if ($sleep -eq $true) 
-#     {
-#         Start-Sleep -Seconds 60
-#     }
-#     $newRevisionStatus = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName --query "properties.active"
-#     Write-Host "New revision status: $newRevisionStatus"
-#     $sleep = $true
-# } While ($newRevisionStatus -ne "true")
+Write-Host "Waiting for new revision $newRevisionName to become active"
+# wait for the new revision to become active
+$sleep = $false
+DO
+{
+    if ($sleep -eq $true) 
+    {
+        Start-Sleep -Seconds 60
+    }
+    $newRevisionStatus = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName --query "properties.active"
+    Write-Host "New revision status: $newRevisionStatus"
+    $sleep = $true
+} While ($newRevisionStatus -ne "true")
 
-# Write-Host "Assigning label $inactiveLabel to the new revision"
-# # assign the label to the new revision
-# az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName
+Write-Host "Assigning label $inactiveLabel to the new revision"
+# assign the label to the new revision
+az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision-name $newRevisionName
 
-# # transfer all traffiic to the new revision
-# az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100
+# transfer all traffiic to the new revision
+az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100
