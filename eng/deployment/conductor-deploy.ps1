@@ -67,8 +67,6 @@ az containerapp revision label add --label $inactiveLabel --name $containerappNa
 
 # TODO tests..
 
-az containerapp ingress traffic set --help
-
 # transfer all traffiic to the new revision
-az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100 | Out-Null
+az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
 Write-Host "All traffic has been redirected to label $inactiveLabel"
