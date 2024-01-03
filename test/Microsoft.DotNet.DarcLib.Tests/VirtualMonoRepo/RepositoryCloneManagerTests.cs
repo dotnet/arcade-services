@@ -300,7 +300,7 @@ public class RepositoryCloneManagerTests
                         throw new Exception($"Could not find {sha}");
                     }
                 })
-                .ReturnsAsync("commit");
+                .ReturnsAsync(GitObjectType.Commit);
         }
     }
 

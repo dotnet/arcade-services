@@ -161,6 +161,18 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
+    protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath)
+    {
+        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrBackFlower>();
+        return await codeflower.FlowBackAsync(mappingName, repoPath, cancellationToken: _cancellationToken.Token);
+    }
+
+    protected async Task<string?> CallDarcForwardflow(string mappingName, NativePath repoPath)
+    {
+        var codeflower = _serviceProvider.Value.GetRequiredService<IVmrForwardFlower>();
+        return await codeflower.FlowForwardAsync(mappingName, repoPath, cancellationToken: _cancellationToken.Token);
+    }
+
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {
         var cloakedFileScanner = _serviceProvider.Value.GetRequiredService<VmrCloakedFileScanner>();

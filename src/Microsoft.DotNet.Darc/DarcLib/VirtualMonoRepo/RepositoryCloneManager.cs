@@ -163,8 +163,8 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             {
                 try
                 {
-                    string objectType = await _localGitRepo.GetObjectTypeAsync(path, commit);
-                    if (objectType == "commit")
+                    var objectType = await _localGitRepo.GetObjectTypeAsync(path, commit);
+                    if (objectType == GitObjectType.Commit)
                     {
                         refsToVerify.Remove(commit);
                     }

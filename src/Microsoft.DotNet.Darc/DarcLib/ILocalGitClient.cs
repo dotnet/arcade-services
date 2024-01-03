@@ -118,14 +118,14 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="gitRef">Git reference to resolve or HEAD when null</param>
-    Task<string> GetShaForRefAsync(string repoPath, string gitRef);
+    Task<string> GetShaForRefAsync(string repoPath, string? gitRef = null);
 
     /// <summary>
     ///     Gets the type of a git object (e.g. commit, tree..).
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <param name="objectSha">SHA of the object</param>
-    Task<string> GetObjectTypeAsync(string repoPath, string objectSha);
+    Task<GitObjectType> GetObjectTypeAsync(string repoPath, string objectSha);
 
     /// <summary>
     ///     Returns a list of modified staged files.
