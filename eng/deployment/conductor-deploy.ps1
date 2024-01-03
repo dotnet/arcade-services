@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory=$true)][string]$commitSha,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$subscriptionName
+    [Parameter(Mandatory=$true)][string]$subscriptionName,
+    [Parameter(Mandatory=$true)][string]$containerappEnvironmentName
 )
 
 az extension add --name containerapp --upgrade
@@ -65,7 +66,15 @@ Write-Host "Assigning label $inactiveLabel to the new revision"
 # assign the label to the new revision
 az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
 
-# TODO tests..
+# test the newly deployed revision
+$appDomain = az containerapp env show --resource-group $resourceGroupName -name $containerappEnvironmentName --query properties.defaultDomain -o tsv
+$testURL = "https://$containerappName---$inactiveLabel.$appDomain/weatherforecast"
+Write-Host "Testing new revision with URL $testURL"
+$testResult = Invoke-WebRequest -Uri $testURL
+if ($testResult.StatusCode -ne 200) {
+    Write-Host "Test failed with status code $($testResult.StatusCode)"
+    exit 1
+}
 
 # transfer all traffiic to the new revision
 az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
