@@ -67,7 +67,7 @@ Write-Host "Assigning label $inactiveLabel to the new revision"
 az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
 
 # test the newly deployed revision
-$appDomain = az containerapp env show --resource-group $resourceGroupName -name $containerappEnvironmentName --query properties.defaultDomain -o tsv
+$appDomain = az containerapp env show --resource-group $resourceGroupName --name $containerappEnvironmentName --query properties.defaultDomain -o tsv
 $testURL = "https://$containerappName---$inactiveLabel.$appDomain/weatherforecast"
 Write-Host "Testing new revision with URL $testURL"
 $testResult = Invoke-WebRequest -Uri $testURL
