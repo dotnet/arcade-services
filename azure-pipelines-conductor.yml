@@ -25,10 +25,4 @@ stages:
               scriptType: 'pscore'
               scriptLocation: 'scriptPath'
               scriptPath: '$(Build.SourcesDirectory)/eng/deployment/conductor-deploy.ps1'
-              arguments: |
-                --resourceGroupName "dkurepa-containers2"
-                --containerappName "apiservice"
-                --commitSha $(Build.SourceVersion)
-                --containerRegistryName "dkurepaacr"
-                --imageName "conductor.api"
-                --subscriptionName "dkurepa dev subscription"
+              arguments: -resourceGroupName "dkurepa-containers2" -containerappName "apiservice" -commitSha $(Build.SourceVersion) -containerRegistryName "dkurepaacr" -imageName "conductor.api" -subscriptionName "dkurepa dev subscription"
