@@ -22,7 +22,7 @@ stages:
           - task: AzureCLI@2
             inputs:
               azureSubscription: 'dkurepa-test'
-              scriptType: 'ps'
+              scriptType: 'pscore'
               scriptLocation: 'scriptPath'
               scriptPath: '$(Build.SourcesDirectory)/eng/deployment/conductor-deploy.ps1'
               arguments: |
