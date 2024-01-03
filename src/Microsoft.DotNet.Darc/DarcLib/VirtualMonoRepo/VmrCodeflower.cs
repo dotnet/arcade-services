@@ -189,8 +189,8 @@ internal abstract class VmrCodeflower
             sourceRepo = repoClone;
         }
 
-        GitObjectType objectType1 = await repoClone.GetObjectTypeAsync(backwardSha);
-        GitObjectType objectType2 = await repoClone.GetObjectTypeAsync(forwardSha);
+        GitObjectType objectType1 = await sourceRepo.GetObjectTypeAsync(backwardSha);
+        GitObjectType objectType2 = await sourceRepo.GetObjectTypeAsync(forwardSha);
 
         if (objectType1 != GitObjectType.Commit || objectType2 != GitObjectType.Commit)
         {
