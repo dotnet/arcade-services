@@ -60,7 +60,10 @@ DO
 
 Write-Host "Assigning label $inactiveLabel to the new revision"
 # assign the label to the new revision
-az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName
+az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
+
+# TODO tests..
 
 # transfer all traffiic to the new revision
-az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100
+az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight $inactiveLabel=100 | Out-Null
+Write-Host "All traffic has been redirected to label $inactiveLabel"
