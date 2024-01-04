@@ -12,6 +12,6 @@ public class ServiceStatusController : Controller
     [HttpGet("startup")]
     public IActionResult GetStartupStatus()
     {
-        return BadRequest();
+        return Ok();
     }
 }
