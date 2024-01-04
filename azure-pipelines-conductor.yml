@@ -1,3 +1,5 @@
+name: $(Date:yyyyMMdd)$(Rev:r)
+
 stages:
   - stage: PublishConductor
     displayName: Publish Conductor
@@ -12,8 +14,6 @@ stages:
           - name: newDockerImageTag
             value: $(Build.SourceVersion)-$(Build.BuildNumber)
           - group: dkurepa-test
-
-        name: $(Date:yyyyMMdd)$(Rev:r)
 
         steps:
           - checkout: self
