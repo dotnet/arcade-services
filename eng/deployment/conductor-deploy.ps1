@@ -82,5 +82,7 @@ if ($newRevisionRunningState -match "Running") {
     Write-Host "All traffic has been redirected to label $inactiveLabel"
 }
 else {
-    Write-Host "New revision is not running. Deleting the new revision"
+    Write-Host "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
+    az containerapp revision deactivate --revision $newRevisionName --name $containerappName --resource-group $resourceGroupName
+    exit 1
 }
