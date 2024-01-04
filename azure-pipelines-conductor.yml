@@ -11,12 +11,15 @@ stages:
           vmImage: ubuntu-latest
 
         variables:
-          - name: newDockerImageTag
-            value: $(Build.SourceVersion)-$(Build.BuildNumber)
           - group: dkurepa-test
 
         steps:
           - checkout: self
+
+          - powershell: |
+              $newDockerTag = "$($(Build.SourceVersion).Substring(0, 10))-$(Build.BuildNumber)"
+              Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
+            displayName: 'Set new docker image tag variable'
 
           - powershell: |
               docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile -t dkurepaacr.azurecr.io/conductor.api:${{ variables.newDockerImageTag }}
