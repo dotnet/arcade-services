@@ -1,7 +1,7 @@
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that will contain all the resources')
-param resourceGroupName string = 'dkurepa-containers4'
+param resourceGroupName string = 'dkurepa-containers3'
 
 @minLength(1)
 @description('Primary location for all resources')
@@ -10,7 +10,7 @@ param location string = 'northeurope'
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'dkurepaacr3'
+param containerRegistryName string = 'dkurepaacr123'
 
 @minLength(1)
 @maxLength(64)
@@ -33,6 +33,9 @@ param aspnetcoreEnvironment string = 'Development'
 
 @description('Name of the application insights resource')
 param applicationInsightsName string = 'dkurepa'
+
+@description('Key Vault name')
+param keyVaultName string = 'dkurepa-containters-kv'
 
 var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, location))
 // Use the default container for the creation
@@ -211,4 +214,36 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
         ]
       }
   }
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
+    name: keyVaultName
+    location: location
+    properties: {
+        sku: {
+            name: 'standard'
+            family: 'A'
+        }
+        tenantId: subscription().tenantId
+        enableSoftDelete: true
+        softDeleteRetentionInDays: 90
+        accessPolicies: []
+        enableRbacAuthorization: true
+    }
+}
+
+resource containerRegistryUsernameSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+    parent: keyVault
+    name: 'container-registry-username'
+    properties: {
+        value: containerRegistry.listCredentials().username
+    }
+}
+
+resource containerRegistryPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+    parent: keyVault
+    name: 'container-registry-password'
+    properties: {
+        value: containerRegistry.listCredentials().passwords[0].value
+    }
 }
