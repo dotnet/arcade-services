@@ -17,7 +17,8 @@ stages:
           - checkout: self
 
           - powershell: |
-              $newDockerTag = "$($(Build.SourceVersion).Substring(0, 10))-$(Build.BuildNumber)"
+              $shortSha = "$(Build.SourceVersion)".Substring(0,10)
+              $newDockerTag = "$shortSha-$(Build.BuildNumber)"
               Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
             displayName: 'Set new docker image tag variable'
 
