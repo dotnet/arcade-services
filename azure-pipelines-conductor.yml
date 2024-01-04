@@ -13,6 +13,8 @@ stages:
             value: $(Build.SourceVersion)-$(Build.BuildNumber)
           - group: dkurepa-test
 
+        name: $(Date:yyyyMMdd)$(Rev:r)
+
         steps:
           - checkout: self
 
