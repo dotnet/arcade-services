@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$resourceGroupName,
     [Parameter(Mandatory=$true)][string]$containerappName,
-    [Parameter(Mandatory=$true)][string]$commitSha,
+    [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
     [Parameter(Mandatory=$true)][string]$subscriptionName,
@@ -42,11 +42,11 @@ else
     az containerapp revision deactivate --revision $inactiveRevision.revisionName --name $containerappName --resource-group $resourceGroupName
 }
 # deploy the new image
-$newImage = "$containerRegistryName.azurecr.io/$imageName`:$commitSha"
+$newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $commitSha | Out-Null
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
-$newRevisionName = "$containerappName--$commitSha"
+$newRevisionName = "$containerappName--$newImageTag"
 
 Write-Host "Waiting for new revision $newRevisionName to become active"
 # wait for the new revision to become active
@@ -76,6 +76,6 @@ if ($testResult.StatusCode -ne 200) {
     exit 1
 }
 
-# transfer all traffiic to the new revision
+# transfer all traffic to the new revision
 az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
 Write-Host "All traffic has been redirected to label $inactiveLabel"
