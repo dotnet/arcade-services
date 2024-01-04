@@ -57,25 +57,30 @@ DO
     {
         Start-Sleep -Seconds 60
     }
-    $newRevisionStatus = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName --query "properties.active"
-    Write-Host "New revision status: $newRevisionStatus"
+    $newRevisionRunningState = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName --query "properties.runningState"
+    Write-Host "New revision running state: $newRevisionRunningState"
     $sleep = $true
-} While ($newRevisionStatus -ne "true")
+} While ($newRevisionRunningState -eq "Activating")
 
-Write-Host "Assigning label $inactiveLabel to the new revision"
-# assign the label to the new revision
-az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
+if ($newRevisionRunningState -match "Running") {
+    Write-Host "Assigning label $inactiveLabel to the new revision"
+    # assign the label to the new revision
+    az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
 
-# test the newly deployed revision
-$appDomain = az containerapp env show --resource-group $resourceGroupName --name $containerappEnvironmentName --query properties.defaultDomain -o tsv
-$testURL = "https://$containerappName---$inactiveLabel.$appDomain/weatherforecast"
-Write-Host "Testing new revision with URL $testURL"
-$testResult = Invoke-WebRequest -Uri $testURL
-if ($testResult.StatusCode -ne 200) {
-    Write-Host "Test failed with status code $($testResult.StatusCode)"
-    exit 1
+    # test the newly deployed revision
+    $appDomain = az containerapp env show --resource-group $resourceGroupName --name $containerappEnvironmentName --query properties.defaultDomain -o tsv
+    $testURL = "https://$containerappName---$inactiveLabel.$appDomain/weatherforecast"
+    Write-Host "Testing new revision with URL $testURL"
+    $testResult = Invoke-WebRequest -Uri $testURL
+    if ($testResult.StatusCode -ne 200) {
+        Write-Host "Test failed with status code $($testResult.StatusCode)"
+        exit 1
+    }
+
+    # transfer all traffic to the new revision
+    az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
+    Write-Host "All traffic has been redirected to label $inactiveLabel"
 }
-
-# transfer all traffic to the new revision
-az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
-Write-Host "All traffic has been redirected to label $inactiveLabel"
+else {
+    Write-Host "New revision is not running. Deleting the new revision"
+}
