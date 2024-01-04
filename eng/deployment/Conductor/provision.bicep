@@ -1,7 +1,7 @@
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that will contain all the resources')
-param resourceGroupName string = 'dkurepa-containers2'
+param resourceGroupName string = 'dkurepa-containers4'
 
 @minLength(1)
 @description('Primary location for all resources')
@@ -10,12 +10,12 @@ param location string = 'northeurope'
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'dkurepaacr'
+param containerRegistryName string = 'dkurepaacr3'
 
 @minLength(1)
 @maxLength(64)
 @description('Name of the identity used by the apps to access Azure Container Registry')
-param identityName string = 'dkurepa-c'
+param identityName string = 'dkurepa4-c'
 
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
 param containerCpuCoreCount string = '0.25'
@@ -23,32 +23,20 @@ param containerCpuCoreCount string = '0.25'
 @description('Memory allocated to a single container instance, e.g., 1Gi')
 param containerMemory string = '0.5Gi'
 
-var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, location))
-var helloWorldContainerImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+@description('aspnetcore environment')
+@allowed([
+    'Development'
+    'Staging'
+    'Production'
+])
+param aspnetcoreEnvironment string = 'Development'
 
-// common environment variables used by each of the apps
-var env = [
-    {
-        name: 'ASPNETCORE_ENVIRONMENT'
-        value: 'Development'
-    }
-    {
-        name: 'Logging__Console__FormatterName'
-        value: 'simple'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__SingleLine'
-        value: 'true'
-    }
-    {
-        name: 'Logging__Console__FormatterOptions__IncludeScopes'
-        value: 'true'
-    }
-    {
-        name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
-        value: 'true'
-    }
-]
+@description('Name of the application insights resource')
+param applicationInsightsName string = 'dkurepa'
+
+var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, location))
+// Use the default container for the creation
+var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
@@ -122,6 +110,48 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+// application insights for service logging
+resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
+    name: applicationInsightsName
+    location: location
+    kind: 'web'
+    properties: {
+        Application_Type: 'web'
+        publicNetworkAccessForIngestion: 'Enabled'
+        publicNetworkAccessForQuery: 'Enabled'
+        RetentionInDays: 120
+        WorkspaceResourceId: logAnalytics.id
+    }
+}
+
+// common environment variables used by each of the apps
+var env = [
+    {
+        name: 'ASPNETCORE_ENVIRONMENT'
+        value: aspnetcoreEnvironment
+    }
+    {
+        name: 'Logging__Console__FormatterName'
+        value: 'simple'
+    }
+    {
+        name: 'Logging__Console__FormatterOptions__SingleLine'
+        value: 'true'
+    }
+    {
+        name: 'Logging__Console__FormatterOptions__IncludeScopes'
+        value: 'true'
+    }
+    {
+        name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
+        value: 'true'
+    }
+    {
+        name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+        value: applicationInsights.properties.ConnectionString
+    }
+]
+
 // apiservice - the app's back-end
 resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
   name: 'apiservice'
@@ -133,17 +163,20 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
   properties: {
       managedEnvironmentId: containerAppsEnvironment.id
       configuration: {
-      activeRevisionsMode: 'Multiple'
-      ingress: {
-          external: true
-          targetPort: 80
-          transport: 'http'
-      }
-      dapr: { enabled: false }
-      registries: [ {
-          server: '${containerRegistryName}.azurecr.io'
-          identity: identity.id
-          } ]
+        activeRevisionsMode: 'Multiple'
+        maxInactiveRevisions: 5
+        ingress: {
+            external: true
+            targetPort: 80
+            transport: 'http'
+        }
+        dapr: { enabled: false }
+        registries: [ 
+            {
+                server: '${containerRegistryName}.azurecr.io'
+                identity: identity.id
+            } 
+        ]
       }
       template: {
           scale: {
@@ -151,15 +184,31 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
               maxReplicas: 1
           }
           serviceBinds: []
-          containers: [ {
-              image: helloWorldContainerImage
-              name: 'apiservice'
-              env: env
-              resources: {
-                  cpu: json(containerCpuCoreCount)
-                  memory: containerMemory
-              }
-          } ]
+          containers: [ 
+            {
+                image: containerImageName
+                name: 'apiservice'
+                env: env
+                resources: {
+                    cpu: json(containerCpuCoreCount)
+                    memory: containerMemory
+                }
+                probes: [
+                    {
+                        httpGet: {
+                            path: '/status/startup'
+                            port: 8080
+                            scheme: 'HTTP'
+                        }
+                        initialDelaySeconds: 5
+                        periodSeconds: 10
+                        successThreshold: 1
+                        failureThreshold: 3
+                        type: 'Startup'
+                    }
+                ]
+            } 
+        ]
       }
   }
 }

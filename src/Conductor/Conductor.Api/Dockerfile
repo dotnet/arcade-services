@@ -14,7 +14,7 @@ COPY ["Directory.Build.props", "."]
 COPY ["Directory.Build.targets", "."]
 COPY ["NuGet.config", "."]
 COPY ["global.json", "."]
-COPY ["/src/Conductor/Conductor/Conductor.ServiceDefaults/Conductor.ServiceDefaults.csproj", "/src/Conductor/Conductor/Conductor.ServiceDefaults/"]
+COPY ["/src/Conductor/Conductor.ServiceDefaults/Conductor.ServiceDefaults.csproj", "/src/Conductor/Conductor.ServiceDefaults/"]
 COPY ["src/Conductor/Conductor.Api/Conductor.Api.csproj", "/src/Conductor/Conductor.Api/"]
 RUN dotnet restore "/src/Conductor/Conductor.Api/Conductor.Api.csproj"
 COPY ["src/Conductor", "/src"]
