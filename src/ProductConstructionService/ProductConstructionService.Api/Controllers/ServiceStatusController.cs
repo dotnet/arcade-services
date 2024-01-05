@@ -3,7 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Conductor.Api.Controllers;
+namespace ProductConstructionService.Api.Controllers;
 
 [ApiController]
 [Route("status")]

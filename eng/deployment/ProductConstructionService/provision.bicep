@@ -37,6 +37,9 @@ param applicationInsightsName string = 'dkurepa'
 @description('Key Vault name')
 param keyVaultName string = 'dkurepa-containters-kv'
 
+@description('Virtual network name')
+param virtualNetworkName string = 'dkurepa-containers-vnet'
+
 var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, location))
 // Use the default container for the creation
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
@@ -61,13 +64,13 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
   name: 'acae${resourceToken}'
   location: location
   properties: {
-      appLogsConfiguration: {
-          destination: 'log-analytics'
-          logAnalyticsConfiguration: {
-              customerId: logAnalytics.properties.customerId
-              sharedKey: logAnalytics.listKeys().primarySharedKey
-          }
-      }
+    appLogsConfiguration: {
+        destination: 'log-analytics'
+        logAnalyticsConfiguration: {
+            customerId: logAnalytics.properties.customerId
+            sharedKey: logAnalytics.listKeys().primarySharedKey
+        }
+    }
   }
 }
 
@@ -217,7 +220,7 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-    name: keyVaultName
+    name: 'kv${resourceToken}'
     location: location
     properties: {
         sku: {

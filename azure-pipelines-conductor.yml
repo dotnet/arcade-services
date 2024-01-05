@@ -24,7 +24,7 @@ stages:
             displayName: 'Set new docker image tag variable'
 
           - powershell: |
-              docker build --progress=plain . -f $(Build.SourcesDirectory)/src/Conductor/Conductor.Api/Dockerfile -t dkurepaacr.azurecr.io/conductor.api:$(newDockerImageTag)
+              docker build --progress=plain . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t dkurepaacr.azurecr.io/conductor.api:$(newDockerImageTag)
               echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin "dkurepaacr.azurecr.io"
               docker push "dkurepaacr.azurecr.io/conductor.api:$(newDockerImageTag)"
 
@@ -33,5 +33,5 @@ stages:
               azureSubscription: 'dkurepa-test'
               scriptType: 'pscore'
               scriptLocation: 'scriptPath'
-              scriptPath: '$(Build.SourcesDirectory)/eng/deployment/conductor-deploy.ps1'
+              scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
               arguments: -resourceGroupName "dkurepa-containers2" -containerappName "apiservice" -newImageTag $(newDockerImageTag) -containerRegistryName "dkurepaacr" -imageName "conductor.api" -subscriptionName "dkurepa dev subscription" -containerappEnvironmentName "acaexjpe3hisjmv2e"
