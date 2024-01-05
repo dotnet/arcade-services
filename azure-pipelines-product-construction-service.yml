@@ -48,7 +48,7 @@ stages:
 
           - task: AzureCLI@2
             inputs:
-              azureSubscription: NetHelixStaging
+              azureSubscription: $(serviceConnection)
               scriptType: 'pscore'
               scriptLocation: 'scriptPath'
               scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'

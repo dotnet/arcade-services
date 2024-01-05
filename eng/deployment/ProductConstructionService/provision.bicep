@@ -41,9 +41,6 @@ param containerAppsEnvironmentName string = 'product-construction-service-int-en
 @description('Product construction service API name')
 param productConstructionServiceApiName string = 'product-construction-int-api'
 
-// Use the default container for the creation
-var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
   name: logAnalyticsName
@@ -192,7 +189,6 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
           serviceBinds: []
           containers: [ 
             {
-                image: containerImageName
                 name: 'apiservice'
                 env: env
                 resources: {
