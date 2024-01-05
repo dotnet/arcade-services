@@ -1,12 +1,12 @@
 name: $(Date:yyyyMMdd)$(Rev:r)
 
 stages:
-  - stage: PublishConductor
-    displayName: Publish Conductor
+  - stage: PublishProductConstructionService
+    displayName: Publish Product Construction Service
     dependsOn: []
     jobs:
       - job: Publish
-        displayName: Publish Conductor
+        displayName: Publish Product Construction Service
         pool:
           vmImage: ubuntu-latest
 
@@ -27,6 +27,7 @@ stages:
               docker build --progress=plain . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t dkurepaacr.azurecr.io/conductor.api:$(newDockerImageTag)
               echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin "dkurepaacr.azurecr.io"
               docker push "dkurepaacr.azurecr.io/conductor.api:$(newDockerImageTag)"
+            displayName: 'Build and push docker image'
 
           - task: AzureCLI@2
             inputs:
@@ -35,3 +36,4 @@ stages:
               scriptLocation: 'scriptPath'
               scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
               arguments: -resourceGroupName "dkurepa-containers2" -containerappName "apiservice" -newImageTag $(newDockerImageTag) -containerRegistryName "dkurepaacr" -imageName "conductor.api" -subscriptionName "dkurepa dev subscription" -containerappEnvironmentName "acaexjpe3hisjmv2e"
+            displayName: 'Product Construction Service Deploy'

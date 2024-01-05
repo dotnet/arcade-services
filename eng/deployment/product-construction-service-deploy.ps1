@@ -49,7 +49,7 @@ az containerapp update --name $containerappName --resource-group $resourceGroupN
 $newRevisionName = "$containerappName--$newImageTag"
 
 Write-Host "Waiting for new revision $newRevisionName to become active"
-# wait for the new revision to become active
+# wait for the new revision to pass health probes and become active
 $sleep = $false
 DO
 {
@@ -66,16 +66,6 @@ if ($newRevisionRunningState -match "Running") {
     Write-Host "Assigning label $inactiveLabel to the new revision"
     # assign the label to the new revision
     az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
-
-    # test the newly deployed revision
-    $appDomain = az containerapp env show --resource-group $resourceGroupName --name $containerappEnvironmentName --query properties.defaultDomain -o tsv
-    $testURL = "https://$containerappName---$inactiveLabel.$appDomain/weatherforecast"
-    Write-Host "Testing new revision with URL $testURL"
-    $testResult = Invoke-WebRequest -Uri $testURL
-    if ($testResult.StatusCode -ne 200) {
-        Write-Host "Test failed with status code $($testResult.StatusCode)"
-        exit 1
-    }
 
     # transfer all traffic to the new revision
     az containerapp ingress traffic set --name $containerappName --resource-group $resourceGroupName --label-weight "$inactiveLabel=100" | Out-Null
