@@ -27,6 +27,8 @@ stages:
               value: product-construction-service-int-env
             - name: dockerRegistryUrl
               value: 'productconstructionint.azurecr.io'
+            - name: serviceConnection
+              value: 'NetHelixStaging'
             ${{ else }}:
             - group: 'Product-Construction-Service-Prod
 
@@ -48,7 +50,7 @@ stages:
 
           - task: AzureCLI@2
             inputs:
-              azureSubscription: 'dkurepa-test'
+              azureSubscription: $(serviceConnection)
               scriptType: 'pscore'
               scriptLocation: 'scriptPath'
               scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
