@@ -105,8 +105,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.ScenarioTests", "te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubscriptionActorService.Tests", "test\SubscriptionActorService.Tests\SubscriptionActorService.Tests.csproj", "{53AAB951-C3FB-44A0-A1FF-E74440400159}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Conductor", "Conductor", "{EA6BE4F6-FCE6-4B54-A32E-9E065774CBC9}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.AppHost", "src\ProductConstructionService\ProductConstructionService.AppHost\ProductConstructionService.AppHost.csproj", "{AF9375CF-BBCA-4C38-9F6C-A07E15C75453}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.ServiceDefaults", "src\ProductConstructionService\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj", "{2FCDF4D4-AE2D-428F-9820-BAC7C8C05826}"

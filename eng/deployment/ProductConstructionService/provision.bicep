@@ -173,7 +173,7 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
         maxInactiveRevisions: 5
         ingress: {
             external: true
-            targetPort: 80
+            targetPort: 8080
             transport: 'http'
         }
         dapr: { enabled: false }
