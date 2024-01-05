@@ -30,7 +30,7 @@ stages:
             - name: serviceConnection
               value: 'NetHelixStaging'
             ${{ else }}:
-            - group: 'Product-Construction-Service-Prod
+            - group: 'Product-Construction-Service-Prod'
 
         steps:
           - checkout: self
