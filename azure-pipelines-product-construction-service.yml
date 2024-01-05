@@ -18,17 +18,17 @@ stages:
         - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
             - group: 'Product-Construction-Service-Int'
             - name: containerappName
-              value: 'product-construction-int-api'
+              value: product-construction-int-api
             - name: containerRegistryName
               value: productconstructionint
             - name: subscriptionName
-              value: 'HelixStaging'
+              value: HelixStaging
             - name: containerappEnvironmentName
               value: product-construction-service-int-env
             - name: dockerRegistryUrl
-              value: 'productconstructionint.azurecr.io'
+              value: productconstructionint.azurecr.io
             - name: serviceConnection
-              value: 'NetHelixStaging'
+              value: NetHelixStaging
 
         steps:
           - checkout: self
