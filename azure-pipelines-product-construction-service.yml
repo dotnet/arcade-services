@@ -27,8 +27,6 @@ stages:
               value: product-construction-service-int-env
             - name: dockerRegistryUrl
               value: productconstructionint.azurecr.io
-            - name: serviceConnection
-              value: NetHelixStaging
 
         steps:
           - checkout: self
@@ -46,11 +44,13 @@ stages:
               docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
             displayName: 'Build and push docker image'
 
-          - task: AzureCLI@2
-            inputs:
-              azureSubscription: $(serviceConnection)
-              scriptType: 'pscore'
-              scriptLocation: 'scriptPath'
-              scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
-              arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -subscriptionName $(subscriptionName) -containerappEnvironmentName "acaexjpe3hisjmv2e"
-            displayName: 'Product Construction Service Deploy'
+          # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
+          - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+            - task: AzureCLI@2
+              inputs:
+                azureSubscription: NetHelixStaging
+                scriptType: 'pscore'
+                scriptLocation: 'scriptPath'
+                scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
+                arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -subscriptionName $(subscriptionName) -containerappEnvironmentName "acaexjpe3hisjmv2e"
+              displayName: 'Product Construction Service Deploy'
