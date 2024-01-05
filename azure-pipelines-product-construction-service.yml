@@ -11,11 +11,11 @@ stages:
           vmImage: ubuntu-latest
 
         variables:
-          - name: resourceGroupName
-            value: 'product-construction-service'
-          - name: containerName
-            value: 'product-construction-service.api'
-          - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        - name: resourceGroupName
+          value: 'product-construction-service'
+        - name: containerName
+          value: 'product-construction-service.api'
+        - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
             - group: 'Product-Construction-Service-Int'
             - name: containerappName
               value: 'product-construction-int-api'
@@ -29,8 +29,6 @@ stages:
               value: 'productconstructionint.azurecr.io'
             - name: serviceConnection
               value: 'NetHelixStaging'
-            ${{ else }}:
-            - group: 'Product-Construction-Service-Prod'
 
         steps:
           - checkout: self
