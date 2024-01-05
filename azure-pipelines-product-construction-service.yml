@@ -1,0 +1,56 @@
+name: $(Date:yyyyMMdd)$(Rev:r)
+
+stages:
+  - stage: PublishProductConstructionService
+    displayName: Publish Product Construction Service
+    dependsOn: []
+    jobs:
+      - job: Publish
+        displayName: Publish Product Construction Service
+        pool:
+          vmImage: ubuntu-latest
+
+        variables:
+          - name: resourceGroupName
+            value: 'product-construction-service'
+          - name: containerName
+            value: 'product-construction-service.api'
+          - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+            - group: 'Product-Construction-Service-Int'
+            - name: containerappName
+              value: 'product-construction-int-api'
+            - name: containerRegistryName
+              value: productconstructionint
+            - name: subscriptionName
+              value: 'HelixStaging'
+            - name: containerappEnvironmentName
+              value: product-construction-service-int-env
+            - name: dockerRegistryUrl
+              value: 'productconstructionint.azurecr.io'
+            ${{ else }}:
+            - group: 'Product-Construction-Service-Prod
+
+        steps:
+          - checkout: self
+
+          - powershell: |
+              $shortSha = "$(Build.SourceVersion)".Substring(0,10)
+              $newDockerTag = "$shortSha-$(Build.BuildNumber)"
+              Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
+              Write-Host "set newDockerImageTag to $newDockerTag"
+            displayName: 'Set new docker image tag variable'
+
+          - powershell: |
+              docker build --progress=plain . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+              echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
+              docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+            displayName: 'Build and push docker image'
+
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'dkurepa-test'
+              scriptType: 'pscore'
+              scriptLocation: 'scriptPath'
+              scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
+              arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -subscriptionName $(subscriptionName) -containerappEnvironmentName "acaexjpe3hisjmv2e"
+            displayName: 'Product Construction Service Deploy'

@@ -1,21 +1,16 @@
 @minLength(1)
-@maxLength(64)
-@description('Name of the resource group that will contain all the resources')
-param resourceGroupName string = 'dkurepa-containers3'
-
-@minLength(1)
 @description('Primary location for all resources')
-param location string = 'northeurope'
+param location string = 'centralus'
 
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'dkurepaacr123'
+param containerRegistryName string = 'productconstructionint'
 
 @minLength(1)
 @maxLength(64)
 @description('Name of the identity used by the apps to access Azure Container Registry')
-param identityName string = 'dkurepa4-c'
+param identityName string = 'ProductConstructionServiceIntIdentity'
 
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
 param containerCpuCoreCount string = '0.25'
@@ -29,24 +24,29 @@ param containerMemory string = '0.5Gi'
     'Staging'
     'Production'
 ])
-param aspnetcoreEnvironment string = 'Development'
+param aspnetcoreEnvironment string = 'Staging'
 
 @description('Name of the application insights resource')
-param applicationInsightsName string = 'dkurepa'
+param applicationInsightsName string = 'product-construction-service-int-ai'
 
 @description('Key Vault name')
-param keyVaultName string = 'dkurepa-containters-kv'
+param keyVaultName string = 'ProductConstructionInt'
 
-@description('Virtual network name')
-param virtualNetworkName string = 'dkurepa-containers-vnet'
+@description('Log analytics workspace name')
+param logAnalyticsName string = 'product-construction-service-int-workspace'
 
-var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, location))
+@description('Name of the container apps environment')
+param containerAppsEnvironmentName string = 'product-construction-service-int-env'
+
+@description('Product construction service API name')
+param productConstructionServiceApiName string = 'product-construction-int-api'
+
 // Use the default container for the creation
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
-  name: 'logs${resourceToken}'
+  name: logAnalyticsName
   location: location
   properties: any({
       retentionInDays: 30
@@ -61,7 +61,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-previ
 
 // the container apps environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
-  name: 'acae${resourceToken}'
+  name: containerAppsEnvironmentName
   location: location
   properties: {
     appLogsConfiguration: {
@@ -160,7 +160,7 @@ var env = [
 
 // apiservice - the app's back-end
 resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
-  name: 'apiservice'
+  name: productConstructionServiceApiName
   location: location
   identity: {
       type: 'UserAssigned'
@@ -220,7 +220,7 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-    name: 'kv${resourceToken}'
+    name: keyVaultName
     location: location
     properties: {
         sku: {
