@@ -95,14 +95,22 @@ internal class GetAssetOperation : Operation
 
             List<(Asset asset, Build build)> matchingAssetsAfterDate = new List<(Asset, Build)>();
 
+            Build buildInfo = null;
+            if (_options.Build.HasValue)
+            {
+                buildInfo = await remote.GetBuildAsync(_options.Build.Value);
+            }
+
             foreach (Asset asset in matchingAssets)
             {
                 // Get build info for asset
-                Build buildInfo = await remote.GetBuildAsync(asset.BuildId);
-
-                if (_options.Build == null && now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                if (!_options.Build.HasValue)
                 {
-                    break;
+                    buildInfo = await remote.GetBuildAsync(asset.BuildId);
+                    if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                    {
+                        break;
+                    }
                 }
 
                 checkedAssets++;
