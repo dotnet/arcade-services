@@ -1,8 +1,6 @@
 # Changes the format of the Build.BuildNumber variable
 name: $(Date:yyyyMMdd)$(Rev:r)
 
-triggers: none
-
 variables:
 - name: resourceGroupName
   value: 'product-construction-service'
