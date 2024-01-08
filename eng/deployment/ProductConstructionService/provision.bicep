@@ -1,6 +1,6 @@
 @minLength(1)
 @description('Primary location for all resources')
-param location string = 'northcentralusstage'
+param location string = 'northcentralus'
 
 @minLength(5)
 @maxLength(50)
@@ -10,7 +10,7 @@ param containerRegistryName string = 'productconstructionint'
 @minLength(1)
 @maxLength(64)
 @description('Name of the identity used by the apps to access Azure Container Registry')
-param identityName string = 'ProductConstructionServiceIntIdentity'
+param identityName string = 'ProductConstructionServiceIdentityInt'
 
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
 param containerCpuCoreCount string = '0.25'
@@ -27,19 +27,22 @@ param containerMemory string = '0.5Gi'
 param aspnetcoreEnvironment string = 'Staging'
 
 @description('Name of the application insights resource')
-param applicationInsightsName string = 'product-construction-service-int-ai'
+param applicationInsightsName string = 'product-construction-service-ai-int'
 
 @description('Key Vault name')
 param keyVaultName string = 'ProductConstructionInt'
 
 @description('Log analytics workspace name')
-param logAnalyticsName string = 'product-construction-service-int-workspace'
+param logAnalyticsName string = 'product-construction-service-workspace-int'
 
 @description('Name of the container apps environment')
-param containerAppsEnvironmentName string = 'product-construction-service-int-env'
+param containerAppsEnvironmentName string = 'product-construction-service-env-int'
 
 @description('Product construction service API name')
-param productConstructionServiceApiName string = 'product-construction-int-api'
+param productConstructionServiceName string = 'product-construction-int'
+
+@description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
+var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
 // log analytics
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
@@ -157,7 +160,7 @@ var env = [
 
 // apiservice - the app's back-end
 resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
-  name: productConstructionServiceApiName
+  name: productConstructionServiceName
   location: location
   identity: {
       type: 'UserAssigned'
@@ -189,7 +192,8 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
           serviceBinds: []
           containers: [ 
             {
-                name: 'apiservice'
+                image: containerImageName
+                name: 'api'
                 env: env
                 resources: {
                     cpu: json(containerCpuCoreCount)

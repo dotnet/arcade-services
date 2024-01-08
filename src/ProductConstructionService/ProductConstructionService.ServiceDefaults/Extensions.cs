@@ -82,6 +82,8 @@ public static class Extensions
             builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
         }
 
+        // This method call will read the APPLICATIONINSIGHTS_CONNECTION_STRING environmental variable, and
+        // setup the Application Insights logging
         builder.Services.AddOpenTelemetry()
            .UseAzureMonitor();
 
@@ -99,9 +101,6 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Uncomment the following line to enable the Prometheus endpoint (requires the OpenTelemetry.Exporter.Prometheus.AspNetCore package)
-        // app.MapPrometheusScrapingEndpoint();
-
         // All health checks must pass for app to be considered ready to accept traffic after starting
         app.MapHealthChecks("/health");
 

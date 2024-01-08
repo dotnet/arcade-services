@@ -9,7 +9,7 @@ variables:
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - group: 'Product-Construction-Service-Int'
     - name: containerappName
-      value: product-construction-int-api
+      value: product-construction-int
     - name: containerRegistryName
       value: productconstructionint
     - name: subscriptionName
@@ -18,6 +18,8 @@ variables:
       value: product-construction-service-env-int
     - name: dockerRegistryUrl
       value: productconstructionint.azurecr.io
+    - name: subscriptionName
+      value: NetHelixStaging
 
 stages:
   - stage: PublishProductConstructionService
@@ -27,7 +29,8 @@ stages:
       - job: Publish
         displayName: Publish Product Construction Service
         pool:
-          vmImage: ubuntu-latest
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-windows-2019
 
         steps:
           - checkout: self
@@ -49,7 +52,7 @@ stages:
           - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
             - task: AzureCLI@2
               inputs:
-                azureSubscription: NetHelixStaging
+                azureSubscription: ${{ variables.NetHelixStaging }}
                 scriptType: 'pscore'
                 scriptLocation: 'scriptPath'
                 scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
