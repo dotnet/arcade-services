@@ -9,7 +9,7 @@ variables:
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - group: 'Product-Construction-Service-Int'
     - name: containerappName
-      value: product-construction-int
+      value: product-construction-int-api
     - name: containerRegistryName
       value: productconstructionint
     - name: subscriptionName
