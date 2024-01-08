@@ -29,8 +29,7 @@ stages:
       - job: Publish
         displayName: Publish Product Construction Service
         pool:
-          name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals 1es-windows-2019
+          vmImage: ubuntu-latest
 
         steps:
           - checkout: self
@@ -43,7 +42,7 @@ stages:
             displayName: 'Set new docker image tag variable'
 
           - powershell: |
-              docker build --progress=plain . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+              docker build . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
               echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
               docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
             displayName: 'Build and push docker image'
