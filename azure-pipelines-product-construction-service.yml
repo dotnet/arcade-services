@@ -1,4 +1,25 @@
+# Changes the format of the Build.BuildNumber variable
 name: $(Date:yyyyMMdd)$(Rev:r)
+
+triggers: none
+
+variables:
+- name: resourceGroupName
+  value: 'product-construction-service'
+- name: containerName
+  value: 'product-construction-service.api'
+- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    - group: 'Product-Construction-Service-Int'
+    - name: containerappName
+      value: product-construction-int
+    - name: containerRegistryName
+      value: productconstructionint
+    - name: subscriptionName
+      value: HelixStaging
+    - name: containerappEnvironmentName
+      value: product-construction-service-env-int
+    - name: dockerRegistryUrl
+      value: productconstructionint.azurecr.io
 
 stages:
   - stage: PublishProductConstructionService
@@ -9,24 +30,6 @@ stages:
         displayName: Publish Product Construction Service
         pool:
           vmImage: ubuntu-latest
-
-        variables:
-        - name: resourceGroupName
-          value: 'product-construction-service'
-        - name: containerName
-          value: 'product-construction-service.api'
-        - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-            - group: 'Product-Construction-Service-Int'
-            - name: containerappName
-              value: product-construction-int-api
-            - name: containerRegistryName
-              value: productconstructionint
-            - name: subscriptionName
-              value: HelixStaging
-            - name: containerappEnvironmentName
-              value: product-construction-service-int-env
-            - name: dockerRegistryUrl
-              value: productconstructionint.azurecr.io
 
         steps:
           - checkout: self

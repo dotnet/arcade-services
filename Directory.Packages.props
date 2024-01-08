@@ -12,10 +12,12 @@
          newer copy of this package loaded. When updating one, be aware of the other to prevent runtime issues
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
     <PackageVersion Include="Aspire.Hosting" Version="8.0.0-preview.1.23557.2" />
-    <PackageVersion Include="Azure.Core" Version="1.35.0" />
+    <PackageVersion Include="Azure.Core" Version="1.36.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
     <PackageVersion Include="Azure.Identity" Version="1.10.3" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.0.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.1.0" />
     <PackageVersion Include="Azure.Security.KeyVault.Secrets" Version="4.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.2.1" />
     <PackageVersion Include="CoreHealthMonitor" Version="$(CoreHealthMonitorVersion)" />

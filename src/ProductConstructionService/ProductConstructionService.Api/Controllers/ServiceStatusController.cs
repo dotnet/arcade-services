@@ -9,9 +9,17 @@ namespace ProductConstructionService.Api.Controllers;
 [Route("status")]
 public class ServiceStatusController : Controller
 {
+    private ILogger<ServiceStatusController> _logger;
+
+    public ServiceStatusController(ILogger<ServiceStatusController> logger)
+    {
+        _logger = logger;
+    }
+
     [HttpGet("startup")]
     public IActionResult GetStartupStatus()
     {
+        _logger.LogInformation("asd");
         return Ok();
     }
 }

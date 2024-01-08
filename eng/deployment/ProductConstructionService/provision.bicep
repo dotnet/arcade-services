@@ -1,6 +1,6 @@
 @minLength(1)
 @description('Primary location for all resources')
-param location string = 'centralus'
+param location string = 'northcentralusstage'
 
 @minLength(5)
 @maxLength(50)

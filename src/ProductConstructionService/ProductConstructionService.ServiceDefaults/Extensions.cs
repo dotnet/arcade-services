@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,7 +62,11 @@ public static class Extensions
                        .AddHttpClientInstrumentation();
             });
 
-        builder.AddOpenTelemetryExporters();
+        // We're not writing to Application Insights when running the service locally
+        if (!builder.Environment.IsDevelopment())
+        { 
+            builder.AddOpenTelemetryExporters();
+        }
 
         return builder;
     }
@@ -77,13 +82,8 @@ public static class Extensions
             builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
         }
 
-        // Uncomment the following lines to enable the Prometheus exporter (requires the OpenTelemetry.Exporter.Prometheus.AspNetCore package)
-        // builder.Services.AddOpenTelemetry()
-        //    .WithMetrics(metrics => metrics.AddPrometheusExporter());
-
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.Exporter package)
-        // builder.Services.AddOpenTelemetry()
-        //    .UseAzureMonitor();
+        builder.Services.AddOpenTelemetry()
+           .UseAzureMonitor();
 
         return builder;
     }
