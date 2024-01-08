@@ -75,7 +75,6 @@ internal class GetAssetOperation : Operation
             if (_options.Build != null)
             {
                 queryDescription.Append($" from build '{_options.Build}'");
-                _options.MaxAgeInDays = 5000;
             }
             else
             {
@@ -101,7 +100,7 @@ internal class GetAssetOperation : Operation
                 // Get build info for asset
                 Build buildInfo = await remote.GetBuildAsync(asset.BuildId);
 
-                if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                if (_options.Build == null && now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
                 {
                     break;
                 }
