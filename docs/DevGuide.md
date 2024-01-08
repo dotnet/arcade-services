@@ -80,3 +80,16 @@ EXEC : gyp verb `which` failed error : not found: python2 [E:\gh\chcosta\arcade-
 EXEC : gyp verb `which` failed  python2 error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
 ```
   Make sure python 2.7 is installed and on your path.  You may have to copy `python27\python.exe` to `python27\python2.exe`
+- if DNS Service is enabled for the cluster, Service Fabric will automaticaly edit the DNS settings for your machine and add SF as first DNS server which sometimes causes issues with DNS resolution and you may not be able to access any webpages. There is information about the issue in https://github.com/microsoft/service-fabric/issues/124
+
+## Configuring a dev cluster
+- the script that sets up a local Service Fabric cluster is `C:\Program Files\Microsoft SDKs\Service Fabric\ClusterSetup\DevClusterSetup.ps1`
+Configuration files are in the folders `Secure\OneNode`, `Secure\FiveNode`, `NonSecure\OneNode`, `NonSecure\FiveNode` depending on if the cluster is secure/nonsecure and the number of nodes. By default the local cluster is not secure. Once the cluster is set up all the configuration is stored in `C:\SFDevCluster\Data`, you can see logs in `C:\SFDevCluster\Log`
+You can disable the DNS Service by deleting `DnsService` from the add-on features in `ClusterManifestTemplate.json`
+```
+    "addOnFeatures": [
+      "EventStoreService",
+      "DnsService"
+    ]
+```
+If you change any settings in `ClusterManifestTemplate.json` run `Reset Local Cluster` from Service Fabric Local Cluster Manager to recreate the cluster configuration using the new settings
