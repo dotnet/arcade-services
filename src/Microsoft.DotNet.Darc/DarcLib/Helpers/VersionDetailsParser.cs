@@ -3,16 +3,18 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface IVersionDetailsParser
 {
+    VersionDetails ParseVersionDetailsFile(string path, bool includePinned = true);
+
     VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true);
 
     VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true);
@@ -43,6 +45,12 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string ManagedOnlyAttributeName = "ManagedOnly";
     public const string TarballOnlyAttributeName = "TarballOnly";
     public const string SourceElementName = "Source";
+
+    public VersionDetails ParseVersionDetailsFile(string path, bool includePinned = true)
+    {
+        var content = File.ReadAllText(path);
+        return ParseVersionDetailsXml(content, includePinned: includePinned);
+    }
 
     public VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {

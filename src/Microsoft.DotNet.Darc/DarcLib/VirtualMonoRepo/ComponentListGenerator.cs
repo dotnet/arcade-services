@@ -12,15 +12,15 @@ using Microsoft.DotNet.DarcLib.Helpers;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IReadmeComponentListGenerator
+public interface IComponentListGenerator
 {
-    Task UpdateReadme(string templatePath);
+    Task UpdateComponentList(string templatePath);
 }
 
 /// <summary>
-/// Class responsible for generating the dynamic list of components in README.md.
+/// Class responsible for generating the dynamic list of components in Components.md.
 /// </summary>
-public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
+public class ComponentListGenerator : IComponentListGenerator
 {
     private const string ComponentListStartTag = "<!-- component list beginning -->";
     private const string ComponentListEndTag = "<!-- component list end -->";
@@ -29,7 +29,7 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
 
-    public ReadmeComponentListGenerator(
+    public ComponentListGenerator(
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo,
         IFileSystem fileSystem)
@@ -39,17 +39,17 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
         _fileSystem = fileSystem;
     }
 
-    public async Task UpdateReadme(string templatePath)
+    public async Task UpdateComponentList(string templatePath)
     {
         if (!_fileSystem.FileExists(templatePath))
         {
             return;
         }
 
-        var readmePath = _vmrInfo.VmrPath / VmrInfo.ReadmeFileName;
+        var componentListPath = _vmrInfo.VmrPath / VmrInfo.ComponentListPath;
 
         using var readStream = _fileSystem.GetFileStream(templatePath, FileMode.Open, FileAccess.Read);
-        using var writeStream = _fileSystem.GetFileStream(readmePath, FileMode.Create, FileAccess.Write);
+        using var writeStream = _fileSystem.GetFileStream(componentListPath, FileMode.Create, FileAccess.Write);
         using var reader = new StreamReader(readStream);
         using var writer = new StreamWriter(writeStream, Encoding.UTF8);
         
@@ -68,7 +68,7 @@ public class ReadmeComponentListGenerator : IReadmeComponentListGenerator
 
                     if (line == null)
                     {
-                        throw new Exception("Component list end tag not found in README.md");
+                        throw new Exception($"Component list end tag not found in {templatePath}");
                     }
                 }
 

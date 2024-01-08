@@ -1,34 +1,34 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using FluentAssertions;
 using NUnit.Framework;
 
-namespace Maestro.ScenarioTests
+namespace Maestro.ScenarioTests;
+
+public class TestHelpersTests
 {
-    public class TestHelpersTests
+    [Test]
+    public void EmptyArguments()
     {
-        [Test]
-        public void EmptyArguments()
-        {
-            var formatted = TestHelpers.FormatExecutableCall("darc.exe");
+        var formatted = TestHelpers.FormatExecutableCall("darc.exe");
 
-            Assert.AreEqual("darc.exe", formatted);
-        }
+        formatted.Should().Be("darc.exe");
+    }
 
-        [Test]
-        public void HarmlessArguments()
-        {
-            var formatted = TestHelpers.FormatExecutableCall("darc.exe", new[] { "add-channel", "--name", "what-a-channel" });
+    [Test]
+    public void HarmlessArguments()
+    {
+        var formatted = TestHelpers.FormatExecutableCall("darc.exe", ["add-channel", "--name", "what-a-channel"]);
 
-            Assert.AreEqual("darc.exe \"add-channel\" \"--name\" \"what-a-channel\"", formatted);
-        }
+        formatted.Should().Be("darc.exe \"add-channel\" \"--name\" \"what-a-channel\"");
+    }
 
-        [Test]
-        public void ArgumentsWithSecretTokensInside()
-        {
-            var formatted = TestHelpers.FormatExecutableCall("darc.exe", new[] { "-p", "secret", "add-channel", "--github-pat", "another secret", "--name", "what-a-channel" });
+    [Test]
+    public void ArgumentsWithSecretTokensInside()
+    {
+        var formatted = TestHelpers.FormatExecutableCall("darc.exe", ["-p", "secret", "add-channel", "--github-pat", "another secret", "--name", "what-a-channel"]);
 
-            Assert.AreEqual("darc.exe \"-p\" \"***\" \"add-channel\" \"--github-pat\" \"***\" \"--name\" \"what-a-channel\"", formatted);
-        }
+        formatted.Should().Be("darc.exe \"-p\" \"***\" \"add-channel\" \"--github-pat\" \"***\" \"--name\" \"what-a-channel\"");
     }
 }

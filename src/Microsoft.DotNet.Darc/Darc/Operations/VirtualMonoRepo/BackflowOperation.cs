@@ -3,26 +3,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
+internal class BackflowOperation : VmrOperationBase
 {
     private readonly BackflowCommandLineOptions _options;
-
-    public static IImmutableDictionary<string, BackflowAction> Actions { get; } = new Dictionary<string, BackflowAction>
-    {
-        { "create-patches", BackflowAction.CreatePatches },
-        { "apply-patches", BackflowAction.ApplyPatches },
-    }.ToImmutableDictionary();
 
     public BackflowOperation(BackflowCommandLineOptions options)
         : base(options)
@@ -31,7 +25,6 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrBackflower vmrBackflower,
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -46,21 +39,19 @@ internal class BackflowOperation : VmrOperationBase<IVmrBackflower>
             throw new FileNotFoundException($"Could not find directory {targetDirectory}");
         }
 
-        await vmrBackflower.BackflowAsync(
-            ParseAction(_options.Action),
-            repoName,
-            new NativePath(targetDirectory),
-            additionalRemotes,
-            cancellationToken);
-    }
-
-    private static BackflowAction ParseAction(string value)
-    {
-        if (!Actions.TryGetValue(value, out BackflowAction action))
+        if (_options.RepositoryDirectory is not null)
         {
-            throw new ArgumentException($"Invalid action {value}. Allowed values are: {string.Join(", ", Actions.Keys)}");
+            var vmrInfo = Provider.GetRequiredService<IVmrInfo>();
+            vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
         }
 
-        return action;
+        var backflower = Provider.GetRequiredService<IVmrBackFlower>();
+
+        await backflower.FlowBackAsync(
+            repoName,
+            new NativePath(targetDirectory),
+            shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
+            _options.DiscardPatches,
+            cancellationToken: cancellationToken);
     }
 }
