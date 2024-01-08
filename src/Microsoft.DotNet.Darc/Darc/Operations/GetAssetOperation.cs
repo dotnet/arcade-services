@@ -62,9 +62,14 @@ internal class GetAssetOperation : Operation
                 queryDescription.Append($" named '{_options.Name}'");
             }
 
+            if (_options.Build.HasValue)
+            {
+                queryDescription.Append($" from build '{_options.Build}'");
+            }
+
             if (!string.IsNullOrEmpty(_options.Version))
             {
-                queryDescription.Append($" and version '{_options.Version}'");
+                queryDescription.Append($" with version '{_options.Version}'");
             }
 
             if (targetChannel != null)
@@ -72,11 +77,7 @@ internal class GetAssetOperation : Operation
                 queryDescription.Append($" on channel '{targetChannel.Name}'");
             }
 
-            if (_options.Build != null)
-            {
-                queryDescription.Append($" from build '{_options.Build}'");
-            }
-            else
+            if (!_options.Build.HasValue)
             {
                 queryDescription.Append($" in the last {_options.MaxAgeInDays} days");
             }
