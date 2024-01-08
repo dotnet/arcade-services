@@ -6,11 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
+internal class UpdateOperation : VmrOperationBase
 {
     private readonly UpdateCommandLineOptions _options;
 
@@ -21,21 +22,20 @@ internal class UpdateOperation : VmrOperationBase<IVmrUpdater>
     }
 
     protected override async Task ExecuteInternalAsync(
-        IVmrUpdater vmrManager,
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
-        =>
-        await vmrManager.UpdateRepository(
-            repoName,
-            targetRevision,
-            targetVersion: null,
-            _options.Recursive,
-            additionalRemotes,
-            _options.ReadMeTemplate,
-            _options.TpnTemplate,
-            _options.GenerateCodeowners,
-            _options.DiscardPatches,
-            cancellationToken);
+        => await Provider.GetRequiredService<IVmrUpdater>()
+            .UpdateRepository(
+                repoName,
+                targetRevision,
+                targetVersion: null,
+                _options.Recursive,
+                additionalRemotes,
+                _options.ComponentTemplate,
+                _options.TpnTemplate,
+                _options.GenerateCodeowners,
+                _options.DiscardPatches,
+                cancellationToken);
 }

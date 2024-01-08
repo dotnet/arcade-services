@@ -27,12 +27,14 @@ public abstract class VmrManagerBase
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly IReadmeComponentListGenerator _readmeComponentListGenerator;
+    private readonly IComponentListGenerator _componentListGenerator;
     private readonly ICodeownersGenerator _codeownersGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
+
+    protected ILocalGitRepo LocalVmr { get; }
 
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
@@ -41,9 +43,10 @@ public abstract class VmrManagerBase
         IVmrPatchHandler vmrPatchHandler,
         IVersionDetailsParser versionDetailsParser,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        IReadmeComponentListGenerator readmeComponentListGenerator,
+        IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
@@ -55,22 +58,24 @@ public abstract class VmrManagerBase
         _patchHandler = vmrPatchHandler;
         _versionDetailsParser = versionDetailsParser;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _readmeComponentListGenerator = readmeComponentListGenerator;
+        _componentListGenerator = componentListGenerator;
         _codeownersGenerator = codeownersGenerator;
         _localGitClient = localGitClient;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
+
+        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
-        NativePath clonePath,
+        ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
         (string Name, string Email)? author,
         string commitMessage,
         bool reapplyVmrPatches,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
@@ -78,7 +83,7 @@ public abstract class VmrManagerBase
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             update.Mapping,
-            clonePath,
+            repoClone,
             fromRevision,
             update.TargetRevision,
             _vmrInfo.TmpPath,
@@ -93,29 +98,15 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (discardPatches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, $"Failed to delete patch file {patch.Path}");
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
 
-        if (readmeTemplatePath != null)
+        if (componentTemplatePath != null)
         {
-            await _readmeComponentListGenerator.UpdateReadme(readmeTemplatePath);
+            await _componentListGenerator.UpdateComponentList(componentTemplatePath);
         }
 
         var filesToAdd = new List<string>
@@ -124,9 +115,9 @@ public abstract class VmrManagerBase
             _vmrInfo.SourceManifestPath
         };
 
-        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ReadmeFileName))
+        if (_fileSystem.FileExists(_vmrInfo.VmrPath / VmrInfo.ComponentListPath))
         {
-            filesToAdd.Add(VmrInfo.ReadmeFileName);
+            filesToAdd.Add(VmrInfo.ComponentListPath);
         }
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
@@ -177,7 +168,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 

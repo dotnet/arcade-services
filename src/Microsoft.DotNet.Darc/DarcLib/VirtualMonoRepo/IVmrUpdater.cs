@@ -19,7 +19,7 @@ public interface IVmrUpdater
     /// <param name="noSquash">Whether to pull changes commit by commit instead of squashing all updates into one</param>
     /// <param name="updateDependencies">When true, updates dependencies (from Version.Details.xml) recursively</param>
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
-    /// <param name="readmeTemplatePath">Path to VMR's README.md template</param>
+    /// <param name="componentTemplatePath">Path to VMR's Component.md template</param>
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
@@ -30,7 +30,7 @@ public interface IVmrUpdater
         string? targetVersion,
         bool updateDependencies,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,

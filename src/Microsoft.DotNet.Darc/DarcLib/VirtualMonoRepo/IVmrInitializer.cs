@@ -20,7 +20,7 @@ public interface IVmrInitializer
     /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
     /// <param name="additionalRemotes">Additional git remotes to use when fetching</param>
-    /// <param name="readmeTemplatePath">Path to VMR's README.md template</param>
+    /// <param name="componentTemplatePath">Path to VMR's README.md template</param>
     /// <param name="tpnTemplatePath">Path to VMR's THIRD-PARTY-NOTICES.md template</param>
     /// <param name="generateCodeowners">Whether to generate a CODEOWNERS file</param>
     /// <param name="discardPatches">Whether to clean up genreated .patch files after their used</param>
@@ -31,7 +31,7 @@ public interface IVmrInitializer
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        string? readmeTemplatePath,
+        string? componentTemplatePath,
         string? tpnTemplatePath,
         bool generateCodeowners,
         bool discardPatches,
