@@ -141,6 +141,9 @@ stages:
           inputs:
             versionSpec: 6.1.x
 
+        - powershell: dotnet workload install aspire
+          displayName: Install Aspire Workload
+
         - task: NuGetCommand@2
           displayName: Restore Packages
           inputs:
