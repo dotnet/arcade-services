@@ -75,8 +75,21 @@ Things to try:
 - If you are using your own PATs for debugging tests, your account needs to have permissions to the repositories involved and include appropriate scopes (default is just 'public')
 - To build the packages folder starting from a clean repository, run **desktop** `nuget restore arcade-services.sln` then **desktop** `msbuild arcade-services.sln /t:Restore,Build,Pack`.  Non-desktop versions of build, including dotnet.exe, will fail building the .sfproj projects and then not pack the nupkgs.
 - Seeing errors like
+    ```
+    EXEC : gyp verb `which` failed error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
+    EXEC : gyp verb `which` failed  python2 error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
+    ```
+    Make sure python 2.7 is installed and on your path.  You may have to copy `python27\python.exe` to `python27\python2.exe`
+- if DNS Service is enabled for the cluster, Service Fabric will automaticaly edit the DNS settings for your machine and add SF as first DNS server which sometimes causes issues with DNS resolution and you may not be able to access any webpages. There is information about the issue in https://github.com/microsoft/service-fabric/issues/124
+
+## Configuring a dev cluster
+The script that sets up a local Service Fabric cluster is `C:\Program Files\Microsoft SDKs\Service Fabric\ClusterSetup\DevClusterSetup.ps1`
+Configuration files are in the folders `Secure\OneNode`, `Secure\FiveNode`, `NonSecure\OneNode`, `NonSecure\FiveNode` depending if the cluster is secure/nonsecure and the number of nodes. By default the local cluster is not secure. Once the cluster is set up all the configuration is stored in `C:\SFDevCluster\Data`, you can see logs in `C:\SFDevCluster\Log`
+You can disable the DNS Service by deleting `DnsService` from the add-on features in `ClusterManifestTemplate.json`
 ```
-EXEC : gyp verb `which` failed error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
-EXEC : gyp verb `which` failed  python2 error : not found: python2 [E:\gh\chcosta\arcade-services\src\Maestro\maestro-angular\maestro-angular.proj]
+    "addOnFeatures": [
+      "EventStoreService",
+      "DnsService"
+    ]
 ```
-  Make sure python 2.7 is installed and on your path.  You may have to copy `python27\python.exe` to `python27\python2.exe`
+If you change any settings in `ClusterManifestTemplate.json` run `Reset Local Cluster` from Service Fabric Local Cluster Manager to recreate the cluster configuration using the new settings
