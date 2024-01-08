@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.Darc.Options;
 [Verb("get-asset", HelpText = "Get information about an asset.")]
 internal class GetAssetCommandLineOptions : CommandLineOptions
 {
-    [Option("name", Required = true, HelpText = "Name of asset to look up")]
+    [Option("name", Required = false, HelpText = "Name of asset to look up")]
     public string Name { get; set; }
 
     [Option("version", HelpText = "Look up specific version of an asset.")]
