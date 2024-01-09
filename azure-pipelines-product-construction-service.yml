@@ -5,7 +5,8 @@ trigger:
   branches:
     exclude:
       - production
-  pr: none
+
+pr: none
 
 variables:
 - name: resourceGroupName
