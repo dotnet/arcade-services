@@ -161,8 +161,8 @@ stages:
 
         - powershell: |
             . .\eng\common\tools.ps1
-            InitializeDotNetCli -install:$true
-            dotnet install workload aspire
+            $dotnetInstallDir = InitializeDotNetCli -install:$true
+            $dotnetInstallDir\dotnet install workload aspire
           displayName: Install .NET and Aspire
 
         - script: eng\common\cibuild.cmd
