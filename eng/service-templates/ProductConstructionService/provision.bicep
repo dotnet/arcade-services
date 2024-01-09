@@ -169,11 +169,6 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
             transport: 'http'
         }
         dapr: { enabled: false }
-        registries: [ 
-            {
-                server: '${containerRegistryName}.azurecr.io'
-            } 
-        ]
       }
       template: {
           scale: {
