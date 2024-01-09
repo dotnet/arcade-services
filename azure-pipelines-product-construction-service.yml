@@ -33,14 +33,11 @@ stages:
   jobs:
   - job: Publish
     displayName: Publish Product Construction Service
-    dependsOn: []
-    jobs:
-      - job: Publish
-        displayName: Publish Product Construction Service
-        pool:
-          vmImage: ubuntu-latest
-          # name: NetCore1ESPool-Internal
-          # demands: ImageOverride -equals 1es-ubuntu-2004
+    pool:
+      vmImage: ubuntu-latest
+      # name: NetCore1ESPool-Internal
+      # demands: ImageOverride -equals 1es-ubuntu-2004
+
 
     steps:
     - checkout: self
