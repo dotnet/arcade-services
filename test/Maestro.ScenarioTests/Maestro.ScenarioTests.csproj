@@ -15,6 +15,12 @@
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="NUnit3TestAdapter">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 
   <Target Name="PublishOnBuild" AfterTargets="Build" DependsOnTargets="Publish">
   </Target>

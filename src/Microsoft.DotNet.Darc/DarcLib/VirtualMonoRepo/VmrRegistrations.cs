@@ -33,6 +33,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<IGitRepoFactory, VmrGitClientFactory>();
+        services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
         services.TryAddTransient<ISourceMappingParser, SourceMappingParser>();
@@ -40,7 +41,8 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
-        services.TryAddTransient<IVmrBackflower, CodeBackflower>();
+        services.TryAddTransient<IVmrBackFlower, VmrBackFlower>();
+        services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<IVmrRepoVersionResolver, VmrRepoVersionResolver>();
         services.TryAddSingleton<IVmrDependencyTracker, VmrDependencyTracker>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
@@ -52,6 +54,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IGitRepoCloner, GitNativeRepoCloner>();
         services.TryAddTransient<VmrCloakedFileScanner>();
         services.TryAddTransient<VmrBinaryFileScanner>();
+        services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.AddHttpClient("GraphQL", httpClient =>
         {
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");

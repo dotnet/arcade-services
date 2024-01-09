@@ -5,41 +5,40 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace Maestro.ScenarioTests
+namespace Maestro.ScenarioTests;
+
+public class TemporaryDirectory : IDisposable
 {
-    public class TemporaryDirectory : IDisposable
+    public static TemporaryDirectory Get()
     {
-        public static TemporaryDirectory Get()
+        string dir = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
+        System.IO.Directory.CreateDirectory(dir);
+        return new TemporaryDirectory(dir);
+    }
+
+    public string Directory { get; }
+
+    private TemporaryDirectory(string dir)
+    {
+        Directory = dir;
+    }
+
+    public void Dispose()
+    {
+        try
         {
-            string dir = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
-            System.IO.Directory.CreateDirectory(dir);
-            return new TemporaryDirectory(dir);
+            System.IO.Directory.Delete(Directory, true);
         }
-
-        public string Directory { get; }
-
-        private TemporaryDirectory(string dir)
+        catch (UnauthorizedAccessException)
         {
-            Directory = dir;
-        }
-
-        public void Dispose()
-        {
+            Thread.Sleep(5000);
             try
             {
                 System.IO.Directory.Delete(Directory, true);
             }
             catch (UnauthorizedAccessException)
             {
-                Thread.Sleep(5000);
-                try
-                {
-                    System.IO.Directory.Delete(Directory, true);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // We tried, don't fail the test.
-                }
+                // We tried, don't fail the test.
             }
         }
     }

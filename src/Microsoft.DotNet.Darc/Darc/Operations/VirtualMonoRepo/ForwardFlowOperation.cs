@@ -14,11 +14,11 @@ using Microsoft.Extensions.DependencyInjection;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase
+internal class ForwardFlowOperation : VmrOperationBase
 {
-    private readonly BackflowCommandLineOptions _options;
+    private readonly ForwardFlowCommandLineOptions _options;
 
-    public BackflowOperation(BackflowCommandLineOptions options)
+    public ForwardFlowOperation(ForwardFlowCommandLineOptions options)
         : base(options)
     {
         _options = options;
@@ -30,26 +30,20 @@ internal class BackflowOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        targetDirectory ??= Path.Combine(
-            _options.RepositoryDirectory ?? throw new ArgumentException($"No target directory specified for repository {repoName}"),
-            repoName);
+        ArgumentNullException.ThrowIfNull(targetDirectory);
 
-        if (!Directory.Exists(targetDirectory))
+        var targetDir = new NativePath(targetDirectory) / repoName;
+
+        if (!Directory.Exists(targetDir))
         {
-            throw new FileNotFoundException($"Could not find directory {targetDirectory}");
+            throw new FileNotFoundException($"Could not find directory {targetDir}");
         }
 
-        if (_options.RepositoryDirectory is not null)
-        {
-            var vmrInfo = Provider.GetRequiredService<IVmrInfo>();
-            vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
-        }
+        var forwardFlower = Provider.GetRequiredService<IVmrForwardFlower>();
 
-        var backflower = Provider.GetRequiredService<IVmrBackFlower>();
-
-        await backflower.FlowBackAsync(
+        await forwardFlower.FlowForwardAsync(
             repoName,
-            new NativePath(targetDirectory),
+            targetDir,
             shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
             _options.DiscardPatches,
             cancellationToken: cancellationToken);

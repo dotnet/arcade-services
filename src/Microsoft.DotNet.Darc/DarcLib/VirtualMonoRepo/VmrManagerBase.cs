@@ -34,6 +34,8 @@ public abstract class VmrManagerBase
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
+    protected ILocalGitRepo LocalVmr { get; }
+
     protected VmrManagerBase(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -44,6 +46,7 @@ public abstract class VmrManagerBase
         IComponentListGenerator componentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
@@ -60,11 +63,13 @@ public abstract class VmrManagerBase
         _localGitClient = localGitClient;
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
+
+        LocalVmr = localGitRepoFactory.Create(_vmrInfo.VmrPath);
     }
 
     public async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
-        NativePath clonePath,
+        ILocalGitRepo repoClone,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         string fromRevision,
         (string Name, string Email)? author,
@@ -78,7 +83,7 @@ public abstract class VmrManagerBase
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             update.Mapping,
-            clonePath,
+            repoClone,
             fromRevision,
             update.TargetRevision,
             _vmrInfo.TmpPath,
@@ -93,22 +98,8 @@ public abstract class VmrManagerBase
 
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, discardPatches, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (discardPatches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, $"Failed to delete patch file {patch.Path}");
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
         }
 
         _dependencyInfo.UpdateDependencyVersion(update);
@@ -177,7 +168,7 @@ public abstract class VmrManagerBase
                 continue;
             }
 
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
