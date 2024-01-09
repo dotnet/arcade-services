@@ -1,4 +1,4 @@
-# This script deploys the Product Construction Service, using the blue/green deployment pattern.
+# This script deploys the Product Construction Service using the blue/green deployment pattern.
 # The script detirmines the color of the currently active revision, deactivates the old inactive revision, 
 # and deploys the new revision, switching all traffic to it if the health probes pass.
 param(
