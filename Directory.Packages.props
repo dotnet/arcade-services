@@ -11,7 +11,7 @@
     <!-- Note: These libraries can be loaded by Arcade SDK clients, which may already have a
          newer copy of this package loaded. When updating one, be aware of the other to prevent runtime issues
          See: https://github.com/dotnet/arcade/blob/main/eng/Versions.props -->
-    <PackageVersion Include="Aspire.Hosting" Version="8.0.0-preview.1.23557.2" />
+    <PackageVersion Include="Aspire.Hosting" Version="8.0.0-preview.2.23619.3" />
     <PackageVersion Include="Azure.Core" Version="1.36.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.3" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.1.0" />
