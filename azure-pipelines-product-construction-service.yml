@@ -50,7 +50,7 @@ stages:
     - powershell: docker build . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
       displayName: 'Build docker image'
 
-    - ${{ if notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
       - powershell: |
           echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
           docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
