@@ -7,11 +7,6 @@ param location string = 'northcentralus'
 @description('Name of the Azure Container Registry resource into which container images will be published')
 param containerRegistryName string = 'productconstructionint'
 
-@minLength(1)
-@maxLength(64)
-@description('Name of the identity used by the apps to access Azure Container Registry')
-param identityName string = 'ProductConstructionServiceIdentityInt'
-
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
 param containerCpuCoreCount string = '0.25'
 
@@ -94,27 +89,28 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
   }
 }
 
+// TODO: uncomment when https://github.com/dotnet/arcade-services/issues/3180 is resolved
 // identity for the container apps
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: identityName
-  location: location
-}
+// resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+//   name: identityName
+//   location: location
+// }
 
-var principalId = identity.properties.principalId
+// var principalId = identity.properties.principalId
 
-// azure system role for setting up acr pull access
-var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+// // azure system role for setting up acr pull access
+// var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 
-// allow acr pulls to the identity used for the aca's
-resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-  name: guid(subscription().id, resourceGroup().id, acrPullRole)
-  properties: {
-      roleDefinitionId: acrPullRole
-      principalType: 'ServicePrincipal'
-      principalId: principalId
-  }
-}
+// // allow acr pulls to the identity used for the aca's
+// resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+//   scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+//   name: guid(subscription().id, resourceGroup().id, acrPullRole)
+//   properties: {
+//       roleDefinitionId: acrPullRole
+//       principalType: 'ServicePrincipal'
+//       principalId: principalId
+//   }
+// }
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -162,10 +158,6 @@ var env = [
 resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
   name: productConstructionServiceName
   location: location
-  identity: {
-      type: 'UserAssigned'
-      userAssignedIdentities: { '${identity.id}' : {}}
-  }
   properties: {
       managedEnvironmentId: containerAppsEnvironment.id
       configuration: {
@@ -180,7 +172,6 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
         registries: [ 
             {
                 server: '${containerRegistryName}.azurecr.io'
-                identity: identity.id
             } 
         ]
       }
