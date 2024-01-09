@@ -1,3 +1,7 @@
+# Starting the service locally
+
+To run the Product Construction Service locally, set the `ProductConstructionService.AppHost` as Startup Project, and run with F5
+
 # Instructions for recreating the Product Construction Service
 Using Azure CLI, run the following lines:
  - `az account set --subscription <subscription name/id>`
