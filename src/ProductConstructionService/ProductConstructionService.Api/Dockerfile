@@ -14,11 +14,11 @@ COPY ["Directory.Build.props", "."]
 COPY ["Directory.Build.targets", "."]
 COPY ["NuGet.config", "."]
 COPY ["global.json", "."]
-COPY ["/src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "/src/ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
-COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "/src/ProductConstructionService/ProductConstructionService.Api/"]
+COPY ["/src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
+COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService/ProductConstructionService.Api/"]
 RUN dotnet restore "/src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
-COPY ["src/ProductConstructionService", "/src"]
-RUN dotnet build "/src/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
+COPY ["src/ProductConstructionService", "."]
+RUN dotnet build "./ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
