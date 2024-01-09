@@ -63,7 +63,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             Build build = await remote.GetBuildAsync(_options.Id);
             if (build == null)
@@ -198,7 +198,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IRemote remote)
+    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarOnlyRemote remote)
     {
         if (_options.SkipAssetsPublishing)
         {

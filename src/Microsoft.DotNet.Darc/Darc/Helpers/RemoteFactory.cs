@@ -5,7 +5,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -77,9 +76,24 @@ internal class RemoteFactory : IRemoteFactory
     /// <param name="options">Command line options</param>
     /// <param name="logger">Logger</param>
     /// <returns>New remote</returns>
-    public static IRemote GetBarOnlyRemote(CommandLineOptions options, ILogger logger)
+    public static IBarOnlyRemote GetBarOnlyRemote(CommandLineOptions options, ILogger logger)
     {
-        return GetRemote(options, null, logger);
+        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
+
+        if (darcSettings.GitType != GitRepoType.None &&
+            string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
+        {
+            throw new DarcException($"No personal access token was provided for repo type '{darcSettings.GitType}'");
+        }
+
+        IBarClient barClient = null;
+        if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
+        {
+            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
+            darcSettings.BuildAssetRegistryBaseUri);
+        }
+
+        return new Remote(null, barClient, new VersionDetailsParser(), logger);
     }
 
     /// <summary>
@@ -90,12 +104,8 @@ internal class RemoteFactory : IRemoteFactory
     /// <param name="logger">Logger</param>
     /// <returns>New remote</returns>
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
-    {
-        return Task.FromResult(GetRemote(this._options, repoUrl, logger));
-    }
+        => Task.FromResult(GetRemote(_options, repoUrl, logger));
 
-    public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
-    {
-        return Task.FromResult(GetRemote(this._options, null, logger));
-    }
+    public Task<IBarOnlyRemote> GetBarOnlyRemoteAsync(ILogger logger)
+        => Task.FromResult(GetBarOnlyRemote(_options, logger));
 }

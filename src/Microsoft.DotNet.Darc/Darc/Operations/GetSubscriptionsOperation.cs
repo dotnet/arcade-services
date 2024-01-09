@@ -36,7 +36,7 @@ class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IRemote remote = Provider.GetService<IRemote>() ??  RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = Provider.GetService<IRemote>() ??  RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
@@ -79,7 +79,7 @@ class GetSubscriptionsOperation : Operation
             _ => base.IsOutputFormatSupported(outputFormat),
         };
 
-    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IRemote remote)
+    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IBarOnlyRemote remote)
     {
         foreach (var subscription in Sort(subscriptions))
         {
@@ -100,7 +100,7 @@ class GetSubscriptionsOperation : Operation
         Console.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
     }
 
-    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IRemote remote)
+    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IBarOnlyRemote remote)
     {
         foreach (var subscription in Sort(subscriptions))
         {

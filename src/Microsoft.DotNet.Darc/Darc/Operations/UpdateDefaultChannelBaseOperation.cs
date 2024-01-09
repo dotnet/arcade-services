@@ -32,7 +32,7 @@ abstract class UpdateDefaultChannelBaseOperation : Operation
     /// <returns>Default channel or null</returns>
     protected async Task<DefaultChannel> ResolveSingleChannel()
     {
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
         IEnumerable<DefaultChannel> potentialDefaultChannels = await remote.GetDefaultChannelsAsync();
             

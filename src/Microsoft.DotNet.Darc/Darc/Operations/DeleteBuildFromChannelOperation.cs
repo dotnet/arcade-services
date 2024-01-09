@@ -30,7 +30,7 @@ internal class DeleteBuildFromChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             // Find the build to give someone info
             Build build = await remote.GetBuildAsync(_options.Id);

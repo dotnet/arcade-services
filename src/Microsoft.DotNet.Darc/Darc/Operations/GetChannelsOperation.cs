@@ -33,7 +33,7 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             var allChannels = await remote.GetChannelsAsync();
             switch (_options.OutputFormat)

@@ -54,7 +54,7 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await remote.GetSubscriptionsAsync();
             IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();

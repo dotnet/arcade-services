@@ -44,7 +44,7 @@ class SubscriptionsStatusOperation : Operation
 
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToEnableDisable = new List<Subscription>();
