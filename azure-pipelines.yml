@@ -160,7 +160,8 @@ stages:
           displayName: Remove RunAsPolicy From MaestroApplication
 
         - powershell: |
-            .\eng\common\build.ps1 -restore
+            . .\eng\common\tools.ps1
+            InitializeDotNetCli -install:$true
             .\.dotnet\dotnet install workload aspire
           displayName: Install .NET and Aspire
 
