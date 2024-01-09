@@ -12,17 +12,17 @@ variables:
 - name: containerName
   value: 'product-construction-service.api'
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    - group: 'Product-Construction-Service-Int'
-    - name: containerappName
-      value: product-construction-int
-    - name: containerRegistryName
-      value: productconstructionint
-    - name: subscriptionName
-      value: HelixStaging
-    - name: containerappEnvironmentName
-      value: product-construction-service-env-int
-    - name: dockerRegistryUrl
-      value: productconstructionint.azurecr.io
+  - group: 'Product-Construction-Service-Int'
+  - name: containerappName
+    value: product-construction-int
+  - name: containerRegistryName
+    value: productconstructionint
+  - name: subscriptionName
+    value: HelixStaging
+  - name: containerappEnvironmentName
+    value: product-construction-service-env-int
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
 
 stages:
   - stage: PublishProductConstructionService
