@@ -202,7 +202,7 @@ internal class MergedManifestTests
         public void GetGithubRepoNameTest(string azdoRepoUrl, string expectedRepo)
         {
             string actualRepo = pushMetadata.GetGithubRepoName(azdoRepoUrl);
-            Assert.AreEqual(expectedRepo, actualRepo);
+            actualRepo.Should().Be(expectedRepo);
         }
 
         [Test]

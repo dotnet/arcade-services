@@ -3,45 +3,45 @@
 
 using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using NUnit.Framework;
 
-namespace Maestro.ScenarioTests
+namespace Maestro.ScenarioTests;
+
+[TestFixture]
+[Category("PostDeployment")]
+internal class ScenarioTests_Channels : MaestroScenarioTestBase
 {
-    [TestFixture]
-    [Category("PostDeployment")]
-    public class ScenarioTests_Channels : MaestroScenarioTestBase
+    private TestParameters _parameters;
+
+    [TearDown]
+    public Task DisposeAsync()
     {
-        private TestParameters _parameters;
+        _parameters.Dispose();
+        return Task.CompletedTask;
+    }
 
-        [TearDown]
-        public Task DisposeAsync()
+    [Test]
+    public async Task ArcadeChannels_EndToEnd()
+    {
+        _parameters = await TestParameters.GetAsync();
+        SetTestParameters(_parameters);
+
+        // Create a new channel
+        string testChannelName = $"Test Channel End to End {Environment.MachineName}";
+
+        await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
         {
-            _parameters.Dispose();
-            return Task.CompletedTask;
-        }
+            // Get the channel and make sure it's there
+            string returnedChannel = await GetTestChannelsAsync().ConfigureAwait(false);
+            returnedChannel.Should().Contain(testChannelName, "Channel was not created or could not be retrieved");
 
-        [Test]
-        public async Task ArcadeChannels_EndToEnd()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
+            // Delete the channel
+            await DeleteTestChannelAsync(testChannelName).ConfigureAwait(false);
 
-            // Create a new channel
-            string testChannelName = $"Test Channel End to End {Environment.MachineName}";
-
-            await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
-            {
-                // Get the channel and make sure it's there
-                string returnedChannel = await GetTestChannelsAsync().ConfigureAwait(false);
-                StringAssert.Contains(testChannelName, returnedChannel, "Channel was not created or could not be retrieved");
-
-                // Delete the channel
-                await DeleteTestChannelAsync(testChannelName).ConfigureAwait(false);
-
-                // Get the channel and make sure it was deleted
-                string returnedChannel2 = await GetTestChannelsAsync().ConfigureAwait(false);
-                StringAssert.DoesNotContain(testChannelName, returnedChannel2, "Channel was not deleted");
-            }
+            // Get the channel and make sure it was deleted
+            string returnedChannel2 = await GetTestChannelsAsync().ConfigureAwait(false);
+            returnedChannel2.Should().NotContain(testChannelName, "Channel was not deleted");
         }
     }
 }

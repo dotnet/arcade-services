@@ -358,8 +358,8 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetApprovingPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        Assert.AreEqual(reviews.Count, expectedReviewCount);
-        Assert.False(reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected));
+        reviews.Should().HaveCount(expectedReviewCount);
+        reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeFalse();
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getlatestreviews/pulls/123", 0, 10)]
@@ -368,7 +368,7 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetOnlyCommentsPullRequestData("githubclienttests", "getlatestreviews", 123, fakeUserCount);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        Assert.AreEqual(reviews.Count, expectedReviewCount);
+        reviews.Should().HaveCount(expectedReviewCount);
     }
 
     [TestCase("https://api.github.com/repos/githubclienttests/getmixedreviews/pulls/456", 10, 10, false)] // Happy path: 10 approvals
@@ -379,16 +379,16 @@ public class GitHubClientTests
     {
         var pullRequestReviewData = GetMixedPullRequestData("githubclienttests", "getmixedreviews", 456, fakeUserCount, usersCommentAfterApprove);
         var reviews = await GetLatestReviewsForPullRequestWrapperAsync(pullRequestReviewData, pullRequestUrl);
-        Assert.AreEqual(reviews.Count, expectedReviewCount);
+        reviews.Should().HaveCount(expectedReviewCount);
 
         if (successExpected)
         {
-            Assert.False(reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected));
-            Assert.GreaterOrEqual(reviews.Count, 1);
+            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeFalse();
+            reviews.Should().HaveCountGreaterThanOrEqualTo(1);
         }
         else if (reviews.Count > 0)
         {
-            Assert.True(reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected));
+            reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected).Should().BeTrue();
         }
     }
 
@@ -398,9 +398,9 @@ public class GitHubClientTests
 
         // Use Moq to put the return value 
         OctoKitPullRequestReviewsClient.Setup(x => x.GetAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
-            .Callback<string, string, int>((string x, string y, int z) =>
+            .Callback((string x, string y, int z) =>
             {
-                Tuple<string, string, int> theKey = new Tuple<string, string, int>(x, y, z);
+                var theKey = new Tuple<string, string, int>(x, y, z);
                 if (data.ContainsKey(theKey))
                 {
                     fakeReviews.AddRange(data[theKey]);

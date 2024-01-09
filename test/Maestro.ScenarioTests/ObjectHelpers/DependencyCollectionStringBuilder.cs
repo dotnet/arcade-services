@@ -6,20 +6,19 @@ using System.Text;
 using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.DarcLib;
 
-namespace Maestro.ScenarioTests.ObjectHelpers
+namespace Maestro.ScenarioTests.ObjectHelpers;
+
+public class DependencyCollectionStringBuilder
 {
-    public class DependencyCollectionStringBuilder
+    internal static string GetString(List<DependencyDetail> expectedDependencies)
     {
-        internal static string GetString(List<DependencyDetail> expectedDependencies)
+        StringBuilder stringBuilder = new StringBuilder();
+
+        foreach(DependencyDetail dependency in expectedDependencies)
         {
-            StringBuilder stringBuilder = new StringBuilder();
-
-            foreach(DependencyDetail dependency in expectedDependencies)
-            {
-                stringBuilder.AppendLine(UxHelpers.DependencyToString(dependency));
-            }
-
-            return stringBuilder.ToString();
+            stringBuilder.AppendLine(UxHelpers.DependencyToString(dependency));
         }
+
+        return stringBuilder.ToString();
     }
 }

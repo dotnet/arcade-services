@@ -43,7 +43,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly ILocalGitClient _localGitClient;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
@@ -57,19 +56,19 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         IComponentListGenerator readmeComponentListGenerator,
         ICodeownersGenerator codeownersGenerator,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, dependencyFileManager, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, readmeComponentListGenerator, codeownersGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
         _cloneManager = cloneManager;
-        _localGitClient = localGitClient;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -104,7 +103,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             workBranchName += $"/{targetRevision}";
         }
 
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(_vmrInfo.VmrPath, workBranchName);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, workBranchName);
 
         var rootUpdate = new VmrDependencyUpdate(
             mapping,
@@ -181,7 +180,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             .Prepend(update.RemoteUri)
             .ToArray();
 
-        NativePath clonePath = await _cloneManager.PrepareCloneAsync(
+        ILocalGitRepo clone = await _cloneManager.PrepareCloneAsync(
             update.Mapping,
             remotes,
             new[] { update.TargetRevision },
@@ -192,14 +191,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         update = update with
         {
-            TargetRevision = await _localGitClient.GetShaForRefAsync(clonePath, update.TargetRevision)
+            TargetRevision = await clone.GetShaForRefAsync(update.TargetRevision)
         };
 
         string commitMessage = PrepareCommitMessage(InitializationCommitMessage, update.Mapping.Name, update.RemoteUri, newSha: update.TargetRevision);
 
         await UpdateRepoToRevisionAsync(
             update,
-            clonePath,
+            clone,
             additionalRemotes,
             Constants.EmptyGitObject,
             author: null,

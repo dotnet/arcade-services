@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -70,8 +69,8 @@ internal static class Program
 
     // This order will mandate the order in which the commands are displayed if typing just 'darc'
     // so keep these sorted.
-    private static Type[] GetOptions() => new[]
-    {
+    private static Type[] GetOptions() =>
+    [
         typeof(AddChannelCommandLineOptions),
         typeof(AddDependencyCommandLineOptions),
         typeof(AddDefaultChannelCommandLineOptions),
@@ -106,18 +105,19 @@ internal static class Program
         typeof(VerifyCommandLineOptions),
         typeof(SetGoalCommandLineOptions),
         typeof(GetGoalCommandLineOptions),
-    };
+    ];
 
     // These are under the "vmr" subcommand
-    private static Type[] GetVmrOptions() => new[]
-    {
+    private static Type[] GetVmrOptions() =>
+    [
         typeof(InitializeCommandLineOptions),
         typeof(UpdateCommandLineOptions),
         typeof(BackflowCommandLineOptions),
+        typeof(ForwardFlowCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
         typeof(BinaryFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions)
-    };
+    ];
 }
