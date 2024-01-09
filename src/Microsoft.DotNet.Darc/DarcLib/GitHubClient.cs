@@ -733,7 +733,19 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         using (HttpClient client = CreateHttpClient())
         {
             var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
-            return await requestManager.ExecuteAsync(retryCount);
+            try
+            {
+                return await requestManager.ExecuteAsync(retryCount);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+            {
+                if (logFailure)
+                {
+                    _logger.LogError("Check SAML single sign-on (SSO) for your token: " +
+                        "https://aka.ms/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on");
+                }
+                throw;
+            }
         }
     }
 
