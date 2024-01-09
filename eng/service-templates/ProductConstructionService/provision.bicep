@@ -202,7 +202,7 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
                 probes: [
                     {
                         httpGet: {
-                            path: '/status/startup'
+                            path: '/health'
                             port: 8080
                             scheme: 'HTTP'
                         }
