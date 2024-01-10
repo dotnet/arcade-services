@@ -3,11 +3,7 @@
 To run the Product Construction Service locally, set the `ProductConstructionService.AppHost` as Startup Project, and run with F5
 
 # Instructions for recreating the Product Construction Service
-Create the `product-construction-service` resource group in your subscription. Use the `North Central US (Stage)` location. A special feature flag allowing us to create containers with large volumes is enabled here.
-
-Using Azure CLI, run the following lines:
- - `az account set --subscription <subscription name/id>`
- - `az deployment group create --template-file provision.bicep --resource-group product-construction-service`
+Run the `provision.ps1` script by giving it the name of the subscription you want to create the service in. Note that keyvault and container registry names have to be unique on Azure, so you'll have to change these, or delete and purge the existing ones.
 
 This will create all of the necessary Azure resources.
 
