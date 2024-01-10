@@ -86,6 +86,20 @@ public class BarRemote : IBarRemote
     public async Task<Subscription> DeleteSubscriptionAsync(string subscriptionId)
         => await _barClient.DeleteSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
 
+    /// <summary>
+    /// Convert subscription id to a Guid, throwing if not valid.
+    /// </summary>
+    /// <param name="subscriptionId">ID of subscription.</param>
+    /// <returns>New guid</returns>
+    private static Guid GetSubscriptionGuid(string subscriptionId)
+    {
+        if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+        {
+            throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+        }
+        return subscriptionGuid;
+    }
+
     #endregion
 
     #region Channel Operations
@@ -246,20 +260,6 @@ public class BarRemote : IBarRemote
         => await _barClient.GetBuildTimeAsync(defaultChannelId, days);
 
     #endregion
-
-    /// <summary>
-    /// Convert subscription id to a Guid, throwing if not valid.
-    /// </summary>
-    /// <param name="subscriptionId">ID of subscription.</param>
-    /// <returns>New guid</returns>
-    private static Guid GetSubscriptionGuid(string subscriptionId)
-    {
-        if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-        {
-            throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-        }
-        return subscriptionGuid;
-    }
 
     #region Repo/Dependency Operations
 
@@ -423,11 +423,8 @@ public class BarRemote : IBarRemote
                     .To;
 
                 // Not current in the update list, so look up in the original dependencies.
-                if (parentCoherentDependency == null)
-                {
-                    parentCoherentDependency = dependencies.FirstOrDefault(d =>
-                        d.Name.Equals(dependencyToUpdate.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                }
+                parentCoherentDependency ??= dependencies.FirstOrDefault(d =>
+                    d.Name.Equals(dependencyToUpdate.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
 
                 if (parentCoherentDependency == null)
                 {
@@ -656,9 +653,9 @@ public class BarRemote : IBarRemote
                     }
 
                     return asset.Locations
-                            .Select(location => location.Location)
-                            .Intersect(nugetFeeds)
-                            .Any();
+                        .Select(location => location.Location)
+                        .Intersect(nugetFeeds)
+                        .Any();
                 })
                 .ToList();
 
