@@ -22,7 +22,7 @@ variables:
   - name: containerappEnvironmentName
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
-    value: productconstructionnt50.azurecr.io
+    value: productconstructionnt50.azurecr.io.azurecr.io
 
 stages:
 - stage: PublishProductConstructionService
