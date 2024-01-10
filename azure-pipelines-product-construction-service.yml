@@ -63,8 +63,8 @@ stages:
         - task: AzureCLI@2
           inputs:
             azureSubscription: NetHelixStaging
-            scriptType: 'pscore'
-            scriptLocation: 'scriptPath'
-            scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
+            scriptType: pscore
+            scriptLocation: scriptPath
+            scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
             arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName)
           displayName: Product Construction Service Deploy
