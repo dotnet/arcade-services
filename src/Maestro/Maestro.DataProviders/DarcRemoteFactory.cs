@@ -18,6 +18,7 @@ public class DarcRemoteFactory : IRemoteFactory
 {
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly OperationManager _operations;
+    private readonly IKustoClientProvider _kustoClientProvider;
 
     public DarcRemoteFactory(
         BuildAssetRegistryContext context,
@@ -29,17 +30,16 @@ public class DarcRemoteFactory : IRemoteFactory
         OperationManager operations)
     {
         _operations = operations;
+        _kustoClientProvider = kustoClientProvider;
+        _versionDetailsParser = versionDetailsParser;
+
         Context = context;
-        KustoClientProvider = (KustoClientProvider)kustoClientProvider;
         GitHubTokenProvider = gitHubTokenProvider;
         AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
-        _versionDetailsParser = versionDetailsParser;
         Cache = memoryCache;
     }
 
     public BuildAssetRegistryContext Context { get; }
-
-    private readonly KustoClientProvider KustoClientProvider;
 
     public DarcRemoteMemoryCache Cache { get; }
 
@@ -47,9 +47,9 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
 
-    public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
     {
-        return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger));
+        return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(Context, _kustoClientProvider), logger));
     }
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -99,7 +99,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(remoteGitClient, new MaestroBarClient(Context, KustoClientProvider), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, new MaestroBarClient(Context, _kustoClientProvider), _versionDetailsParser, logger);
         }
     }
 }

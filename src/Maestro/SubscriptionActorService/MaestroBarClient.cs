@@ -5,12 +5,10 @@ using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.TeamFoundation.Build.WebApi.Events;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SubscriptionActorService;

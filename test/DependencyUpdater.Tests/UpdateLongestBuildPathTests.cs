@@ -1,20 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Maestro.Data.Migrations;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DependencyUpdater.Tests;
 
@@ -88,9 +85,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     [Test]
     public async Task ShouldNotAddLongestBuildPathRowWhenGraphIsEmpty()
     {
-        var graph = new DependencyFlowGraph(
-            new List<DependencyFlowNode>(),
-            new List<DependencyFlowEdge>());
+        var graph = new DependencyFlowGraph([], []);
 
         SetupRemote(
             (ChannelId: 1, Graph: graph));
@@ -105,7 +100,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     private void SetupRemote(
         params (int ChannelId, DependencyFlowGraph Graph)[] graphPerChannel)
     {
-        var remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IBarRemote>();
 
         foreach (var item in graphPerChannel)
         {
@@ -145,8 +140,6 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             })
             .ToList();
 
-        return new DependencyFlowGraph(
-            graphNodes,
-            new List<DependencyFlowEdge>());
+        return new DependencyFlowGraph(graphNodes, []);
     }
 }
