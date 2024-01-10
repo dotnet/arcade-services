@@ -9,8 +9,6 @@ namespace Microsoft.DotNet.DarcLib;
 
 public interface IBarRemote
 {
-    #region Repo/Dependency Operations
-
     /// <summary>
     ///     Get updates required by coherency constraints.
     /// </summary>
@@ -36,26 +34,10 @@ public interface IBarRemote
         IEnumerable<AssetData> assets,
         IEnumerable<DependencyDetail> dependencies);
 
-    #endregion
-
-    #region Build/Asset Operations
-
-    /// <summary>
-    ///     Retrieve the latest build of a repository on a specific channel.
-    /// </summary>
-    /// <param name="repoUri">URI of repository to obtain a build for.</param>
-    /// <param name="channelId">Channel the build was applied to.</param>
-    /// <returns>Latest build of <paramref name="repoUri"/> on channel <paramref name="channelId"/>,
-    /// or null if there is no latest.</returns>
-    /// <remarks>The build's assets are returned</remarks>
-    Task<Build> GetLatestBuildAsync(string repoUri, int channelId);
-
     /// <summary>
     ///     Update a list of dependencies with asset locations.
     /// </summary>
     /// <param name="dependencies">Dependencies to load locations for</param>
     /// <returns>Async task</returns>
     Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
-
-    #endregion
 }
