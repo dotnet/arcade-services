@@ -52,7 +52,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
     {
-        return Task.FromResult<IBarRemote>(new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
+        return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(_context), logger));
     }
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)

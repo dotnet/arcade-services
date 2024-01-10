@@ -93,7 +93,7 @@ internal class RemoteFactory : IRemoteFactory
             darcSettings.BuildAssetRegistryBaseUri);
         }
 
-        return new Remote(null, barClient, new VersionDetailsParser(), logger);
+        return new BarRemote(barClient, logger);
     }
 
     /// <summary>
