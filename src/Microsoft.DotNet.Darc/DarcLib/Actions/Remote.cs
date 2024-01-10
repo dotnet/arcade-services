@@ -122,9 +122,6 @@ public sealed class Remote : IRemote
     /// <summary>
     /// Merges pull request for a dependency update  
     /// </summary>
-    /// <param name="pullRequestUrl"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
     {
         CheckForValidGitClient();
@@ -391,7 +388,7 @@ public sealed class Remote : IRemote
 
         if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
         {
-            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
+            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
         }
 
         return dotnetVersion;
