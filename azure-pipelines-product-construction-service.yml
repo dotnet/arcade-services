@@ -26,6 +26,9 @@ variables:
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
+  - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+    - name: isDevBranch
+      value: true
 
 stages:
 - stage: PublishProductConstructionService
@@ -43,7 +46,10 @@ stages:
 
     - powershell: |
         $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-        $newDockerTag = "$shortSha-$(Build.BuildNumber)"
+        $newDockerTag = "$(Build.BuildNumber)-$shortSha"
+        if ($(isDevBranch) -eq "true") {
+          $newDockerTag = $newDockerTag + "-dev"
+        }
         Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
         Write-Host "set newDockerImageTag to $newDockerTag"
       displayName: Set new docker image tag variable
