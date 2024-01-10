@@ -17,8 +17,6 @@ variables:
     value: product-construction-int
   - name: containerRegistryName
     value: productconstructionint
-  - name: subscriptionName
-    value: HelixStaging
   - name: containerappEnvironmentName
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
@@ -63,5 +61,5 @@ stages:
             scriptType: 'pscore'
             scriptLocation: 'scriptPath'
             scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
-            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -subscriptionName $(subscriptionName) -containerappEnvironmentName "acaexjpe3hisjmv2e" -containerRegistryUsername $(container-registry-username) -containerRegistryPassword $(container-registry-password)
+            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName)
           displayName: 'Product Construction Service Deploy'

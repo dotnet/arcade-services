@@ -6,9 +6,7 @@ param(
     [Parameter(Mandatory=$true)][string]$containerappName,
     [Parameter(Mandatory=$true)][string]$newImageTag,
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
-    [Parameter(Mandatory=$true)][string]$imageName,
-    [Parameter(Mandatory=$true)][string]$subscriptionName,
-    [Parameter(Mandatory=$true)][string]$containerappEnvironmentName
+    [Parameter(Mandatory=$true)][string]$imageName
 )
 
 az extension add --name containerapp --upgrade
