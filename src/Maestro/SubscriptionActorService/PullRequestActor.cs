@@ -61,6 +61,7 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _darcFactory;
+        private readonly ICoherencyUpdateResolverFactory _updateResolverFactory;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
@@ -82,6 +83,7 @@ namespace SubscriptionActorService
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
@@ -90,6 +92,7 @@ namespace SubscriptionActorService
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
             _darcFactory = darcFactory;
+            _updateResolverFactory = updateResolverFactory;
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
@@ -110,6 +113,7 @@ namespace SubscriptionActorService
                         reminderManager,
                         stateManager,
                         _mergePolicyEvaluator,
+                        _updateResolverFactory,
                         _context,
                         _darcFactory,
                         _loggerFactory,
@@ -121,6 +125,7 @@ namespace SubscriptionActorService
                         reminderManager,
                         stateManager,
                         _mergePolicyEvaluator,
+                        _updateResolverFactory,
                         _context,
                         _darcFactory,
                         _loggerFactory,
@@ -183,6 +188,7 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
@@ -193,6 +199,7 @@ namespace SubscriptionActorService
             Reminders = reminders;
             StateManager = stateManager;
             MergePolicyEvaluator = mergePolicyEvaluator;
+            UpdateResolverFactory = updateResolverFactory;
             Context = context;
             DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
@@ -207,6 +214,7 @@ namespace SubscriptionActorService
         public IReminderManager Reminders { get; }
         public IActorStateManager StateManager { get; }
         public IMergePolicyEvaluator MergePolicyEvaluator { get; }
+        public ICoherencyUpdateResolverFactory UpdateResolverFactory { get; }
         public BuildAssetRegistryContext Context { get; }
         public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
@@ -1127,7 +1135,7 @@ namespace SubscriptionActorService
             Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            ICoherencyUpdateResolver coherencyUpdateResolver = ;
+            ICoherencyUpdateResolver coherencyUpdateResolver = await UpdateResolverFactory.CreateAsync(Logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -1287,21 +1295,24 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
-            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier) : base(
-            id,
-            reminders,
-            stateManager,
-            mergePolicyEvaluator,
-            context,
-            darcFactory,
-            loggerFactory,
-            actionRunner,
-            subscriptionActorFactory)
+            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier)
+            : base(
+                id,
+                reminders,
+                stateManager,
+                mergePolicyEvaluator,
+                updateResolverFactory,
+                context,
+                darcFactory,
+                loggerFactory,
+                actionRunner,
+                subscriptionActorFactory)
         {
             _lazySubscription = new Lazy<Task<Subscription>>(RetrieveSubscription);
             _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
@@ -1369,22 +1380,23 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
-            :
-            base(
-            id,
-            reminders,
-            stateManager,
-            mergePolicyEvaluator,
-            context,
-            darcFactory,
-            loggerFactory,
-            actionRunner,
-            subscriptionActorFactory)
+            : base(
+                id,
+                reminders,
+                stateManager,
+                mergePolicyEvaluator,
+                updateResolverFactory,
+                context,
+                darcFactory,
+                loggerFactory,
+                actionRunner,
+                subscriptionActorFactory)
         {
         }
 
