@@ -176,8 +176,10 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
 
-        IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync(repoUri, branch, loadAssetLocations: true);
-        await _barClient.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+        IBarRemote barRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
+
+        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
+        await barRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
@@ -323,24 +325,15 @@ public sealed class Remote : IRemote
     /// <param name="repoUri">Repository to get dependencies from</param>
     /// <param name="branchOrCommit">Commit to get dependencies at</param>
     /// <param name="name">Optional name of specific dependency to get information on</param>
-    /// <param name="loadAssetLocations">Optional switch to include the asset locations</param>
     /// <returns>Matching dependency information.</returns>
     public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
         string branchOrCommit,
-        string name = null,
-        bool loadAssetLocations = false)
+        string name = null)
     {
         CheckForValidGitClient();
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit);
-        var dependencies = versionDetails.Dependencies
+        return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-        if (loadAssetLocations)
-        {
-            await _barClient.AddAssetLocationToDependenciesAsync(dependencies);
-        }
-
-        return dependencies;
     }
 
     /// <summary>
@@ -351,7 +344,6 @@ public sealed class Remote : IRemote
     /// <param name="targetDirectory">Directory to clone to</param>
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory</param>
-    /// <returns></returns>
     public async Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
         CheckForValidGitClient();

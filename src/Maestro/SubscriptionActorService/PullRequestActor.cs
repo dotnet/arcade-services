@@ -865,6 +865,7 @@ namespace SubscriptionActorService
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IBarRemote barRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -886,8 +887,13 @@ namespace SubscriptionActorService
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
-                    dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                var itemsToUpdate = dependenciesToCommit
+                    .Select(du => du.To)
+                    .ToList();
+
+                await barRemote.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+
+                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
                 pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
             }
 
@@ -900,16 +906,20 @@ namespace SubscriptionActorService
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
 
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
-                    coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+                var itemsToUpdate = coherencyUpdate.deps
+                    .Select(du => du.To)
+                    .ToList();
+
+                await barRemote.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
             }
 
             // If the coherency algorithm failed and there are no non-coherency updates and
-            // we crate an empty commit that describes an issue.
+            // we create an empty commit that describes an issue.
             if (requiredUpdates.Count == 0)
             {
                 string message = "Failed to perform coherency update for one or more dependencies.";
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, new List<DependencyDetail>(), message);
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, [], message);
                 return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
             }
 

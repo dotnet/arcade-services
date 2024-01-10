@@ -103,7 +103,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         BarRemotes[TargetRepo]
             .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
         DarcRemotes[TargetRepo]
-            .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
         BarRemotes[TargetRepo]
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
         assets.Should()
