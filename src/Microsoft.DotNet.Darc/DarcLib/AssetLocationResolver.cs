@@ -9,6 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
 
+public interface IAssetLocationResolver
+{
+    /// <summary>
+    ///     Update a list of dependencies with asset locations.
+    /// </summary>
+    /// <param name="dependencies">Dependencies to load locations for</param>
+    /// <returns>Async task</returns>
+    Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
+}
+
 public class AssetLocationResolver : IAssetLocationResolver
 {
     private readonly IBarClient _barClient;
