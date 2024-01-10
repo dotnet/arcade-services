@@ -19,13 +19,6 @@ internal class RemoteFactory : IRemoteFactory
         _options = options;
     }
 
-    /// <summary>
-    ///     Get a remote for a specific repo.
-    /// </summary>
-    /// <param name="options">Command line options</param>
-    /// <param name="repoUrl">Repository url</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
     public static IRemote GetRemote(CommandLineOptions options, string repoUrl, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
@@ -67,22 +60,9 @@ internal class RemoteFactory : IRemoteFactory
         return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
-    /// <summary>
-    ///     Get a build asset registry only remote for a specific repo.
-    /// </summary>
-    /// <param name="options">Command line options</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
-    public static IBarRemote GetBarRemote(CommandLineOptions options, ILogger logger)
+    public static IBarClient GetBarClient(CommandLineOptions options, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
-
-        if (darcSettings.GitType != GitRepoType.None &&
-            string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
-        {
-            throw new DarcException($"No personal access token was provided for repo type '{darcSettings.GitType}'");
-        }
-
         IBarClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
@@ -90,19 +70,18 @@ internal class RemoteFactory : IRemoteFactory
             darcSettings.BuildAssetRegistryBaseUri);
         }
 
-        return new BarRemote(barClient, logger);
+        return barClient;
     }
 
-    /// <summary>
-    ///     Retrieve a remote based on repository URI, which sets up the git client.
-    ///     Also sets up the BAR client.
-    /// </summary>
-    /// <param name="repoUrl">Repository url to get a remote for</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
+    public static IBarRemote GetBarRemote(CommandLineOptions options, ILogger logger)
+        => new BarRemote(GetBarClient(options, logger), logger);
+
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         => Task.FromResult(GetRemote(_options, repoUrl, logger));
 
     public Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
         => Task.FromResult(GetBarRemote(_options, logger));
+
+    public Task<IBarClient> GetBarClientAsync(ILogger logger)
+        => Task.FromResult(GetBarClient(_options, logger));
 }

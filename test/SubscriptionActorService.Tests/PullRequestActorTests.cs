@@ -101,7 +101,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
         BarRemotes[TargetRepo]
-            .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
+            .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
         DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
         BarRemotes[TargetRepo]
@@ -227,12 +227,12 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
             .Setup(
-                r => r.GetRequiredNonCoherencyUpdatesAsync(
+                r => r.GetRequiredNonCoherencyUpdates(
                     SourceRepo,
                     NewCommit,
                     It.IsAny<IEnumerable<AssetData>>(),
                     It.IsAny<IEnumerable<DependencyDetail>>()))
-            .ReturnsAsync(
+            .Returns(
                 (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
                     // Just make from->to identical.
                     assets

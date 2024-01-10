@@ -27,7 +27,7 @@ internal class AddDefaultChannelOperation : Operation
         try
         {
             IRemote repoRemote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
-            IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
             _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);
@@ -38,7 +38,7 @@ internal class AddDefaultChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            await barRemote.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
+            await barClient.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
 
             return Constants.SuccessCode;
         }

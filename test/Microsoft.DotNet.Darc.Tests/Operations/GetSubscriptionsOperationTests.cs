@@ -27,7 +27,7 @@ public class GetSubscriptionsOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IBarRemote> _remoteMock = null!;
+    private Mock<IBarClient> _barMock = null!;
 
 
     [SetUp]
@@ -35,7 +35,7 @@ public class GetSubscriptionsOperationTests
     {
         _consoleOutput = new();
 
-        _remoteMock = new Mock<IBarRemote>();
+        _barMock = new Mock<IBarClient>();
         _services = new ServiceCollection();
     }
 
@@ -48,7 +48,7 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_empty_set()
     {
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new(), _services);
 
@@ -63,9 +63,9 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_AuthenticationException()
     {
-        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new AuthenticationException("boo."));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new(), _services);
 
@@ -80,9 +80,9 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_Exception()
     {
-        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new Exception("foo."));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new(), _services);
 
@@ -111,9 +111,9 @@ public class GetSubscriptionsOperationTests
             subscription
         ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new(), _services);
 
@@ -141,9 +141,9 @@ public class GetSubscriptionsOperationTests
             subscription
         ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.json }, _services);
 
@@ -180,9 +180,9 @@ public class GetSubscriptionsOperationTests
             subscription2,
         ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.text }, _services);
 

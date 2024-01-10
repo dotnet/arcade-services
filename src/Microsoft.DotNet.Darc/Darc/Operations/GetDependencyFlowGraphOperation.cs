@@ -32,21 +32,21 @@ internal class GetDependencyFlowGraphOperation : Operation
     {
         try
         {
-            RemoteFactory remoteFactory = new RemoteFactory(_options);
-            var barRemote = await remoteFactory.GetBarRemoteAsync(Logger);
+            var remoteFactory = new RemoteFactory(_options);
+            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
 
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
                 // Resolve the channel.
-                targetChannel = await UxHelpers.ResolveSingleChannel(barRemote, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
                 }
             }
 
-            var flowGraph = await barRemote.GetDependencyFlowGraphAsync(
+            var flowGraph = await barClient.GetDependencyFlowGraphAsync(
                 targetChannel?.Id ?? 0,
                 _options.Days,
                 includeArcade: true,

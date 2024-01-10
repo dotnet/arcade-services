@@ -58,11 +58,26 @@ public interface IBarClient
     Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription);
 
     /// <summary>
+    ///     Update an existing subscription
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription to update</param>
+    /// <param name="subscription">Subscription information</param>
+    /// <returns>Updated subscription</returns>
+    Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription);
+
+    /// <summary>
     ///     Retrieve a subscription by ID
     /// </summary>
     /// <param name="subscriptionId">Id of subscription</param>
     /// <returns>Subscription information</returns>
     Task<Subscription> GetSubscriptionAsync(Guid subscriptionId);
+
+    /// <summary>
+    ///     Retrieve a subscription by ID
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription</param>
+    /// <returns>Subscription information</returns>
+    Task<Subscription> GetSubscriptionAsync(string subscriptionId);
 
     /// <summary>
     ///     Get a repository merge policy (for batchable subscriptions)

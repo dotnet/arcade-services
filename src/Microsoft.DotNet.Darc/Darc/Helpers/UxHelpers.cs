@@ -65,12 +65,12 @@ public static class UxHelpers
     /// <summary>
     ///     Resolve a channel substring to an exact channel, or print out potential names if more than one, or none, match.
     /// </summary>
-    /// <param name="remote">Remote for retrieving channels</param>
+    /// <param name="barClient">Remote for retrieving channels</param>
     /// <param name="desiredChannel">Desired channel</param>
     /// <returns>Channel, or null if no channel was matched.</returns>
-    public static async Task<Channel> ResolveSingleChannel(IBarRemote remote, string desiredChannel)
+    public static async Task<Channel> ResolveSingleChannel(IBarClient barClient, string desiredChannel)
     {
-        return ResolveSingleChannel(await remote.GetChannelsAsync(), desiredChannel);
+        return ResolveSingleChannel(await barClient.GetChannelsAsync(), desiredChannel);
     }
 
     public static string GetSubscriptionDescription(Subscription subscription)
@@ -123,7 +123,7 @@ public static class UxHelpers
     /// <returns>Description</returns>
     public static string GetTextBuildDescription(Build build)
     {
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
         builder.AppendLine($"Repository:    {build.GitHubRepository ?? build.AzureDevOpsRepository}");
         builder.AppendLine($"Branch:        {build.GitHubBranch ?? build.AzureDevOpsBranch}");
         builder.AppendLine($"Commit:        {build.Commit}");
@@ -153,7 +153,7 @@ public static class UxHelpers
     /// <returns>Description string</returns>
     public static string GetMergePoliciesDescription(IEnumerable<MergePolicy> mergePolicies, string indent = "")
     {
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
 
         if (mergePolicies.Any())
         {
@@ -170,9 +170,9 @@ public static class UxHelpers
                         // 1. If the number of lines in the string is 1, write on same line as key
                         // 2. If the number of lines in the string is more than one, start on new
                         //    line and indent.
-                        string valueString = mergePolicyProperty.Value.ToString();
-                        string[] valueLines = valueString.Split(System.Environment.NewLine);
-                        string keyString = $"{indent}    {mergePolicyProperty.Key} = ";
+                        var valueString = mergePolicyProperty.Value.ToString();
+                        var valueLines = valueString.Split(System.Environment.NewLine);
+                        var keyString = $"{indent}    {mergePolicyProperty.Key} = ";
                         builder.Append(keyString);
                         if (valueLines.Length == 1)
                         {
@@ -180,7 +180,7 @@ public static class UxHelpers
                         }
                         else
                         {
-                            string indentString = new string(' ', keyString.Length);
+                            var indentString = new string(' ', keyString.Length);
                             builder.AppendLine();
                             foreach (string line in valueLines)
                             {
@@ -201,7 +201,7 @@ public static class UxHelpers
 
     public static string GetTextSubscriptionDescription(Subscription subscription, IEnumerable<MergePolicy> mergePolicies = null)
     {
-        StringBuilder subInfo = new StringBuilder();
+        var subInfo = new StringBuilder();
         subInfo.AppendLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
         subInfo.AppendLine($"  - Id: {subscription.Id}");
         subInfo.AppendLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
@@ -224,7 +224,7 @@ public static class UxHelpers
 
     public static string DependencyToString(DependencyDetail dependency)
     {
-        StringBuilder dependencyBuilder = new StringBuilder();
+        var dependencyBuilder = new StringBuilder();
 
         dependencyBuilder.AppendLine($"Name:             {dependency.Name}");
         dependencyBuilder.AppendLine($"Version:          {dependency.Version}");
@@ -243,7 +243,7 @@ public static class UxHelpers
 
     public static string GetSimpleRepoName(string repoUri)
     {
-        int lastSlash = repoUri.LastIndexOf("/");
+        var lastSlash = repoUri.LastIndexOf("/");
         if ((lastSlash != -1) && (lastSlash < (repoUri.Length - 1)))
         {
             return repoUri.Substring(lastSlash + 1);
@@ -291,10 +291,10 @@ public static class UxHelpers
     /// <returns>String describing the default channel.</returns>
     public static string GetDefaultChannelDescriptionString(DefaultChannel defaultChannel)
     {
-        string disabled = !defaultChannel.Enabled ? " (Disabled)" : "";
+        var disabled = !defaultChannel.Enabled ? " (Disabled)" : "";
         // Pad so that id's up to 9999 will result in consistent
         // listing
-        string idPrefix = $"({defaultChannel.Id})".PadRight(7);
+        var idPrefix = $"({defaultChannel.Id})".PadRight(7);
         return $"{idPrefix}{defaultChannel.Repository} @ {defaultChannel.Branch} -> {defaultChannel.Channel.Name}{disabled}";
     }
 
@@ -311,22 +311,19 @@ public static class UxHelpers
     /// </remarks>
     public static StreamWriter GetOutputFileStreamOrConsole(string outputFile)
     {
-        StreamWriter outputStream = null;
-        if (!string.IsNullOrEmpty(outputFile))
+        if (string.IsNullOrEmpty(outputFile))
         {
-            string fullPath = Path.GetFullPath(outputFile);
-            string directory = Path.GetDirectoryName(fullPath);
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            outputStream = new StreamWriter(fullPath);
+            return new StreamWriter(Console.OpenStandardOutput());
         }
-        else
+        
+        var fullPath = Path.GetFullPath(outputFile);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (!Directory.Exists(directory))
         {
-            outputStream = new StreamWriter(Console.OpenStandardOutput());
+            Directory.CreateDirectory(directory);
         }
-        return outputStream;
+
+        return new StreamWriter(fullPath);
     }
 
     /// <summary>

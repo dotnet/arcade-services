@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 class UpdateSubscriptionOperation : Operation
 {
-    readonly UpdateSubscriptionCommandLineOptions _options;
+    private readonly UpdateSubscriptionCommandLineOptions _options;
 
     public UpdateSubscriptionOperation(UpdateSubscriptionCommandLineOptions options)
         : base(options)
@@ -29,17 +29,16 @@ class UpdateSubscriptionOperation : Operation
     /// <summary>
     /// Implements the 'update-subscription' operation
     /// </summary>
-    /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
-        Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+        Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
 
-        var suggestedRepos = remote.GetSubscriptionsAsync();
-        var suggestedChannels = remote.GetChannelsAsync();
+        var suggestedRepos = barClient.GetSubscriptionsAsync();
+        var suggestedChannels = barClient.GetChannelsAsync();
 
         string channel = subscription.Channel.Name;
         string sourceRepository = subscription.SourceRepository;
@@ -126,7 +125,7 @@ class UpdateSubscriptionOperation : Operation
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
 
-            var updatedSubscription = await remote.UpdateSubscriptionAsync(
+            var updatedSubscription = await barClient.UpdateSubscriptionAsync(
                 _options.Id,
                 subscriptionToUpdate);
 
@@ -151,7 +150,7 @@ class UpdateSubscriptionOperation : Operation
 
                 if (triggerAutomatically)
                 {
-                    await remote.TriggerSubscriptionAsync(updatedSubscription.Id.ToString());
+                    await barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
                     Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
                 }
             }

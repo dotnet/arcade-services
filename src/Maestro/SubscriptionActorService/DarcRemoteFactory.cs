@@ -50,10 +50,11 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    public Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
-    {
-        return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(_context), logger));
-    }
+    public Task<IBarClient> GetBarClientAsync(ILogger logger)
+        => Task.FromResult<IBarClient>(new MaestroBarClient(_context));
+
+    public async Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
+        => new BarRemote(await GetBarClientAsync(logger), logger);
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
     {
@@ -115,4 +116,6 @@ public class DarcRemoteFactory : IRemoteFactory
             return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
     }
+
+    Task<IBarClient> IRemoteFactory.GetBarClientAsync(ILogger logger) => throw new NotImplementedException();
 }

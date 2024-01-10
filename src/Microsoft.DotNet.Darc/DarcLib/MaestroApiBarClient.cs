@@ -267,6 +267,17 @@ public class MaestroApiBarClient : IBarClient
     }
 
     /// <summary>
+    ///     Update an existing subscription
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription to update</param>
+    /// <param name="subscription">Subscription information</param>
+    /// <returns>Updated subscription</returns>
+    public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
+    {
+        return UpdateSubscriptionAsync(Guid.Parse(subscriptionId), subscription);
+    }
+
+    /// <summary>
     ///     Get a set of subscriptions based on input filters.
     /// </summary>
     /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
@@ -304,6 +315,16 @@ public class MaestroApiBarClient : IBarClient
     public Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {
         return _barClient.Subscriptions.GetSubscriptionAsync(subscriptionId);
+    }
+
+    /// <summary>
+    ///     Retrieve a subscription by ID
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription</param>
+    /// <returns>Subscription information</returns>
+    public Task<Subscription> GetSubscriptionAsync(string subscriptionId)
+    {
+        return GetSubscriptionAsync(Guid.Parse(subscriptionId));
     }
 
     /// <summary>

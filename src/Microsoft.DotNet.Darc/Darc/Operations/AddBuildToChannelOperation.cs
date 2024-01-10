@@ -64,9 +64,9 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            Build build = await remote.GetBuildAsync(_options.Id);
+            Build build = await barClient.GetBuildAsync(_options.Id);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'.");
@@ -95,7 +95,7 @@ internal class AddBuildToChannelOperation : Operation
 
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                Channel targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+                Channel targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
@@ -106,7 +106,7 @@ internal class AddBuildToChannelOperation : Operation
 
             if (_options.AddToDefaultChannels)
             {
-                IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync(
+                IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync(
                     build.GitHubRepository ?? build.AzureDevOpsRepository,
                     build.GitHubBranch ?? build.AzureDevOpsBranch);
 
@@ -151,7 +151,7 @@ internal class AddBuildToChannelOperation : Operation
             // Queues a build of the Build Promotion pipeline that will takes care of making sure
             // that the build assets are published to the right location and also promoting the build
             // to the requested channel
-            int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannels, remote)
+            int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannels, barClient)
                 .ConfigureAwait(false);
 
             if (promoteBuildQueuedStatus != Constants.SuccessCode)
@@ -160,7 +160,7 @@ internal class AddBuildToChannelOperation : Operation
             }
 
             // Get the latest build information to verify the channels
-            build = await remote.GetBuildAsync(build.Id);
+            build = await barClient.GetBuildAsync(build.Id);
 
             Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
             foreach (var channel in targetChannels)
@@ -176,7 +176,7 @@ internal class AddBuildToChannelOperation : Operation
 
             foreach (var targetChannel in targetChannels)
             {
-                IEnumerable<Subscription> appSubscriptions = await remote.GetSubscriptionsAsync(
+                IEnumerable<Subscription> appSubscriptions = await barClient.GetSubscriptionsAsync(
                     sourceRepo: buildRepo,
                     channelId: targetChannel.Id);
 
@@ -199,13 +199,13 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarRemote remote)
+    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarClient barClient)
     {
         if (_options.SkipAssetsPublishing)
         {
             foreach (var targetChannel in targetChannels)
             {
-                await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
+                await barClient.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
                 Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
             }
             return Constants.SuccessCode;
@@ -231,7 +231,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+        var azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
         var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
             .ConfigureAwait(false);
@@ -320,7 +320,7 @@ internal class AddBuildToChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        build = await remote.GetBuildAsync(build.Id);
+        build = await barClient.GetBuildAsync(build.Id);
 
         if (targetChannels.All(ch => build.Channels.Any(c => c.Id == ch.Id)))
         {
@@ -418,7 +418,7 @@ internal class AddBuildToChannelOperation : Operation
             build.GitHubRepository;
 
         IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
-        IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);
@@ -431,7 +431,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        IEnumerable<Asset> listArcadeSDKAssets = await barRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
+        IEnumerable<Asset> listArcadeSDKAssets = await barClient.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
             .ConfigureAwait(false);
 
         Asset sourceBuildArcadeSDKDepAsset = listArcadeSDKAssets.FirstOrDefault();
@@ -442,7 +442,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        Build sourceBuildArcadeSDKDepBuild = await barRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+        Build sourceBuildArcadeSDKDepBuild = await barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
 
         if (sourceBuildArcadeSDKDepBuild == null)
         {

@@ -23,7 +23,7 @@ public class DependencyCoherencyTests
     ///     Test that a simple set of non-coherency updates works.
     /// </summary>
     [Test]
-    public async Task CoherencyUpdateTests1()
+    public void CoherencyUpdateTests1()
     {
         var remote = new BarRemote(null, NullLogger.Instance);
 
@@ -37,7 +37,7 @@ public class DependencyCoherencyTests
         ];
 
         List<DependencyUpdate> updates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         updates.Should().SatisfyRespectively(u =>
         {
@@ -50,7 +50,7 @@ public class DependencyCoherencyTests
     ///     Test that a simple set of non-coherency updates works.
     /// </summary>
     [Test]
-    public async Task CoherencyUpdateTests2()
+    public void CoherencyUpdateTests2()
     {
         var remote = new BarRemote(null, NullLogger.Instance);
 
@@ -65,7 +65,7 @@ public class DependencyCoherencyTests
         ];
 
         List<DependencyUpdate> updates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         updates.Should().SatisfyRespectively(            u =>
         {
@@ -85,7 +85,7 @@ public class DependencyCoherencyTests
     ///     depA should have its case-corrected.
     /// </summary>
     [Test]
-    public async Task CoherencyUpdateTests3()
+    public void CoherencyUpdateTests3()
     {
         var remote = new BarRemote(null, NullLogger.Instance);
 
@@ -100,7 +100,7 @@ public class DependencyCoherencyTests
         ];
 
         List<DependencyUpdate> updates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         updates.Should().SatisfyRespectively(            u =>
         {
@@ -114,7 +114,7 @@ public class DependencyCoherencyTests
     ///     Test a chain with a pinned middle.
     /// </summary>
     [Test]
-    public async Task CoherencyUpdateTests4()
+    public void CoherencyUpdateTests4()
     {
         var remote = new BarRemote(null, NullLogger.Instance);
 
@@ -131,7 +131,7 @@ public class DependencyCoherencyTests
         ];
             
         List<DependencyUpdate> updates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         updates.Should().SatisfyRespectively(            u =>
         {
@@ -145,7 +145,7 @@ public class DependencyCoherencyTests
     ///     Test different casings
     /// </summary>
     [Test]
-    public async Task CoherencyUpdateTests5()
+    public void CoherencyUpdateTests5()
     {
         var remote = new BarRemote(null, NullLogger.Instance);
 
@@ -164,7 +164,7 @@ public class DependencyCoherencyTests
         ];
 
         List<DependencyUpdate> updates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         updates.Should().BeEmpty();
     }
@@ -226,7 +226,7 @@ public class DependencyCoherencyTests
         ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
         {
@@ -300,7 +300,7 @@ public class DependencyCoherencyTests
         ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
         {
@@ -362,7 +362,7 @@ public class DependencyCoherencyTests
         ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
 
         nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
         {
@@ -571,7 +571,7 @@ public class DependencyCoherencyTests
         ];
 
         List<DependencyUpdate> nonCoherencyUpdates =
-            await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+            remote.GetRequiredNonCoherencyUpdates("repoA", "commit2", assets, existingDetails);
             
         nonCoherencyUpdates.Should().SatisfyRespectively(u =>
         {

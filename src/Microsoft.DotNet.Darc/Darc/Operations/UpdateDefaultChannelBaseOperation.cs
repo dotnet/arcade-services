@@ -9,7 +9,6 @@ using Microsoft.DotNet.Services.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -17,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 abstract class UpdateDefaultChannelBaseOperation : Operation
 
 {
-    UpdateDefaultChannelBaseCommandLineOptions _options;
+    private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
 
     public UpdateDefaultChannelBaseOperation(UpdateDefaultChannelBaseCommandLineOptions options)
         : base(options)
@@ -32,9 +31,9 @@ abstract class UpdateDefaultChannelBaseOperation : Operation
     /// <returns>Default channel or null</returns>
     protected async Task<DefaultChannel> ResolveSingleChannel()
     {
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-        IEnumerable<DefaultChannel> potentialDefaultChannels = await remote.GetDefaultChannelsAsync();
+        IEnumerable<DefaultChannel> potentialDefaultChannels = await barClient.GetDefaultChannelsAsync();
             
         // User should have supplied id or a combo of the channel name, repo, and branch.
         if (_options.Id != -1)

@@ -84,11 +84,12 @@ public class SubscriptionHealthMetric : HealthMetric
     {
         IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
         IBarRemote barRemote = await RemoteFactory.GetBarRemoteAsync(Logger);
+        IBarClient barClient = await RemoteFactory.GetBarClientAsync(Logger);
 
         Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
         // Get subscriptions that target this repo/branch
-        Subscriptions = (await barRemote.GetSubscriptionsAsync(targetRepo: Repository))
+        Subscriptions = (await barClient.GetSubscriptionsAsync(targetRepo: Repository))
             .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 
         // Get the dependencies of the repository/branch. Skip pinned and subscriptions tied to another

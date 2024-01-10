@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
 {
-    DeleteDefaultChannelCommandLineOptions _options;
+    private readonly DeleteDefaultChannelCommandLineOptions _options;
     public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
         : base(options)
     {
@@ -25,7 +25,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             DefaultChannel resolvedChannel = await ResolveSingleChannel();
             if (resolvedChannel == null)
@@ -33,7 +33,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
                 return Constants.ErrorCode;
             }
 
-            await remote.DeleteDefaultChannelAsync(resolvedChannel.Id);
+            await barClient.DeleteDefaultChannelAsync(resolvedChannel.Id);
 
             return Constants.SuccessCode;
         }

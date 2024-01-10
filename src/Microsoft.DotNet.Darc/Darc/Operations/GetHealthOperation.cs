@@ -43,7 +43,7 @@ class HealthMetricWithOutput
 /// </summary>
 internal class GetHealthOperation : Operation
 {
-    GetHealthCommandLineOptions _options;
+    private readonly GetHealthCommandLineOptions _options;
     public GetHealthOperation(GetHealthCommandLineOptions options)
         : base(options)
     {
@@ -54,11 +54,11 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            IEnumerable<Subscription> subscriptions = await remote.GetSubscriptionsAsync();
-            IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
-            IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+            IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
+            IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
+            IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
 
             HashSet<string> channelsToEvaluate = ComputeChannelsToEvaluate(channels);
             HashSet<string> reposToEvaluate = ComputeRepositoriesToEvaluate(defaultChannels, subscriptions);

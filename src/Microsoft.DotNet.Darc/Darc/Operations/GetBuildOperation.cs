@@ -36,8 +36,8 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IBarRemote remote = Provider.GetService<IBarRemote>()
-                ?? RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient remote = Provider.GetService<IBarClient>()
+                ?? RemoteFactory.GetBarClient(_options, Logger);
 
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
@@ -64,7 +64,7 @@ internal class GetBuildOperation : Operation
                     .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                matchingBuilds = new List<Build>();
+                matchingBuilds = [];
                 foreach (string repo in possibleRepos)
                 {
                     matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));

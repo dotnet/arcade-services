@@ -30,9 +30,9 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-        if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
+        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
             return Constants.ErrorCode;
@@ -102,7 +102,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             // specify policies on the command line. In this case, they typically want to update
             if (!mergePolicies.Any() && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
-                mergePolicies = (await remote.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
+                mergePolicies = (await barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
             }
 
             // Help the user along with a form.  We'll use the API to gather suggested values
@@ -126,8 +126,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
 
         IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-        IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
-        IEnumerable<RepositoryBranch> targetRepository = await barRemote.GetRepositoriesAsync(repository);
+        IEnumerable<RepositoryBranch> targetRepository = await barClient.GetRepositoriesAsync(repository, branch: null);
 
         if (targetRepository == null || !targetRepository.Any())
         {
@@ -143,7 +142,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await remote.SetRepositoryMergePoliciesAsync(
+            await barClient.SetRepositoryMergePoliciesAsync(
                 repository, branch, mergePolicies);
             Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
             return Constants.SuccessCode;

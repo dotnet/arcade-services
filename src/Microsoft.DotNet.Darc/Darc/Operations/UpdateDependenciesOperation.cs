@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 class UpdateDependenciesOperation : Operation
 {
-    UpdateDependenciesCommandLineOptions _options;
+    private readonly UpdateDependenciesCommandLineOptions _options;
     public UpdateDependenciesOperation(UpdateDependenciesCommandLineOptions options)
         : base(options)
     {
@@ -48,9 +48,11 @@ class UpdateDependenciesOperation : Operation
                 _options.GitHubPat;
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
+            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
             IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(Logger);
+
             var local = new Local(_options.GetRemoteConfiguration(), Logger);
-            List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
+            List<DependencyDetail> dependenciesToUpdate = [];
             bool someUpToDate = false;
             string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";
 
@@ -105,10 +107,9 @@ class UpdateDependenciesOperation : Operation
                     if (!_options.CoherencyOnly)
                     {
                         Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
-                        var specificBuild = await barRemote.GetBuildAsync(_options.BARBuildId);
+                        var specificBuild = await barClient.GetBuildAsync(_options.BARBuildId);
 
-                        int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(specificBuild, barRemote, currentDependencies, dependenciesToUpdate)
-                            .ConfigureAwait(false);
+                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, barRemote, currentDependencies, dependenciesToUpdate);
                         if (nonCoherencyResult != Constants.SuccessCode)
                         {
                             Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
@@ -150,7 +151,7 @@ class UpdateDependenciesOperation : Operation
                     }
 
                     // Start channel query.
-                    Task<Channel> channel = barRemote.GetChannelAsync(_options.Channel);
+                    Task<Channel> channel = barClient.GetChannelAsync(_options.Channel);
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     // We gather the latest build for any dependencies that aren't marked with coherent parent
@@ -160,7 +161,7 @@ class UpdateDependenciesOperation : Operation
                         .Select(dependency => dependency.RepoUri)
                         .ToHashSet();
 
-                    ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
+                    var getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
 
                     Channel channelInfo = await channel;
                     if (channelInfo == null)
@@ -172,7 +173,7 @@ class UpdateDependenciesOperation : Operation
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
                         Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                        var latestBuild = barRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
+                        var latestBuild = barClient.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
@@ -190,8 +191,7 @@ class UpdateDependenciesOperation : Operation
                             continue;
                         }
 
-                        int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(build, barRemote, currentDependencies, dependenciesToUpdate)
-                            .ConfigureAwait(false);
+                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, barRemote, currentDependencies, dependenciesToUpdate);
                         if (nonCoherencyResult != Constants.SuccessCode)
                         {
                             Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
@@ -250,7 +250,7 @@ class UpdateDependenciesOperation : Operation
         }
     }
 
-    private async Task<int> NonCoherencyUpdatesForBuildAsync(
+    private static int NonCoherencyUpdatesForBuild(
         Build build,
         IBarRemote barRemote,
         List<DependencyDetail> currentDependencies,
@@ -266,8 +266,8 @@ class UpdateDependenciesOperation : Operation
         string repository = build.GitHubRepository ?? build.AzureDevOpsRepository;
 
         // Now determine what needs to be updated.
-        List<DependencyUpdate> updates = await barRemote.
-            GetRequiredNonCoherencyUpdatesAsync(repository, build.Commit, assetData, currentDependencies);
+        List<DependencyUpdate> updates = barRemote.
+            GetRequiredNonCoherencyUpdates(repository, build.Commit, assetData, currentDependencies);
 
         foreach (DependencyUpdate update in updates)
         {

@@ -260,7 +260,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
         {
-            IBarRemote barRemote = await RemoteFactory.GetBarRemoteAsync(Logger);
+            IBarClient barClient = await RemoteFactory.GetBarClientAsync(Logger);
             List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
             IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
@@ -268,7 +268,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
             foreach (var channel in channels)
             {
-                var flowGraph = await barRemote.GetDependencyFlowGraphAsync(
+                var flowGraph = await barClient.GetDependencyFlowGraphAsync(
                     channel.Id,
                     days: 30,
                     includeArcade: false,

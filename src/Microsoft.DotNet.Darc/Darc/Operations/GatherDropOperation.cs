@@ -34,17 +34,17 @@ internal class InputBuilds
 
 internal class GatherDropOperation : Operation
 {
-    GatherDropCommandLineOptions _options;
+    private readonly GatherDropCommandLineOptions _options;
     public GatherDropOperation(GatherDropCommandLineOptions options)
         : base(options)
     {
         _options = options;
     }
 
-    const string packagesSubPath = "packages";
-    const string assetsSubPath = "assets";
-    const string nonShippingSubPath = "nonshipping";
-    const string shippingSubPath = "shipping";
+    const string PackagesSubPath = "packages";
+    const string AssetsSubPath = "assets";
+    const string NonShippingSubPath = "nonshipping";
+    const string ShippingSubPath = "shipping";
 
     // Regular expression used to check that an AssetLocation matches the format of
     // an Azure DevOps Feed. Such feeds look like:
@@ -64,8 +64,8 @@ internal class GatherDropOperation : Operation
         try
         {
             // Formalize the directory path.
-            string rootOutputPath = Path.GetFullPath(_options.OutputDirectory);
-            bool success = true;
+            var rootOutputPath = Path.GetFullPath(_options.OutputDirectory);
+            var success = true;
 
             // Gather the list of builds that need to be downloaded.
             var rootBuilds = await GetRootBuildsAsync();
@@ -78,8 +78,8 @@ internal class GatherDropOperation : Operation
 
             Console.WriteLine();
 
-            List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
-            List<DownloadedAsset> extraDownloadedAssets = new List<DownloadedAsset>();
+            List<DownloadedBuild> downloadedBuilds = [];
+            List<DownloadedAsset> extraDownloadedAssets = [];
 
             foreach (var build in buildsToDownload.Builds)
             {
@@ -125,7 +125,7 @@ internal class GatherDropOperation : Operation
             await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
 
             // Create the release nupkg layout
-            string nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
+            var nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
             CreateReleasePackageLayout(downloadedBuilds, nugetPublishFilesReleaseLocation);
 
             Console.WriteLine();
@@ -154,7 +154,7 @@ internal class GatherDropOperation : Operation
 
     private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
     {
-        string repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
+        var repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
         IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
         return await remote.GetDependenciesAsync(repoUri, build.Commit);
     }
@@ -209,17 +209,17 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         string repoUri = _options.RepoUri;
 
         if (_options.RootBuildIds.Any())
         {
-            List<Task<Build>> rootBuildTasks = new List<Task<Build>>();
+            List<Task<Build>> rootBuildTasks = [];
             foreach (var rootBuildId in _options.RootBuildIds)
             {
                 Console.WriteLine($"Looking up build by id {rootBuildId}");
-                rootBuildTasks.Add(remote.GetBuildAsync(rootBuildId));
+                rootBuildTasks.Add(barClient.GetBuildAsync(rootBuildId));
             }
             return await Task.WhenAll(rootBuildTasks);
         }
@@ -227,7 +227,7 @@ internal class GatherDropOperation : Operation
         {
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+                IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
                 IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
                 if (desiredChannels.Count() != 1)
                 {
@@ -240,7 +240,7 @@ internal class GatherDropOperation : Operation
                 }
                 Channel targetChannel = desiredChannels.First();
                 Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
-                Build rootBuild = await remote.GetLatestBuildAsync(repoUri, targetChannel.Id);
+                Build rootBuild = await barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
                 if (rootBuild == null)
                 {
                     Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
@@ -251,7 +251,7 @@ internal class GatherDropOperation : Operation
             else if (!string.IsNullOrEmpty(_options.Commit))
             {
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IEnumerable<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                IEnumerable<Build> builds = await barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
                 // If more than one is available, print them with their IDs.
                 if (builds.Count() > 1)
                 {
@@ -294,19 +294,19 @@ internal class GatherDropOperation : Operation
     /// </summary>
     /// <param name="build">Downloaded build</param>
     /// <returns>Product name</returns>
-    private string GetProductNameForReleaseJson(DownloadedBuild build)
+    private static string GetProductNameForReleaseJson(DownloadedBuild build)
     {
         // Preference the github repo name over the azure devops repo name.
         if (!string.IsNullOrEmpty(build.Build.GitHubRepository))
         {
             // Split off the github.com+org name and just use the repo name, all lower case.
-            (string owner, string repo) = GitHubClient.ParseRepoUri(build.Build.GitHubRepository);
+            (_, string repo) = GitHubClient.ParseRepoUri(build.Build.GitHubRepository);
             return repo.ToLowerInvariant();
         }
         else if (!string.IsNullOrEmpty(build.Build.AzureDevOpsRepository))
         {
             // Use the full repo name without project/account
-            (string accountName, string projectName, string repoName) = AzureDevOpsClient.ParseRepoUri(build.Build.AzureDevOpsRepository);
+            (_, _, string repoName) = AzureDevOpsClient.ParseRepoUri(build.Build.AzureDevOpsRepository);
             return repoName.ToLowerInvariant();
         }
         else
@@ -320,97 +320,97 @@ internal class GatherDropOperation : Operation
     /// </summary>
     /// <param name="build">Downloaded build</param>
     /// <returns>File share location</returns>
-    public string GetFileShareLocationForReleaseJson(DownloadedBuild build)
+    public static string GetFileShareLocationForReleaseJson(DownloadedBuild build)
     {
         // We only want to have shipping assets in the release json, so append that path
-        return Path.Combine(build.ReleaseLayoutOutputDirectory, shippingSubPath);
+        return Path.Combine(build.ReleaseLayoutOutputDirectory, ShippingSubPath);
     }
 
-    private const string githubRepoPrefix = "https://github.com/";
-    private const string azdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
-    private const string coreRepoCategory = "core";
-    private const string aspnetCategory = "aspnet";
-    private const string wcfCategory = "wcf";
-    private const string manifestCategory = "core-manifest";
+    private const string GithubRepoPrefix = "https://github.com/";
+    private const string AzdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
+    private const string CoreRepoCategory = "core";
+    private const string AspnetCategory = "aspnet";
+    private const string WcfCategory = "wcf";
+    private const string ManifestCategory = "core-manifest";
 
     // The following is the list of repos that should be picked up by the tooling
     // This list is effectively static, but not the full set of repos that are in the graph,
     // as our release process does not publish all of the packages (e.g. not nuget.client).
     // Each dictionary entry maps to a tuple of the category of the package (owner) and short name of the repo.
-    private static readonly Dictionary<string, (string, string)> repositories = new Dictionary<string, (string, string)>()
+    private static readonly IReadOnlyDictionary<string, (string, string)> repositories = new Dictionary<string, (string, string)>()
     {
         // Core
 
         // Public
-        { $"{githubRepoPrefix}dotnet/corefx", (coreRepoCategory, "corefx") },
-        { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
-        { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
-        { $"{githubRepoPrefix}dotnet/runtime", (coreRepoCategory, "runtime") },
-        { $"{githubRepoPrefix}dotnet/winforms", (coreRepoCategory, "winforms") },
-        { $"{githubRepoPrefix}dotnet/windowsdesktop", (coreRepoCategory, "windowsdesktop") },
-        { $"{githubRepoPrefix}dotnet/templating", (coreRepoCategory, "templating") },
-        { $"{githubRepoPrefix}dotnet/emsdk", (coreRepoCategory, "emsdk") },
-        { $"{githubRepoPrefix}dotnet/sdk", (coreRepoCategory, "sdk") },
-        { $"{githubRepoPrefix}dotnet/roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
-        { $"{githubRepoPrefix}dotnet/linker", (coreRepoCategory, "linker") },
+        { $"{GithubRepoPrefix}dotnet/corefx", (CoreRepoCategory, "corefx") },
+        { $"{GithubRepoPrefix}dotnet/coreclr", (CoreRepoCategory, "coreclr") },
+        { $"{GithubRepoPrefix}dotnet/core-setup", (CoreRepoCategory, "core-setup") },
+        { $"{GithubRepoPrefix}dotnet/runtime", (CoreRepoCategory, "runtime") },
+        { $"{GithubRepoPrefix}dotnet/winforms", (CoreRepoCategory, "winforms") },
+        { $"{GithubRepoPrefix}dotnet/windowsdesktop", (CoreRepoCategory, "windowsdesktop") },
+        { $"{GithubRepoPrefix}dotnet/templating", (CoreRepoCategory, "templating") },
+        { $"{GithubRepoPrefix}dotnet/emsdk", (CoreRepoCategory, "emsdk") },
+        { $"{GithubRepoPrefix}dotnet/sdk", (CoreRepoCategory, "sdk") },
+        { $"{GithubRepoPrefix}dotnet/roslyn-analyzers", (CoreRepoCategory, "roslyn-analyzers") },
+        { $"{GithubRepoPrefix}dotnet/linker", (CoreRepoCategory, "linker") },
         // Internal
-        { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
-        { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
-        { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
-        { $"{azdoRepoPrefix}dotnet-runtime", (coreRepoCategory, "runtime") },
-        { $"{azdoRepoPrefix}dotnet-winforms", (coreRepoCategory, "winforms") },
-        { $"{azdoRepoPrefix}dotnet-windowsdesktop", (coreRepoCategory, "windowsdesktop") },
-        { $"{azdoRepoPrefix}dotnet-templating", (coreRepoCategory, "templating") },
-        { $"{azdoRepoPrefix}dotnet-emsdk", (coreRepoCategory, "emsdk") },
-        { $"{azdoRepoPrefix}dotnet-sdk", (coreRepoCategory, "sdk") },
-        { $"{azdoRepoPrefix}dotnet-roslyn-analyzers", (coreRepoCategory, "roslyn-analyzers") },
-        { $"{azdoRepoPrefix}dotnet-linker", (coreRepoCategory, "linker") },
+        { $"{AzdoRepoPrefix}dotnet-corefx", (CoreRepoCategory, "corefx") },
+        { $"{AzdoRepoPrefix}dotnet-coreclr", (CoreRepoCategory, "coreclr") },
+        { $"{AzdoRepoPrefix}dotnet-core-setup", (CoreRepoCategory, "core-setup") },
+        { $"{AzdoRepoPrefix}dotnet-runtime", (CoreRepoCategory, "runtime") },
+        { $"{AzdoRepoPrefix}dotnet-winforms", (CoreRepoCategory, "winforms") },
+        { $"{AzdoRepoPrefix}dotnet-windowsdesktop", (CoreRepoCategory, "windowsdesktop") },
+        { $"{AzdoRepoPrefix}dotnet-templating", (CoreRepoCategory, "templating") },
+        { $"{AzdoRepoPrefix}dotnet-emsdk", (CoreRepoCategory, "emsdk") },
+        { $"{AzdoRepoPrefix}dotnet-sdk", (CoreRepoCategory, "sdk") },
+        { $"{AzdoRepoPrefix}dotnet-roslyn-analyzers", (CoreRepoCategory, "roslyn-analyzers") },
+        { $"{AzdoRepoPrefix}dotnet-linker", (CoreRepoCategory, "linker") },
 
         // ASPNET
 
         // Public
-        { $"{githubRepoPrefix}dotnet/extensions", (aspnetCategory, "extensions") },
-        { $"{githubRepoPrefix}dotnet/aspnetcore", (aspnetCategory, "aspnetcore") },
-        { $"{githubRepoPrefix}dotnet/aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
-        { $"{githubRepoPrefix}dotnet/efcore", (aspnetCategory, "efcore") },
-        { $"{githubRepoPrefix}dotnet/ef6", (aspnetCategory, "ef6") },
-        { $"{githubRepoPrefix}dotnet/blazor", (aspnetCategory, "blazor") },
-        { $"{githubRepoPrefix}dotnet/razor-tooling", (aspnetCategory, "razor-tooling") },
+        { $"{GithubRepoPrefix}dotnet/extensions", (AspnetCategory, "extensions") },
+        { $"{GithubRepoPrefix}dotnet/aspnetcore", (AspnetCategory, "aspnetcore") },
+        { $"{GithubRepoPrefix}dotnet/aspnetcore-tooling", (AspnetCategory, "aspnetcore-tooling") },
+        { $"{GithubRepoPrefix}dotnet/efcore", (AspnetCategory, "efcore") },
+        { $"{GithubRepoPrefix}dotnet/ef6", (AspnetCategory, "ef6") },
+        { $"{GithubRepoPrefix}dotnet/blazor", (AspnetCategory, "blazor") },
+        { $"{GithubRepoPrefix}dotnet/razor-tooling", (AspnetCategory, "razor-tooling") },
         // Internal
-        { $"{azdoRepoPrefix}dotnet-extensions", (aspnetCategory, "extensions") },
-        { $"{azdoRepoPrefix}dotnet-aspnetcore", (aspnetCategory, "aspnetcore") },
-        { $"{azdoRepoPrefix}dotnet-aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
-        { $"{azdoRepoPrefix}dotnet-efcore", (aspnetCategory, "efcore") },
-        { $"{azdoRepoPrefix}dotnet-ef6", (aspnetCategory, "ef6") },
-        { $"{azdoRepoPrefix}dotnet-blazor", (aspnetCategory, "blazor") },
-        { $"{azdoRepoPrefix}dotnet-razor-tooling", (aspnetCategory, "razor-tooling") },
+        { $"{AzdoRepoPrefix}dotnet-extensions", (AspnetCategory, "extensions") },
+        { $"{AzdoRepoPrefix}dotnet-aspnetcore", (AspnetCategory, "aspnetcore") },
+        { $"{AzdoRepoPrefix}dotnet-aspnetcore-tooling", (AspnetCategory, "aspnetcore-tooling") },
+        { $"{AzdoRepoPrefix}dotnet-efcore", (AspnetCategory, "efcore") },
+        { $"{AzdoRepoPrefix}dotnet-ef6", (AspnetCategory, "ef6") },
+        { $"{AzdoRepoPrefix}dotnet-blazor", (AspnetCategory, "blazor") },
+        { $"{AzdoRepoPrefix}dotnet-razor-tooling", (AspnetCategory, "razor-tooling") },
 
         // WCF
 
         // Public
-        { $"{githubRepoPrefix}dotnet/wcf", (wcfCategory, "wcf") },
+        { $"{GithubRepoPrefix}dotnet/wcf", (WcfCategory, "wcf") },
         // Internal
-        { $"{azdoRepoPrefix}dotnet-wcf", (wcfCategory, "wcf") },
+        { $"{AzdoRepoPrefix}dotnet-wcf", (WcfCategory, "wcf") },
     };
 
-    private static readonly List<string> doNotListSymbolPackageFilenamePrefixes = new List<string>()
-    {
+    private static readonly List<string> doNotListSymbolPackageFilenamePrefixes =
+    [
         // Do not include targeting pack symbol packages: https://github.com/dotnet/core-setup/issues/8310
         // They shouldn't have PDBs anyway, but due to tool behavior plus an artifact issue,
         // they do have PDB and publishing them breaks PDB conversion later on.
         "Microsoft.NETCore.App.Ref.",
         "Microsoft.NETCore.App.Internal.",
         "Microsoft.WindowsDesktop.App.Ref."
-    };
+    ];
 
-    private const string identitiesDirectoryName = "identities";
-    private const string nupkgDirectoryName = "nupkgs";
-    private const string sympkgsDirectoryName = "sympkgs";
-    private const string allNupkgsFileName = "nupkgs-all-just-for-reference.txt";
-    private const string nupkgsFileNamePrefix = "nupkgs-";
-    private const string sympkgsFileName = "sympkgs-all.txt";
-    private const string packagesSubDir = "packages";
-    private const string symPackagesSubDir = "assets/symbols";
+    private const string IdentitiesDirectoryName = "identities";
+    private const string NupkgDirectoryName = "nupkgs";
+    private const string SympkgsDirectoryName = "sympkgs";
+    private const string AllNupkgsFileName = "nupkgs-all-just-for-reference.txt";
+    private const string NupkgsFileNamePrefix = "nupkgs-";
+    private const string SympkgsFileName = "sympkgs-all.txt";
+    private const string PackagesSubDir = "packages";
+    private const string SymPackagesSubDir = "assets/symbols";
 
     /// <summary>
     ///     Create the nupkg layout required for the final release.
@@ -445,31 +445,31 @@ internal class GatherDropOperation : Operation
 
         // Identify the subdirectories. Do not need to create these now because
         // we will create them as they go
-        string nupkgDirectory = Path.Combine(outputDirectory, nupkgDirectoryName);
-        string sympkgsDirectory = Path.Combine(outputDirectory, sympkgsDirectoryName);
+        var nupkgDirectory = Path.Combine(outputDirectory, NupkgDirectoryName);
+        var sympkgsDirectory = Path.Combine(outputDirectory, SympkgsDirectoryName);
 
         // Universal text file content
-        StringBuilder allNupkgsFileContent = new StringBuilder();
-        StringBuilder sympkgsFileContent = new StringBuilder();
+        var allNupkgsFileContent = new StringBuilder();
+        var sympkgsFileContent = new StringBuilder();
 
         // Identity Csv contents
-        Dictionary<string, StringBuilder> identitiesFileContents = new Dictionary<string, StringBuilder>();
+        Dictionary<string, StringBuilder> identitiesFileContents = [];
 
         // core/wcf/aspnet nupkg lists
-        Dictionary<string, StringBuilder> nupkgFileContents = new Dictionary<string, StringBuilder>();
+        Dictionary<string, StringBuilder> nupkgFileContents = [];
 
         // Walk each input repo build and start filling out the directories
         foreach (var downloadedBuild in downloadedBuilds)
         {
             // Start by determining whether we need to look at this build at all.
-            string repository = downloadedBuild.Build.GitHubRepository ?? downloadedBuild.Build.AzureDevOpsRepository;
+            var repository = downloadedBuild.Build.GitHubRepository ?? downloadedBuild.Build.AzureDevOpsRepository;
 
             if (!repositories.TryGetValue(repository, out (string, string) categoryAndShortName))
             {
                 continue;
             }
 
-            (string category, string shortName) = categoryAndShortName;
+            (var category, var shortName) = categoryAndShortName;
 
             // This goes into the release layout. Walk the downloaded assets
             foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
@@ -484,14 +484,14 @@ internal class GatherDropOperation : Operation
                     }
 
                     // Create the target directory
-                    string targetFile = Path.Combine(sympkgsDirectory, shortName,
-                        symPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
+                    var targetFile = Path.Combine(sympkgsDirectory, shortName,
+                        SymPackagesSubDir, Path.GetFileName(asset.UnifiedLayoutTargetLocation));
                     Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                     File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
 
                     // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
-                    string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                    var relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                     sympkgsFileContent.AppendLine(relativeSymPackagePath);
                 }
                 // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
@@ -500,23 +500,23 @@ internal class GatherDropOperation : Operation
                     var packageFileName = Path.GetFileName(asset.UnifiedLayoutTargetLocation);
 
                     // Create the target directory
-                    string targetFile = Path.Combine(nupkgDirectory, shortName,
-                        packagesSubDir, packageFileName);
+                    var targetFile = Path.Combine(nupkgDirectory, shortName,
+                        PackagesSubDir, packageFileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                     File.Copy(asset.UnifiedLayoutTargetLocation, targetFile, true);
 
                     // Add the relative path to the various spots. Choose paths are relative to the root output dir
-                    string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                    var relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                     allNupkgsFileContent.AppendLine(relativePackagePath);
 
                     var packageCategory = category;
 
-                    if (packageCategory == coreRepoCategory
+                    if (packageCategory == CoreRepoCategory
                         && packageFileName.Contains("Workload")
                         && packageFileName.Contains("Manifest"))
                     {
-                        packageCategory = manifestCategory;
+                        packageCategory = ManifestCategory;
                     }
 
                     StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(packageCategory,
@@ -534,18 +534,18 @@ internal class GatherDropOperation : Operation
 
         Directory.CreateDirectory(outputDirectory);
 
-        File.WriteAllText(Path.Combine(outputDirectory, allNupkgsFileName), allNupkgsFileContent.ToString());
-        File.WriteAllText(Path.Combine(outputDirectory, sympkgsFileName), sympkgsFileContent.ToString());
+        File.WriteAllText(Path.Combine(outputDirectory, AllNupkgsFileName), allNupkgsFileContent.ToString());
+        File.WriteAllText(Path.Combine(outputDirectory, SympkgsFileName), sympkgsFileContent.ToString());
 
         // Write out for each category
         foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
         {
-            File.WriteAllText(Path.Combine(outputDirectory, $"{nupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"),
+            File.WriteAllText(Path.Combine(outputDirectory, $"{NupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"),
                 nupkgsByCategory.Value.ToString());
         }
 
         // Write out the identities
-        string identitiesDirectory = Path.Combine(outputDirectory, identitiesDirectoryName);
+        var identitiesDirectory = Path.Combine(outputDirectory, IdentitiesDirectoryName);
         Directory.CreateDirectory(identitiesDirectory);
         foreach (KeyValuePair<string, StringBuilder> identityByCategory in identitiesFileContents)
         {
@@ -568,7 +568,7 @@ internal class GatherDropOperation : Operation
         }
 
         Directory.CreateDirectory(outputDirectory);
-        string outputPath = Path.Combine(outputDirectory, "release.json");
+        var outputPath = Path.Combine(outputDirectory, "release.json");
 
         var releaseJson = new[]
         {
@@ -599,7 +599,7 @@ internal class GatherDropOperation : Operation
             return;
         }
 
-        string outputPath = Path.Combine(specificOutputDirectory, "manifest.json");
+        var outputPath = Path.Combine(specificOutputDirectory, "manifest.json");
 
         if (_options.Overwrite)
         {
@@ -682,7 +682,7 @@ internal class GatherDropOperation : Operation
             };
         }
 
-        HashSet<Build> builds = new HashSet<Build>(new BuildComparer());
+        var builds = new HashSet<Build>(new BuildComparer());
         foreach (Build rootBuild in rootBuilds)
         {
             builds.Add(rootBuild);
@@ -695,7 +695,7 @@ internal class GatherDropOperation : Operation
             Console.WriteLine("Filtering toolset dependencies from the graph...");
         }
 
-        DependencyGraphBuildOptions buildOptions = new DependencyGraphBuildOptions()
+        var buildOptions = new DependencyGraphBuildOptions()
         {
             IncludeToolset = _options.IncludeToolset,
             LookupBuilds = true,
@@ -707,7 +707,7 @@ internal class GatherDropOperation : Operation
         {
             Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
 
-            string rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
+            var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
                 rootBuildRepository,
@@ -784,9 +784,9 @@ internal class GatherDropOperation : Operation
     /// </summary>
     /// <param name="asset">Asset</param>
     /// <returns>Name for logging.</returns>
-    private string GetAssetNameForLogging(Asset asset)
+    private static string GetAssetNameForLogging(Asset asset)
     {
-        string assetNameAndVersion = asset.Name;
+        var assetNameAndVersion = asset.Name;
         if (!assetNameAndVersion.Contains(asset.Version))
         {
             assetNameAndVersion += $"@{asset.Version}";
@@ -801,16 +801,16 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
-        bool success = true;
-        string unifiedOutputDirectory = rootOutputDirectory;
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        var success = true;
+        var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);
 
         // Calculate the release directory name based on the last element of the build
         // repo uri plus the build number (to disambiguate overlapping builds)
         string releaseOutputDirectory = null;
-        string repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
-        int lastSlash = repoUri.LastIndexOf("/");
+        var repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
+        var lastSlash = repoUri.LastIndexOf("/");
         if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
         {
             releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
@@ -826,16 +826,16 @@ internal class GatherDropOperation : Operation
             Directory.CreateDirectory(releaseOutputDirectory);
         }
 
-        ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
-        ConcurrentBag<DownloadedAsset> extraDownloadedAssets = new ConcurrentBag<DownloadedAsset>();
-        bool anyShipping = false;
+        ConcurrentBag<DownloadedAsset> downloadedAssets = [];
+        ConcurrentBag<DownloadedAsset> extraDownloadedAssets = [];
+        var anyShipping = false;
 
         Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
 
-        List<Asset> mustDownloadAssets = new List<Asset>();
+        List<Asset> mustDownloadAssets = [];
         string[] alwaysDownloadRegexes = _options.AlwaysDownloadAssetPatterns.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
-        var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
+        var assets = await barClient.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?) false : null));
         if (!string.IsNullOrEmpty(_options.AssetFilter))
         {
             assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
@@ -858,7 +858,7 @@ internal class GatherDropOperation : Operation
         // Now download the extras (if any)
         if (mustDownloadAssets.Any())
         {
-            string extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
+            var extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
             Directory.CreateDirectory(extraAssetsDirectory);
 
             (bool success, bool _, ConcurrentBag<DownloadedAsset> downloadedExtraAssets) extraAssetDownloadResult = await DownloadAssetsToDirectories(mustDownloadAssets, build, extraAssetsDirectory, unifiedOutputDirectory);
@@ -870,7 +870,7 @@ internal class GatherDropOperation : Operation
             }
         }
 
-        DownloadedBuild newBuild = new DownloadedBuild
+        var newBuild = new DownloadedBuild
         {
             Successful = success,
             Build = build,
@@ -882,7 +882,7 @@ internal class GatherDropOperation : Operation
 
         if (_options.Separated)
         {
-            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, null, releaseOutputDirectory);
+            await WriteDropManifestAsync([newBuild], null, releaseOutputDirectory);
         }
 
         return newBuild;
@@ -891,10 +891,10 @@ internal class GatherDropOperation : Operation
 
     private async Task<(bool success, bool anyShipping, ConcurrentBag<DownloadedAsset> downloadedAssets)> DownloadAssetsToDirectories(IEnumerable<Asset> assets, Build build, string specificAssetDirectory, string unifiedOutputDirectory)
     {
-        bool success = true;
+        var success = true;
         var downloaded = new ConcurrentBag<DownloadedAsset>();
-        bool anyShipping = false;
-        using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromMinutes(5) })
+        var anyShipping = false;
+        using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromMinutes(5) })
         {
             using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
             {
@@ -961,7 +961,7 @@ internal class GatherDropOperation : Operation
         string releaseOutputDirectory,
         string unifiedOutputDirectory)
     {
-        string assetNameAndVersion = GetAssetNameForLogging(asset);
+        var assetNameAndVersion = GetAssetNameForLogging(asset);
         if (!_options.IncludeNonShipping && asset.NonShipping)
         {
             Console.WriteLine($"  Skipping non-shipping asset {assetNameAndVersion}");
@@ -970,18 +970,18 @@ internal class GatherDropOperation : Operation
 
         // String builder for the purposes of ensuring that we don't have a lot
         // of interleaved output in the download info.
-        StringBuilder downloadOutput = new StringBuilder();
+        var downloadOutput = new StringBuilder();
         downloadOutput.AppendLine($"  Downloading asset {assetNameAndVersion}");
 
-        DownloadedAsset downloadedAsset = new DownloadedAsset()
+        var downloadedAsset = new DownloadedAsset()
         {
             Successful = false,
             Asset = asset
         };
 
-        List<string> errors = new List<string>();
+        List<string> errors = [];
 
-        List<AssetLocation> assetLocations = new List<AssetLocation>(asset.Locations);
+        var assetLocations = new List<AssetLocation>(asset.Locations);
 
         if (assetLocations.Count == 0)
         {
@@ -989,7 +989,7 @@ internal class GatherDropOperation : Operation
             // of feeds.
             if (!_options.NoWorkarounds)
             {
-                if (asset.Name.Contains("/"))
+                if (asset.Name.Contains('/'))
                 {
                     assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetcli.blob.core.windows.net/dotnet/index.json"));
                     assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetclichecksums.blob.core.windows.net/dotnet/index.json"));
@@ -1042,7 +1042,7 @@ internal class GatherDropOperation : Operation
         // If none of the download attempts succeeded, then we should print out all the error
         // information.
         downloadOutput.AppendLine($"    Failed to download asset, errors shown below:");
-        foreach (string error in errors)
+        foreach (var error in errors)
         {
             downloadOutput.AppendLine($"      {error}");
         }
@@ -1126,8 +1126,8 @@ internal class GatherDropOperation : Operation
         List<string> errors,
         StringBuilder downloadOutput)
     {
-        var releaseSubPath = Path.Combine(releaseOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
-        var unifiedSubPath = Path.Combine(unifiedOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+        var releaseSubPath = Path.Combine(releaseOutputDirectory, asset.NonShipping ? NonShippingSubPath : ShippingSubPath);
+        var unifiedSubPath = Path.Combine(unifiedOutputDirectory, asset.NonShipping ? NonShippingSubPath : ShippingSubPath);
 
         var locationType = location.Type;
 
@@ -1138,7 +1138,7 @@ internal class GatherDropOperation : Operation
         // (they are just the package name).
         if (!_options.NoWorkarounds)
         {
-            if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
+            if (!asset.Name.Contains('/') && !asset.Name.Contains(".nupkg"))
             {
                 locationType = LocationType.NugetFeed;
             }
@@ -1190,14 +1190,14 @@ internal class GatherDropOperation : Operation
         // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
         // then {asset name}.{version}.nupkg
 
-        string releaseFullSubPath = Path.Combine(releaseOutputDirectory, packagesSubPath);
-        string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, packagesSubPath);
-        string targetFileName = $"{asset.Name}.{asset.Version}.nupkg";
+        var releaseFullSubPath = Path.Combine(releaseOutputDirectory, PackagesSubPath);
+        var unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, PackagesSubPath);
+        var targetFileName = $"{asset.Name}.{asset.Version}.nupkg";
         // Construct the final path, using the correct casing rather than the blob feed casing.
-        string releaseFullTargetPath = Path.Combine(releaseFullSubPath, targetFileName);
-        string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, targetFileName);
+        var releaseFullTargetPath = Path.Combine(releaseFullSubPath, targetFileName);
+        var unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, targetFileName);
 
-        List<string> targetFilePaths = new List<string>();
+        List<string> targetFilePaths = [];
 
         if (_options.Separated)
         {
@@ -1206,7 +1206,7 @@ internal class GatherDropOperation : Operation
 
         targetFilePaths.Add(unifiedFullTargetPath);
 
-        DownloadedAsset downloadedAsset = new DownloadedAsset()
+        var downloadedAsset = new DownloadedAsset()
         {
             Successful = false,
             Asset = asset,
@@ -1218,9 +1218,9 @@ internal class GatherDropOperation : Operation
         if (IsBlobFeedUrl(assetLocation.Location))
         {
             // Construct the source uri.
-            string name = asset.Name.ToLowerInvariant();
-            string version = asset.Version.ToLowerInvariant();
-            string finalUri = GetBlobBaseUri(assetLocation.Location);
+            var name = asset.Name.ToLowerInvariant();
+            var version = asset.Version.ToLowerInvariant();
+            var finalUri = GetBlobBaseUri(assetLocation.Location);
 
             finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
@@ -1234,9 +1234,9 @@ internal class GatherDropOperation : Operation
                 return downloadedAsset;
             }
         }
-        else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedProject, out string feedName))
+        else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out var feedAccount, out var feedProject, out var feedName))
         {
-            string packageContentUri = await DownloadAssetFromAzureDevOpsFeedAsync(client, asset,
+            var packageContentUri = await DownloadAssetFromAzureDevOpsFeedAsync(client, asset,
                 feedAccount, feedProject, feedName, targetFilePaths, errors, downloadOutput);
 
             if (packageContentUri != null)
@@ -1248,7 +1248,7 @@ internal class GatherDropOperation : Operation
         }
         else
         {
-            string assetNameAndVersion = GetAssetNameForLogging(asset);
+            var assetNameAndVersion = GetAssetNameForLogging(asset);
             if (string.IsNullOrEmpty(assetLocation.Location))
             {
                 errors.Add($"Asset location for {assetNameAndVersion} is not available.");
@@ -1287,7 +1287,7 @@ internal class GatherDropOperation : Operation
         List<string> errors,
         StringBuilder downloadOutput)
     {
-        string assetName = asset.Name;
+        var assetName = asset.Name;
 
         // Some blobs get pushed as packages. This is an artifact of a one-off issue in core-sdk
         // see https://github.com/dotnet/arcade/issues/4608 for an overall fix of this.
@@ -1298,15 +1298,15 @@ internal class GatherDropOperation : Operation
             assetName = Path.GetFileName(assetName);
         }
 
-        string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedProject}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
+        var packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedProject}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
         if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
         {
-            LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+            var localSettings = LocalSettings.LoadSettingsFile(_options);
             _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
         }
 
-        AuthenticationHeaderValue authHeader = new AuthenticationHeaderValue(
+        var authHeader = new AuthenticationHeaderValue(
             "Basic",
             Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
 
@@ -1379,7 +1379,7 @@ internal class GatherDropOperation : Operation
     /// </remarks>
     private static string GetBlobBaseUri(string blobUri)
     {
-        string baseUri = blobUri;
+        var baseUri = blobUri;
 
         if (baseUri.EndsWith("index.json"))
         {
@@ -1405,19 +1405,19 @@ internal class GatherDropOperation : Operation
         // Normalize the asset name.  Sometimes the upload to the BAR will have
         // "assets/" prepended to it and sometimes not (depending on the Maestro tasks version).
         // Remove assets/ if it exists so we get consistent target paths.
-        string normalizedAssetName = asset.Name;
+        var normalizedAssetName = asset.Name;
         if (asset.Name.StartsWith("assets/"))
         {
             normalizedAssetName = asset.Name.Substring("assets/".Length);
         }
 
-        string releaseFullSubPath = Path.Combine(releaseOutputDirectory, assetsSubPath);
-        string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, assetsSubPath);
+        var releaseFullSubPath = Path.Combine(releaseOutputDirectory, AssetsSubPath);
+        var unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, AssetsSubPath);
         // Construct the final path, using the correct casing rather than the blob feed casing.
-        string releaseFullTargetPath = Path.Combine(releaseFullSubPath, normalizedAssetName);
-        string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
+        var releaseFullTargetPath = Path.Combine(releaseFullSubPath, normalizedAssetName);
+        var unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
 
-        List<string> targetFilePaths = new List<string>();
+        List<string> targetFilePaths = [];
             
         if (_options.Separated)
         {
@@ -1426,7 +1426,7 @@ internal class GatherDropOperation : Operation
             
         targetFilePaths.Add(unifiedFullTargetPath);
 
-        DownloadedAsset downloadedAsset = new DownloadedAsset()
+        var downloadedAsset = new DownloadedAsset()
         {
             Successful = false,
             Asset = asset,
@@ -1444,9 +1444,9 @@ internal class GatherDropOperation : Operation
 
         if (IsBlobFeedUrl(assetLocation.Location))
         {
-            string finalBaseUri = GetBlobBaseUri(assetLocation.Location);
-            string finalUri1 = $"{finalBaseUri}{asset.Name}";
-            string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
+            var finalBaseUri = GetBlobBaseUri(assetLocation.Location);
+            var finalUri1 = $"{finalBaseUri}{asset.Name}";
+            var finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
 
             using var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
             using var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
@@ -1468,7 +1468,7 @@ internal class GatherDropOperation : Operation
             // pipeline.
             if (!_options.NoWorkarounds)
             {
-                string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
+                var finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
                 using var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
 
                 if (await DownloadFileAsync(client, finalUri3, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource3.Token))
@@ -1479,7 +1479,7 @@ internal class GatherDropOperation : Operation
                 }
 
                 // Could also not be under /assets, so strip that from the url
-                string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+                var finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
                 using var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
 
                 if (await DownloadFileAsync(client, finalUri4, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource4.Token))
@@ -1491,19 +1491,19 @@ internal class GatherDropOperation : Operation
             }
             return downloadedAsset;
         }
-        else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedProject, out string feedName))
+        else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out var feedAccount, out var feedProject, out var feedName))
         {
             // If we are here, it means this is a symbols package or a nupkg published to a feed,
             // remove some known paths from the name
 
-            string replacedName = asset.Name.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+            var replacedName = asset.Name.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
             replacedName = replacedName.Replace("symbols/", "", StringComparison.OrdinalIgnoreCase);
             replacedName = replacedName.Replace("sdk/", "", StringComparison.OrdinalIgnoreCase);
             replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
             replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
 
             // finally, remove the version from the name, which should be the last element
-            string versionSegmentToRemove = $".{asset.Version}";
+            var versionSegmentToRemove = $".{asset.Version}";
             if (!replacedName.EndsWith(versionSegmentToRemove))
             {
                 Logger.LogWarning($"Warning: Expected that '{asset.Name}', with package and path parts removed, would end in '{asset.Version}'. Instead was '{replacedName}'.");
@@ -1511,14 +1511,14 @@ internal class GatherDropOperation : Operation
             replacedName = replacedName.Remove(replacedName.Length - versionSegmentToRemove.Length);
 
             // create a temp asset with the mangled name and version
-            Asset mangledAsset = new Asset(asset.Id,
+            var mangledAsset = new Asset(asset.Id,
                 asset.BuildId,
                 asset.NonShipping,
                 replacedName,
                 asset.Version,
                 asset.Locations);
 
-            string packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,
+            var packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                 mangledAsset,
                 feedAccount,
                 feedProject,
@@ -1568,7 +1568,7 @@ internal class GatherDropOperation : Operation
     {
         if (_options.DryRun)
         {
-            foreach (string targetFile in targetFilePaths)
+            foreach (var targetFile in targetFilePaths)
             {
                 downloadOutput.AppendLine($"  {sourceUri} => {targetFile}.");
             }
@@ -1578,10 +1578,10 @@ internal class GatherDropOperation : Operation
         // Check all existing locations for the target file. If one exists, copy to the others.
         if (_options.SkipExisting)
         {
-            string existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
+            var existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
             if (!string.IsNullOrEmpty(existingFile))
             {
-                foreach (string targetFile in targetFilePaths)
+                foreach (var targetFile in targetFilePaths)
                 {
                     try
                     {
@@ -1639,24 +1639,24 @@ internal class GatherDropOperation : Operation
     {
         // Use a temporary in progress file name so we don't end up with corrupted
         // half downloaded files. Use the first location as the
-        string temporaryFileName = $"{targetFiles.First()}.inProgress";
+        var temporaryFileName = $"{targetFiles.First()}.inProgress";
 
         try
         {
             await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
 
-            foreach (string targetFile in targetFiles)
+            foreach (var targetFile in targetFiles)
             {
-                string directory = Path.GetDirectoryName(targetFile);
+                var directory = Path.GetDirectoryName(targetFile);
                 Directory.CreateDirectory(directory);
             }
 
             // Ensure the parent target directory has been created.
-            using (FileStream outStream = new FileStream(temporaryFileName,
+            using (var outStream = new FileStream(temporaryFileName,
                        _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                        FileAccess.Write))
             {
-                HttpRequestManager manager = new HttpRequestManager(
+                var manager = new HttpRequestManager(
                     client,
                     HttpMethod.Get,
                     sourceUri,
@@ -1669,7 +1669,7 @@ internal class GatherDropOperation : Operation
                     using (var inStream = await response.Content.ReadAsStreamAsync())
                     {
                         downloadOutput.AppendLine($"    {sourceUri} =>");
-                        foreach (string targetFile in targetFiles)
+                        foreach (var targetFile in targetFiles)
                         {
                             downloadOutput.AppendLine($"      {targetFile}");
                         }
@@ -1678,7 +1678,7 @@ internal class GatherDropOperation : Operation
                 }
             }
 
-            foreach (string targetFile in targetFiles)
+            foreach (var targetFile in targetFiles)
             {
                 // Rename file to the target file name.
                 File.Copy(temporaryFileName, targetFile);
@@ -1692,7 +1692,7 @@ internal class GatherDropOperation : Operation
         }
         catch (HttpRequestException e)
         {
-            foreach (string targetFile in targetFiles)
+            foreach (var targetFile in targetFiles)
             {
                 if (File.Exists(targetFile))
                 {

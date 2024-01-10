@@ -25,13 +25,13 @@ public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IBarRemote> _remoteMock = null!;
+    private Mock<IBarClient> _barMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
-        _remoteMock = new Mock<IBarRemote>();
+        _barMock = new Mock<IBarClient>();
         _services = new ServiceCollection();
     }
 
@@ -78,11 +78,11 @@ public class GetBuildOperationTests
             build
         ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _remoteMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(Task.FromResult(builds.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -126,10 +126,10 @@ public class GetBuildOperationTests
             GitHubRepository = githubRepo,
         };
 
-        _remoteMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
+        _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(build));
 
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -152,10 +152,10 @@ public class GetBuildOperationTests
     {
         int buildId = 10001;
 
-        _remoteMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
+        _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Throws(new Exception());
 
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {

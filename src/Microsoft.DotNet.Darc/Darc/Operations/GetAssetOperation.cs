@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal class GetAssetOperation : Operation
 {
-    private GetAssetCommandLineOptions _options;
+    private readonly GetAssetCommandLineOptions _options;
 
     public GetAssetOperation(GetAssetCommandLineOptions options)
         : base(options)
@@ -37,14 +37,14 @@ internal class GetAssetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         try
         {
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
@@ -53,7 +53,7 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                (await barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
             var queryDescription = new StringBuilder();
 
@@ -99,7 +99,7 @@ internal class GetAssetOperation : Operation
             Build buildInfo = null;
             if (_options.Build.HasValue)
             {
-                buildInfo = await remote.GetBuildAsync(_options.Build.Value);
+                buildInfo = await barClient.GetBuildAsync(_options.Build.Value);
             }
 
             foreach (Asset asset in matchingAssets)
@@ -107,7 +107,7 @@ internal class GetAssetOperation : Operation
                 // Get build info for asset
                 if (!_options.Build.HasValue)
                 {
-                    buildInfo = await remote.GetBuildAsync(asset.BuildId);
+                    buildInfo = await barClient.GetBuildAsync(asset.BuildId);
                     if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
                     {
                         break;

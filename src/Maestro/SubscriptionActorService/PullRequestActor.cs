@@ -866,6 +866,7 @@ namespace SubscriptionActorService
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
             IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(Logger);
+            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -1143,7 +1144,7 @@ namespace SubscriptionActorService
                     });
                 // Retrieve the source of the assets
 
-                List<DependencyUpdate> dependenciesToUpdate = await bar.GetRequiredNonCoherencyUpdatesAsync(
+                List<DependencyUpdate> dependenciesToUpdate = bar.GetRequiredNonCoherencyUpdates(
                     update.SourceRepo,
                     update.SourceSha,
                     assetData,

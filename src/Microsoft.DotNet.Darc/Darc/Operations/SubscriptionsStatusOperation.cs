@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 class SubscriptionsStatusOperation : Operation
 {
-    SubscriptionsStatusCommandLineOptions _options;
+    private readonly SubscriptionsStatusCommandLineOptions _options;
 
     public SubscriptionsStatusOperation(SubscriptionsStatusCommandLineOptions options)
         : base(options)
@@ -44,7 +44,7 @@ class SubscriptionsStatusOperation : Operation
 
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToEnableDisable = new List<Subscription>();
@@ -54,7 +54,7 @@ class SubscriptionsStatusOperation : Operation
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToEnableDisable.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
@@ -71,7 +71,7 @@ class SubscriptionsStatusOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -127,7 +127,7 @@ class SubscriptionsStatusOperation : Operation
                 subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
                 subscriptionToUpdate.Policy.MergePolicies = subscription.Policy.MergePolicies;
 
-                var updatedSubscription = await remote.UpdateSubscriptionAsync(
+                var updatedSubscription = await barClient.UpdateSubscriptionAsync(
                     subscription.Id.ToString(),
                     subscriptionToUpdate);
             }

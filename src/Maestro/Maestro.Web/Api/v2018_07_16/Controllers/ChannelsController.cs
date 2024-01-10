@@ -290,8 +290,8 @@ public class ChannelsController : Controller
         int days = 7,
         bool includeArcade = true)
     {
-        var barRemote = await _remoteFactory.GetBarRemoteAsync(Logger);
-        var flowGraph = await barRemote.GetDependencyFlowGraphAsync(
+        var barClient = await _remoteFactory.GetBarClientAsync(Logger);
+        var flowGraph = await barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
             includeArcade,
