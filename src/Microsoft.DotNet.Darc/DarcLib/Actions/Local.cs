@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -64,7 +63,7 @@ public class Local : ILocal
         // Update the incoming dependencies with locations.
         IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
+        IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
         await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
         await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
 

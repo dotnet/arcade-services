@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class MaestroApiBarClient : IBarClient
 {
-    IMaestroApi _barClient;
+    private readonly IMaestroApi _barClient;
 
     public MaestroApiBarClient(string buildAssetRegistryPat, string buildAssetRegistryBaseUri = null)
     {

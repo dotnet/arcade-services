@@ -209,7 +209,7 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
         string repoUri = _options.RepoUri;
 
@@ -801,7 +801,7 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
         bool success = true;
         string unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);
