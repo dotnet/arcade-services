@@ -8,7 +8,7 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IRemote : IBarRemote
+public interface IRemote
 {
     #region Pull Request Operations
 

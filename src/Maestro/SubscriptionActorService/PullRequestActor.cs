@@ -1116,6 +1116,7 @@ namespace SubscriptionActorService
             Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IBarRemote bar = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -1132,7 +1133,7 @@ namespace SubscriptionActorService
                     });
                 // Retrieve the source of the assets
 
-                List<DependencyUpdate> dependenciesToUpdate = await darc.GetRequiredNonCoherencyUpdatesAsync(
+                List<DependencyUpdate> dependenciesToUpdate = await bar.GetRequiredNonCoherencyUpdatesAsync(
                     update.SourceRepo,
                     update.SourceSha,
                     assetData,
@@ -1167,7 +1168,7 @@ namespace SubscriptionActorService
             try
             {
                 Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
-                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
+                coherencyUpdates = await bar.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
             }
             catch (DarcCoherencyException e)
             {

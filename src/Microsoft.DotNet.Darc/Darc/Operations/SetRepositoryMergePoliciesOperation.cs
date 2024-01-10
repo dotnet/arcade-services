@@ -20,7 +20,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class SetRepositoryMergePoliciesOperation : Operation
 {
-    SetRepositoryMergePoliciesCommandLineOptions _options;
+    private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
+
     public SetRepositoryMergePoliciesOperation(SetRepositoryMergePoliciesCommandLineOptions options)
         : base(options)
     {
@@ -38,7 +39,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
 
         // Parse the merge policies
-        List<MergePolicy> mergePolicies = new List<MergePolicy>();
+        List<MergePolicy> mergePolicies = [];
 
         if (_options.AllChecksSuccessfulMergePolicy)
         {
@@ -106,15 +107,14 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
-            SetRepositoryMergePoliciesPopUp initEditorPopUp =
-                new SetRepositoryMergePoliciesPopUp("set-policies/set-policies-todo",
-                    Logger,
-                    repository,
-                    branch,
-                    mergePolicies,
-                    Constants.AvailableMergePolicyYamlHelp);
+            var initEditorPopUp = new SetRepositoryMergePoliciesPopUp("set-policies/set-policies-todo",
+                Logger,
+                repository,
+                branch,
+                mergePolicies,
+                Constants.AvailableMergePolicyYamlHelp);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
             int exitCode = uxManager.PopUp(initEditorPopUp);
             if (exitCode != Constants.SuccessCode)
             {
@@ -126,7 +126,8 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
 
         IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-        IEnumerable<RepositoryBranch> targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
+        IBarRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IEnumerable<RepositoryBranch> targetRepository = await barRemote.GetRepositoriesAsync(repository);
 
         if (targetRepository == null || !targetRepository.Any())
         {
@@ -134,7 +135,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
             return Constants.ErrorCode;
         }
 
-        if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet)))
+        if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet))
         {
             Console.WriteLine("Aborting merge policy creation.");
             return Constants.ErrorCode;

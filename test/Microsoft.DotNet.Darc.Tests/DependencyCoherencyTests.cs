@@ -25,16 +25,16 @@ public class DependencyCoherencyTests
     [Test]
     public async Task CoherencyUpdateTests1()
     {
-        Remote remote = new Remote(null, null, null, NullLogger.Instance);
+        var remote = new BarRemote(null, NullLogger.Instance);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false);
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"}
-        };
+        ];
 
         List<DependencyUpdate> updates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -52,17 +52,17 @@ public class DependencyCoherencyTests
     [Test]
     public async Task CoherencyUpdateTests2()
     {
-        Remote remote = new Remote(null, null, null, NullLogger.Instance);
+        var remote = new BarRemote(null, NullLogger.Instance);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false);
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"}
-        };
+        ];
 
         List<DependencyUpdate> updates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -87,17 +87,17 @@ public class DependencyCoherencyTests
     [Test]
     public async Task CoherencyUpdateTests3()
     {
-        Remote remote = new Remote(null, null, null, NullLogger.Instance);
+        var remote = new BarRemote(null, NullLogger.Instance);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depa", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"}
-        };
+        ];
 
         List<DependencyUpdate> updates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -116,19 +116,19 @@ public class DependencyCoherencyTests
     [Test]
     public async Task CoherencyUpdateTests4()
     {
-        Remote remote = new Remote(null, null, null, NullLogger.Instance);
+        var remote = new BarRemote(null, NullLogger.Instance);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: true, coherentParent: "depA");
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v7", "repoC", "commit1", pinned: false, coherentParent: "depB");
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"},
             new AssetData(false) { Name = "depC", Version = "v7"}
-        };
+        ];
             
         List<DependencyUpdate> updates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -147,21 +147,21 @@ public class DependencyCoherencyTests
     [Test]
     public async Task CoherencyUpdateTests5()
     {
-        Remote remote = new Remote(null, null, null, NullLogger.Instance);
+        var remote = new BarRemote(null, NullLogger.Instance);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: true);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v3", "repoC", "commit1", pinned: false, coherentParent: "depA");
         DependencyDetail depD = AddDependency(existingDetails, "depD", "v3", "REPOC", "commit1", pinned: false, coherentParent: "DEPA");
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"},
             new AssetData(false) { Name = "depC", Version = "v7"},
             new AssetData(false) { Name = "depD", Version = "v11"}
-        };
+        ];
 
         List<DependencyUpdate> updates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -178,7 +178,7 @@ public class DependencyCoherencyTests
     {
         // Initialize
         var barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -188,42 +188,42 @@ public class DependencyCoherencyTests
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depA");
 
         // Attempt to update all 3, only A should move.
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"},
             new AssetData(false) { Name = "depC", Version = "v10324"}
-        };
+        ];
 
-        BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoA", "commit2",
+        [
             ("depA", "v2", null)
-        });
+        ]);
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
         AddDependency(repoADeps, "depZ", "v43", "repoC", "commit6", pinned: false);
         AddDependency(repoADeps, "depB", "v10", "repoB", "commit5", pinned: false);
         AddDependency(repoADeps, "depC", "v1000", "repoC", "commit6", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v10", null),
             ("depY", "v42", null),
-        });
+        ]);
 
-        BuildProducesAssets(barClientMock, "repoC", "commit6", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoC", "commit6",
+        [
             ("depC", "v1000", null),
             ("depZ", "v43", null),
-        });
+        ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -264,7 +264,7 @@ public class DependencyCoherencyTests
     {
         // Initialize
         var barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -274,30 +274,30 @@ public class DependencyCoherencyTests
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: true, coherentParent: "depA");
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"}
-        };
+        ];
 
-        BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoA", "commit2",
+        [
             ("depA", "v2", null)
-        });
+        ]);
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depC", "v10", "repoB", "commit5", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depC", "v10", null),
             ("depB", "v101", null),
-        });
+        ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -327,7 +327,7 @@ public class DependencyCoherencyTests
     {
         // Initialize
         var barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
         var dependencyGraphRemoteMock = new Mock<IRemote>();
@@ -337,29 +337,29 @@ public class DependencyCoherencyTests
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"},
             new AssetData(false) { Name = "depB", Version = "v5"}
-        };
+        ];
 
-        BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoA", "commit2",
+        [
             ("depA", "v2", null)
-        });
+        ]);
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depC", "v10", "repoB", "commit5", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depC", "v10", null)
-        });
+        ]);
 
         List<DependencyUpdate> nonCoherencyUpdates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -386,48 +386,48 @@ public class DependencyCoherencyTests
     public async Task CoherencyUpdateTests9(bool pinHead)
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
+        var dependencyGraphRemoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit2", pinned: false, coherentParent: "depA");
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depB");
 
-        BuildProducesAssets(barClientMock, "repoA", "commit1", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoA", "commit1",
+        [
             ("depA", "v1", null)
-        });
+        ]);
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
         AddDependency(repoADeps, "depB", "v10", "repoB", "commit5", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v10", null),
             ("depY", "v42", null),
-        });
+        ]);
 
-        List<DependencyDetail> repoBDeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBDeps = [];
         AddDependency(repoBDeps, "depZ", "v64", "repoC", "commit7", pinned: false);
         AddDependency(repoBDeps, "depC", "v1000", "repoC", "commit7", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoB", "commit5", repoBDeps);
 
-        BuildProducesAssets(barClientMock, "repoC", "commit7", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoC", "commit7",
+        [
             ("depC", "v1000", null),
             ("depZ", "v64", null),
-        });
+        ]);
 
         // This should bring B and C in line.
         List<DependencyUpdate> coherencyUpdates =
@@ -458,58 +458,58 @@ public class DependencyCoherencyTests
     public async Task CoherencyUpdateTests10(bool pinHead)
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
+        var dependencyGraphRemoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit2", pinned: false, coherentParent: "depA");
         // Both C and D depend on B
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depB");
         DependencyDetail depD = AddDependency(existingDetails, "depD", "v50", "repoD", "commit5", pinned: false, coherentParent: "depB");
 
-        BuildProducesAssets(barClientMock, "repoA", "commit1", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoA", "commit1",
+        [
             ("depA", "v1", null)
-        });
+        ]);
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
         AddDependency(repoADeps, "depB", "v10", "repoB", "commit5", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v10", null),
             ("depY", "v42", null),
-        });
+        ]);
 
-        List<DependencyDetail> repoBDeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBDeps = [];
         AddDependency(repoBDeps, "depQ", "v66", "repoD", "commit35", pinned: false);
         AddDependency(repoBDeps, "depZ", "v64", "repoC", "commit7", pinned: false);
         AddDependency(repoBDeps, "depC", "v1000", "repoC", "commit7", pinned: false);
         AddDependency(repoBDeps, "depD", "v1001", "repoD", "commit35", pinned: false);
         RepoHasDependencies(dependencyGraphRemoteMock, "repoB", "commit5", repoBDeps);
 
-        BuildProducesAssets(barClientMock, "repoC", "commit7", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoC", "commit7",
+        [
             ("depC", "v1000", null),
             ("depZ", "v64", null),
-        });
+        ]);
 
-        BuildProducesAssets(barClientMock, "repoD", "commit35", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoD", "commit35",
+        [
             ("depD", "v1001", null),
             ("depQ", "v66", null),
-        });
+        ]);
 
         // This should bring B and C in line.
         List<DependencyUpdate> coherencyUpdates =
@@ -550,25 +550,25 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests1()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false);
 
-        List<AssetData> assets = new List<AssetData>()
-        {
+        List<AssetData> assets =
+        [
             new AssetData(false) { Name = "depA", Version = "v2"}
-        };
+        ];
 
         List<DependencyUpdate> nonCoherencyUpdates =
             await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -598,18 +598,18 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests2()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
@@ -634,22 +634,22 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests3()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -671,22 +671,22 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests4()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -712,32 +712,32 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests5()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v1", "repoC", "commit1", pinned: false, coherentParent: "depB");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
         // This set of deps should not be used because B should move before C gets updated
-        List<DependencyDetail> repoBAtCommit1Deps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBAtCommit1Deps = [];
         AddDependency(repoBAtCommit1Deps, depC.Name, "v101", depC.RepoUri, "commit100", pinned: false);
         RepoHasDependencies(remoteMock, "repoB", "commit1", repoBAtCommit1Deps);
 
-        List<DependencyDetail> repoBAtCommit5Deps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBAtCommit5Deps = [];
         AddDependency(repoBAtCommit5Deps, depC.Name, "v1000", depC.RepoUri, "commit1000", pinned: false);
         RepoHasDependencies(remoteMock, "repoB", "commit5", repoBAtCommit5Deps);
 
@@ -768,38 +768,38 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests6()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
         // This is pinned and so should not move, meaning that D should update based on C @ commit1
         DependencyDetail depC = AddDependency(existingDetails, "depC", "v1", "repoC", "commit1", pinned: true, coherentParent: "depB");
         DependencyDetail depD = AddDependency(existingDetails, "depD", "v1", "repoD", "commit1", pinned: false, coherentParent: "depC");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
         // This set of deps should not be used because B should move before C gets updated
-        List<DependencyDetail> repoBAtCommit1Deps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBAtCommit1Deps = [];
         AddDependency(repoBAtCommit1Deps, depC.Name, "v101", depC.RepoUri, "commit100", pinned: false);
         RepoHasDependencies(remoteMock, "repoB", "commit1", repoBAtCommit1Deps);
 
-        List<DependencyDetail> repoBAtCommit5Deps = new List<DependencyDetail>();
+        List<DependencyDetail> repoBAtCommit5Deps = [];
         AddDependency(repoBAtCommit5Deps, depC.Name, "v1000", depC.RepoUri, "commit1000", pinned: false);
         RepoHasDependencies(remoteMock, "repoB", "commit5", repoBAtCommit5Deps);
 
-        List<DependencyDetail> repoCAtCommit1Deps = new List<DependencyDetail>();
+        List<DependencyDetail> repoCAtCommit1Deps = [];
         AddDependency(repoCAtCommit1Deps, depD.Name, "v2.5", depD.RepoUri, "commit2.5", pinned: false);
         RepoHasDependencies(remoteMock, "repoC", "commit1", repoCAtCommit1Deps);
 
@@ -832,29 +832,29 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests7()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-        BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version, string[] locations)>
-        {
+        BuildProducesAssets(barClientMock, "repoB", "commit5",
+        [
             ("depB", "v42", null)
-        });
+        ]);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -879,22 +879,22 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests8()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -930,22 +930,22 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests9()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -990,21 +990,21 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1026,7 +1026,7 @@ public class DependencyCoherencyTests
             });
 
         // Repo has no feeds
-        RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", new string[] { });
+        RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", []);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1061,23 +1061,23 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
         remoteMock.Setup(m => m.GetPackageSourcesAsync("repoA", "commit1")).ReturnsAsync(
-            new String[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json" });
+            new[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json" });
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1130,21 +1130,21 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1168,7 +1168,7 @@ public class DependencyCoherencyTests
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-            new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
+            ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1203,21 +1203,21 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1242,7 +1242,7 @@ public class DependencyCoherencyTests
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-            new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
+            ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1277,21 +1277,21 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1316,7 +1316,7 @@ public class DependencyCoherencyTests
             });
 
         RepositoryHasFeeds(gitRepoMock, "repoA", "commit1",
-            new string[] { "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json" });
+            ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1348,22 +1348,22 @@ public class DependencyCoherencyTests
     public async Task StrictCoherencyUpdateTests15()
     {
         // Initialize
-        Mock<IBarClient> barClientMock = new Mock<IBarClient>();
-        Remote remote = new Remote(null, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var barClientMock = new Mock<IBarClient>();
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1393,21 +1393,21 @@ public class DependencyCoherencyTests
         // Initialize
         var barClientMock = new Mock<IBarClient>();
         var gitRepoMock = new Mock<IRemoteGitRepo>();
-        var remote = new Remote(gitRepoMock.Object, barClientMock.Object, Mock.Of<IVersionDetailsParser>(), NullLogger.Instance);
+        var remote = new BarRemote(barClientMock.Object, NullLogger.Instance);
 
         // Mock the remote used by build dependency graph to gather dependency details.
-        Mock<IRemote> remoteMock = new Mock<IRemote>();
+        var remoteMock = new Mock<IRemote>();
 
         // Always return the main remote.
         var remoteFactoryMock = new Mock<IRemoteFactory>();
         remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(remoteMock.Object);
         remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
-        List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+        List<DependencyDetail> existingDetails = [];
         DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
         DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-        List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+        List<DependencyDetail> repoADeps = [];
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
@@ -1429,7 +1429,7 @@ public class DependencyCoherencyTests
             });
 
         // Repo has no feeds
-        RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", new string[] { });
+        RepositoryHasFeeds(gitRepoMock, "repoA", "commit1", []);
 
         List<DependencyUpdate> coherencyUpdates =
             await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
@@ -1452,10 +1452,10 @@ public class DependencyCoherencyTests
         });
     }
 
-    private DependencyDetail AddDependency(List<DependencyDetail> details, string name,
+    private static DependencyDetail AddDependency(List<DependencyDetail> details, string name,
         string version, string repo, string commit, bool pinned = false, string coherentParent = null)
     {
-        DependencyDetail dep = new DependencyDetail
+        var dep = new DependencyDetail
         {
             Name = name,
             Version = version,
@@ -1469,13 +1469,13 @@ public class DependencyCoherencyTests
         return dep;
     }
 
-    private void RepoHasDependencies(Mock<IRemote> remoteMock, 
+    private static void RepoHasDependencies(Mock<IRemote> remoteMock, 
         string repo, string commit, List<DependencyDetail> dependencies)
     {
         remoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null, false)).ReturnsAsync(dependencies);
     }
 
-    private void RepoHadBuilds(Mock<IBarClient> barClientMock, string repo, string commit, IEnumerable<Build> builds)
+    private static void RepoHadBuilds(Mock<IBarClient> barClientMock, string repo, string commit, IEnumerable<Build> builds)
     {
         barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(builds);
     }
@@ -1526,7 +1526,7 @@ FEEDSHERE
         barClientMock.Setup(m => m.GetFileContentsAsync(VersionFiles.NugetConfig, repo, commit)).ReturnsAsync(nugetConfig);
     }
 
-    private Random _randomIdGenerator = new Random();
+    private readonly Random _randomIdGenerator = new();
     private int GetRandomId()
     {
         return _randomIdGenerator.Next();
@@ -1537,7 +1537,7 @@ FEEDSHERE
     /// </summary>
     /// <param name="currentDependencies">Full set of existing dependency details</param>
     /// <param name="updates">Updates.</param>
-    private void UpdateCurrentDependencies(List<DependencyDetail> currentDependencies,
+    private static void UpdateCurrentDependencies(List<DependencyDetail> currentDependencies,
         List<DependencyUpdate> updates)
     {
         foreach (DependencyUpdate update in updates)

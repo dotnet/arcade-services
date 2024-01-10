@@ -15,11 +15,12 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public sealed class Remote : BarRemote, IRemote
+public sealed class Remote : IRemote
 {
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
+    private readonly IBarClient _barClient;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -35,10 +36,10 @@ public sealed class Remote : BarRemote, IRemote
         IBarClient barClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
-        : base(barClient, logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
+        _barClient = barClient;
         _versionDetailsParser = versionDetailsParser;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }
@@ -176,7 +177,7 @@ public sealed class Remote : BarRemote, IRemote
         CheckForValidGitClient();
 
         IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync(repoUri, branch, loadAssetLocations: true);
-        await AddAssetLocationToDependenciesAsync(itemsToUpdate);
+        await _barClient.AddAssetLocationToDependenciesAsync(itemsToUpdate);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
@@ -336,7 +337,7 @@ public sealed class Remote : BarRemote, IRemote
 
         if (loadAssetLocations)
         {
-            await AddAssetLocationToDependenciesAsync(dependencies);
+            await _barClient.AddAssetLocationToDependenciesAsync(dependencies);
         }
 
         return dependencies;

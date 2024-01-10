@@ -36,6 +36,8 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private Dictionary<string, Mock<IRemote>> DarcRemotes;
 
+    private Dictionary<string, Mock<IBarRemote>> BarRemotes;
+
     private Mock<IRemoteFactory> RemoteFactory;
 
     private Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
@@ -47,8 +49,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     [SetUp]
     public void PullRequestActorTests_SetUp()
     {
-        DarcRemotes = new Dictionary<string, Mock<IRemote>>();
-        SubscriptionActors = new Dictionary<ActorId, Mock<ISubscriptionActor>>();
+        DarcRemotes = [];
+        BarRemotes = [];
+        SubscriptionActors = [];
         MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
     }
@@ -97,11 +100,11 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
-        DarcRemotes[TargetRepo]
+        BarRemotes[TargetRepo]
             .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
         DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
-        DarcRemotes[TargetRepo]
+        BarRemotes[TargetRepo]
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
         assets.Should()
             .BeEquivalentTo(
@@ -139,14 +142,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .BeEquivalentTo(
                 new List<List<DependencyDetail>>
                 {
-                    withUpdatesFromBuild.Assets.Select(
-                            a => new DependencyDetail
-                            {
-                                Name = a.Name,
-                                Version = a.Version,
-                                RepoUri = withUpdatesFromBuild.GitHubRepository,
-                                Commit = "sha3"
-                            })
+                    withUpdatesFromBuild.Assets
+                        .Select(a => new DependencyDetail
+                        {
+                            Name = a.Name,
+                            Version = a.Version,
+                            RepoUri = withUpdatesFromBuild.GitHubRepository,
+                            Commit = "sha3"
+                        })
                         .ToList()
                 });
     }
@@ -160,7 +163,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .BeEquivalentTo(
                 new List<PullRequest>
                 {
-                    new PullRequest
+                    new()
                     {
                         BaseBranch = TargetBranch,
                         HeadBranch = NewBranch
@@ -171,7 +174,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         ValidatePRDescriptionContainsLinks(pullRequests[0]);
     }
 
-    private void ValidatePRDescriptionContainsLinks(PullRequest pr)
+    private static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
         pr.Description.Should().Contain("][1]");
         pr.Description.Should().Contain("[1]:");
@@ -193,7 +196,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .BeEquivalentTo(
                 new List<PullRequest>
                 {
-                    new PullRequest
+                    new()
                     {
                         BaseBranch = TargetBranch,
                         HeadBranch = NewBranch ?? InProgressPrHeadBranch
@@ -220,9 +223,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 It.IsAny<string>()));
     }
 
-    private void WithRequireNonCoherencyUpdates(Build fromBuild)
+    private void WithRequireNonCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
             .Setup(
                 r => r.GetRequiredNonCoherencyUpdatesAsync(
                     SourceRepo,
@@ -231,47 +234,41 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     It.IsAny<IEnumerable<DependencyDetail>>()))
             .ReturnsAsync(
                 (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
-                {
                     // Just make from->to identical.
-                    return assets.Select(
-                            d => new DependencyUpdate
+                    assets
+                        .Select(d => new DependencyUpdate
+                        {
+                            From = new DependencyDetail
                             {
-                                From = new DependencyDetail
-                                {
-                                    Name = d.Name,
-                                    Version = d.Version,
-                                    RepoUri = sourceRepo,
-                                    Commit = sourceSha
-                                },
-                                To = new DependencyDetail
-                                {
-                                    Name = d.Name,
-                                    Version = d.Version,
-                                    RepoUri = sourceRepo,
-                                    Commit = "sha3"
-                                },
-                            })
-                        .ToList();
-                });
+                                Name = d.Name,
+                                Version = d.Version,
+                                RepoUri = sourceRepo,
+                                Commit = sourceSha
+                            },
+                            To = new DependencyDetail
+                            {
+                                Name = d.Name,
+                                Version = d.Version,
+                                RepoUri = sourceRepo,
+                                Commit = "sha3"
+                            },
+                        })
+                        .ToList());
     }
 
     private void WithNoRequiredCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),
                     It.IsAny<IRemoteFactory>()))
-            .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
-                {
-                    return new List<DependencyUpdate>();
-                });
+            .ReturnsAsync((IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) => []);
     }
 
     private void WithFailsStrictCheckForCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),
@@ -279,7 +276,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             .ReturnsAsync(
                 (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
                 {
-                    CoherencyError fakeCoherencyError = new CoherencyError()
+                    var fakeCoherencyError = new CoherencyError()
                     {
                         Dependency = new DependencyDetail() { Name = "fakeDependency" },
                         Error = "Repo @ commit does not contain dependency fakeDependency",
@@ -298,16 +295,16 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             {
                 Url = InProgressPrUrl,
                 CoherencyCheckSuccessful = true,
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
+                ContainedSubscriptions =
+                [
                     new SubscriptionPullRequestUpdate
                     {
                         BuildId = -1,
                         SubscriptionId = Subscription.Id
                     }
-                },
-                RequiredUpdates = new List<DependencyUpdateSummary>
-                {
+                ],
+                RequiredUpdates =
+                [
                     new DependencyUpdateSummary
                     {
                         DependencyName = "Ham",
@@ -320,7 +317,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                         FromVersion = "1.0.0-beta.1",
                         ToVersion = "1.0.1-beta.1"
                     },
-                }
+                ]
             };
             StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
             ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
@@ -369,7 +366,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequestUpdate,
             new MockReminderManager.Reminder(
                 PullRequestActorImplementation.PullRequestUpdate,
-                Array.Empty<byte>(),
+                [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
     }
@@ -380,14 +377,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequest,
             new InProgressPullRequest
             {
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
+                ContainedSubscriptions =
+                [
                     new SubscriptionPullRequestUpdate
                     {
                         BuildId = forBuild.Id,
                         SubscriptionId = Subscription.Id
                     }
-                },
+                ],
                 RequiredUpdates = forBuild.Assets.Select(
                         d => new DependencyUpdateSummary
                         {
@@ -408,18 +405,18 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequestUpdate,
             new List<PullRequestActorImplementation.UpdateAssetsParameters>
             {
-                new PullRequestActorImplementation.UpdateAssetsParameters
+                new()
                 {
                     SubscriptionId = Subscription.Id,
                     BuildId = forBuild.Id,
                     SourceSha = forBuild.Commit,
                     SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-                    Assets = forBuild.Assets.Select(
-                            a => new Asset
-                            {
-                                Name = a.Name,
-                                Version = a.Version
-                            })
+                    Assets = forBuild.Assets
+                        .Select(a => new Asset
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
                         .ToList(),
                     IsCoherencyUpdate = false
                 }
@@ -460,7 +457,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         {
             var reminder = new MockReminderManager.Reminder(
                 PullRequestActorImplementation.PullRequestUpdate,
-                Array.Empty<byte>(),
+                [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5));
             Reminders.Data[PullRequestActorImplementation.PullRequestUpdate] = reminder;
@@ -481,7 +478,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 {
                     var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
                     {
-                        new PullRequestActorImplementation.UpdateAssetsParameters
+                        new()
                         {
                             SubscriptionId = Subscription.Id,
                             BuildId = forBuild.Id,
@@ -518,8 +515,6 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     Batchable = true,
                     UpdateFrequency = UpdateFrequency.EveryBuild
                 });
-            Build b = GivenANewBuild(true);
-
             GivenAPendingUpdateReminder();
             AndNoPendingUpdates();
             await WhenProcessPendingUpdatesAsyncIsCalled();
@@ -561,7 +556,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
             GivenAPendingUpdateReminder();
             AndPendingUpdates(b);
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
             {
@@ -614,7 +609,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
 
             CreatePullRequestShouldReturnAValidValue();
@@ -643,7 +638,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
           
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
@@ -670,7 +665,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
             {
@@ -694,7 +689,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true, Array.Empty<(string, string, bool)>());
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
 
             await WhenUpdateAssetsAsyncIsCalled(b);
@@ -716,7 +711,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithFailsStrictCheckForCoherencyUpdates();
 
             CreatePullRequestShouldReturnAValidValue();
@@ -730,13 +725,13 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(b,
                 coherencyCheckSuccessful: false,
-                coherencyErrors: new List<CoherencyErrorDetails>() {
+                coherencyErrors: [
                     new CoherencyErrorDetails()
                     {
                         Error = "Repo @ commit does not contain dependency fakeDependency",
                         PotentialSolutions = new List<string>()
                     }
-                });
+                ]);
             AndDependencyFlowEventsShouldBeAdded();
         }
     }

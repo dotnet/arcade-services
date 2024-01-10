@@ -27,7 +27,7 @@ public class GetSubscriptionsOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IRemote> _remoteMock = null!;
+    private Mock<IBarRemote> _remoteMock = null!;
 
 
     [SetUp]
@@ -35,7 +35,7 @@ public class GetSubscriptionsOperationTests
     {
         _consoleOutput = new();
 
-        _remoteMock = new Mock<IRemote>();
+        _remoteMock = new Mock<IBarRemote>();
         _services = new ServiceCollection();
     }
 
@@ -106,10 +106,10 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+        List<Subscription> subscriptions =
+        [
             subscription
-        };
+        ];
 
         _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
@@ -136,10 +136,10 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+        List<Subscription> subscriptions =
+        [
             subscription
-        };
+        ];
 
         _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
@@ -174,11 +174,11 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+        List<Subscription> subscriptions =
+        [
             subscription1,
             subscription2,
-        };
+        ];
 
         _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));

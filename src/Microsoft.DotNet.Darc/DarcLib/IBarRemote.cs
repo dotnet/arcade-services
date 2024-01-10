@@ -303,7 +303,7 @@ public interface IBarRemote
     /// </summary>
     /// <param name="dependencies">Dependencies to load locations for</param>
     /// <returns>Async task</returns>
-    Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies);
+    Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
 
     /// <summary>
     ///     Update an existing build.

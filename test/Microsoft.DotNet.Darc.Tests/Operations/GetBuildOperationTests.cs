@@ -25,13 +25,13 @@ public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IRemote> _remoteMock = null!;
+    private Mock<IBarRemote> _remoteMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
-        _remoteMock = new Mock<IRemote>();
+        _remoteMock = new Mock<IBarRemote>();
         _services = new ServiceCollection();
     }
 
@@ -51,11 +51,11 @@ public class GetBuildOperationTests
         Subscription subscription1 = new(Guid.Empty, true, internalRepo, "target", "test", string.Empty);
         Subscription subscription2 = new(Guid.Empty, true, githubRepo, "target", "test", string.Empty);
 
-        List<Subscription> subscriptions = new()
-        {
+        List<Subscription> subscriptions =
+        [
             subscription1,
             subscription2
-        };
+        ];
 
         Build build = new(
             id: 0,
@@ -67,17 +67,16 @@ public class GetBuildOperationTests
             channels: ImmutableList.Create<Channel>(),
             assets: ImmutableList.Create<Asset>(),
             dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>()
-            )
+            incoherencies: ImmutableList.Create<BuildIncoherence>())
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
         };
 
-        List<Build> builds = new()
-        {
+        List<Build> builds =
+        [
             build
-        };
+        ];
 
         _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));

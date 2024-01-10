@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddBuildToChannelOperation : Operation
 {
-    private static readonly Dictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
+    private static readonly IReadOnlyDictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
         new Dictionary<string, (string project, int pipelineId)>(StringComparer.OrdinalIgnoreCase)
         {
             { "dnceng", ("internal", 750) },
@@ -30,7 +30,7 @@ internal class AddBuildToChannelOperation : Operation
     // (the branch that has build promotion infra) doesn't have YAML
     // implementation for them. There is usually not a high demand for
     // promoting builds to these channels.
-    private readonly Dictionary<int, string> UnsupportedChannels = new Dictionary<int, string>()
+    private static readonly IReadOnlyDictionary<int, string> UnsupportedChannels = new Dictionary<int, string>
     {
         { 3, ".NET Core 3 Dev" },
         { 19, ".NET Core 3 Release" },
@@ -48,7 +48,8 @@ internal class AddBuildToChannelOperation : Operation
         { 560, ".NET Core SDK 3.1.1xx" }
     };
 
-    AddBuildToChannelCommandLineOptions _options;
+    private readonly AddBuildToChannelCommandLineOptions _options;
+
     public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
         : base(options)
     {
@@ -90,7 +91,7 @@ internal class AddBuildToChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            List<Channel> targetChannels = new List<Channel>();
+            List<Channel> targetChannels = [];
 
             if (!string.IsNullOrEmpty(_options.Channel))
             {
@@ -171,7 +172,7 @@ internal class AddBuildToChannelOperation : Operation
 
             // Be helpful. Let the user know what will happen.
             string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
-            List<Subscription> applicableSubscriptions = new List<Subscription>();
+            List<Subscription> applicableSubscriptions = [];
 
             foreach (var targetChannel in targetChannels)
             {
@@ -416,9 +417,10 @@ internal class AddBuildToChannelOperation : Operation
             build.AzureDevOpsRepository :
             build.GitHubRepository;
 
-        IRemote repoAndBarRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
+        IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
+        IBarRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-        IEnumerable<DependencyDetail> sourceBuildDependencies = await repoAndBarRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
+        IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);
 
         DependencyDetail sourceBuildArcadeSDKDependency = sourceBuildDependencies.FirstOrDefault(i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
@@ -429,7 +431,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        IEnumerable<Asset> listArcadeSDKAssets = await repoAndBarRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
+        IEnumerable<Asset> listArcadeSDKAssets = await barRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
             .ConfigureAwait(false);
 
         Asset sourceBuildArcadeSDKDepAsset = listArcadeSDKAssets.FirstOrDefault();
@@ -440,7 +442,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        Build sourceBuildArcadeSDKDepBuild = await repoAndBarRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+        Build sourceBuildArcadeSDKDepBuild = await barRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
 
         if (sourceBuildArcadeSDKDepBuild == null)
         {
@@ -469,7 +471,7 @@ internal class AddBuildToChannelOperation : Operation
         return (sourceBuildArcadeSDKDepBuild.GitHubBranch, sourceBuildArcadeSDKDepBuild.Commit);
     }
 
-    private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
+    private static void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
     {
         IEnumerable<Subscription> subscriptionsThatWillFlowImmediately = applicableSubscriptions.Where(s => s.Enabled &&
             s.Policy.UpdateFrequency == UpdateFrequency.EveryBuild);

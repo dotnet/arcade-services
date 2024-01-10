@@ -83,11 +83,12 @@ public class SubscriptionHealthMetric : HealthMetric
     public override async Task EvaluateAsync()
     {
         IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
+        IBarRemote barRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
 
         Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
         // Get subscriptions that target this repo/branch
-        Subscriptions = (await remote.GetSubscriptionsAsync(targetRepo: Repository))
+        Subscriptions = (await barRemote.GetSubscriptionsAsync(targetRepo: Repository))
             .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 
         // Get the dependencies of the repository/branch. Skip pinned and subscriptions tied to another
@@ -116,7 +117,7 @@ public class SubscriptionHealthMetric : HealthMetric
             }
         }
 
-        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts(remote);
+        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts(barRemote);
         ComputeSubscriptionUse(latestAssets);
 
         // Determine the result. A conflict or missing subscription is an error.
@@ -142,9 +143,9 @@ public class SubscriptionHealthMetric : HealthMetric
     /// <param name="latestAssets">Latest assets produced by each subscription</param>
     private void ComputeSubscriptionUse(Dictionary<string, Subscription> latestAssets)
     {
-        HashSet<Subscription> unusedSubs = new HashSet<Subscription>(Subscriptions);
-        List<DependencyDetail> dependenciesThatDoNotFlow = new List<DependencyDetail>();
-        List<DependencyDetail> dependenciesMissingSubscriptions = new List<DependencyDetail>();
+        var unusedSubs = new HashSet<Subscription>(Subscriptions);
+        List<DependencyDetail> dependenciesThatDoNotFlow = [];
+        List<DependencyDetail> dependenciesMissingSubscriptions = [];
 
         foreach (DependencyDetail dependency in Dependencies)
         {
@@ -179,15 +180,14 @@ public class SubscriptionHealthMetric : HealthMetric
     ///     and compute any conflicts between subscriptionss
     /// </summary>
     /// <returns>Mapping of assets to subscriptions that produce them.</returns>
-    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IRemote remote)
+    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IBarRemote remote)
     {
         // Populate the latest build task for each of these. The search for assets would be N*M*A where N is the number of
         // dependencies, M is the number of subscriptions, and A is average the number of assets per build.
         // Because this could add up pretty quickly, we build up a dictionary of assets->List<(subscription, build)>
         // instead.
-        Dictionary<string, Subscription> assetsToLatestInSubscription =
-            new Dictionary<string, Subscription>(StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, SubscriptionConflict> subscriptionConflicts = new Dictionary<string, SubscriptionConflict>();
+        Dictionary<string, Subscription> assetsToLatestInSubscription = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, SubscriptionConflict> subscriptionConflicts = [];
 
         foreach (Subscription subscription in Subscriptions)
         {

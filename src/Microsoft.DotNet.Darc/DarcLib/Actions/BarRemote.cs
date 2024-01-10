@@ -192,7 +192,7 @@ public class BarRemote : IBarRemote
     /// </summary>
     /// <param name="dependencies">Dependencies to load locations for</param>
     /// <returns>Async task</returns>
-    public async Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
+    public async Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies)
     {
         var buildCache = new Dictionary<int, Build>();
 

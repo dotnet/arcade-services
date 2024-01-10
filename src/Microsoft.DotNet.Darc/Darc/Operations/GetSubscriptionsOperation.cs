@@ -36,7 +36,8 @@ class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IBarRemote remote = Provider.GetService<IRemote>() ??  RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = Provider.GetService<IBarRemote>()
+                ?? RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 

@@ -263,6 +263,7 @@ public interface IBarClient
     #endregion
 
     #region Goal Operations
+
     /// <summary>
     ///     Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
     /// </summary>
