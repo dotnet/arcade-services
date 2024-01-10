@@ -7,7 +7,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IBarRemote
+public interface ICoherencyUpdateResolver
 {
     /// <summary>
     ///     Get updates required by coherency constraints.
@@ -33,11 +33,4 @@ public interface IBarRemote
         string sourceCommit,
         IEnumerable<AssetData> assets,
         IEnumerable<DependencyDetail> dependencies);
-
-    /// <summary>
-    ///     Update a list of dependencies with asset locations.
-    /// </summary>
-    /// <param name="dependencies">Dependencies to load locations for</param>
-    /// <returns>Async task</returns>
-    Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
 }

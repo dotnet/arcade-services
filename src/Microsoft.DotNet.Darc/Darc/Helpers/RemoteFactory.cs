@@ -73,14 +73,8 @@ internal class RemoteFactory : IRemoteFactory
         return barClient;
     }
 
-    public static IBarRemote GetBarRemote(CommandLineOptions options, ILogger logger)
-        => new BarRemote(GetBarClient(options, logger), logger);
-
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         => Task.FromResult(GetRemote(_options, repoUrl, logger));
-
-    public Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
-        => Task.FromResult(GetBarRemote(_options, logger));
 
     public Task<IBarClient> GetBarClientAsync(ILogger logger)
         => Task.FromResult(GetBarClient(_options, logger));

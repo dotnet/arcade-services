@@ -52,11 +52,6 @@ public class DarcRemoteFactory : IRemoteFactory
         return Task.FromResult<IBarClient>(new MaestroBarClient(Context, _kustoClientProvider));
     }
 
-    public async Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
-    {
-        return new BarRemote(await GetBarClientAsync(logger), logger);
-    }
-
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
     {
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))

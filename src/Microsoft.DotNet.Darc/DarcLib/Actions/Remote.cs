@@ -170,10 +170,9 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
 
-        IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(_logger);
-
         List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
-        await barRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
+        var locationResolver = new AssetLocationResolver(await remoteFactory.GetBarClientAsync(_logger), _logger);
+        await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json

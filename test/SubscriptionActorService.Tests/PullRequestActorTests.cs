@@ -36,7 +36,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private Dictionary<string, Mock<IRemote>> DarcRemotes;
 
-    private Dictionary<string, Mock<IBarRemote>> BarRemotes;
+    private Dictionary<string, Mock<ICoherencyUpdateResolver>> UpdateResolvers;
 
     private Mock<IRemoteFactory> RemoteFactory;
 
@@ -50,7 +50,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     public void PullRequestActorTests_SetUp()
     {
         DarcRemotes = [];
-        BarRemotes = [];
+        UpdateResolvers = [];
         SubscriptionActors = [];
         MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
@@ -100,11 +100,11 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
-        BarRemotes[TargetRepo]
+        UpdateResolvers[TargetRepo]
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
         DarcRemotes[TargetRepo]
             .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
-        BarRemotes[TargetRepo]
+        UpdateResolvers[TargetRepo]
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
         assets.Should()
             .BeEquivalentTo(
@@ -225,7 +225,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private void WithRequireNonCoherencyUpdates()
     {
-        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
+        UpdateResolvers.GetOrAddValue(TargetRepo, CreateMock<ICoherencyUpdateResolver>)
             .Setup(
                 r => r.GetRequiredNonCoherencyUpdates(
                     SourceRepo,
@@ -258,7 +258,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private void WithNoRequiredCoherencyUpdates()
     {
-        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
+        UpdateResolvers.GetOrAddValue(TargetRepo, CreateMock<ICoherencyUpdateResolver>)
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),
@@ -268,7 +268,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private void WithFailsStrictCheckForCoherencyUpdates()
     {
-        BarRemotes.GetOrAddValue(TargetRepo, CreateMock<IBarRemote>)
+        UpdateResolvers.GetOrAddValue(TargetRepo, CreateMock<ICoherencyUpdateResolver>)
             .Setup(
                 r => r.GetRequiredCoherencyUpdatesAsync(
                     It.IsAny<IEnumerable<DependencyDetail>>(),

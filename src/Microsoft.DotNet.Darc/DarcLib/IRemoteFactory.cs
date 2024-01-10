@@ -14,7 +14,5 @@ public interface IRemoteFactory
 {
     Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger);
 
-    Task<IBarRemote> GetBarRemoteAsync(ILogger logger);
-
     Task<IBarClient> GetBarClientAsync(ILogger logger);
 }

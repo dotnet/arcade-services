@@ -29,7 +29,6 @@ internal class GetRepositoryMergePoliciesOperation : Operation
         try
         {
             IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
-            IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
 
             IEnumerable<RepositoryBranch> allRepositories = await barClient.GetRepositoriesAsync(null, null);
             IEnumerable<RepositoryBranch> filteredRepositories = allRepositories.Where(repositories =>

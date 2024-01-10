@@ -865,8 +865,8 @@ namespace SubscriptionActorService
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(Logger);
             IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
+            var locationResolver = new AssetLocationResolver(barClient, Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -892,7 +892,7 @@ namespace SubscriptionActorService
                     .Select(du => du.To)
                     .ToList();
 
-                await barRemote.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
                 pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
@@ -911,7 +911,7 @@ namespace SubscriptionActorService
                     .Select(du => du.To)
                     .ToList();
 
-                await barRemote.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
             }
 
@@ -1127,7 +1127,7 @@ namespace SubscriptionActorService
             Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            IBarRemote bar = await remoteFactory.GetBarRemoteAsync(Logger);
+            ICoherencyUpdateResolver coherencyUpdateResolver = ;
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -1144,7 +1144,7 @@ namespace SubscriptionActorService
                     });
                 // Retrieve the source of the assets
 
-                List<DependencyUpdate> dependenciesToUpdate = bar.GetRequiredNonCoherencyUpdates(
+                List<DependencyUpdate> dependenciesToUpdate = coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
                     update.SourceRepo,
                     update.SourceSha,
                     assetData,
@@ -1156,7 +1156,7 @@ namespace SubscriptionActorService
                     await UpdateSubscriptionsForMergedPRAsync(
                         new List<SubscriptionPullRequestUpdate>
                         {
-                            new SubscriptionPullRequestUpdate
+                            new()
                             {
                                 SubscriptionId = update.SubscriptionId,
                                 BuildId = update.BuildId
@@ -1175,11 +1175,11 @@ namespace SubscriptionActorService
             }
 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
-            List<DependencyUpdate> coherencyUpdates = new List<DependencyUpdate>();
+            List<DependencyUpdate> coherencyUpdates = [];
             try
             {
                 Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
-                coherencyUpdates = await bar.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
+                coherencyUpdates = await coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
             }
             catch (DarcCoherencyException e)
             {

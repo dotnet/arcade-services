@@ -4,83 +4,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class BarRemote : IBarRemote
+public class CoherencyUpdateResolver : ICoherencyUpdateResolver
 {
     private readonly IBarClient _barClient;
     private readonly ILogger _logger;
 
-    public BarRemote(IBarClient barClient, ILogger logger)
+    public CoherencyUpdateResolver(IBarClient barClient, ILogger logger)
     {
         _barClient = barClient;
         _logger = logger;
     }
-
-    #region Build/Asset Operations
-
-    public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
-    {
-        try
-        {
-            return await _barClient.GetLatestBuildAsync(repoUri: repoUri, channelId: channelId);
-        }
-        catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-    }
-
-    public async Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies)
-    {
-        var buildCache = new Dictionary<int, Build>();
-
-        foreach (var dependency in dependencies)
-        {
-            IEnumerable<Asset> matchingAssets = await _barClient.GetAssetsAsync(dependency.Name, dependency.Version);
-            List<Asset> matchingAssetsFromSameSha = [];
-
-            foreach (var asset in matchingAssets)
-            {
-                if (!buildCache.TryGetValue(asset.BuildId, out Build producingBuild))
-                {
-                    producingBuild = await _barClient.GetBuildAsync(asset.BuildId);
-                    buildCache.Add(asset.BuildId, producingBuild);
-                }
-
-                if (producingBuild.Commit == dependency.Commit)
-                {
-                    matchingAssetsFromSameSha.Add(asset);
-                }
-            }
-
-            // Always look at the 'latest' asset to get the right asset even in stable build scenarios
-            var latestAsset = matchingAssetsFromSameSha.OrderByDescending(a => a.BuildId).FirstOrDefault();
-            if (latestAsset != null)
-            {
-                IEnumerable<string> currentAssetLocations = latestAsset.Locations?
-                    .Where(l => l.Type == LocationType.NugetFeed)
-                    .Select(l => l.Location);
-
-                if (currentAssetLocations == null)
-                {
-                    continue;
-                }
-
-                dependency.Locations = currentAssetLocations;
-            }
-        }
-    }
-
-    #endregion
-
-    #region Repo/Dependency Operations
 
     public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
         IEnumerable<DependencyDetail> dependencies,
@@ -489,6 +428,4 @@ public class BarRemote : IBarRemote
 
         return coherentAsset;
     }
-
-    #endregion
 }
