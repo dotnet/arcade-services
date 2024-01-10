@@ -37,8 +37,8 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
     [SetUp]
     public void SubscriptionOrPullRequestActorTests_SetUp()
     {
-        ContextUpdates = new List<Action<BuildAssetRegistryContext>>();
-        AfterDbUpdateActions= new List<Action>();
+        ContextUpdates = [];
+        AfterDbUpdateActions= [];
         ActionRunner = CreateMock<IActionRunner>();
         HostingEnvironment = CreateMock<IHostEnvironment>();
     }
@@ -126,14 +126,14 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
                         Name = a.name,
                         Version = a.version,
                         NonShipping = a.nonShipping,
-                        Locations = new List<AssetLocation>
-                        {
+                        Locations =
+                        [
                             new AssetLocation
                             {
                                 Location = AssetFeedUrl,
                                 Type = LocationType.NugetFeed
                             }
-                        }
+                        ]
                     }))
         };
         ContextUpdates.Add(

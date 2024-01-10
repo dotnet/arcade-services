@@ -35,21 +35,21 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private const string PrUrl = "https://git.com/pr/123";
 
     private Dictionary<string, Mock<IRemote>> _darcRemotes;
+    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
 
     private Mock<IRemoteFactory> _remoteFactory;
-
     private Mock<ICoherencyUpdateResolver> _updateResolver;
-
     private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
-
-    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
 
     private string _newBranch;
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
     {
-        _darcRemotes = [];
+        _darcRemotes = new()
+        {
+            [TargetRepo] = new Mock<IRemote>()
+        };
         _subscriptionActors = [];
         _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
         _remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
@@ -75,6 +75,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
 
+        _remoteFactory.Setup(f => f.GetBarClientAsync(It.IsAny<ILogger>()))
+            .ReturnsAsync(Mock.Of<IBarClient>());
+
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
@@ -83,7 +86,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
         var updateResolverFactory = new Mock<ICoherencyUpdateResolverFactory>();
         updateResolverFactory.SetReturnsDefault(Task.FromResult(_updateResolver.Object));
-        services.AddSingleton<ICoherencyUpdateResolverFactory>(updateResolverFactory.Object);
+        services.AddSingleton(updateResolverFactory.Object);
 
         base.RegisterServices(services);
     }
