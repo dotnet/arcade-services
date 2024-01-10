@@ -12,17 +12,17 @@ variables:
 - name: containerName
   value: 'product-construction-service.api'
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  - group: 'Product-Construction-Service-Int'
+  - group: 'dkurepa-test'
   - name: containerappName
     value: product-construction-int
   - name: containerRegistryName
-    value: productconstructionint
+    value: productconstructionnt50
   - name: subscriptionName
-    value: HelixStaging
+    value: 'dkurepa dev subscription'
   - name: containerappEnvironmentName
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
-    value: productconstructionint.azurecr.io
+    value: productconstructionnt50.azurecr.io.azurecr.io
 
 stages:
 - stage: PublishProductConstructionService
@@ -59,7 +59,7 @@ stages:
       - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
         - task: AzureCLI@2
           inputs:
-            azureSubscription: NetHelixStaging
+            azureSubscription: dkurepa-test
             scriptType: 'pscore'
             scriptLocation: 'scriptPath'
             scriptPath: '$(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1'
