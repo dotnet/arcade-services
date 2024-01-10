@@ -22,45 +22,50 @@ public class RemoteTests
         var mergePullRequest = new MergePullRequestParameters
         {
             DeleteSourceBranch = true,
-            CommitToMerge = "",
+            CommitToMerge = string.Empty,
             SquashMerge = true
         };
 
-        var pr = new PullRequest();
-        pr.Description = @"This pull request updates the following dependencies
+        var pr = new PullRequest
+        {
+            Title = "[352119842] Update dependencies from maestro-auth-test/maestro-test1",
+            Description =
+                """
+                This pull request updates the following dependencies
 
-[marker]: <> (Begin:390b1f10-7ba2-4d3a-142d-08d8149908a8)
-## From https://github.com/maestro-auth-test/maestro-test1
-- **Subscription**: 390b1f10-7ba2-4d3a-142d-08d8149908a8
-- **Build**: 388602341
-- **Date Produced**: 6/19/2020 9:45 PM
-- **Commit**: 863063912
+                [marker]: <> (Begin:390b1f10-7ba2-4d3a-142d-08d8149908a8)
+                ## From https://github.com/maestro-auth-test/maestro-test1
+                - **Subscription**: 390b1f10-7ba2-4d3a-142d-08d8149908a8
+                - **Build**: 388602341
+                - **Date Produced**: 6/19/2020 9:45 PM
+                - **Commit**: 863063912
 
-[DependencyUpdate]: <> (Begin)
+                [DependencyUpdate]: <> (Begin)
 
-- **Updates**:
-  - **Foo**: from  to 1.2.0
-  - **Bar**: from  to 2.2.0
+                - **Updates**:
+                  - **Foo**: from  to 1.2.0
+                  - **Bar**: from  to 2.2.0
 
-[DependencyUpdate]: <> (End)
+                [DependencyUpdate]: <> (End)
 
-## Coherency Updates
+                ## Coherency Updates
 
-The following updates ensure that dependencies with a *CoherentParentDependency*
-attribute were produced in a build used as input to the parent dependency's build.
-See [Dependency Description Format](https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)
+                The following updates ensure that dependencies with a *CoherentParentDependency*
+                attribute were produced in a build used as input to the parent dependency's build.
+                See [Dependency Description Format](https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)
 
-[DependencyUpdate]: <> (Begin)
+                [DependencyUpdate]: <> (Begin)
 
-Coherency Update:
- - **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
- - **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
+                Coherency Update:
+                 - **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+                 - **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
 
-[DependencyUpdate]: <> (End)
+                [DependencyUpdate]: <> (End)
 
 
-[marker]: <> (End:390b1f10-7ba2-4d3a-142d-08d8149908a8)";
-        pr.Title = "[352119842] Update dependencies from maestro-auth-test/maestro-test1";
+                [marker]: <> (End:390b1f10-7ba2-4d3a-142d-08d8149908a8)
+                """
+        };
 
         var firstCommit = new Commit(Constants.DarcBotName, "Sha", "TestCommit1");
         var secondCommit = new Commit(Constants.DarcBotName, "Sha", "TestCommit2");
@@ -98,10 +103,10 @@ Coherency Update:
               - Bar: from  to 2.2.0
 
             Coherency Update:
-            - Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-            - Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
+             - Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+             - Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
 
-            - Updated text
+             - Updated text
             """;
         commitToMerge[0].Should().Be(expectedCommitMessage);
     }
