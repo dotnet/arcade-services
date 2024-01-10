@@ -169,6 +169,23 @@ resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
             transport: 'http'
         }
         dapr: { enabled: false }
+        secrets: [
+            {
+                name: 'container-registry-username'
+                value: containerRegistry.listCredentials().username
+            }
+            {
+                name: 'container-registry-password'
+                value: containerRegistry.listCredentials().passwords[0].value
+            }
+        ]
+        registries: [
+            {
+                server: '${containerRegistryName}.azurecr.io'
+                username: containerRegistry.listCredentials().username
+                passwordSecretRef: 'container-registry-password'
+            }
+        ]
       }
       template: {
           scale: {
