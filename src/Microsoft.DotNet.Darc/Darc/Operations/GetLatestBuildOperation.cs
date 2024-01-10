@@ -31,7 +31,7 @@ internal class GetLatestBuildOperation : Operation
     {
         try
         {
-            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             // Calculate out possible repos based on the input strings.
             // Today the DB has no way of searching for builds by substring, so for now

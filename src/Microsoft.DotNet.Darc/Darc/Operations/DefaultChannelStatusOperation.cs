@@ -35,7 +35,7 @@ class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
             return Constants.ErrorCode;
         }
 
-        IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
         try
         {

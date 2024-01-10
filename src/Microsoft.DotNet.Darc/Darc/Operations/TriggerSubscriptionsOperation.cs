@@ -33,7 +33,7 @@ internal class TriggerSubscriptionsOperation : Operation
     {
         try
         {
-            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToTrigger = new List<Subscription>();

@@ -28,7 +28,7 @@ internal class DeleteSubscriptionsOperation : Operation
     {
         try
         {
-            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToDelete = new List<Subscription>();

@@ -286,7 +286,7 @@ public class DependencyGraph
     {
         logger.LogInformation("Running latest in channel node diff.");
 
-        IBarOnlyRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
+        IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
 
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
@@ -450,7 +450,7 @@ public class DependencyGraph
             logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
         }
 
-        IBarOnlyRemote barOnlyRemote = null;
+        IBarRemote barOnlyRemote = null;
         if (remote)
         {
             // Look up the dependency and get the creating build.

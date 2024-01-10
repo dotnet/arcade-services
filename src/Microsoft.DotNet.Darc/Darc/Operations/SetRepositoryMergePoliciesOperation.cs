@@ -29,7 +29,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
         if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
         {

@@ -35,7 +35,7 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync())
                 .Where(defaultChannel =>

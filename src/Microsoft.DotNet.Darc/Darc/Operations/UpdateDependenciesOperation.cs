@@ -48,7 +48,7 @@ class UpdateDependenciesOperation : Operation
                 _options.GitHubPat;
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            IBarOnlyRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
+            IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
             var local = new Local(_options.GetRemoteConfiguration(), Logger);
             List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
             bool someUpToDate = false;
@@ -252,7 +252,7 @@ class UpdateDependenciesOperation : Operation
 
     private async Task<int> NonCoherencyUpdatesForBuildAsync(
         Build build,
-        IBarOnlyRemote barOnlyRemote,
+        IBarRemote barOnlyRemote,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)
     {
@@ -290,7 +290,7 @@ class UpdateDependenciesOperation : Operation
     }
 
     private async Task<int> CoherencyUpdatesAsync(
-        IBarOnlyRemote barOnlyRemote,
+        IBarRemote barOnlyRemote,
         IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)

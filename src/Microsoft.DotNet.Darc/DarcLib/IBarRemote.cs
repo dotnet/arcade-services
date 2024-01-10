@@ -9,7 +9,7 @@ using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IBarOnlyRemote
+public interface IBarRemote
 {
     #region Repo/Dependency Operations
 
@@ -211,10 +211,6 @@ public interface IBarOnlyRemote
 
     #endregion
 
-    #region Pull Request Operations
-
-    #endregion
-
     #region Repo/Dependency Operations
 
     /// <summary>
@@ -241,7 +237,6 @@ public interface IBarOnlyRemote
         string sourceCommit,
         IEnumerable<AssetData> assets,
         IEnumerable<DependencyDetail> dependencies);
-
 
     #endregion
 

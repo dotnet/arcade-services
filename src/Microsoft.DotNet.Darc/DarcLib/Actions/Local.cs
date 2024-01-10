@@ -63,7 +63,7 @@ public class Local : ILocal
         // Update the incoming dependencies with locations.
         IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        IBarOnlyRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
+        IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
         await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
         await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
 

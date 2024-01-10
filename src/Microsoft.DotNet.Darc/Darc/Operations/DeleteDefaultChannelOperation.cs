@@ -25,7 +25,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
     {
         try
         {
-            IBarOnlyRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             DefaultChannel resolvedChannel = await ResolveSingleChannel();
             if (resolvedChannel == null)

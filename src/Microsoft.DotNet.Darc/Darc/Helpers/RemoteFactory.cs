@@ -76,7 +76,7 @@ internal class RemoteFactory : IRemoteFactory
     /// <param name="options">Command line options</param>
     /// <param name="logger">Logger</param>
     /// <returns>New remote</returns>
-    public static IBarOnlyRemote GetBarOnlyRemote(CommandLineOptions options, ILogger logger)
+    public static IBarRemote GetBarOnlyRemote(CommandLineOptions options, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
 
@@ -106,6 +106,6 @@ internal class RemoteFactory : IRemoteFactory
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         => Task.FromResult(GetRemote(_options, repoUrl, logger));
 
-    public Task<IBarOnlyRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
         => Task.FromResult(GetBarOnlyRemote(_options, logger));
 }
