@@ -5,7 +5,7 @@ param location string = 'northcentralus'
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
-param containerRegistryName string = 'productconstructionnt50'
+param containerRegistryName string = 'productconstructionint'
 
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
 param containerCpuCoreCount string = '0.25'
@@ -25,7 +25,7 @@ param aspnetcoreEnvironment string = 'Staging'
 param applicationInsightsName string = 'product-construction-service-ai-int'
 
 @description('Key Vault name')
-param keyVaultName string = 'ProductConstructionfd2j'
+param keyVaultName string = 'ProductConstructionInt'
 
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
