@@ -20,7 +20,6 @@ public sealed class Remote : IRemote
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
-    private readonly IBarClient _barClient;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -33,13 +32,11 @@ public sealed class Remote : IRemote
 
     public Remote(
         IRemoteGitRepo remoteGitClient,
-        IBarClient barClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
-        _barClient = barClient;
         _versionDetailsParser = versionDetailsParser;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
     }

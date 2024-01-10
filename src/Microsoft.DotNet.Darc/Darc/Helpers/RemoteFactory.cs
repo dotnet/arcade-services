@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.Darc.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
-    CommandLineOptions _options;
+    private readonly CommandLineOptions _options;
 
     public RemoteFactory(CommandLineOptions options)
     {
@@ -47,7 +47,9 @@ internal class RemoteFactory : IRemoteFactory
         IRemoteGitRepo gitClient = null;
         if (darcSettings.GitType == GitRepoType.GitHub)
         {
-            gitClient = new GitHubClient(options.GitLocation, darcSettings.GitRepoPersonalAccessToken,
+            gitClient = new GitHubClient(
+                options.GitLocation,
+                darcSettings.GitRepoPersonalAccessToken,
                 logger,
                 temporaryRepositoryRoot,
                 // Caching not in use for Darc local client.
@@ -55,19 +57,14 @@ internal class RemoteFactory : IRemoteFactory
         }
         else if (darcSettings.GitType == GitRepoType.AzureDevOps)
         {
-            gitClient = new AzureDevOpsClient(options.GitLocation, darcSettings.GitRepoPersonalAccessToken,
+            gitClient = new AzureDevOpsClient(
+                options.GitLocation,
+                darcSettings.GitRepoPersonalAccessToken,
                 logger,
                 temporaryRepositoryRoot);
         }
 
-        IBarClient barClient = null;
-        if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
-        {
-            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
-                darcSettings.BuildAssetRegistryBaseUri);
-        }
-
-        return new Remote(gitClient, barClient, new VersionDetailsParser(), logger);
+        return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
     /// <summary>

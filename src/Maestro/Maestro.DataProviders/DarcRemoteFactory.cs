@@ -99,7 +99,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(remoteGitClient, new MaestroBarClient(Context, _kustoClientProvider), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
     }
 }
