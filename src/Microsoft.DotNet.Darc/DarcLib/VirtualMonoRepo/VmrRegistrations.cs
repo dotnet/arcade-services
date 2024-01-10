@@ -59,19 +59,19 @@ public static class VmrRegistrations
         {
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
             httpClient.DefaultRequestHeaders.Add(HeaderNames.UserAgent, "Darc");
-        }).ConfigureHttpMessageHandlerBuilder(handler =>
+        }).ConfigurePrimaryHttpMessageHandler((handler, service) =>
         {
-            if (handler.PrimaryHandler is HttpClientHandler httpClientHandler)
+            if (handler is HttpClientHandler httpClientHandler)
             {
                 httpClientHandler.CheckCertificateRevocationList = true;
             }
-            else if (handler.PrimaryHandler is SocketsHttpHandler socketsHttpHandler)
+            else if (handler is SocketsHttpHandler socketsHttpHandler)
             {
                 socketsHttpHandler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
             }
             else
             {
-                throw new InvalidOperationException($"Could not create client with CRL check, HttpMessageHandler type {handler.PrimaryHandler.GetType().FullName ?? handler.PrimaryHandler.GetType().Name} is unknown.");
+                throw new InvalidOperationException($"Could not create client with CRL check, HttpMessageHandler type {handler.GetType().FullName ?? handler.GetType().Name} is unknown.");
             }
         });
 
