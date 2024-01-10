@@ -35,9 +35,8 @@ stages:
   - job: Publish
     displayName: Publish Product Construction Service
     pool:
-      # name: NetCore1ESPool-Internal
-      # demands: ImageOverride -equals 1es-ubuntu-2004
-      vmImage: windows-latest
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2022
 
     steps:
     - checkout: self
