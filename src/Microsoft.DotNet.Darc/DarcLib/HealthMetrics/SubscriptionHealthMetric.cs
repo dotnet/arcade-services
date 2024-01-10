@@ -83,7 +83,7 @@ public class SubscriptionHealthMetric : HealthMetric
     public override async Task EvaluateAsync()
     {
         IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
-        IBarRemote barRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
+        IBarRemote barRemote = await RemoteFactory.GetBarRemoteAsync(Logger);
 
         Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 

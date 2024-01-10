@@ -47,7 +47,7 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
 
-    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    public Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
     {
         return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(Context, _kustoClientProvider), logger));
     }

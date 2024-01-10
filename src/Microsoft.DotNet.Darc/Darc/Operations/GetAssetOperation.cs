@@ -37,7 +37,7 @@ internal class GetAssetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
 
         try
         {

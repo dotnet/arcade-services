@@ -27,7 +27,7 @@ internal class AddDefaultChannelOperation : Operation
         try
         {
             IRemote repoRemote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
-            IBarRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
 
             // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
             _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);

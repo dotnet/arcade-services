@@ -50,7 +50,7 @@ public class DarcRemoteFactory : IRemoteFactory
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly OperationManager _operations;
 
-    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    public Task<IBarRemote> GetBarRemoteAsync(ILogger logger)
     {
         return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(_context), logger));
     }

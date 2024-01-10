@@ -35,7 +35,7 @@ class AddSubscriptionOperation : Operation
     /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
-        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
 
         if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
         {

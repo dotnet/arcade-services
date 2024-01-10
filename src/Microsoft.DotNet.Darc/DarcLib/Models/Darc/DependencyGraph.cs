@@ -286,7 +286,7 @@ public class DependencyGraph
     {
         logger.LogInformation("Running latest in channel node diff.");
 
-        IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
+        IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(logger);
 
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
@@ -312,7 +312,7 @@ public class DependencyGraph
                     if (!latestCommitCache.TryGetValue(latestCommitKey, out latestCommit))
                     {
                         // Look up latest build in the channel
-                        var latestBuild = await barOnlyRemote.GetLatestBuildAsync(node.Repository, channelId);
+                        var latestBuild = await barRemote.GetLatestBuildAsync(node.Repository, channelId);
                         // Could be null, if the only build was removed from the channel
                         if (latestBuild != null)
                         {
@@ -450,11 +450,11 @@ public class DependencyGraph
             logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
         }
 
-        IBarRemote barOnlyRemote = null;
+        IBarRemote barRemote = null;
         if (remote)
         {
             // Look up the dependency and get the creating build.
-            barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
+            barRemote = await remoteFactory.GetBarRemoteAsync(logger);
         }
 
         List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
@@ -465,7 +465,7 @@ public class DependencyGraph
             buildLookups = new Dictionary<string, List<Build>>();
 
             // Look up the dependency and get the creating build.
-            buildLookups.Add($"{repoUri}@{commit}", (await barOnlyRemote.GetBuildsAsync(repoUri, commit)).ToList());
+            buildLookups.Add($"{repoUri}@{commit}", (await barRemote.GetBuildsAsync(repoUri, commit)).ToList());
         }
 
         // Create the root node and add the repo to the visited bit vector.
@@ -556,7 +556,7 @@ public class DependencyGraph
                         if (!buildLookups.ContainsKey($"{dependency.RepoUri}@{dependency.Commit}"))
                         {
                             buildLookups.Add($"{dependency.RepoUri}@{dependency.Commit}",
-                                (await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                                (await barRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
                                 .ToList());
                         }
                     }

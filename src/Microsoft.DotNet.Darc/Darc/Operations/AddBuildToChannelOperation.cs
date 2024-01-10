@@ -64,7 +64,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
 
             Build build = await remote.GetBuildAsync(_options.Id);
             if (build == null)
@@ -418,7 +418,7 @@ internal class AddBuildToChannelOperation : Operation
             build.GitHubRepository;
 
         IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
-        IBarRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);

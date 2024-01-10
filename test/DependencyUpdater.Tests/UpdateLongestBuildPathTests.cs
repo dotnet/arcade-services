@@ -124,7 +124,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         Context.SaveChanges();
 
         RemoteFactory
-            .Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>()))
+            .Setup(m => m.GetBarRemoteAsync(It.IsAny<ILogger>()))
             .Returns(Task.FromResult(remoteMock.Object));
     }
 

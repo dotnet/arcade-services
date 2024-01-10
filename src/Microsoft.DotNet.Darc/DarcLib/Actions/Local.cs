@@ -63,9 +63,9 @@ public class Local : ILocal
         // Update the incoming dependencies with locations.
         List<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        IBarRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
-        await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
-        await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
+        IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(_logger);
+        await barRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
+        await barRemote.AddAssetLocationToDependenciesAsync(dependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.FirstOrDefault(

@@ -42,8 +42,8 @@ public class BuildTimeController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetBuildTimes([Required]int id, int days = 7)
     {
-        var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(_logger);
-        var buildTime = await barOnlyRemote.GetBuildTimeAsync(id, days);
+        var barRemote = await _remoteFactory.GetBarRemoteAsync(_logger);
+        var buildTime = await barRemote.GetBuildTimeAsync(id, days);
         if (buildTime != null)
         {
             return Ok(new BuildTime(

@@ -30,7 +30,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
 
         if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
         {
@@ -126,7 +126,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         }
 
         IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-        IBarRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote barRemote = RemoteFactory.GetBarRemote(_options, Logger);
         IEnumerable<RepositoryBranch> targetRepository = await barRemote.GetRepositoriesAsync(repository);
 
         if (targetRepository == null || !targetRepository.Any())

@@ -176,7 +176,7 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
 
-        IBarRemote barRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
+        IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(_logger);
 
         List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
         await barRemote.AddAssetLocationToDependenciesAsync(oldDependencies);

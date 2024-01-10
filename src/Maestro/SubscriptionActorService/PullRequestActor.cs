@@ -865,7 +865,7 @@ namespace SubscriptionActorService
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            IBarRemote barRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
+            IBarRemote barRemote = await remoteFactory.GetBarRemoteAsync(Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -1126,7 +1126,7 @@ namespace SubscriptionActorService
             Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            IBarRemote bar = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
+            IBarRemote bar = await remoteFactory.GetBarRemoteAsync(Logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 

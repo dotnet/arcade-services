@@ -31,7 +31,7 @@ internal class GetGoalOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
             Goal goalInfo = await remote.GetGoalAsync(_options.Channel, _options.DefinitionId);
             Console.Write(goalInfo.Minutes);
             return Constants.SuccessCode;

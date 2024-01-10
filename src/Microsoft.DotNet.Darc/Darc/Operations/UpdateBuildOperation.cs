@@ -31,7 +31,7 @@ internal class UpdateBuildOperation : Operation
 
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarRemote(_options, Logger);
 
             Build updatedBuild = await remote.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 

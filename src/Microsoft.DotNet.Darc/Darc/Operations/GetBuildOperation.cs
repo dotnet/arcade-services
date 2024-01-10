@@ -37,7 +37,7 @@ internal class GetBuildOperation : Operation
         try
         {
             IBarRemote remote = Provider.GetService<IBarRemote>()
-                ?? RemoteFactory.GetBarOnlyRemote(_options, Logger);
+                ?? RemoteFactory.GetBarRemote(_options, Logger);
 
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
