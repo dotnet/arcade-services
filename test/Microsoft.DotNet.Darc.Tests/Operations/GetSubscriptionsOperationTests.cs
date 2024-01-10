@@ -50,7 +50,7 @@ public class GetSubscriptionsOperationTests
     {
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -67,7 +67,7 @@ public class GetSubscriptionsOperationTests
             .Throws(new AuthenticationException("boo."));
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -84,7 +84,7 @@ public class GetSubscriptionsOperationTests
             .Throws(new Exception("foo."));
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -106,16 +106,18 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+
         List<Subscription> subscriptions =
         [
             subscription
         ];
 
-        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock
+            .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -136,6 +138,7 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+
         List<Subscription> subscriptions =
         [
             subscription
@@ -145,7 +148,7 @@ public class GetSubscriptionsOperationTests
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.json }, _services);
+        var operation = new GetSubscriptionsOperation(new() { OutputFormat = DarcOutputType.json }, _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -166,6 +169,7 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+
         Subscription subscription2 = new(Guid.Empty, true, "source1", "target1", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
@@ -174,6 +178,7 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+
         List<Subscription> subscriptions =
         [
             subscription1,
@@ -184,7 +189,12 @@ public class GetSubscriptionsOperationTests
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
         _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.text }, _services);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions()
+            {
+                OutputFormat = DarcOutputType.text
+            },
+            _services);
 
         int result = await operation.ExecuteAsync();
 
