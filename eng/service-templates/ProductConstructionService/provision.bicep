@@ -1,6 +1,7 @@
 @minLength(1)
 @description('Primary location for all resources')
 param location string = 'northcentralus'
+param stageLocation string = 'northcentralusstage'
 
 @minLength(5)
 @maxLength(50)
@@ -57,7 +58,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-previ
 // the container apps environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
   name: containerAppsEnvironmentName
-  location: location
+  location: stageLocation
   properties: {
     appLogsConfiguration: {
         destination: 'log-analytics'
@@ -157,7 +158,7 @@ var env = [
 // apiservice - the app's back-end
 resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
   name: productConstructionServiceName
-  location: location
+  location: stageLocation
   properties: {
       managedEnvironmentId: containerAppsEnvironment.id
       configuration: {

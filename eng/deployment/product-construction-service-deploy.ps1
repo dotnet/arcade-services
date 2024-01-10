@@ -8,9 +8,7 @@ param(
     [Parameter(Mandatory=$true)][string]$containerRegistryName,
     [Parameter(Mandatory=$true)][string]$imageName,
     [Parameter(Mandatory=$true)][string]$subscriptionName,
-    [Parameter(Mandatory=$true)][string]$containerappEnvironmentName,
-    [Parameter(Mandatory=$true)][string]$containerRegistryUsername,
-    [Parameter(Mandatory=$true)][string]$containerRegistryPassword
+    [Parameter(Mandatory=$true)][string]$containerappEnvironmentName
 )
 
 az extension add --name containerapp --upgrade
@@ -50,7 +48,7 @@ else
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
 # We should used a managed identity to authenticate to the container registry once https://github.com/dotnet/arcade-services/issues/3180 is resolved
-az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag --registry-username $containerRegistryUsername --registry-password $containerRegistryPassword | Out-Null
+az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
 $newRevisionName = "$containerappName--$newImageTag"
 
