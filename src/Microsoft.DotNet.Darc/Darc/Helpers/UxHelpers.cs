@@ -68,7 +68,7 @@ public static class UxHelpers
     /// <param name="remote">Remote for retrieving channels</param>
     /// <param name="desiredChannel">Desired channel</param>
     /// <returns>Channel, or null if no channel was matched.</returns>
-    public static async Task<Channel> ResolveSingleChannel(IRemote remote, string desiredChannel)
+    public static async Task<Channel> ResolveSingleChannel(IBarRemote remote, string desiredChannel)
     {
         return ResolveSingleChannel(await remote.GetChannelsAsync(), desiredChannel);
     }

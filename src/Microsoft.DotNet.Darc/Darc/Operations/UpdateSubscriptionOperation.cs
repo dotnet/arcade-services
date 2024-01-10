@@ -32,7 +32,7 @@ class UpdateSubscriptionOperation : Operation
     /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`

@@ -31,7 +31,7 @@ internal class AddChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             // If the user tried to mark as internal, indicate that this is currently
             // unsupported.
