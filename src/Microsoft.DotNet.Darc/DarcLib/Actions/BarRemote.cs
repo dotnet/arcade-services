@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using System;
-using Channel = Microsoft.DotNet.Maestro.Client.Models.Channel;
-using Microsoft.DotNet.Maestro.Client;
-using System.Net;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -30,12 +29,10 @@ public class BarRemote : IBarRemote
         string sourceRepo = null,
         string targetRepo = null,
         int? channelId = null)
-    {
-        return await _barClient.GetSubscriptionsAsync(
+        => await _barClient.GetSubscriptionsAsync(
             sourceRepo: sourceRepo,
             targetRepo: targetRepo,
             channelId: channelId);
-    }
 
     public async Task<Subscription> CreateSubscriptionAsync(
         string channelName,
@@ -46,8 +43,7 @@ public class BarRemote : IBarRemote
         bool batchable,
         List<MergePolicy> mergePolicies,
         string failureNotificationTags)
-    {
-        return await _barClient.CreateSubscriptionAsync(
+        => await _barClient.CreateSubscriptionAsync(
             channelName,
             sourceRepo,
             targetRepo,
@@ -56,93 +52,66 @@ public class BarRemote : IBarRemote
             batchable,
             mergePolicies,
             failureNotificationTags);
-    }
 
     public async Task<Subscription> UpdateSubscriptionAsync(
         string subscriptionId,
         SubscriptionUpdate subscription)
-    {
-        return await _barClient.UpdateSubscriptionAsync(GetSubscriptionGuid(subscriptionId), subscription);
-    }
+        => await _barClient.UpdateSubscriptionAsync(GetSubscriptionGuid(subscriptionId), subscription);
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
-    {
-        return await _barClient.GetSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
-    }
+        => await _barClient.GetSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
 
     public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(
         string repoUri,
         string branch)
-    {
-        return await _barClient.GetRepositoryMergePoliciesAsync(repoUri, branch);
-    }
+        => await _barClient.GetRepositoryMergePoliciesAsync(repoUri, branch);
 
     public async Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(
         string repoUri,
         string branch)
-    {
-        return await _barClient.GetRepositoriesAsync(repoUri, branch);
-    }
+        => await _barClient.GetRepositoriesAsync(repoUri, branch);
 
     public async Task SetRepositoryMergePoliciesAsync(
         string repoUri,
         string branch,
         List<MergePolicy> mergePolicies)
-    {
-        await _barClient.SetRepositoryMergePoliciesAsync(repoUri, branch, mergePolicies ?? []);
-    }
+        => await _barClient.SetRepositoryMergePoliciesAsync(repoUri, branch, mergePolicies ?? []);
 
     public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId)
-    {
-        return await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
-    }
+        => await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
 
     public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId, int sourceBuildId)
-    {
-        return await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId), sourceBuildId);
-    }
+        => await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId), sourceBuildId);
 
     public async Task<Subscription> DeleteSubscriptionAsync(string subscriptionId)
-    {
-        return await _barClient.DeleteSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
-    }
+        => await _barClient.DeleteSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
 
     #endregion
 
     #region Channel Operations
 
     public async Task<Channel> GetChannelAsync(string channel)
-    {
-        return await _barClient.GetChannelAsync(channel);
-    }
+        => await _barClient.GetChannelAsync(channel);
 
     public async Task<Channel> GetChannelAsync(int channelId)
-    {
-        return await _barClient.GetChannelAsync(channelId);
-    }
+        => await _barClient.GetChannelAsync(channelId);
 
     public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(
         string repository = null,
         string branch = null,
         string channel = null)
-    {
-        return await _barClient.GetDefaultChannelsAsync(repository: repository,
+        => await _barClient.GetDefaultChannelsAsync(repository: repository,
             branch: branch,
             channel: channel);
-    }
 
     public async Task AddDefaultChannelAsync(
         string repository,
         string branch,
         string channel)
-    {
-        await _barClient.AddDefaultChannelAsync(repository, branch, channel);
-    }
+        => await _barClient.AddDefaultChannelAsync(repository, branch, channel);
 
     public async Task DeleteDefaultChannelAsync(int id)
-    {
-        await _barClient.DeleteDefaultChannelAsync(id);
-    }
+        => await _barClient.DeleteDefaultChannelAsync(id);
 
     public async Task UpdateDefaultChannelAsync(
         int id,
@@ -150,24 +119,16 @@ public class BarRemote : IBarRemote
         string branch = null,
         string channel = null,
         bool? enabled = null)
-    {
-        await _barClient.UpdateDefaultChannelAsync(id, repository, branch, channel, enabled);
-    }
+        => await _barClient.UpdateDefaultChannelAsync(id, repository, branch, channel, enabled);
 
     public async Task<Channel> CreateChannelAsync(string name, string classification)
-    {
-        return await _barClient.CreateChannelAsync(name, classification);
-    }
+        => await _barClient.CreateChannelAsync(name, classification);
 
     public async Task<Channel> DeleteChannelAsync(int id)
-    {
-        return await _barClient.DeleteChannelAsync(id);
-    }
+        => await _barClient.DeleteChannelAsync(id);
 
     public async Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
-    {
-        return await _barClient.GetChannelsAsync(classification);
-    }
+        => await _barClient.GetChannelsAsync(classification);
 
     public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
         int channelId,
@@ -176,15 +137,13 @@ public class BarRemote : IBarRemote
         bool includeBuildTimes,
         bool includeDisabledSubscriptions,
         IReadOnlyList<string> includedFrequencies = default)
-    {
-        return await _barClient.GetDependencyFlowGraphAsync(
+        => await _barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
             includeArcade,
             includeBuildTimes,
             includeDisabledSubscriptions,
             includedFrequencies);
-    }
 
     #endregion
 
@@ -203,42 +162,30 @@ public class BarRemote : IBarRemote
     }
 
     public async Task<Build> GetBuildAsync(int buildId)
-    {
-        return await _barClient.GetBuildAsync(buildId);
-    }
+        => await _barClient.GetBuildAsync(buildId);
 
     public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
-    {
-        return await _barClient.GetBuildsAsync(repoUri: repoUri, commit: commit);
-    }
+        => await _barClient.GetBuildsAsync(repoUri: repoUri, commit: commit);
 
     public async Task<IEnumerable<Asset>> GetAssetsAsync(
         string name = null,
         string version = null,
         int? buildId = null,
         bool? nonShipping = null)
-    {
-        return await _barClient.GetAssetsAsync(
+        => await _barClient.GetAssetsAsync(
             name: name,
             version: version,
             buildId: buildId,
             nonShipping: nonShipping);
-    }
 
     public async Task AssignBuildToChannelAsync(int buildId, int channelId)
-    {
-        await _barClient.AssignBuildToChannelAsync(buildId, channelId);
-    }
+        => await _barClient.AssignBuildToChannelAsync(buildId, channelId);
 
     public async Task DeleteBuildFromChannelAsync(int buildId, int channelId)
-    {
-        await _barClient.DeleteBuildFromChannelAsync(buildId, channelId);
-    }
+        => await _barClient.DeleteBuildFromChannelAsync(buildId, channelId);
 
     public async Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
-    {
-        return await _barClient.UpdateBuildAsync(buildId, buildUpdate);
-    }
+        => await _barClient.UpdateBuildAsync(buildId, buildUpdate);
 
     /// <summary>
     ///     Update a list of dependencies with asset locations.
@@ -252,7 +199,7 @@ public class BarRemote : IBarRemote
         foreach (var dependency in dependencies)
         {
             IEnumerable<Asset> matchingAssets = await GetAssetsAsync(dependency.Name, dependency.Version);
-            List<Asset> matchingAssetsFromSameSha = new List<Asset>();
+            List<Asset> matchingAssetsFromSameSha = [];
 
             foreach (var asset in matchingAssets)
             {
@@ -272,7 +219,7 @@ public class BarRemote : IBarRemote
             var latestAsset = matchingAssetsFromSameSha.OrderByDescending(a => a.BuildId).FirstOrDefault();
             if (latestAsset != null)
             {
-                IEnumerable<String> currentAssetLocations = latestAsset.Locations?
+                IEnumerable<string> currentAssetLocations = latestAsset.Locations?
                     .Where(l => l.Type == LocationType.NugetFeed)
                     .Select(l => l.Location);
 
@@ -290,19 +237,13 @@ public class BarRemote : IBarRemote
 
     #region Goal Operations
     public async Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
-    {
-        return await _barClient.SetGoalAsync(channel, definitionId, minutes);
-    }
+        => await _barClient.SetGoalAsync(channel, definitionId, minutes);
 
     public async Task<Goal> GetGoalAsync(string channel, int definitionId)
-    {
-        return await _barClient.GetGoalAsync(channel, definitionId);
-    }
+        => await _barClient.GetGoalAsync(channel, definitionId);
 
     public async Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
-    {
-        return await _barClient.GetBuildTimeAsync(defaultChannelId, days);
-    }
+        => await _barClient.GetBuildTimeAsync(defaultChannelId, days);
 
     #endregion
 
@@ -325,9 +266,7 @@ public class BarRemote : IBarRemote
     public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
         IEnumerable<DependencyDetail> dependencies,
         IRemoteFactory remoteFactory)
-    {
-        return await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
-    }
+        => await GetRequiredStrictCoherencyUpdatesAsync(dependencies, remoteFactory);
 
     /// <summary>
     ///     Determine what dependencies need to be updated given an input set of assets.
@@ -343,7 +282,7 @@ public class BarRemote : IBarRemote
         IEnumerable<AssetData> assets,
         IEnumerable<DependencyDetail> dependencies)
     {
-        Dictionary<DependencyDetail, DependencyDetail> toUpdate = new Dictionary<DependencyDetail, DependencyDetail>();
+        Dictionary<DependencyDetail, DependencyDetail> toUpdate = [];
 
         // Walk the assets, finding the dependencies that don't have coherency markers.
         // those must be updated in a second pass.
@@ -380,7 +319,7 @@ public class BarRemote : IBarRemote
                 continue;
             }
 
-            DependencyDetail newDependency = new DependencyDetail(matchingDependencyByName)
+            var newDependency = new DependencyDetail(matchingDependencyByName)
             {
                 Commit = sourceCommit,
                 RepoUri = sourceRepoUri,
@@ -392,11 +331,13 @@ public class BarRemote : IBarRemote
             toUpdate.Add(matchingDependencyByName, newDependency);
         }
 
-        List<DependencyUpdate> dependencyUpdates = toUpdate.Select(kv => new DependencyUpdate
-        {
-            From = kv.Key,
-            To = kv.Value
-        }).ToList();
+        List<DependencyUpdate> dependencyUpdates = toUpdate
+            .Select(kv => new DependencyUpdate
+            {
+                From = kv.Key,
+                To = kv.Value
+            })
+            .ToList();
 
         return Task.FromResult(dependencyUpdates);
     }
@@ -431,7 +372,7 @@ public class BarRemote : IBarRemote
         IEnumerable<DependencyDetail> dependencies,
         IRemoteFactory remoteFactory)
     {
-        List<DependencyUpdate> toUpdate = new List<DependencyUpdate>();
+        List<DependencyUpdate> toUpdate = [];
         IEnumerable<DependencyDetail> leavesOfCoherencyTrees = CalculateLeavesOfCoherencyTrees(dependencies);
 
         if (!leavesOfCoherencyTrees.Any())
@@ -440,15 +381,14 @@ public class BarRemote : IBarRemote
             return toUpdate;
         }
 
-        Dictionary<string, CoherencyError> coherencyErrors = new Dictionary<string, CoherencyError>();
+        Dictionary<string, CoherencyError> coherencyErrors = [];
 
         // Cache of dependencies. Key is "<repo>@<sha>".
-        Dictionary<string, IEnumerable<DependencyDetail>> dependenciesCache =
-            new Dictionary<string, IEnumerable<DependencyDetail>>();
+        Dictionary<string, IEnumerable<DependencyDetail>> dependenciesCache = [];
         // Cache of builds with assets. Key is "<repo>@<sha>".
-        Dictionary<string, List<Build>> buildCache = new Dictionary<string, List<Build>>();
+        Dictionary<string, List<Build>> buildCache = [];
         // Cache of nuget config files for further build disambiguation. Key is "<repo>@<sha>".
-        Dictionary<string, IEnumerable<string>> nugetConfigCache = new Dictionary<string, IEnumerable<string>>();
+        Dictionary<string, IEnumerable<string>> nugetConfigCache = [];
 
         // Now make a walk over coherent dependencies. Note that coherent dependencies could make
         // a chain (A->B->C). In all cases we need to walk to the head of the chain, keeping track
@@ -461,7 +401,7 @@ public class BarRemote : IBarRemote
             // the dependency and therefore it is effectively the "head" of the subtree.
             // We will still visit all the elements in the chain eventually in this algorithm:
             // Consider A->B(pinned)->C(pinned)->D.
-            Stack<DependencyDetail> updateStack = new Stack<DependencyDetail>();
+            var updateStack = new Stack<DependencyDetail>();
             DependencyDetail currentDependency = dependency;
             while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
             {
@@ -478,8 +418,9 @@ public class BarRemote : IBarRemote
 
                 // Get the coherent parent info. Note that the coherent parent could have
                 // been updated, so we look in the toUpdate list first to find the updated info
-                DependencyDetail parentCoherentDependency = toUpdate.FirstOrDefault(d =>
-                    d.To.Name.Equals(dependencyToUpdate.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase))?.To;
+                DependencyDetail parentCoherentDependency = toUpdate
+                    .FirstOrDefault(d => d.To.Name.Equals(dependencyToUpdate.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase))?
+                    .To;
 
                 // Not current in the update list, so look up in the original dependencies.
                 if (parentCoherentDependency == null)
@@ -494,7 +435,7 @@ public class BarRemote : IBarRemote
                                             "in either original or updated dependencies list");
                 }
 
-                string parentCoherentDependencyCacheKey = $"{parentCoherentDependency.RepoUri}@{parentCoherentDependency.Commit}";
+                var parentCoherentDependencyCacheKey = $"{parentCoherentDependency.RepoUri}@{parentCoherentDependency.Commit}";
 
                 // Get the dependencies at currentDependency's repo+sha.
                 if (!dependenciesCache.TryGetValue(parentCoherentDependencyCacheKey,
@@ -513,7 +454,7 @@ public class BarRemote : IBarRemote
                 if (cpdDependency == null)
                 {
                     // This is an invalid state. The dependency should be listed in the cpd parent's version details file.
-                    string coherencyErrorKey = $"{parentCoherentDependency.RepoUri}{parentCoherentDependency.Commit}{dependencyToUpdate.Name}";
+                    var coherencyErrorKey = $"{parentCoherentDependency.RepoUri}{parentCoherentDependency.Commit}{dependencyToUpdate.Name}";
                     if (!coherencyErrors.ContainsKey(coherencyErrorKey))
                     {
                         coherencyErrors.Add(coherencyErrorKey, new CoherencyError()
@@ -549,7 +490,7 @@ public class BarRemote : IBarRemote
                 Asset coherentAsset = await DisambiguateAssetsAsync(remoteFactory, buildCache, nugetConfigCache,
                     parentCoherentDependency, cpdDependency);
 
-                DependencyDetail updatedDependency = new DependencyDetail(dependencyToUpdate)
+                var updatedDependency = new DependencyDetail(dependencyToUpdate)
                 {
                     Name = cpdDependency.Name,
                     Version = cpdDependency.Version,
@@ -635,12 +576,12 @@ public class BarRemote : IBarRemote
         Dictionary<string, List<Build>> buildCache, Dictionary<string, IEnumerable<string>> nugetConfigCache,
         DependencyDetail parentCoherentDependency, DependencyDetail cpdDependency)
     {
-        string parentCoherentDependencyCacheKey = $"{parentCoherentDependency.RepoUri}@{parentCoherentDependency.Commit}";
+        var parentCoherentDependencyCacheKey = $"{parentCoherentDependency.RepoUri}@{parentCoherentDependency.Commit}";
 
         _logger.LogInformation($"Attempting to disambiguate {cpdDependency.Name}@{cpdDependency.Version} " +
                                $"based on nuget.config at {parentCoherentDependencyCacheKey}");
 
-        AssetComparer assetComparer = new AssetComparer();
+        var assetComparer = new AssetComparer();
 
         // Because stable assets can have specialized feeds which need
         // to be added to the nuget.config so that the assets can be accessed,
@@ -681,10 +622,14 @@ public class BarRemote : IBarRemote
         else if (potentialBuilds.Count > 1)
         {
             // Gather all matching assets from each of the builds.
-            List<Build> buildsWithMatchingAssets = potentialBuilds.Where(
-                build => build.Assets.Any(asset => assetComparer.Equals(asset, cpdDependency))).OrderByDescending(build => build.Id).ToList();
-            List<Asset> allMatchingAssets = buildsWithMatchingAssets.Select(build => build.Assets.FirstOrDefault(
-                asset => assetComparer.Equals(asset, cpdDependency))).ToList();
+            List<Build> buildsWithMatchingAssets = potentialBuilds
+                .Where(build => build.Assets.Any(asset => assetComparer.Equals(asset, cpdDependency)))
+                .OrderByDescending(build => build.Id)
+                .ToList();
+
+            List<Asset> allMatchingAssets = buildsWithMatchingAssets
+                .Select(build => build.Assets.FirstOrDefault(asset => assetComparer.Equals(asset, cpdDependency)))
+                .ToList();
 
             // If there is one or zero matching assets, just return what we have.
             if (allMatchingAssets.Count <= 1)
@@ -702,20 +647,28 @@ public class BarRemote : IBarRemote
             }
 
             // Find assets with locations that match any feed in the nuget.config file.
-            var assetsWithMatchingLocations = allMatchingAssets.Where(asset =>
-            {
-                if (asset.Locations != null)
+            var assetsWithMatchingLocations = allMatchingAssets
+                .Where(asset =>
                 {
-                    return asset.Locations.Select(location => location.Location).Intersect(nugetFeeds).Any();
-                }
-                return false;
-            }).ToList();
+                    if (asset.Locations == null)
+                    {
+                        return false;
+                    }
+
+                    return asset.Locations
+                            .Select(location => location.Location)
+                            .Intersect(nugetFeeds)
+                            .Any();
+                })
+                .ToList();
 
             if (assetsWithMatchingLocations.Count != 1)
             {
                 // Find the newest build in the matching assets
-                return buildsWithMatchingAssets.First().Assets.FirstOrDefault(
-                    asset => assetComparer.Equals(asset, cpdDependency));
+                return buildsWithMatchingAssets
+                    .First()
+                    .Assets
+                    .FirstOrDefault(asset => assetComparer.Equals(asset, cpdDependency));
             }
             else
             {

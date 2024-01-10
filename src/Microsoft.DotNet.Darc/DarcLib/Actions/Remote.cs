@@ -195,7 +195,7 @@ public sealed class Remote : BarRemote, IRemote
 
         GitFileContentContainer fileContainer =
             await _fileManager.UpdateDependencyFiles(itemsToUpdate, sourceDependency: null, repoUri, branch, oldDependencies, targetDotNetVersion);
-        List<GitFile> filesToCommit = new List<GitFile>();
+        List<GitFile> filesToCommit = [];
 
         if (mayNeedArcadeUpdate)
         {
@@ -234,7 +234,7 @@ public sealed class Remote : BarRemote, IRemote
                 _logger.LogInformation($"Dependency update from Arcade commit {arcadeItem.Commit} to {repoUri} " +
                                        $"on branch {branch}@{latestCommit} will delete files in eng/common." +
                                        $" Source file count: {engCommonFiles.Count}, Target file count: {targetEngCommonFiles.Count}." +
-                                       $" Deleted files: {String.Join(Environment.NewLine, deletedFiles)}");
+                                       $" Deleted files: {string.Join(Environment.NewLine, deletedFiles)}");
             }
         }
 
@@ -396,9 +396,7 @@ public sealed class Remote : BarRemote, IRemote
 
         _logger.LogInformation("Reading dotnet version from global.json succeeded!");
 
-        SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion);
-
-        if (dotnetVersion == null)
+        if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
         {
             _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
         }
