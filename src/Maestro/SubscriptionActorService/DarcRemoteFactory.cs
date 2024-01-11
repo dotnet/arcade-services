@@ -50,9 +50,6 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    public Task<Microsoft.DotNet.DarcLib.IBarApiClient> GetBarClientAsync(ILogger logger)
-        => throw new NotImplementedException();
-
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
     {
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
@@ -61,7 +58,7 @@ public class DarcRemoteFactory : IRemoteFactory
             // get a token. When we do coherency updates we build a repo graph and
             // may end up traversing links to classic azdo uris.
             string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
-            Uri normalizedRepoUri = new Uri(normalizedUrl);
+            var normalizedRepoUri = new Uri(normalizedUrl);
             // Look up the setting for where the repo root should be held.  Default to empty,
             // which will use the temp directory.
             string temporaryRepositoryRoot = _configuration.GetValue<string>("DarcTemporaryRepoRoot", null);

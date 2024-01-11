@@ -37,6 +37,7 @@
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
+    <ProjectReference Include="..\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
   </ItemGroup>

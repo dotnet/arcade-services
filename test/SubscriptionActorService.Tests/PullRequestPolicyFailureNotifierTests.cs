@@ -94,9 +94,13 @@ public class PullRequestPolicyFailureNotifierTests
             });
 
         MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), NullLogger.Instance);
+
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
+
+        BarClientFactory = new Mock<IBasicBarClientFactory>(MockBehavior.Strict);
         BarClientFactory.Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>())).ReturnsAsync(BarClient.Object);
+
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();
     }
