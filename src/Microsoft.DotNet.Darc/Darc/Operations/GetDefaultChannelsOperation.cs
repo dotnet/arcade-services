@@ -35,7 +35,7 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             IEnumerable<DefaultChannel> defaultChannels = (await barClient.GetDefaultChannelsAsync())
                 .Where(defaultChannel =>

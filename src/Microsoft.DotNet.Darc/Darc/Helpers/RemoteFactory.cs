@@ -60,22 +60,6 @@ internal class RemoteFactory : IRemoteFactory
         return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
-    public static IBarClient GetBarClient(CommandLineOptions options, ILogger logger)
-    {
-        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
-        IBarClient barClient = null;
-        if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
-        {
-            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
-            darcSettings.BuildAssetRegistryBaseUri);
-        }
-
-        return barClient;
-    }
-
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         => Task.FromResult(GetRemote(_options, repoUrl, logger));
-
-    public Task<IBarClient> GetBarClientAsync(ILogger logger)
-        => Task.FromResult(GetBarClient(_options, logger));
 }

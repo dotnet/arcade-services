@@ -37,7 +37,7 @@ internal class GetAssetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         try
         {

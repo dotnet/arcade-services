@@ -209,7 +209,7 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         string repoUri = _options.RepoUri;
 
@@ -801,7 +801,7 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);

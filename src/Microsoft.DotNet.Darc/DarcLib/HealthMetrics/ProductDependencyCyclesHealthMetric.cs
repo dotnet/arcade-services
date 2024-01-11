@@ -1,12 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib.HealthMetrics;
 
@@ -16,20 +14,29 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics;
 /// </summary>
 public class ProductDependencyCyclesHealthMetric : HealthMetric
 {
-    public ProductDependencyCyclesHealthMetric(string repo, string branch, ILogger logger, IRemoteFactory remoteFactory)
+    private readonly string _repository;
+    private readonly string _branch;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBarApiClientFactory _barApiClientFactory;
+    private IEnumerable<IEnumerable<string>> _cycles;
+
+    public ProductDependencyCyclesHealthMetric(
+        string repo,
+        string branch,
+        ILogger logger,
+        IRemoteFactory remoteFactory,
+        IBarApiClientFactory barApiClientFactory)
         : base(logger, remoteFactory)
     {
-        Repository = repo;
-        Branch = branch;
+        _repository = repo;
+        _branch = branch;
+        _remoteFactory = remoteFactory;
+        _barApiClientFactory = barApiClientFactory;
     }
-
-    public readonly string Repository;
-    public readonly string Branch;
-    public IEnumerable<IEnumerable<string>> Cycles;
 
     public override string MetricName => "Product Dependency Cycle Health";
 
-    public override string MetricDescription => $"Product dependency cycle health for {Repository} @ {Branch}";
+    public override string MetricDescription => $"Product dependency cycle health for {_repository} @ {_branch}";
 
     public override async Task EvaluateAsync()
     {
@@ -46,26 +53,31 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         };
 
         // Evaluate and find out what the latest is on the branch
-        var remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
-        var commit = await remote.GetLatestCommitAsync(Repository, Branch);
+        var remote = await _remoteFactory.GetRemoteAsync(_repository, Logger);
+        var commit = await remote.GetLatestCommitAsync(_repository, _branch);
 
         if (commit == null)
         {
             // If there were no commits, then there can be no cycles. This would be typical of newly
             // created branches.
             Result = HealthResult.Passed;
-            Cycles = new List<List<string>>();
+            _cycles = new List<List<string>>();
             return;
         }
 
-        DependencyGraph graph =
-            await DependencyGraph.BuildRemoteDependencyGraphAsync(RemoteFactory, Repository, commit, options, Logger);
+        DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+            _remoteFactory,
+            _barApiClientFactory,
+            _repository,
+            commit,
+            options,
+            Logger);
 
         // Check to see whether there are any cycles.
         // Boil down the cycles into just the repositories involved
-        Cycles = graph.Cycles.Select(cycle => cycle.Select(graphNode => graphNode.Repository));
+        _cycles = graph.Cycles.Select(cycle => cycle.Select(graphNode => graphNode.Repository));
 
-        if (Cycles.Any())
+        if (_cycles.Any())
         {
             Result = HealthResult.Failed;
         }

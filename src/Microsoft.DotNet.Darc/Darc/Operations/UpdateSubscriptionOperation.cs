@@ -31,7 +31,7 @@ class UpdateSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`

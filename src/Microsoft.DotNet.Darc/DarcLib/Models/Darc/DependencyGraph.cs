@@ -137,6 +137,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        IBarApiClientFactory barClientFactory,
         string repoUri,
         string commit,
         DependencyGraphBuildOptions options,
@@ -144,6 +145,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            barClientFactory,
             null, /* no initial root dependencies */
             repoUri,
             commit,
@@ -167,6 +169,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        IBarApiClientFactory barClientFactory,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -175,6 +178,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            barClientFactory,
             rootDependencies,
             repoUri,
             commit,
@@ -211,6 +215,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             null,
+            null,
             rootDependencies,
             rootRepoFolder,
             rootRepoCommit,
@@ -225,27 +230,11 @@ public class DependencyGraph
     /// <summary>
     ///     Validate that the graph build options are correct.
     /// </summary>
-    /// <param name="remoteFactory"></param>
-    /// <param name="rootDependencies"></param>
-    /// <param name="repoUri"></param>
-    /// <param name="commit"></param>
-    /// <param name="options"></param>
-    /// <param name="remote"></param>
-    /// <param name="logger"></param>
-    /// <param name="reposFolder"></param>
-    /// <param name="remotesMap"></param>
-    /// <param name="testPath"></param>
     private static void ValidateBuildOptions(
         IRemoteFactory remoteFactory,
         IEnumerable<DependencyDetail> rootDependencies,
-        string repoUri,
-        string commit,
         DependencyGraphBuildOptions options,
-        bool remote,
-        ILogger logger,
-        string reposFolder,
-        IEnumerable<string> remotesMap,
-        string testPath)
+        bool remote)
     {
         // Fail fast if darcSettings is null in a remote scenario
         if (remote && remoteFactory == null)
@@ -280,13 +269,13 @@ public class DependencyGraph
 
     private static async Task DoLatestInChannelGraphNodeDiffAsync(
         IRemoteFactory remoteFactory,
+        IBarApiClientFactory barClientFactory,
         ILogger logger,
-        Dictionary<string, DependencyGraphNode> nodeCache,
-        Dictionary<string, DependencyGraphNode> visitedRepoUriNodes)
+        Dictionary<string, DependencyGraphNode> nodeCache)
     {
         logger.LogInformation("Running latest in channel node diff.");
 
-        IBarClient barClient = await remoteFactory.GetBarClientAsync(logger);
+        IBarClient barClient = await barClientFactory.GetBarClientAsync(logger);
 
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
@@ -413,6 +402,7 @@ public class DependencyGraph
     /// <returns>New dependency graph</returns>
     private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
         IRemoteFactory remoteFactory,
+        IBarApiClientFactory barClientFactory,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -425,16 +415,7 @@ public class DependencyGraph
     {
         List<DependencyDetail> rootDependencyList = rootDependencies?.ToList();
         List<string> remotesList = remotesMap?.ToList();
-        ValidateBuildOptions(remoteFactory,
-            rootDependencyList,
-            repoUri,
-            commit,
-            options,
-            remote,
-            logger,
-            reposFolder,
-            remotesList,
-            testPath);
+        ValidateBuildOptions(remoteFactory, rootDependencyList, options, remote);
 
         if (rootDependencies != null)
         {
@@ -454,7 +435,7 @@ public class DependencyGraph
         if (remote)
         {
             // Look up the dependency and get the creating build.
-            barClient = await remoteFactory.GetBarClientAsync(logger);
+            barClient = await barClientFactory.GetBarClientAsync(logger);
         }
 
         List<LinkedList<DependencyGraphNode>> cycles = [];
@@ -493,8 +474,10 @@ public class DependencyGraph
 
         // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
         // we can just add these nodes as a child. The cache key is '{repoUri}@{commit}'
-        var nodeCache = new Dictionary<string, DependencyGraphNode>();
-        nodeCache.Add($"{rootGraphNode.Repository}@{rootGraphNode.Commit}", rootGraphNode);
+        var nodeCache = new Dictionary<string, DependencyGraphNode>
+        {
+            { $"{rootGraphNode.Repository}@{rootGraphNode.Commit}", rootGraphNode }
+        };
 
         // Cache of incoherent nodes, looked up by repo URI.
         var visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
@@ -648,7 +631,7 @@ public class DependencyGraph
                 await DoLatestInGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
                 break;
             case NodeDiff.LatestInChannel:
-                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
+                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, barClientFactory, logger, nodeCache);
                 break;
         }
 

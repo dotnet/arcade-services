@@ -57,13 +57,13 @@ public class Local : ILocal
     /// <param name="dependencies">Dependencies that need updates.</param>
     /// <param name="remote">Remote instance for gathering eng/common script updates.</param>
     /// <returns></returns>
-    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory)
+    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IBarApiClientFactory barClientFactory)
     {
         // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
         // Update the incoming dependencies with locations.
         List<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        var locationResolver = new AssetLocationResolver(await remoteFactory.GetBarClientAsync(_logger), _logger);
+        var locationResolver = new AssetLocationResolver(await barClientFactory.GetBarClientAsync(_logger), _logger);
         await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
         await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 

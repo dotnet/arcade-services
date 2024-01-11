@@ -61,6 +61,7 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _darcFactory;
+        private readonly IBarDbClientFactory _barClientFactory;
         private readonly ICoherencyUpdateResolverFactory _updateResolverFactory;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
@@ -83,6 +84,7 @@ namespace SubscriptionActorService
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            IBarDbClientFactory barClientFactory,
             ICoherencyUpdateResolverFactory updateResolverFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
@@ -92,6 +94,7 @@ namespace SubscriptionActorService
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
             _darcFactory = darcFactory;
+            _barClientFactory = barClientFactory;
             _updateResolverFactory = updateResolverFactory;
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
@@ -116,6 +119,7 @@ namespace SubscriptionActorService
                         _updateResolverFactory,
                         _context,
                         _darcFactory,
+                        _barClientFactory,
                         _loggerFactory,
                         _actionRunner,
                         _subscriptionActorFactory,
@@ -128,6 +132,7 @@ namespace SubscriptionActorService
                         _updateResolverFactory,
                         _context,
                         _darcFactory,
+                        _barClientFactory,
                         _loggerFactory,
                         _actionRunner,
                         _subscriptionActorFactory);
@@ -191,6 +196,7 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            IBarDbClientFactory barClientFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
@@ -201,7 +207,8 @@ namespace SubscriptionActorService
             MergePolicyEvaluator = mergePolicyEvaluator;
             UpdateResolverFactory = updateResolverFactory;
             Context = context;
-            DarcRemoteFactory = darcFactory;
+            RemoteFactory = darcFactory;
+            BarClientFactory = barClientFactory;
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
             LoggerFactory = loggerFactory;
@@ -216,7 +223,8 @@ namespace SubscriptionActorService
         public IMergePolicyEvaluator MergePolicyEvaluator { get; }
         public ICoherencyUpdateResolverFactory UpdateResolverFactory { get; }
         public BuildAssetRegistryContext Context { get; }
-        public IRemoteFactory DarcRemoteFactory { get; }
+        public IRemoteFactory RemoteFactory { get; }
+        public IBarDbClientFactory BarClientFactory { get; }
         public IActionRunner ActionRunner { get; }
         public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
 
@@ -423,7 +431,7 @@ namespace SubscriptionActorService
             }
 
             (string targetRepository, _) = await GetTargetAsync();
-            IRemote darc = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IRemote darc = await RemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             InProgressPullRequest pr = maybePr.Value;
 
@@ -745,10 +753,10 @@ namespace SubscriptionActorService
         private async Task<string> CreatePullRequestAsync(List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
-            IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IRemote darcRemote = await RemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate =
-                await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, RemoteFactory, targetRepository, targetBranch);
 
             if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count() < 1)
             {
@@ -763,7 +771,6 @@ namespace SubscriptionActorService
                 string description = await CalculatePRDescriptionAndCommitUpdatesAsync(
                     repoDependencyUpdate.RequiredUpdates,
                     null,
-                    DarcRemoteFactory,
                     targetRepository,
                     newBranchName);
 
@@ -856,11 +863,9 @@ namespace SubscriptionActorService
         /// <param name="remoteFactory">Remote factory for generating remotes based on repo uri</param>
         /// <param name="targetRepository">Target repository that the updates should be applied to</param>
         /// <param name="newBranchName">Target branch the updates should be to</param>
-        /// <returns></returns>
         private async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
             string description,
-            IRemoteFactory remoteFactory,
             string targetRepository,
             string newBranchName)
         {
@@ -872,8 +877,8 @@ namespace SubscriptionActorService
             (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
-            IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
-            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
+            IRemote remote = await RemoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IBarDbClient barClient = await BarClientFactory.GetBarDbClient(Logger);
             var locationResolver = new AssetLocationResolver(barClient, Logger);
 
             // To keep a PR to as few commits as possible, if the number of
@@ -902,7 +907,7 @@ namespace SubscriptionActorService
 
                 await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
 
-                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
+                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, RemoteFactory, itemsToUpdate, message.ToString());
                 pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
             }
 
@@ -920,7 +925,7 @@ namespace SubscriptionActorService
                     .ToList();
 
                 await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, RemoteFactory, itemsToUpdate, message.ToString());
             }
 
             // If the coherency algorithm failed and there are no non-coherency updates and
@@ -928,7 +933,7 @@ namespace SubscriptionActorService
             if (requiredUpdates.Count == 0)
             {
                 string message = "Failed to perform coherency update for one or more dependencies.";
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, [], message);
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, RemoteFactory, [], message);
                 return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
             }
 
@@ -990,10 +995,10 @@ namespace SubscriptionActorService
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
-            IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IRemote darcRemote = await RemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             TargetRepoDependencyUpdate targetRepositoryUpdates =
-                await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, RemoteFactory, targetRepository, targetBranch);
 
             if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count() < 1)
             {
@@ -1050,7 +1055,6 @@ namespace SubscriptionActorService
             pullRequest.Description = await CalculatePRDescriptionAndCommitUpdatesAsync(
                 targetRepositoryUpdates.RequiredUpdates,
                 pullRequest.Description,
-                DarcRemoteFactory,
                 targetRepository,
                 headBranch);
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
@@ -1298,6 +1302,7 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            IBarDbClientFactory barClientFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
@@ -1310,6 +1315,7 @@ namespace SubscriptionActorService
                 updateResolverFactory,
                 context,
                 darcFactory,
+                barClientFactory,
                 loggerFactory,
                 actionRunner,
                 subscriptionActorFactory)
@@ -1383,6 +1389,7 @@ namespace SubscriptionActorService
             ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            IBarDbClientFactory barClientFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
@@ -1394,6 +1401,7 @@ namespace SubscriptionActorService
                 updateResolverFactory,
                 context,
                 darcFactory,
+                barClientFactory,
                 loggerFactory,
                 actionRunner,
                 subscriptionActorFactory)

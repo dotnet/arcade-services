@@ -54,7 +54,7 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
             IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
