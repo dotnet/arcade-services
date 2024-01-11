@@ -29,7 +29,7 @@ variables:
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value: -dev
-    ${{ else }}:
+  - ${{ else }}:
     - name: devBranchSuffix
       value: ''
 
