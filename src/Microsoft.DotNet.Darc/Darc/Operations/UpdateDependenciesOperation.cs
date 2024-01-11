@@ -49,7 +49,7 @@ class UpdateDependenciesOperation : Operation
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
             var barClientFactory = new BarApiClientFactory(_options);
-            IBarClient barClient = await barClientFactory.GetBarClientAsync(Logger);
+            IBarApiClient barClient = await barClientFactory.GetBarClientAsync(Logger);
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 
             var local = new Local(_options.GetRemoteConfiguration(), Logger);

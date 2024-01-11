@@ -50,7 +50,7 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    public Task<Microsoft.DotNet.DarcLib.IBarClient> GetBarClientAsync(ILogger logger)
+    public Task<Microsoft.DotNet.DarcLib.IBarApiClient> GetBarClientAsync(ILogger logger)
         => throw new NotImplementedException();
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)

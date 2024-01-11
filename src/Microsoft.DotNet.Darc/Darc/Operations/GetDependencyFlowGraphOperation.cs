@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetDependencyFlowGraphOperation : Operation
 {
-    private GetDependencyFlowGraphCommandLineOptions _options;
+    private readonly GetDependencyFlowGraphCommandLineOptions _options;
 
     public GetDependencyFlowGraphOperation(GetDependencyFlowGraphCommandLineOptions options)
         : base(options)
@@ -25,15 +25,13 @@ internal class GetDependencyFlowGraphOperation : Operation
         _options = options;
     }
 
-    const int engLatestChannelId = 2;
-    const int eng3ChannelId = 344;
-
     public override async Task<int> ExecuteAsync()
     {
         try
         {
             var remoteFactory = new RemoteFactory(_options);
-            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
+            var barClientFactory = new BarApiClientFactory(_options);
+            IBarApiClient barClient = await barClientFactory.GetBarClientAsync(Logger);
 
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))

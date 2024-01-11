@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IBarApiClientFactory
+public interface IBarApiClientFactory : IBasicBarClientFactory
 {
-    Task<IBarClient> GetBarClientAsync(ILogger logger);
+    Task<IBarApiClient> GetBarClientAsync(ILogger logger);
 }

@@ -36,8 +36,8 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IBarClient remote = Provider.GetService<IBarClient>()
-                ?? RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient remote = Provider.GetService<IBarApiClient>()
+                ?? BarApiClientFactory.GetBarClient(_options, Logger);
 
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)

@@ -20,7 +20,7 @@ namespace Maestro.DataProviders;
 ///     A bar client interface for use by DarcLib which talks directly
 ///     to the database for diamond dependency resolution.  Only a few features are required.
 /// </summary>
-internal class MaestroDbBarClient : IBarDbClient
+internal class MaestroDbBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly KustoClientProvider _kustoClientProvider;
@@ -59,12 +59,19 @@ internal class MaestroDbBarClient : IBarDbClient
         return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
     }
 
-    /// <summary>
-    ///     Get a list of builds for the given repo uri and commit.
-    /// </summary>
-    /// <param name="repoUri">Repository uri</param>
-    /// <param name="commit">Commit</param>
-    /// <returns>List of builds</returns>
+    public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
+    {
+        Data.Models.Build build = await _context.Builds
+            .Where(b => (repoUri == b.GitHubRepository || repoUri == b.AzureDevOpsRepository) && b.BuildChannels.Any(c => c.ChannelId == channelId))
+            .Include(b => b.Assets)
+            .OrderByDescending(b => b.DateProduced)
+            .FirstOrDefaultAsync();
+
+        return build != null
+            ? ToClientModelBuild(build)
+            : null;
+    }
+
     public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
     {
         List<Data.Models.Build> builds = await _context.Builds.Where(b =>

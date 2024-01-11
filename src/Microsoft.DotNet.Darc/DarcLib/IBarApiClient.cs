@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib;
 ///     Represents basic operations that can be done against BAR, for use in
 ///     Remote
 /// </summary>
-public interface IBarClient : IBarDbClient
+public interface IBarApiClient : IBasicBarClient
 {
     #region Subscription Operations
 
@@ -162,16 +162,6 @@ public interface IBarClient : IBarDbClient
     #endregion
 
     #region Build/Asset Operations
-
-    /// <summary>
-    ///     Retrieve the latest build of a repository on a specific channel.
-    /// </summary>
-    /// <param name="repoUri">URI of repository to obtain a build for.</param>
-    /// <param name="channelId">Channel the build was applied to.</param>
-    /// <returns>Latest build of <paramref name="repoUri"/> on channel <paramref name="channelId"/>,
-    /// or null if there is no latest.</returns>
-    /// <remarks>The build's assets are returned</remarks>
-    Task<Build> GetLatestBuildAsync(string repoUri, int channelId);
 
     /// <summary>
     ///     Assign a particular build to a channel.

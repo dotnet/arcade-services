@@ -30,7 +30,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {

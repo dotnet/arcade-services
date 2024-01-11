@@ -17,22 +17,23 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
     private readonly string _repository;
     private readonly string _branch;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IBarApiClientFactory _barApiClientFactory;
-    private IEnumerable<IEnumerable<string>> _cycles;
+    private readonly IBasicBarClientFactory _barClientFactory;
 
     public ProductDependencyCyclesHealthMetric(
         string repo,
         string branch,
         ILogger logger,
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barApiClientFactory)
-        : base(logger, remoteFactory)
+        IBasicBarClientFactory barClientFactory)
+        : base(logger, remoteFactory, barClientFactory)
     {
         _repository = repo;
         _branch = branch;
         _remoteFactory = remoteFactory;
-        _barApiClientFactory = barApiClientFactory;
+        _barClientFactory = barClientFactory;
     }
+
+    public IEnumerable<IEnumerable<string>> Cycles { get; private set; }
 
     public override string MetricName => "Product Dependency Cycle Health";
 
@@ -44,7 +45,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         // Build without build lookups, toolsets, etc. to minimize time. Toolset dependencies also break
         // product dependency cycles, so that eliminates some analysis
 
-        DependencyGraphBuildOptions options = new DependencyGraphBuildOptions
+        var options = new DependencyGraphBuildOptions
         {
             IncludeToolset = false,
             LookupBuilds = false,
@@ -61,13 +62,13 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
             // If there were no commits, then there can be no cycles. This would be typical of newly
             // created branches.
             Result = HealthResult.Passed;
-            _cycles = new List<List<string>>();
+            Cycles = [];
             return;
         }
 
         DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
             _remoteFactory,
-            _barApiClientFactory,
+            _barClientFactory,
             _repository,
             commit,
             options,
@@ -75,9 +76,9 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
 
         // Check to see whether there are any cycles.
         // Boil down the cycles into just the repositories involved
-        _cycles = graph.Cycles.Select(cycle => cycle.Select(graphNode => graphNode.Repository));
+        Cycles = graph.Cycles.Select(cycle => cycle.Select(graphNode => graphNode.Repository));
 
-        if (_cycles.Any())
+        if (Cycles.Any())
         {
             Result = HealthResult.Failed;
         }

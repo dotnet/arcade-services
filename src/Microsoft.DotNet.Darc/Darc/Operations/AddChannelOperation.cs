@@ -31,7 +31,7 @@ internal class AddChannelOperation : Operation
     {
         try
         {
-            IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             // If the user tried to mark as internal, indicate that this is currently
             // unsupported.

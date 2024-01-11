@@ -137,7 +137,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barClientFactory,
+        IBasicBarClientFactory barClientFactory,
         string repoUri,
         string commit,
         DependencyGraphBuildOptions options,
@@ -269,13 +269,13 @@ public class DependencyGraph
 
     private static async Task DoLatestInChannelGraphNodeDiffAsync(
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barClientFactory,
+        IBasicBarClientFactory barClientFactory,
         ILogger logger,
         Dictionary<string, DependencyGraphNode> nodeCache)
     {
         logger.LogInformation("Running latest in channel node diff.");
 
-        IBarClient barClient = await barClientFactory.GetBarClientAsync(logger);
+        IBasicBarClient barClient = await barClientFactory.GetBasicBarClient(logger);
 
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
@@ -402,7 +402,7 @@ public class DependencyGraph
     /// <returns>New dependency graph</returns>
     private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barClientFactory,
+        IBasicBarClientFactory barClientFactory,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -431,11 +431,11 @@ public class DependencyGraph
             logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
         }
 
-        IBarClient barClient = null;
+        IBasicBarClient barClient = null;
         if (remote)
         {
             // Look up the dependency and get the creating build.
-            barClient = await barClientFactory.GetBarClientAsync(logger);
+            barClient = await barClientFactory.GetBasicBarClient(logger);
         }
 
         List<LinkedList<DependencyGraphNode>> cycles = [];

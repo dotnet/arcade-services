@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.DarcLib;
 /// <summary>
 /// Factory for a client that accessed the BAR database directly.
 /// </summary>
-public interface IBarDbClientFactory
+public interface IBasicBarClientFactory
 {
-    Task<IBarDbClient> GetBarDbClient(ILogger logger);
+    Task<IBasicBarClient> GetBasicBarClient(ILogger logger);
 }

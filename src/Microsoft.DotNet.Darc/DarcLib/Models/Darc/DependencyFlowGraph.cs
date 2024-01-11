@@ -318,7 +318,7 @@ public class DependencyFlowGraph
     public static async Task<DependencyFlowGraph> BuildAsync(
         List<DefaultChannel> defaultChannels,
         List<Subscription> subscriptions,
-        IBarDbClient barClient,
+        IBasicBarClient barClient,
         int days)
     {
         // Dictionary of nodes. Key is the repo+branch

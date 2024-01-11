@@ -17,10 +17,10 @@ internal class BarApiClientFactory : IBarApiClientFactory
         _options = options;
     }
 
-    public static IBarClient GetBarClient(CommandLineOptions options, ILogger logger)
+    public static IBarApiClient GetBarClient(CommandLineOptions options, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
-        IBarClient barClient = null;
+        IBarApiClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
             barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
@@ -30,6 +30,9 @@ internal class BarApiClientFactory : IBarApiClientFactory
         return barClient;
     }
 
-    public Task<IBarClient> GetBarClientAsync(ILogger logger)
+    public Task<IBarApiClient> GetBarClientAsync(ILogger logger)
         => Task.FromResult(GetBarClient(_options, logger));
+
+    public Task<IBasicBarClient> GetBasicBarClient(ILogger logger)
+        => Task.FromResult<IBasicBarClient>(GetBarClient(_options, logger));
 }

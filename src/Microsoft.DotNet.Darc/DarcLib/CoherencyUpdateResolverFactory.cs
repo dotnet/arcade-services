@@ -11,9 +11,9 @@ public interface ICoherencyUpdateResolverFactory
     Task<ICoherencyUpdateResolver> CreateAsync(ILogger logger);
 }
 
-public class CoherencyUpdateResolverFactory(IRemoteFactory remoteFactory)
+public class CoherencyUpdateResolverFactory(IBasicBarClientFactory barClientFactory)
     : ICoherencyUpdateResolverFactory
 {
     public async Task<ICoherencyUpdateResolver> CreateAsync(ILogger logger)
-        => new CoherencyUpdateResolver(await remoteFactory.GetBarClientAsync(logger), logger);
+        => new CoherencyUpdateResolver(await barClientFactory.GetBasicBarClient(logger), logger);
 }

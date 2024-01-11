@@ -44,7 +44,7 @@ class SubscriptionsStatusOperation : Operation
 
         try
         {
-            IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToEnableDisable = new List<Subscription>();

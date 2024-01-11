@@ -36,8 +36,8 @@ class GetSubscriptionsOperation : Operation
     {
         try
         {
-            IBarClient barClient = Provider.GetService<IBarClient>()
-                ?? RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetService<IBarApiClient>()
+                ?? BarApiClientFactory.GetBarClient(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
 
@@ -80,7 +80,7 @@ class GetSubscriptionsOperation : Operation
             _ => base.IsOutputFormatSupported(outputFormat),
         };
 
-    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IBarClient barClient)
+    private static async Task OutputJsonAsync(IEnumerable<Subscription> subscriptions, IBarApiClient barClient)
     {
         foreach (var subscription in Sort(subscriptions))
         {
@@ -101,7 +101,7 @@ class GetSubscriptionsOperation : Operation
         Console.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
     }
 
-    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IBarClient barClient)
+    private static async Task OutputTextAsync(IEnumerable<Subscription> subscriptions, IBarApiClient barClient)
     {
         foreach (var subscription in Sort(subscriptions))
         {

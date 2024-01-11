@@ -30,8 +30,14 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics;
 /// </summary>
 public class SubscriptionHealthMetric : HealthMetric
 {
-    public SubscriptionHealthMetric(string repo, string branch, Func<DependencyDetail, bool> dependencySelector, ILogger logger, IRemoteFactory remoteFactory)
-        : base(logger, remoteFactory)
+    public SubscriptionHealthMetric(
+        string repo,
+        string branch,
+        Func<DependencyDetail, bool> dependencySelector,
+        ILogger logger,
+        IRemoteFactory remoteFactory,
+        IBasicBarClientFactory barClientFactory)
+        : base(logger, remoteFactory, barClientFactory)
     {
         Repository = repo;
         Branch = branch;
@@ -83,7 +89,7 @@ public class SubscriptionHealthMetric : HealthMetric
     public override async Task EvaluateAsync()
     {
         IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
-        IBarClient barClient = await RemoteFactory.GetBarClientAsync(Logger);
+        IBasicBarClient barClient = await BarClientFactory.GetBasicBarClient(Logger);
 
         Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
@@ -180,7 +186,7 @@ public class SubscriptionHealthMetric : HealthMetric
     ///     and compute any conflicts between subscriptionss
     /// </summary>
     /// <returns>Mapping of assets to subscriptions that produce them.</returns>
-    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IBarClient barClient)
+    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IBasicBarClient barClient)
     {
         // Populate the latest build task for each of these. The search for assets would be N*M*A where N is the number of
         // dependencies, M is the number of subscriptions, and A is average the number of assets per build.

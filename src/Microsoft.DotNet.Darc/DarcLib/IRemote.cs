@@ -140,11 +140,17 @@ public interface IRemote
     /// <param name="repoUri">Repository to update</param>
     /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
     /// <param name="remoteFactory">Remote factory for obtaining common script files from arcade</param>
+    /// <param name="barClientFactory">Factory for getting clients that can query build and asset information</param>
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
     /// <param name="message">Commit message.</param>
     /// <returns>Async task.</returns>
-    Task<List<GitFile>> CommitUpdatesAsync(string repoUri, string branch, IRemoteFactory remoteFactory, 
-        List<DependencyDetail> itemsToUpdate, string message);
+    Task<List<GitFile>> CommitUpdatesAsync(
+        string repoUri,
+        string branch,
+        IRemoteFactory remoteFactory,
+        IBasicBarClientFactory barClientFactory,
+        List<DependencyDetail> itemsToUpdate,
+        string message);
 
     /// <summary>
     ///     Diff two commits in a repository and return information about them.

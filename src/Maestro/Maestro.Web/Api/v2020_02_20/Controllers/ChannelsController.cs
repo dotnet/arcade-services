@@ -38,7 +38,7 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        IBarDbClientFactory barClientFactory,
+        IBasicBarClientFactory barClientFactory,
         ILogger<ChannelsController> logger)
         : base(context, logger, barClientFactory)
     {

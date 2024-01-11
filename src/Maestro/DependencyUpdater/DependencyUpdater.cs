@@ -36,7 +36,7 @@ public class DependencyUpdateItem
 /// </summary>
 public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdater
 {
-    private readonly IBarDbClientFactory _dbClientFactory;
+    private readonly IBasicBarClientFactory _dbClientFactory;
     private readonly OperationManager _operations;
     private readonly IReliableStateManager _stateManager;
     private readonly ILogger<DependencyUpdater> _logger;
@@ -47,7 +47,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         IReliableStateManager stateManager,
         ILogger<DependencyUpdater> logger,
         BuildAssetRegistryContext context,
-        IBarDbClientFactory dbClientFactory,
+        IBasicBarClientFactory dbClientFactory,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
         OperationManager operations)
     {
@@ -259,7 +259,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
         {
-            IBarDbClient barClient = await _dbClientFactory.GetBarDbClient(_logger);
+            IBasicBarClient barClient = await _dbClientFactory.GetBasicBarClient(_logger);
 
             List<Channel> channels = _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
             IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };

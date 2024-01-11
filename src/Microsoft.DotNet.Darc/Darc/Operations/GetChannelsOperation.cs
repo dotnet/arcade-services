@@ -33,7 +33,7 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IBarClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             var allChannels = await barClient.GetChannelsAsync();
             switch (_options.OutputFormat)

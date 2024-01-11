@@ -15,7 +15,7 @@ using AsyncEnumerable = Microsoft.DotNet.Maestro.Client.AsyncEnumerable;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class MaestroApiBarClient : IBarClient
+public class MaestroApiBarClient : IBarApiClient
 {
     private readonly IMaestroApi _barClient;
 

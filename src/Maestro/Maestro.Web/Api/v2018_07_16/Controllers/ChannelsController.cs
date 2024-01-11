@@ -30,13 +30,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers;
 public class ChannelsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IBarDbClientFactory _barClientFactory;
+    private readonly IBasicBarClientFactory _barClientFactory;
     private readonly ILogger<ChannelsController> _logger;
 
     public ChannelsController(
         BuildAssetRegistryContext context,
         ILogger<ChannelsController> logger,
-        IBarDbClientFactory barClientFactory)
+        IBasicBarClientFactory barClientFactory)
     {
         _context = context;
         _logger = logger;
@@ -290,7 +290,7 @@ public class ChannelsController : Controller
         int days = 7,
         bool includeArcade = true)
     {
-        IBarDbClient barClient = await _barClientFactory.GetBarDbClient(_logger);
+        IBasicBarClient barClient = await _barClientFactory.GetBasicBarClient(_logger);
         DependencyFlowGraph flowGraph = await barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
