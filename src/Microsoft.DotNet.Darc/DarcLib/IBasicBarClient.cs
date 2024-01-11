@@ -10,6 +10,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 /// <summary>
 /// A simplified set of BAR operations implemented using both API and direct database access.
+/// Service Fabric services use the implementation with the direct access while darc uses the API.
 /// </summary>
 public interface IBasicBarClient
 {
