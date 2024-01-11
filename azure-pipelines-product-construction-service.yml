@@ -31,7 +31,7 @@ variables:
       value: -dev
   - ${{ else }}:
     - name: devBranchSuffix
-      value: ''
+      value: 
 
 stages:
 - stage: PublishProductConstructionService
