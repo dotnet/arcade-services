@@ -26,12 +26,12 @@ variables:
     value: product-construction-service-env-int
   - name: dockerRegistryUrl
     value: productconstructionint.azurecr.io
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
-    - name: devBranchSuffix
-      value: ''
-    ${{ else }}:
+  - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value: -dev
+    ${{ else }}:
+    - name: devBranchSuffix
+      value:
 
 stages:
 - stage: PublishProductConstructionService
