@@ -13,6 +13,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
   </ItemGroup>
 
   <ItemGroup>

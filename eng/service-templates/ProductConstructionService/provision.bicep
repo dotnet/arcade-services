@@ -28,6 +28,9 @@ param applicationInsightsName string = 'product-construction-service-ai-int'
 @description('Key Vault name')
 param keyVaultName string = 'ProductConstructionInt'
 
+@description('Dev Key Vault name')
+param devKeyVaultName string = 'ProductConstructionDev'
+
 @description('Log analytics workspace name')
 param logAnalyticsName string = 'product-construction-service-workspace-int'
 
@@ -252,5 +255,22 @@ resource containerRegistryPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2022
     name: 'container-registry-password'
     properties: {
         value: containerRegistry.listCredentials().passwords[0].value
+    }
+}
+
+// If we're creating the staging environment, also create a dev key vault
+resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvironment == 'Staging') {
+    name: devKeyVaultName
+    location: location
+    properties: {
+        sku: {
+            name: 'standard'
+            family: 'A'
+        }
+        tenantId: subscription().tenantId
+        enableSoftDelete: true
+        softDeleteRetentionInDays: 90
+        accessPolicies: []
+        enableRbacAuthorization: true
     }
 }
