@@ -741,8 +741,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 if (logFailure)
                 {
-                    _logger.LogError("Check SAML single sign-on (SSO) for your token: " +
-                        "https://aka.ms/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on");
+                    _logger.LogError("Your GitHub token seems to be invalid." +
+                        "Please see https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#step-3-set-additional-pats-for-azure-devops-and-github-operations" +
+                        "Make sure the GitHub token is Single Sign-On (SSO) enabled for the organization associated with the repository.");
                 }
                 throw;
             }
