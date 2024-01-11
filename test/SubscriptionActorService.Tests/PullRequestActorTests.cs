@@ -34,23 +34,26 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private const string InProgressPrHeadBranch = "pr.head.branch";
     private const string PrUrl = "https://git.com/pr/123";
 
-    private Dictionary<string, Mock<IRemote>> DarcRemotes;
+    private Dictionary<string, Mock<IRemote>> _darcRemotes;
+    private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
 
-    private Mock<IRemoteFactory> RemoteFactory;
+    private Mock<IRemoteFactory> _remoteFactory;
+    private Mock<ICoherencyUpdateResolver> _updateResolver;
+    private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
 
-    private Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
-
-    private Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors;
-
-    private string NewBranch;
+    private string _newBranch;
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
     {
-        DarcRemotes = new Dictionary<string, Mock<IRemote>>();
-        SubscriptionActors = new Dictionary<ActorId, Mock<ISubscriptionActor>>();
-        MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-        RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        _darcRemotes = new()
+        {
+            [TargetRepo] = new Mock<IRemote>()
+        };
+        _subscriptionActors = [];
+        _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
+        _remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        _updateResolver = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict);
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -59,24 +62,31 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
             .Returns((ActorId actorId) =>
             {
-                Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
+                Mock<ISubscriptionActor> mock = _subscriptionActors.GetOrAddValue(
                     actorId,
                     CreateMock<ISubscriptionActor>);
                 return mock.Object;
             });
 
         services.AddSingleton(proxyFactory.Object);
-        services.AddSingleton(MergePolicyEvaluator.Object);
+        services.AddSingleton(_mergePolicyEvaluator.Object);
         services.AddGitHubTokenProvider();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
 
-        RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
+        _remoteFactory.Setup(f => f.GetBarClientAsync(It.IsAny<ILogger>()))
+            .ReturnsAsync(Mock.Of<IBarClient>());
+
+        _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
                 (string repo, ILogger logger) =>
-                    DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
-        services.AddSingleton(RemoteFactory.Object);
+                    _darcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
+        services.AddSingleton(_remoteFactory.Object);
+
+        var updateResolverFactory = new Mock<ICoherencyUpdateResolverFactory>();
+        updateResolverFactory.SetReturnsDefault(Task.FromResult(_updateResolver.Object));
+        services.AddSingleton(updateResolverFactory.Object);
 
         base.RegisterServices(services);
     }
@@ -97,56 +107,56 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         var assets = new List<IEnumerable<AssetData>>();
         var dependencies = new List<IEnumerable<DependencyDetail>>();
-        DarcRemotes[TargetRepo]
-            .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
-        DarcRemotes[TargetRepo]
-            .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
-        DarcRemotes[TargetRepo]
-            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
+        _updateResolver
+            .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
+        _darcRemotes[TargetRepo]
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
+        _updateResolver
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), _remoteFactory.Object));
         assets.Should()
             .BeEquivalentTo(
                 new List<List<AssetData>>
                 {
-                    withBuild.Assets.Select(
-                            a => new AssetData(false)
-                            {
-                                Name = a.Name,
-                                Version = a.Version
-                            })
+                    withBuild.Assets
+                        .Select(a => new AssetData(false)
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
                         .ToList()
                 });
     }
 
     private void AndCreateNewBranchShouldHaveBeenCalled()
     {
-        var captureNewBranch = new CaptureMatch<string>(newBranch => NewBranch = newBranch);
-        DarcRemotes[TargetRepo]
+        var captureNewBranch = new CaptureMatch<string>(newBranch => _newBranch = newBranch);
+        _darcRemotes[TargetRepo]
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
 
     private void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
     {
         var updatedDependencies = new List<List<DependencyDetail>>();
-        DarcRemotes[TargetRepo]
+        _darcRemotes[TargetRepo]
             .Verify(
                 r => r.CommitUpdatesAsync(
                     TargetRepo,
-                    NewBranch ?? InProgressPrHeadBranch,
-                    RemoteFactory.Object,
+                    _newBranch ?? InProgressPrHeadBranch,
+                    _remoteFactory.Object,
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
         updatedDependencies.Should()
             .BeEquivalentTo(
                 new List<List<DependencyDetail>>
                 {
-                    withUpdatesFromBuild.Assets.Select(
-                            a => new DependencyDetail
-                            {
-                                Name = a.Name,
-                                Version = a.Version,
-                                RepoUri = withUpdatesFromBuild.GitHubRepository,
-                                Commit = "sha3"
-                            })
+                    withUpdatesFromBuild.Assets
+                        .Select(a => new DependencyDetail
+                        {
+                            Name = a.Name,
+                            Version = a.Version,
+                            RepoUri = withUpdatesFromBuild.GitHubRepository,
+                            Commit = "sha3"
+                        })
                         .ToList()
                 });
     }
@@ -154,16 +164,16 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private void AndCreatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
-        DarcRemotes[TargetRepo]
+        _darcRemotes[TargetRepo]
             .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
         pullRequests.Should()
             .BeEquivalentTo(
                 new List<PullRequest>
                 {
-                    new PullRequest
+                    new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = NewBranch
+                        HeadBranch = _newBranch
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -171,7 +181,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         ValidatePRDescriptionContainsLinks(pullRequests[0]);
     }
 
-    private void ValidatePRDescriptionContainsLinks(PullRequest pr)
+    private static void ValidatePRDescriptionContainsLinks(PullRequest pr)
     {
         pr.Description.Should().Contain("][1]");
         pr.Description.Should().Contain("[1]:");
@@ -179,7 +189,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private void CreatePullRequestShouldReturnAValidValue()
     {
-        DarcRemotes[TargetRepo]
+        _darcRemotes[TargetRepo]
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
             .ReturnsAsync(() => PrUrl);
     }
@@ -187,16 +197,16 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private void AndUpdatePullRequestShouldHaveBeenCalled()
     {
         var pullRequests = new List<PullRequest>();
-        DarcRemotes[TargetRepo]
+        _darcRemotes[TargetRepo]
             .Verify(r => r.UpdatePullRequestAsync(InProgressPrUrl, Capture.In(pullRequests)));
         pullRequests.Should()
             .BeEquivalentTo(
                 new List<PullRequest>
                 {
-                    new PullRequest
+                    new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = NewBranch ?? InProgressPrHeadBranch
+                        HeadBranch = _newBranch ?? InProgressPrHeadBranch
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -204,13 +214,13 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
     private void AndSubscriptionShouldBeUpdatedForMergedPullRequest(Build withBuild)
     {
-        SubscriptionActors[new ActorId(Subscription.Id)]
+        _subscriptionActors[new ActorId(Subscription.Id)]
             .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
     }
 
     private void AndDependencyFlowEventsShouldBeAdded()
     {
-        SubscriptionActors[new ActorId(Subscription.Id)]
+        _subscriptionActors[new ActorId(Subscription.Id)]
             .Verify(s => s.AddDependencyFlowEventAsync(
                 It.IsAny<int>(), 
                 It.IsAny<DependencyFlowEventType>(), 
@@ -220,66 +230,57 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 It.IsAny<string>()));
     }
 
-    private void WithRequireNonCoherencyUpdates(Build fromBuild)
+    private void WithRequireNonCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
-            .Setup(
-                r => r.GetRequiredNonCoherencyUpdatesAsync(
-                    SourceRepo,
-                    NewCommit,
-                    It.IsAny<IEnumerable<AssetData>>(),
-                    It.IsAny<IEnumerable<DependencyDetail>>()))
-            .ReturnsAsync(
+        _updateResolver
+            .Setup(r => r.GetRequiredNonCoherencyUpdates(
+                SourceRepo,
+                NewCommit,
+                It.IsAny<IEnumerable<AssetData>>(),
+                It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Returns(
                 (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
-                {
                     // Just make from->to identical.
-                    return assets.Select(
-                            d => new DependencyUpdate
+                    assets
+                        .Select(d => new DependencyUpdate
+                        {
+                            From = new DependencyDetail
                             {
-                                From = new DependencyDetail
-                                {
-                                    Name = d.Name,
-                                    Version = d.Version,
-                                    RepoUri = sourceRepo,
-                                    Commit = sourceSha
-                                },
-                                To = new DependencyDetail
-                                {
-                                    Name = d.Name,
-                                    Version = d.Version,
-                                    RepoUri = sourceRepo,
-                                    Commit = "sha3"
-                                },
-                            })
-                        .ToList();
-                });
+                                Name = d.Name,
+                                Version = d.Version,
+                                RepoUri = sourceRepo,
+                                Commit = sourceSha
+                            },
+                            To = new DependencyDetail
+                            {
+                                Name = d.Name,
+                                Version = d.Version,
+                                RepoUri = sourceRepo,
+                                Commit = "sha3"
+                            },
+                        })
+                        .ToList());
     }
 
     private void WithNoRequiredCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
-            .Setup(
-                r => r.GetRequiredCoherencyUpdatesAsync(
-                    It.IsAny<IEnumerable<DependencyDetail>>(),
-                    It.IsAny<IRemoteFactory>()))
-            .ReturnsAsync(
-                (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
-                {
-                    return new List<DependencyUpdate>();
-                });
+        _updateResolver
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
+                It.IsAny<IEnumerable<DependencyDetail>>(),
+                It.IsAny<IRemoteFactory>()))
+            .ReturnsAsync((IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) => []);
     }
 
     private void WithFailsStrictCheckForCoherencyUpdates()
     {
-        DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
-            .Setup(
-                r => r.GetRequiredCoherencyUpdatesAsync(
-                    It.IsAny<IEnumerable<DependencyDetail>>(),
-                    It.IsAny<IRemoteFactory>()))
+        _updateResolver
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(
+                It.IsAny<IEnumerable<DependencyDetail>>(),
+                It.IsAny<IRemoteFactory>()))
             .ReturnsAsync(
                 (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
                 {
-                    CoherencyError fakeCoherencyError = new CoherencyError()
+                    var fakeCoherencyError = new CoherencyError()
                     {
                         Dependency = new DependencyDetail() { Name = "fakeDependency" },
                         Error = "Repo @ commit does not contain dependency fakeDependency",
@@ -298,16 +299,16 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             {
                 Url = InProgressPrUrl,
                 CoherencyCheckSuccessful = true,
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
+                ContainedSubscriptions =
+                [
                     new SubscriptionPullRequestUpdate
                     {
                         BuildId = -1,
                         SubscriptionId = Subscription.Id
                     }
-                },
-                RequiredUpdates = new List<DependencyUpdateSummary>
-                {
+                ],
+                RequiredUpdates =
+                [
                     new DependencyUpdateSummary
                     {
                         DependencyName = "Ham",
@@ -320,7 +321,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                         FromVersion = "1.0.0-beta.1",
                         ToVersion = "1.0.1-beta.1"
                     },
-                }
+                ]
             };
             StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
             ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
@@ -331,7 +332,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
         if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
         {
-            DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+            _darcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
                 .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
                 .ReturnsAsync(
                     new PullRequest
@@ -347,7 +348,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()));
                 if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
                 {
-                    DarcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
+                    _darcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
                 }
             });
     }
@@ -369,7 +370,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequestUpdate,
             new MockReminderManager.Reminder(
                 PullRequestActorImplementation.PullRequestUpdate,
-                Array.Empty<byte>(),
+                [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5)));
     }
@@ -380,14 +381,14 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequest,
             new InProgressPullRequest
             {
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
-                {
+                ContainedSubscriptions =
+                [
                     new SubscriptionPullRequestUpdate
                     {
                         BuildId = forBuild.Id,
                         SubscriptionId = Subscription.Id
                     }
-                },
+                ],
                 RequiredUpdates = forBuild.Assets.Select(
                         d => new DependencyUpdateSummary
                         {
@@ -408,18 +409,18 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             PullRequestActorImplementation.PullRequestUpdate,
             new List<PullRequestActorImplementation.UpdateAssetsParameters>
             {
-                new PullRequestActorImplementation.UpdateAssetsParameters
+                new()
                 {
                     SubscriptionId = Subscription.Id,
                     BuildId = forBuild.Id,
                     SourceSha = forBuild.Commit,
                     SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
-                    Assets = forBuild.Assets.Select(
-                            a => new Asset
-                            {
-                                Name = a.Name,
-                                Version = a.Version
-                            })
+                    Assets = forBuild.Assets
+                        .Select(a => new Asset
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
                         .ToList(),
                     IsCoherencyUpdate = false
                 }
@@ -460,7 +461,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         {
             var reminder = new MockReminderManager.Reminder(
                 PullRequestActorImplementation.PullRequestUpdate,
-                Array.Empty<byte>(),
+                [],
                 TimeSpan.FromMinutes(5),
                 TimeSpan.FromMinutes(5));
             Reminders.Data[PullRequestActorImplementation.PullRequestUpdate] = reminder;
@@ -481,7 +482,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 {
                     var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
                     {
-                        new PullRequestActorImplementation.UpdateAssetsParameters
+                        new()
                         {
                             SubscriptionId = Subscription.Id,
                             BuildId = forBuild.Id,
@@ -518,8 +519,6 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     Batchable = true,
                     UpdateFrequency = UpdateFrequency.EveryBuild
                 });
-            Build b = GivenANewBuild(true);
-
             GivenAPendingUpdateReminder();
             AndNoPendingUpdates();
             await WhenProcessPendingUpdatesAsyncIsCalled();
@@ -561,7 +560,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
 
             GivenAPendingUpdateReminder();
             AndPendingUpdates(b);
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
             {
@@ -614,7 +613,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
 
             CreatePullRequestShouldReturnAValidValue();
@@ -643,7 +642,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
           
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
@@ -670,7 +669,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
             using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
             {
@@ -694,7 +693,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true, Array.Empty<(string, string, bool)>());
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithNoRequiredCoherencyUpdates();
 
             await WhenUpdateAssetsAsyncIsCalled(b);
@@ -716,7 +715,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                 });
             Build b = GivenANewBuild(true);
 
-            WithRequireNonCoherencyUpdates(b);
+            WithRequireNonCoherencyUpdates();
             WithFailsStrictCheckForCoherencyUpdates();
 
             CreatePullRequestShouldReturnAValidValue();
@@ -730,13 +729,13 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(b,
                 coherencyCheckSuccessful: false,
-                coherencyErrors: new List<CoherencyErrorDetails>() {
+                coherencyErrors: [
                     new CoherencyErrorDetails()
                     {
                         Error = "Repo @ commit does not contain dependency fakeDependency",
                         PotentialSolutions = new List<string>()
                     }
-                });
+                ]);
             AndDependencyFlowEventsShouldBeAdded();
         }
     }

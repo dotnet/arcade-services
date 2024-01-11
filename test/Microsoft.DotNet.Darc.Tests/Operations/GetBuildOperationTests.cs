@@ -25,13 +25,13 @@ public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IRemote> _remoteMock = null!;
+    private Mock<IBarClient> _barMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
-        _remoteMock = new Mock<IRemote>();
+        _barMock = new Mock<IBarClient>();
         _services = new ServiceCollection();
     }
 
@@ -51,11 +51,11 @@ public class GetBuildOperationTests
         Subscription subscription1 = new(Guid.Empty, true, internalRepo, "target", "test", string.Empty);
         Subscription subscription2 = new(Guid.Empty, true, githubRepo, "target", "test", string.Empty);
 
-        List<Subscription> subscriptions = new()
-        {
+        List<Subscription> subscriptions =
+        [
             subscription1,
             subscription2
-        };
+        ];
 
         Build build = new(
             id: 0,
@@ -67,23 +67,22 @@ public class GetBuildOperationTests
             channels: ImmutableList.Create<Channel>(),
             assets: ImmutableList.Create<Asset>(),
             dependencies: ImmutableList.Create<BuildRef>(),
-            incoherencies: ImmutableList.Create<BuildIncoherence>()
-            )
+            incoherencies: ImmutableList.Create<BuildIncoherence>())
         {
             AzureDevOpsRepository = internalRepo,
             GitHubRepository = githubRepo,
         };
 
-        List<Build> builds = new()
-        {
+        List<Build> builds =
+        [
             build
-        };
+        ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
             .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _remoteMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(Task.FromResult(builds.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -127,10 +126,10 @@ public class GetBuildOperationTests
             GitHubRepository = githubRepo,
         };
 
-        _remoteMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
+        _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Returns(Task.FromResult(build));
 
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {
@@ -153,10 +152,10 @@ public class GetBuildOperationTests
     {
         int buildId = 10001;
 
-        _remoteMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
+        _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
             .Throws(new Exception());
 
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
         {

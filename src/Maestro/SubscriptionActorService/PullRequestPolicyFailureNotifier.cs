@@ -62,7 +62,8 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         }
 
         var darcRemote = await DarcRemoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", Logger);
-        var darcSubscriptionObject = await darcRemote.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId.ToString());
+        var barClient = await DarcRemoteFactory.GetBarClientAsync(Logger);
+        var darcSubscriptionObject = await barClient.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId);
         string sourceRepository = darcSubscriptionObject.SourceRepository;
         string targetRepository = darcSubscriptionObject.TargetRepository;
 
@@ -75,7 +76,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
             return;
         }
 
-        List<string> tagsToNotify = new List<string>();
+        var tagsToNotify = new List<string>();
         if (!string.IsNullOrEmpty(darcSubscriptionObject.PullRequestFailureNotificationTags))
         {
             tagsToNotify.AddRange(darcSubscriptionObject.PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries));

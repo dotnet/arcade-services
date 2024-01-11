@@ -100,11 +100,12 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     private void SetupRemote(
         params (int ChannelId, DependencyFlowGraph Graph)[] graphPerChannel)
     {
-        var remoteMock = new Mock<IBarRemote>();
+        var barMock = new Mock<IBarClient>();
 
         foreach (var item in graphPerChannel)
         {
-            remoteMock.Setup(m => m.GetDependencyFlowGraphAsync(
+            barMock
+                .Setup(m => m.GetDependencyFlowGraphAsync(
                     item.ChannelId,
                     It.IsAny<int>(),
                     It.IsAny<bool>(),
@@ -124,8 +125,8 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         Context.SaveChanges();
 
         RemoteFactory
-            .Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>()))
-            .Returns(Task.FromResult(remoteMock.Object));
+            .Setup(m => m.GetBarClientAsync(It.IsAny<ILogger>()))
+            .Returns(Task.FromResult(barMock.Object));
     }
 
     private DependencyFlowGraph CreateGraph(

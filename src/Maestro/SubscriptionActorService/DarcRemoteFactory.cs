@@ -17,6 +17,17 @@ namespace SubscriptionActorService;
 
 public class DarcRemoteFactory : IRemoteFactory
 {
+    private readonly IConfiguration _configuration;
+    private readonly IGitHubTokenProvider _gitHubTokenProvider;
+    private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly DarcRemoteMemoryCache _cache;
+
+    private readonly TemporaryFiles _tempFiles;
+    private readonly ILocalGit _localGit;
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly OperationManager _operations;
+
     public DarcRemoteFactory(
         IConfiguration configuration,
         IGitHubTokenProvider gitHubTokenProvider,
@@ -39,21 +50,8 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    private readonly IConfiguration _configuration;
-    private readonly IGitHubTokenProvider _gitHubTokenProvider;
-    private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
-    private readonly BuildAssetRegistryContext _context;
-    private readonly DarcRemoteMemoryCache _cache;
-
-    private readonly TemporaryFiles _tempFiles;
-    private readonly ILocalGit _localGit;
-    private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly OperationManager _operations;
-
-    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
-    {
-        return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(_context), logger));
-    }
+    public Task<IBarClient> GetBarClientAsync(ILogger logger)
+        => Task.FromResult<IBarClient>(new MaestroBarClient(_context));
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
     {
@@ -112,7 +110,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(remoteGitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
     }
 }

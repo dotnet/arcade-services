@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteSubscriptionsOperation : Operation
 {
-    DeleteSubscriptionsCommandLineOptions _options;
+    private readonly DeleteSubscriptionsCommandLineOptions _options;
     public DeleteSubscriptionsOperation(DeleteSubscriptionsCommandLineOptions options)
         : base(options)
     {
@@ -28,17 +28,17 @@ internal class DeleteSubscriptionsOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
-            List<Subscription> subscriptionsToDelete = new List<Subscription>();
+            List<Subscription> subscriptionsToDelete = [];
 
             if (!string.IsNullOrEmpty(_options.Id))
             {
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToDelete.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
@@ -55,7 +55,7 @@ internal class DeleteSubscriptionsOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -90,7 +90,7 @@ internal class DeleteSubscriptionsOperation : Operation
                 {
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
-                await remote.DeleteSubscriptionAsync(subscription.Id.ToString());
+                await barClient.DeleteSubscriptionAsync(subscription.Id);
             }
             Console.WriteLine("done");
 

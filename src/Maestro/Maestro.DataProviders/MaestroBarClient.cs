@@ -109,10 +109,10 @@ internal class MaestroBarClient : IBarClient
 
         var defaultChannels = await query.ToListAsync();
 
-        return defaultChannels.Select(dc => ToClientModelDefaultChannel(dc));
+        return defaultChannels.Select(ToClientModelDefaultChannel);
     }
 
-    private DefaultChannel ToClientModelDefaultChannel(Maestro.Data.Models.DefaultChannel other)
+    private DefaultChannel ToClientModelDefaultChannel(Data.Models.DefaultChannel other)
     {
         return new DefaultChannel(other.Id, other.Repository, other.Enabled)
         {
@@ -121,7 +121,7 @@ internal class MaestroBarClient : IBarClient
         };
     }
 
-    private Channel ToClientModelChannel(Maestro.Data.Models.Channel other)
+    private static Channel ToClientModelChannel(Data.Models.Channel other)
     {
         return new Channel(
             other.Id,
@@ -230,7 +230,12 @@ internal class MaestroBarClient : IBarClient
         throw new NotImplementedException();
     }
 
-    private Subscription ToClientModelSubscription(Maestro.Data.Models.Subscription other)
+    public Task<Subscription> GetSubscriptionAsync(string subscriptionId)
+    {
+        throw new NotImplementedException();
+    }
+
+    private Subscription ToClientModelSubscription(Data.Models.Subscription other)
     {
         return new Subscription(
             other.Id,
@@ -282,7 +287,7 @@ internal class MaestroBarClient : IBarClient
         return new BuildRef(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
     }
 
-    private SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
+    private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
     {
         return new SubscriptionPolicy(
             other.Batchable,
@@ -338,6 +343,11 @@ internal class MaestroBarClient : IBarClient
     }
 
     public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
     {
         throw new NotImplementedException();
     }
@@ -466,7 +476,7 @@ internal class MaestroBarClient : IBarClient
             days,
             defaultChannel.BuildDefinitionId);
 
-        var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal),
+        var results = await Task.WhenAll(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal),
             _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
         (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);

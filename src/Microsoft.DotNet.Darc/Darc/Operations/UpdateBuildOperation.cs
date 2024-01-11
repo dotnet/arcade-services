@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class UpdateBuildOperation : Operation
 {
-    UpdateBuildCommandLineOptions _options;
+    private readonly UpdateBuildCommandLineOptions _options;
     public UpdateBuildOperation(UpdateBuildCommandLineOptions options)
         : base(options)
     {
@@ -31,9 +31,9 @@ internal class UpdateBuildOperation : Operation
 
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            Build updatedBuild = await remote.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
+            Build updatedBuild = await barClient.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 
             Console.WriteLine($"Updated build {_options.Id} with new information.");
             Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));

@@ -47,9 +47,9 @@ public class DarcRemoteFactory : IRemoteFactory
 
     public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
 
-    public Task<IBarRemote> GetBarOnlyRemoteAsync(ILogger logger)
+    public Task<IBarClient> GetBarClientAsync(ILogger logger)
     {
-        return Task.FromResult<IBarRemote>(new BarRemote(new MaestroBarClient(Context, _kustoClientProvider), logger));
+        return Task.FromResult<IBarClient>(new MaestroBarClient(Context, _kustoClientProvider));
     }
 
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -99,7 +99,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(remoteGitClient, new MaestroBarClient(Context, _kustoClientProvider), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
     }
 }

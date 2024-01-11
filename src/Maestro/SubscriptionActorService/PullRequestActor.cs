@@ -61,6 +61,7 @@ namespace SubscriptionActorService
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _darcFactory;
+        private readonly ICoherencyUpdateResolverFactory _updateResolverFactory;
         private readonly ILoggerFactory _loggerFactory;
         private readonly IActionRunner _actionRunner;
         private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
@@ -82,6 +83,7 @@ namespace SubscriptionActorService
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
@@ -90,6 +92,7 @@ namespace SubscriptionActorService
             _mergePolicyEvaluator = mergePolicyEvaluator;
             _context = context;
             _darcFactory = darcFactory;
+            _updateResolverFactory = updateResolverFactory;
             _loggerFactory = loggerFactory;
             _actionRunner = actionRunner;
             _subscriptionActorFactory = subscriptionActorFactory;
@@ -110,6 +113,7 @@ namespace SubscriptionActorService
                         reminderManager,
                         stateManager,
                         _mergePolicyEvaluator,
+                        _updateResolverFactory,
                         _context,
                         _darcFactory,
                         _loggerFactory,
@@ -121,6 +125,7 @@ namespace SubscriptionActorService
                         reminderManager,
                         stateManager,
                         _mergePolicyEvaluator,
+                        _updateResolverFactory,
                         _context,
                         _darcFactory,
                         _loggerFactory,
@@ -183,6 +188,7 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
@@ -193,6 +199,7 @@ namespace SubscriptionActorService
             Reminders = reminders;
             StateManager = stateManager;
             MergePolicyEvaluator = mergePolicyEvaluator;
+            UpdateResolverFactory = updateResolverFactory;
             Context = context;
             DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
@@ -207,6 +214,7 @@ namespace SubscriptionActorService
         public IReminderManager Reminders { get; }
         public IActorStateManager StateManager { get; }
         public IMergePolicyEvaluator MergePolicyEvaluator { get; }
+        public ICoherencyUpdateResolverFactory UpdateResolverFactory { get; }
         public BuildAssetRegistryContext Context { get; }
         public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
@@ -865,6 +873,8 @@ namespace SubscriptionActorService
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
+            IBarClient barClient = await remoteFactory.GetBarClientAsync(Logger);
+            var locationResolver = new AssetLocationResolver(barClient, Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -886,8 +896,13 @@ namespace SubscriptionActorService
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
-                    dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                var itemsToUpdate = dependenciesToCommit
+                    .Select(du => du.To)
+                    .ToList();
+
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+
+                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
                 pullRequestDescriptionBuilder.AppendBuildDescription(update, deps, committedFiles, build);
             }
 
@@ -900,16 +915,20 @@ namespace SubscriptionActorService
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 pullRequestDescriptionBuilder.AppendBuildDescription(coherencyUpdate.update, coherencyUpdate.deps, null, build);
 
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
-                    coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+                var itemsToUpdate = coherencyUpdate.deps
+                    .Select(du => du.To)
+                    .ToList();
+
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, itemsToUpdate, message.ToString());
             }
 
             // If the coherency algorithm failed and there are no non-coherency updates and
-            // we crate an empty commit that describes an issue.
+            // we create an empty commit that describes an issue.
             if (requiredUpdates.Count == 0)
             {
                 string message = "Failed to perform coherency update for one or more dependencies.";
-                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, new List<DependencyDetail>(), message);
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory, [], message);
                 return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
             }
 
@@ -1116,6 +1135,7 @@ namespace SubscriptionActorService
             Logger.LogInformation($"Getting Required Updates from {branch} to {targetRepository}");
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
+            ICoherencyUpdateResolver coherencyUpdateResolver = await UpdateResolverFactory.CreateAsync(Logger);
 
             TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
@@ -1132,7 +1152,7 @@ namespace SubscriptionActorService
                     });
                 // Retrieve the source of the assets
 
-                List<DependencyUpdate> dependenciesToUpdate = await darc.GetRequiredNonCoherencyUpdatesAsync(
+                List<DependencyUpdate> dependenciesToUpdate = coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
                     update.SourceRepo,
                     update.SourceSha,
                     assetData,
@@ -1144,7 +1164,7 @@ namespace SubscriptionActorService
                     await UpdateSubscriptionsForMergedPRAsync(
                         new List<SubscriptionPullRequestUpdate>
                         {
-                            new SubscriptionPullRequestUpdate
+                            new()
                             {
                                 SubscriptionId = update.SubscriptionId,
                                 BuildId = update.BuildId
@@ -1163,11 +1183,11 @@ namespace SubscriptionActorService
             }
 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
-            List<DependencyUpdate> coherencyUpdates = new List<DependencyUpdate>();
+            List<DependencyUpdate> coherencyUpdates = [];
             try
             {
                 Logger.LogInformation($"Running a coherency check on the existing dependencies for branch {branch} of repo {targetRepository}");
-                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
+                coherencyUpdates = await coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
             }
             catch (DarcCoherencyException e)
             {
@@ -1275,21 +1295,24 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
-            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier) : base(
-            id,
-            reminders,
-            stateManager,
-            mergePolicyEvaluator,
-            context,
-            darcFactory,
-            loggerFactory,
-            actionRunner,
-            subscriptionActorFactory)
+            IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier)
+            : base(
+                id,
+                reminders,
+                stateManager,
+                mergePolicyEvaluator,
+                updateResolverFactory,
+                context,
+                darcFactory,
+                loggerFactory,
+                actionRunner,
+                subscriptionActorFactory)
         {
             _lazySubscription = new Lazy<Task<Subscription>>(RetrieveSubscription);
             _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
@@ -1357,22 +1380,23 @@ namespace SubscriptionActorService
             IReminderManager reminders,
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
+            ICoherencyUpdateResolverFactory updateResolverFactory,
             BuildAssetRegistryContext context,
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
-            :
-            base(
-            id,
-            reminders,
-            stateManager,
-            mergePolicyEvaluator,
-            context,
-            darcFactory,
-            loggerFactory,
-            actionRunner,
-            subscriptionActorFactory)
+            : base(
+                id,
+                reminders,
+                stateManager,
+                mergePolicyEvaluator,
+                updateResolverFactory,
+                context,
+                darcFactory,
+                loggerFactory,
+                actionRunner,
+                subscriptionActorFactory)
         {
         }
 

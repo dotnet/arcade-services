@@ -21,6 +21,9 @@ namespace SubscriptionActorService.Tests;
 [TestFixture]
 public class PullRequestPolicyFailureNotifierTests
 {
+    private const string FakeOrgName = "orgname";
+    private const string FakeRepoName = "reponame";
+
     protected Mock<IBarClient> BarClient;
     protected Mock<IRemoteGitRepo> GitRepo;
     protected Mock<ILocalLibGit2Client> LocalGitClient;
@@ -33,14 +36,12 @@ public class PullRequestPolicyFailureNotifierTests
     protected Remote MockRemote;
     protected ServiceProvider Provider;
     protected List<ClientModels.Subscription> FakeSubscriptions;
-    private Dictionary<string, string> PrCommentsMade = new Dictionary<string, string>();
-    private const string FakeOrgName = "orgname";
-    private const string FakeRepoName = "reponame";
+    private Dictionary<string, string> _prCommentsMade = [];
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
     {
-        PrCommentsMade = new Dictionary<string, string>();
+        _prCommentsMade = [];
 
         var services = new ServiceCollection();
         FakeSubscriptions = GenerateFakeSubscriptionModels();
@@ -77,9 +78,11 @@ public class PullRequestPolicyFailureNotifierTests
         GitRepo.Setup(g => g.GetPullRequestChecksAsync(It.IsAny<string>()))
             .Returns((string fakePrsUrl) =>
             {
-                List<Check> checksToReturn = new List<Check>();
-                checksToReturn.Add(new Check(CheckState.Failure, "Some Maestro Policy", "", true));
-                checksToReturn.Add(new Check(CheckState.Error, "Some Other Maestro Policy", "", true));
+                List<Check> checksToReturn =
+                [
+                    new Check(CheckState.Failure, "Some Maestro Policy", "", true),
+                    new Check(CheckState.Error, "Some Other Maestro Policy", "", true),
+                ];
 
                 if (fakePrsUrl.EndsWith("/12345"))
                 {
@@ -89,9 +92,10 @@ public class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>) checksToReturn);
             });
 
-        MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
+        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), NullLogger.Instance);
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
+        RemoteFactory.Setup(m => m.GetBarClientAsync(It.IsAny<ILogger>())).ReturnsAsync(BarClient.Object);
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();
     }
@@ -109,9 +113,9 @@ public class PullRequestPolicyFailureNotifierTests
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        PrCommentsMade.Count.Should().Be(1);
+        _prCommentsMade.Count.Should().Be(1);
         // Spot check some values
-        PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
+        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
             $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
         foreach (string individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -120,7 +124,7 @@ public class PullRequestPolicyFailureNotifierTests
             if (!individual.StartsWith('@'))
                 valueToCheck = $"@{valueToCheck}";
 
-            PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
+            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
         }
     }
 
@@ -137,9 +141,9 @@ public class PullRequestPolicyFailureNotifierTests
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        PrCommentsMade.Count.Should().Be(1);
+        _prCommentsMade.Count.Should().Be(1);
         // Spot check some values
-        PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
+        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
             $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
         foreach (string individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -148,7 +152,7 @@ public class PullRequestPolicyFailureNotifierTests
             if (!individual.StartsWith('@'))
                 valueToCheck = $"@{valueToCheck}";
 
-            PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
+            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
         }
     }
 
@@ -163,7 +167,7 @@ public class PullRequestPolicyFailureNotifierTests
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
 
         prToTag.SourceRepoNotified.Should().BeFalse();
-        PrCommentsMade.Count.Should().Be(0);
+        _prCommentsMade.Count.Should().Be(0);
     }
 
     [TestCase()]
@@ -174,7 +178,7 @@ public class PullRequestPolicyFailureNotifierTests
         InProgressPullRequest prToTag = GetInProgressPullRequestWithoutTags("https://api.github.com/repos/orgname/reponame/pulls/23456");
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
         prToTag.SourceRepoNotified.Should().BeFalse();
-        PrCommentsMade.Count.Should().Be(0);
+        _prCommentsMade.Count.Should().Be(0);
     }
 
     #region Test Helpers
@@ -222,10 +226,10 @@ public class PullRequestPolicyFailureNotifierTests
 
     private void RecordGitHubClientComment(string owner, string repo, int prIssue, string comment)
     {
-        lock (PrCommentsMade)
+        lock (_prCommentsMade)
         {
             // No need to check for existence; if the same comment gets added twice, it'd be a bug
-            PrCommentsMade.Add($"{owner}/{repo}/{prIssue}", comment);
+            _prCommentsMade.Add($"{owner}/{repo}/{prIssue}", comment);
         }
     }
 

@@ -83,11 +83,12 @@ public class SubscriptionHealthMetric : HealthMetric
     public override async Task EvaluateAsync()
     {
         IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
+        IBarClient barClient = await RemoteFactory.GetBarClientAsync(Logger);
 
         Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
         // Get subscriptions that target this repo/branch
-        Subscriptions = (await remote.GetSubscriptionsAsync(targetRepo: Repository))
+        Subscriptions = (await barClient.GetSubscriptionsAsync(targetRepo: Repository))
             .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 
         // Get the dependencies of the repository/branch. Skip pinned and subscriptions tied to another
@@ -116,7 +117,7 @@ public class SubscriptionHealthMetric : HealthMetric
             }
         }
 
-        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts(remote);
+        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts(barClient);
         ComputeSubscriptionUse(latestAssets);
 
         // Determine the result. A conflict or missing subscription is an error.
@@ -142,9 +143,9 @@ public class SubscriptionHealthMetric : HealthMetric
     /// <param name="latestAssets">Latest assets produced by each subscription</param>
     private void ComputeSubscriptionUse(Dictionary<string, Subscription> latestAssets)
     {
-        HashSet<Subscription> unusedSubs = new HashSet<Subscription>(Subscriptions);
-        List<DependencyDetail> dependenciesThatDoNotFlow = new List<DependencyDetail>();
-        List<DependencyDetail> dependenciesMissingSubscriptions = new List<DependencyDetail>();
+        var unusedSubs = new HashSet<Subscription>(Subscriptions);
+        List<DependencyDetail> dependenciesThatDoNotFlow = [];
+        List<DependencyDetail> dependenciesMissingSubscriptions = [];
 
         foreach (DependencyDetail dependency in Dependencies)
         {
@@ -179,57 +180,61 @@ public class SubscriptionHealthMetric : HealthMetric
     ///     and compute any conflicts between subscriptionss
     /// </summary>
     /// <returns>Mapping of assets to subscriptions that produce them.</returns>
-    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IRemote remote)
+    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IBarClient barClient)
     {
         // Populate the latest build task for each of these. The search for assets would be N*M*A where N is the number of
         // dependencies, M is the number of subscriptions, and A is average the number of assets per build.
         // Because this could add up pretty quickly, we build up a dictionary of assets->List<(subscription, build)>
         // instead.
-        Dictionary<string, Subscription> assetsToLatestInSubscription =
-            new Dictionary<string, Subscription>(StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, SubscriptionConflict> subscriptionConflicts = new Dictionary<string, SubscriptionConflict>();
+        Dictionary<string, Subscription> assetsToLatestInSubscription = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, SubscriptionConflict> subscriptionConflicts = [];
 
         foreach (Subscription subscription in Subscriptions)
         {
             // Look up the latest build and add it to the dictionary.
-            Build latestBuild = await remote.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-
-            if (latestBuild != null)
+            Build latestBuild = null;
+            try
             {
-                foreach (var asset in latestBuild.Assets)
+                latestBuild = await barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            }
+            catch (Exception)
+            {
+                continue;
+            }
+
+            foreach (var asset in latestBuild.Assets)
+            {
+                string assetName = asset.Name;
+
+                if (assetsToLatestInSubscription.TryGetValue(assetName, out Subscription otherSubscription))
                 {
-                    string assetName = asset.Name;
+                    // Repos can publish the same asset twice for the same build, so filter out those cases,
+                    // as well as cases where the subscription is functionally the same (e.g. you have a twice daily
+                    // and weekly subscription). Basically cases where the source repo and source channels are the same.
 
-                    if (assetsToLatestInSubscription.TryGetValue(assetName, out Subscription otherSubscription))
+                    if (otherSubscription.SourceRepository.Equals(subscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
+                        otherSubscription.Channel.Id == subscription.Channel.Id)
                     {
-                        // Repos can publish the same asset twice for the same build, so filter out those cases,
-                        // as well as cases where the subscription is functionally the same (e.g. you have a twice daily
-                        // and weekly subscription). Basically cases where the source repo and source channels are the same.
+                        continue;
+                    }
 
-                        if (otherSubscription.SourceRepository.Equals(subscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
-                            otherSubscription.Channel.Id == subscription.Channel.Id)
-                        {
-                            continue;
-                        }
-
-                        // While technically this asset would need to be utilized in the dependencies
-                        // to cause an issue, it's an issue waiting to happen, so stick this in the conflicting subscriptions.
-                        if (subscriptionConflicts.TryGetValue(assetName, out SubscriptionConflict conflict))
-                        {
-                            conflict.Subscriptions.Add(subscription);
-                        }
-                        else
-                        {
-                            SubscriptionConflict newConflict = new SubscriptionConflict(assetName,
-                                new List<Subscription>() { otherSubscription, subscription },
-                                Dependencies.Any(d => d.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)));
-                            subscriptionConflicts.Add(assetName, newConflict);
-                        }
+                    // While technically this asset would need to be utilized in the dependencies
+                    // to cause an issue, it's an issue waiting to happen, so stick this in the conflicting subscriptions.
+                    if (subscriptionConflicts.TryGetValue(assetName, out SubscriptionConflict conflict))
+                    {
+                        conflict.Subscriptions.Add(subscription);
                     }
                     else
                     {
-                        assetsToLatestInSubscription.Add(assetName, subscription);
+                        SubscriptionConflict newConflict = new SubscriptionConflict(assetName,
+                            new List<Subscription>() { otherSubscription, subscription },
+                            Dependencies.Any(d => d.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)));
+                        subscriptionConflicts.Add(assetName, newConflict);
                     }
+                }
+                else
+                {
+                    assetsToLatestInSubscription.Add(assetName, subscription);
                 }
             }
         }

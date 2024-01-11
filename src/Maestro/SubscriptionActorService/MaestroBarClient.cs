@@ -111,6 +111,11 @@ internal class MaestroBarClient : IBarClient
         return null;
     }
 
+    public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
+    {
+        return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
+    }
+
     public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
     {
         throw new NotImplementedException();
@@ -127,6 +132,11 @@ internal class MaestroBarClient : IBarClient
     }
 
     public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
     {
         throw new NotImplementedException();
     }

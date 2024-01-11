@@ -15,7 +15,7 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public sealed class Remote : BarRemote, IRemote
+public sealed class Remote : IRemote
 {
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
@@ -32,10 +32,8 @@ public sealed class Remote : BarRemote, IRemote
 
     public Remote(
         IRemoteGitRepo remoteGitClient,
-        IBarClient barClient,
         IVersionDetailsParser versionDetailsParser,
         ILogger logger)
-        : base(barClient, logger)
     {
         _logger = logger;
         _remoteGitClient = remoteGitClient;
@@ -121,9 +119,6 @@ public sealed class Remote : BarRemote, IRemote
     /// <summary>
     /// Merges pull request for a dependency update  
     /// </summary>
-    /// <param name="pullRequestUrl"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
     public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
     {
         CheckForValidGitClient();
@@ -175,8 +170,9 @@ public sealed class Remote : BarRemote, IRemote
     {
         CheckForValidGitClient();
 
-        IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync(repoUri, branch, loadAssetLocations: true);
-        await AddAssetLocationToDependenciesAsync(itemsToUpdate);
+        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
+        var locationResolver = new AssetLocationResolver(await remoteFactory.GetBarClientAsync(_logger), _logger);
+        await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
@@ -322,24 +318,15 @@ public sealed class Remote : BarRemote, IRemote
     /// <param name="repoUri">Repository to get dependencies from</param>
     /// <param name="branchOrCommit">Commit to get dependencies at</param>
     /// <param name="name">Optional name of specific dependency to get information on</param>
-    /// <param name="loadAssetLocations">Optional switch to include the asset locations</param>
     /// <returns>Matching dependency information.</returns>
     public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
         string branchOrCommit,
-        string name = null,
-        bool loadAssetLocations = false)
+        string name = null)
     {
         CheckForValidGitClient();
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit);
-        var dependencies = versionDetails.Dependencies
+        return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-        if (loadAssetLocations)
-        {
-            await AddAssetLocationToDependenciesAsync(dependencies);
-        }
-
-        return dependencies;
     }
 
     /// <summary>
@@ -350,7 +337,6 @@ public sealed class Remote : BarRemote, IRemote
     /// <param name="targetDirectory">Directory to clone to</param>
     /// <param name="checkoutSubmodules">Indicates whether submodules should be checked out as well</param>
     /// <param name="gitDirectory">Location for the .git directory</param>
-    /// <returns></returns>
     public async Task CloneAsync(string repoUri, string commit, string targetDirectory, bool checkoutSubmodules, string gitDirectory = null)
     {
         CheckForValidGitClient();
@@ -398,7 +384,7 @@ public sealed class Remote : BarRemote, IRemote
 
         if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
         {
-            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
+            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
         }
 
         return dotnetVersion;

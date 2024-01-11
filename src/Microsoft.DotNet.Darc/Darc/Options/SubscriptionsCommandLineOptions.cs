@@ -55,10 +55,10 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
     public IEnumerable<string> SubscriptionIds { get; set; }
 
-    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IBarRemote remote)
+    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IBarClient barClient)
     {
-        IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
-        return (await remote.GetSubscriptionsAsync()).Where(subscription =>
+        IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
+        return (await barClient.GetSubscriptionsAsync()).Where(subscription =>
         {
             return SubcriptionFilter(subscription, defaultChannels);
         });
@@ -66,15 +66,15 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
 
     public bool SubcriptionFilter(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)
     {
-        return (SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
-                SubscriptionParameterMatches(GitHelpers.NormalizeBranchName(TargetBranch), subscription.TargetBranch) &&
-                SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
-                SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
-                SubscriptionEnabledParameterMatches(subscription) &&
-                SubscriptionBatchableParameterMatches(subscription) &&
-                SubscriptionIdsParameterMatches(subscription) &&
-                SubscriptionFrequenciesParameterMatches(subscription) &&
-                SubscriptionDefaultChannelTargetParameterMatches(subscription, defaultChannels));
+        return SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
+               SubscriptionParameterMatches(GitHelpers.NormalizeBranchName(TargetBranch), subscription.TargetBranch) &&
+               SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
+               SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
+               SubscriptionEnabledParameterMatches(subscription) &&
+               SubscriptionBatchableParameterMatches(subscription) &&
+               SubscriptionIdsParameterMatches(subscription) &&
+               SubscriptionFrequenciesParameterMatches(subscription) &&
+               SubscriptionDefaultChannelTargetParameterMatches(subscription, defaultChannels);
     }
 
     public bool SubscriptionEnabledParameterMatches(Subscription subscription)

@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteChannelOperation : Operation
 {
-    DeleteChannelCommandLineOptions _options;
+    private readonly DeleteChannelCommandLineOptions _options;
     public DeleteChannelOperation(DeleteChannelCommandLineOptions options)
         : base(options)
     {
@@ -30,10 +30,10 @@ internal class DeleteChannelOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Get the ID of the channel with the specified name.
-            Channel existingChannel = (await remote.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            Channel existingChannel = (await barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
             if (existingChannel == null)
             {
@@ -41,7 +41,7 @@ internal class DeleteChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            await remote.DeleteChannelAsync(existingChannel.Id);
+            await barClient.DeleteChannelAsync(existingChannel.Id);
             Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
 
             return Constants.SuccessCode;

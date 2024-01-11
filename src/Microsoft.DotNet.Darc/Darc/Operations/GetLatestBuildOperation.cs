@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetLatestBuildOperation : Operation
 {
-    GetLatestBuildCommandLineOptions _options;
+    private readonly GetLatestBuildCommandLineOptions _options;
     public GetLatestBuildOperation(GetLatestBuildCommandLineOptions options)
         : base(options)
     {
@@ -31,7 +31,7 @@ internal class GetLatestBuildOperation : Operation
     {
         try
         {
-            IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Calculate out possible repos based on the input strings.
             // Today the DB has no way of searching for builds by substring, so for now
@@ -40,14 +40,14 @@ internal class GetLatestBuildOperation : Operation
             // Then search channels by substring
             // Then run GetLatestBuild for each permutation.
 
-            var subscriptions = await remote.GetSubscriptionsAsync();
+            var subscriptions = await barClient.GetSubscriptionsAsync();
             var possibleRepos = subscriptions
                 .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
                 .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             possibleRepos.Add(_options.Repo);
 
-            var channels = (await remote.GetChannelsAsync())
+            var channels = (await barClient.GetChannelsAsync())
                 .Where(c => string.IsNullOrEmpty(_options.Channel) || c.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
 
             if (!channels.Any())
@@ -61,7 +61,7 @@ internal class GetLatestBuildOperation : Operation
             {
                 foreach (Channel channel in channels)
                 {
-                    Build latestBuild = await remote.GetLatestBuildAsync(possibleRepo, channel.Id);
+                    Build latestBuild = await barClient.GetLatestBuildAsync(possibleRepo, channel.Id);
                     if (latestBuild != null)
                     {
                         if (foundBuilds)

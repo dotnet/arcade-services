@@ -8,7 +8,7 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IRemote : IBarRemote
+public interface IRemote
 {
     #region Pull Request Operations
 
@@ -98,9 +98,8 @@ public interface IRemote : IBarRemote
     /// <param name="repoUri">Repository to get dependencies from</param>
     /// <param name="branchOrCommit">Commit to get dependencies at</param>
     /// <param name="name">Optional name of specific dependency to get information on</param>
-    /// <param name="loadLocations">Optional switch to populate dependency locations from BAR</param>
     /// <returns>Matching dependency information.</returns>
-    Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null, bool loadLocations = false);
+    Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
 
     /// <summary>
     /// Retrieve the common script files from a remote source.

@@ -37,6 +37,7 @@ public static class Program
     {
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
+        services.AddTransient<ICoherencyUpdateResolverFactory, CoherencyUpdateResolverFactory>();
         services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();

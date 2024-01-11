@@ -14,7 +14,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddDefaultChannelOperation : Operation
 {
-    AddDefaultChannelCommandLineOptions _options;
+    private readonly AddDefaultChannelCommandLineOptions _options;
+
     public AddDefaultChannelOperation(AddDefaultChannelCommandLineOptions options)
         : base(options)
     {
@@ -25,18 +26,19 @@ internal class AddDefaultChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
+            IRemote repoRemote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
+            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
             _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);
 
-            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
+            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
             {
                 Console.WriteLine("Aborting default channel creation.");
                 return Constants.ErrorCode;
             }
 
-            await remote.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
+            await barClient.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
 
             return Constants.SuccessCode;
         }

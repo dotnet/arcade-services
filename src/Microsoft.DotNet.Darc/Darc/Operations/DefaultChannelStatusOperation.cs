@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
 {
-    DefaultChannelStatusCommandLineOptions _options;
+    private readonly DefaultChannelStatusCommandLineOptions _options;
 
     public DefaultChannelStatusOperation(DefaultChannelStatusCommandLineOptions options)
         : base(options)
@@ -25,7 +25,6 @@ class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
     /// <summary>
     /// Implements the default channel enable/disable operation
     /// </summary>
-    /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
         if ((_options.Enable && _options.Disable) ||
@@ -35,7 +34,7 @@ class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
             return Constants.ErrorCode;
         }
 
-        IBarRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         try
         {
@@ -65,7 +64,7 @@ class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 enabled = false;
             }
 
-            await remote.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
+            await barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
 
             Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
 
