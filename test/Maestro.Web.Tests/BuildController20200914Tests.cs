@@ -91,11 +91,15 @@ public partial class BuildController20200914Tests
 
             var mockIRemoteFactory = new Mock<IRemoteFactory>();
             var mockIRemote = new Mock<IRemote>();
-            mockIRemoteFactory.Setup(f => f.GetRemoteAsync(repository, It.IsAny<ILogger>())).Returns(Task.FromResult(mockIRemote.Object));
-            mockIRemote.Setup(f => f.GetCommitAsync(repository, commitHash)).Returns(Task.FromResult(new Microsoft.DotNet.DarcLib.Commit(account, commitHash, commitMessage)));
+            mockIRemoteFactory.Setup(f => f.GetRemoteAsync(repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
+            mockIRemote.Setup(f => f.GetCommitAsync(repository, commitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(account, commitHash, commitMessage));
+
+            var mockIBarClientFactory = new Mock<IBasicBarClientFactory>();
+            mockIBarClientFactory.Setup(f => f.GetBasicBarClient(It.IsAny<ILogger>())).ReturnsAsync(Mock.Of<IBasicBarClient>());
 
             collection.AddSingleton(mockIRemote.Object);
             collection.AddSingleton(mockIRemoteFactory.Object);
+            collection.AddSingleton(mockIBarClientFactory.Object);
             collection.AddSingleton(Mock.Of<IBackgroundQueue>());
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
             {

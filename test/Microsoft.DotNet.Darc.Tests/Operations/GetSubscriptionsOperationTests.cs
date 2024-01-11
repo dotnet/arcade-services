@@ -114,7 +114,7 @@ public class GetSubscriptionsOperationTests
 
         _barMock
             .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+            .ReturnsAsync(subscriptions.AsEnumerable());
         _services.AddSingleton(_barMock.Object);
 
         var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
@@ -145,7 +145,7 @@ public class GetSubscriptionsOperationTests
         ];
 
         _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+            .ReturnsAsync(subscriptions.AsEnumerable());
         _services.AddSingleton(_barMock.Object);
 
         var operation = new GetSubscriptionsOperation(new() { OutputFormat = DarcOutputType.json }, _services);
@@ -186,7 +186,7 @@ public class GetSubscriptionsOperationTests
         ];
 
         _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+            .ReturnsAsync(subscriptions.AsEnumerable());
         _services.AddSingleton(_barMock.Object);
 
         var operation = new GetSubscriptionsOperation(

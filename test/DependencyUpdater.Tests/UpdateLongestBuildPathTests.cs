@@ -110,7 +110,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
                     It.IsAny<bool>(),
                     It.IsAny<bool>(),
                     It.IsAny<IReadOnlyList<string>>()))
-                .Returns(Task.FromResult(item.Graph));
+                .ReturnsAsync(item.Graph);
 
             Context.Channels.Add(new Channel
             {
@@ -124,7 +124,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
 
         BarClientFactory
             .Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>()))
-            .Returns(Task.FromResult(barMock.Object));
+            .ReturnsAsync(barMock.Object);
     }
 
     private DependencyFlowGraph CreateGraph(

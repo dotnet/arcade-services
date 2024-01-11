@@ -142,8 +142,8 @@ public class FeedCleanerServiceTests : IDisposable
 
     private Mock<IAzureDevOpsClient> SetupAzdoMock()
     {
-        Mock<IAzureDevOpsClient> azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
-        azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).Returns(Task.FromResult(Feeds.Select(kvp => kvp.Value).ToList()));
+        var azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
+        azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).ReturnsAsync(Feeds.Select(kvp => kvp.Value).ToList());
         azdoClientMock.Setup(a => a.GetPackagesForFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>()))
             .Returns((string account, string project, string feed) => Task.FromResult(Feeds[feed].Packages));
         azdoClientMock.Setup(a => a.DeleteNuGetPackageVersionFromFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))

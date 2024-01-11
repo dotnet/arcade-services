@@ -167,6 +167,7 @@ public partial class ChannelsController20180716Tests
             collection.AddSingleton<ChannelsController>();
             collection.AddSingleton<BuildsController>();
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
+            collection.AddSingleton(Mock.Of<IBasicBarClientFactory>());
             collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
         }
 
