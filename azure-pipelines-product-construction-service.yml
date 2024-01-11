@@ -29,9 +29,6 @@ variables:
   - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/main') }}:
     - name: devBranchSuffix
       value: -dev
-    ${{ else }}:
-    - name: devBranchSuffix
-      value:
 
 stages:
 - stage: PublishProductConstructionService
