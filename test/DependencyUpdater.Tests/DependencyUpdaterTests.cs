@@ -27,6 +27,7 @@ public class DependencyUpdaterTests
     protected MockReliableStateManager StateManager;
     protected Mock<ISubscriptionActor> SubscriptionActor;
     protected Mock<IRemoteFactory> RemoteFactory;
+    protected Mock<IBasicBarClientFactory> BarClientFactory;
 
     [SetUp]
     public void DependencyUpdaterTests_SetUp()
@@ -35,6 +36,7 @@ public class DependencyUpdaterTests
         StateManager = new MockReliableStateManager();
         SubscriptionActor = new Mock<ISubscriptionActor>(MockBehavior.Strict);
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        BarClientFactory = new Mock<IBasicBarClientFactory>(MockBehavior.Strict);
         Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
         services.AddSingleton(Env.Object);
         services.AddSingleton<IReliableStateManager>(StateManager);
@@ -54,6 +56,7 @@ public class DependencyUpdaterTests
             });
         services.AddSingleton(proxyFactory.Object);
         services.AddSingleton(RemoteFactory.Object);
+        services.AddSingleton(BarClientFactory.Object);
         services.AddOperationTracking(o => { });
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();

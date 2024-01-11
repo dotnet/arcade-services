@@ -27,7 +27,7 @@ public class GetSubscriptionsOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IBarClient> _barMock = null!;
+    private Mock<IBarApiClient> _barMock = null!;
 
 
     [SetUp]
@@ -35,7 +35,7 @@ public class GetSubscriptionsOperationTests
     {
         _consoleOutput = new();
 
-        _barMock = new Mock<IBarClient>();
+        _barMock = new Mock<IBarApiClient>();
         _services = new ServiceCollection();
     }
 
