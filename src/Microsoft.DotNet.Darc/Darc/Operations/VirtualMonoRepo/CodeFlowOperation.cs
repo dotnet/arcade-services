@@ -55,8 +55,8 @@ internal abstract class CodeFlowOperation : VmrOperationBase
         string refToFlow = _options.Commit ?? DarcLib.Constants.HEAD;
         if (_options.Build.HasValue)
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-            var build = await remote.GetBuildAsync(_options.Build.Value);
+            IBarApiClient barcLient = BarApiClientFactory.GetBarClient(_options, Logger);
+            Maestro.Client.Models.Build build = await barcLient.GetBuildAsync(_options.Build.Value);
             refToFlow = build.Commit;
         }
 
