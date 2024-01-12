@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
-internal class BarApiClientFactory : IBarApiClientFactory
+internal class BarApiClientFactory
 {
     private readonly CommandLineOptions _options;
 
@@ -23,7 +23,7 @@ internal class BarApiClientFactory : IBarApiClientFactory
         IBarApiClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
-            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
+            barClient = new BarApiClient(darcSettings.BuildAssetRegistryPassword,
             darcSettings.BuildAssetRegistryBaseUri);
         }
 

@@ -9,6 +9,7 @@ using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,11 +37,11 @@ public static class Program
     {
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
-        services.AddTransient<ICoherencyUpdateResolverFactory, CoherencyUpdateResolverFactory>();
+        services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        services.AddScoped<IBasicBarClientFactory, BasicBarClientFactory>();
+        services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();
@@ -74,5 +75,6 @@ public static class Program
         });
 
         services.AddMergePolicies();
+        services.AddKustoClientProvider("Kusto");
     }
 }

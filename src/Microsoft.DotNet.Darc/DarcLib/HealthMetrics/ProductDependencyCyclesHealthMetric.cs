@@ -17,20 +17,21 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
     private readonly string _repository;
     private readonly string _branch;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IBasicBarClientFactory _barClientFactory;
+    private readonly IBasicBarClient _barClient;
+    private readonly ILogger _logger;
 
     public ProductDependencyCyclesHealthMetric(
         string repo,
         string branch,
-        ILogger logger,
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory)
-        : base(logger, remoteFactory, barClientFactory)
+        IBasicBarClient barClient,
+        ILogger logger)
     {
         _repository = repo;
         _branch = branch;
         _remoteFactory = remoteFactory;
-        _barClientFactory = barClientFactory;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     public IEnumerable<IEnumerable<string>> Cycles { get; private set; }
@@ -54,7 +55,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         };
 
         // Evaluate and find out what the latest is on the branch
-        var remote = await _remoteFactory.GetRemoteAsync(_repository, Logger);
+        var remote = await _remoteFactory.GetRemoteAsync(_repository, _logger);
         var commit = await remote.GetLatestCommitAsync(_repository, _branch);
 
         if (commit == null)
@@ -68,11 +69,11 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
 
         DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
             _remoteFactory,
-            _barClientFactory,
+            _barClient,
             _repository,
             commit,
             options,
-            Logger);
+            _logger);
 
         // Check to see whether there are any cycles.
         // Boil down the cycles into just the repositories involved

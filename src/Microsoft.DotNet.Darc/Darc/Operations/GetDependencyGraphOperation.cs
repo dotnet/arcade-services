@@ -116,7 +116,7 @@ internal class GetDependencyGraphOperation : Operation
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    barClientFactory,
+                    await barClientFactory.GetBarClientAsync(Logger),
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
                     _options.Version ?? await _gitClient.GetGitCommitAsync(),

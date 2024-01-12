@@ -233,7 +233,7 @@ class UpdateDependenciesOperation : Operation
             }
 
             // Now call the local updater to run the update.
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, barClientFactory);
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, barClient);
 
             Console.WriteLine(finalMessage);
 

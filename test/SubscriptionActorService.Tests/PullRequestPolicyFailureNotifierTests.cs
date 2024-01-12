@@ -28,7 +28,6 @@ public class PullRequestPolicyFailureNotifierTests
     protected Mock<IRemoteGitRepo> GitRepo;
     protected Mock<ILocalLibGit2Client> LocalGitClient;
     protected Mock<IRemoteFactory> RemoteFactory;
-    protected Mock<IBasicBarClientFactory> BarClientFactory;
     protected Mock<IHostEnvironment> Env;
     protected Mock<Octokit.IGitHubClient> GithubClient;
     protected Mock<IGitHubTokenProvider> GitHubTokenProvider;
@@ -97,9 +96,6 @@ public class PullRequestPolicyFailureNotifierTests
 
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
-
-        BarClientFactory = new Mock<IBasicBarClientFactory>(MockBehavior.Strict);
-        BarClientFactory.Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>())).ReturnsAsync(BarClient.Object);
 
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();
@@ -242,7 +238,7 @@ public class PullRequestPolicyFailureNotifierTests
         GitHubTokenProvider.Object,
         GitHubClientFactory.Object,
         RemoteFactory.Object,
-        BarClientFactory.Object,
+        BarClient.Object,
         Scope.ServiceProvider.GetRequiredService<ILogger<PullRequestPolicyFailureNotifier>>());
 
     private List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>

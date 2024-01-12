@@ -9,7 +9,6 @@ using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
@@ -98,11 +97,9 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     private void SetupBar(
         params (int ChannelId, DependencyFlowGraph Graph)[] graphPerChannel)
     {
-        var barMock = new Mock<IBasicBarClient>();
-
         foreach (var item in graphPerChannel)
         {
-            barMock
+            BarMock
                 .Setup(m => m.GetDependencyFlowGraphAsync(
                     item.ChannelId,
                     It.IsAny<int>(),
@@ -121,10 +118,6 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         }
 
         Context.SaveChanges();
-
-        BarClientFactory
-            .Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>()))
-            .ReturnsAsync(barMock.Object);
     }
 
     private DependencyFlowGraph CreateGraph(
