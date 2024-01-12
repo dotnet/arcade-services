@@ -17,6 +17,14 @@ public interface IVmrBackFlower
 {
     Task<string?> FlowBackAsync(
         string mapping,
+        NativePath targetRepoPath,
+        string? shaToFlow,
+        int? buildToFlow,
+        bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    Task<string?> FlowBackAsync(
+        string mapping,
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
@@ -24,7 +32,7 @@ public interface IVmrBackFlower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
+internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -36,7 +44,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VmrCodeflower> _logger;
+    private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrBackFlower(
         IVmrInfo vmrInfo,
@@ -49,7 +57,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        ILogger<VmrCodeflower> logger)
+        ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
@@ -67,12 +75,12 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
 
     public Task<string?> FlowBackAsync(
         string mapping,
-        NativePath targetRepoDir,
+        NativePath targetRepoPath,
         string? shaToFlow,
         int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
-        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoDir), shaToFlow, buildToFlow, discardPatches, cancellationToken);
+        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoPath), shaToFlow, buildToFlow, discardPatches, cancellationToken);
 
     public async Task<string?> FlowBackAsync(
         string mappingName,
@@ -109,7 +117,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
             return null;
         }
 
-        await UpdateVersionDetailsXml(targetRepo, shaToFlow, cancellationToken);
+        await UpdateVersionDetailsXml(targetRepo, shaToFlow, buildToFlow, cancellationToken);
         return branchName;
     }
 
@@ -300,7 +308,7 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
         return branchName;
     }
 
-    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, CancellationToken cancellationToken)
+    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
     {
         // TODO: Do a proper full update of all dependencies, not just V.D.xml
         var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repo.Path / VersionFiles.VersionDetailsXml));

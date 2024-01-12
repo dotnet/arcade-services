@@ -24,7 +24,7 @@ public interface IVmrForwardFlower
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
+internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrUpdater _vmrUpdater;
@@ -32,7 +32,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IProcessManager _processManager;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly ILogger<VmrCodeflower> _logger;
+    private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
         IVmrInfo vmrInfo,
@@ -45,7 +45,7 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         IProcessManager processManager,
         IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        ILogger<VmrCodeflower> logger)
+        ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
