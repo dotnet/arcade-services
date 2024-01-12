@@ -146,7 +146,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     TargetRepo,
                     _newBranch ?? InProgressPrHeadBranch,
                     _remoteFactory.Object,
-                    It.IsAny<IBasicBarClientFactory>(),
+                    It.IsAny<IBasicBarClient>(),
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
         updatedDependencies.Should()

@@ -36,7 +36,7 @@ public class DependencyUpdateItem
 /// </summary>
 public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdater
 {
-    private readonly IBasicBarClientFactory _dbClientFactory;
+    private readonly IBasicBarClient _barClient;
     private readonly OperationManager _operations;
     private readonly IReliableStateManager _stateManager;
     private readonly ILogger<DependencyUpdater> _logger;
@@ -47,7 +47,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         IReliableStateManager stateManager,
         ILogger<DependencyUpdater> logger,
         BuildAssetRegistryContext context,
-        IBasicBarClientFactory dbClientFactory,
+        IBasicBarClient barClient,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
         OperationManager operations)
     {
@@ -55,7 +55,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         _stateManager = stateManager;
         _logger = logger;
         _context = context;
-        _dbClientFactory = dbClientFactory;
+        _barClient = barClient;
         _subscriptionActorFactory = subscriptionActorFactory;
     }
 
@@ -259,8 +259,6 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
         {
-            IBasicBarClient barClient = await _dbClientFactory.GetBasicBarClient(_logger);
-
             List<Channel> channels = _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
             IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
@@ -268,7 +266,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
             foreach (var channel in channels)
             {
-                var flowGraph = await barClient.GetDependencyFlowGraphAsync(
+                var flowGraph = await _barClient.GetDependencyFlowGraphAsync(
                     channel.Id,
                     days: 30,
                     includeArcade: false,

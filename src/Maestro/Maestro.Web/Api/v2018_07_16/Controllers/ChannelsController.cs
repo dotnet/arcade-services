@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -30,17 +29,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers;
 public class ChannelsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IBasicBarClientFactory _barClientFactory;
-    private readonly ILogger<ChannelsController> _logger;
+    private readonly IBasicBarClient _barClient;
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        ILogger<ChannelsController> logger,
-        IBasicBarClientFactory barClientFactory)
+        IBasicBarClient barClient)
     {
         _context = context;
-        _logger = logger;
-        _barClientFactory = barClientFactory;
+        _barClient = barClient;
     }
 
     /// <summary>
@@ -93,7 +89,7 @@ public class ChannelsController : Controller
 
         List<string> repositoryList = await buildChannelList
             .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
-            .Where(b => !String.IsNullOrEmpty(b))
+            .Where(b => !string.IsNullOrEmpty(b))
             .Distinct()
             .ToListAsync();
 
@@ -290,8 +286,7 @@ public class ChannelsController : Controller
         int days = 7,
         bool includeArcade = true)
     {
-        IBasicBarClient barClient = await _barClientFactory.GetBasicBarClient(_logger);
-        DependencyFlowGraph flowGraph = await barClient.GetDependencyFlowGraphAsync(
+        DependencyFlowGraph flowGraph = await _barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
             includeArcade,

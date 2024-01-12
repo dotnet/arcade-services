@@ -34,10 +34,9 @@ public class SubscriptionHealthMetric : HealthMetric
         string repo,
         string branch,
         Func<DependencyDetail, bool> dependencySelector,
-        ILogger logger,
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory)
-        : base(logger, remoteFactory, barClientFactory)
+        IBasicBarClient barClient,
+        ILogger logger)
     {
         Repository = repo;
         Branch = branch;
@@ -46,11 +45,18 @@ public class SubscriptionHealthMetric : HealthMetric
         ConflictingSubscriptions = Enumerable.Empty<SubscriptionConflict>();
         UnusedSubscriptions = Enumerable.Empty<Subscription>();
         DependencySelector = dependencySelector;
+        _remoteFactory = remoteFactory;
+        _barClient = barClient;
+        _logger = logger;
     }
 
     public readonly string Repository;
     public readonly string Branch;
     public readonly Func<DependencyDetail, bool> DependencySelector;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClient _barClient;
+    private readonly ILogger _logger;
+
     public List<Subscription> Subscriptions { get; private set; }
     public List<DependencyDetail> Dependencies { get; private set; }
 
@@ -88,13 +94,12 @@ public class SubscriptionHealthMetric : HealthMetric
     /// <returns>True if the metric passed, false otherwise</returns>
     public override async Task EvaluateAsync()
     {
-        IRemote remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
-        IBasicBarClient barClient = await BarClientFactory.GetBasicBarClient(Logger);
+        IRemote remote = await _remoteFactory.GetRemoteAsync(Repository, _logger);
 
-        Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
+        _logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
         // Get subscriptions that target this repo/branch
-        Subscriptions = (await barClient.GetSubscriptionsAsync(targetRepo: Repository))
+        Subscriptions = (await _barClient.GetSubscriptionsAsync(targetRepo: Repository))
             .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 
         // Get the dependencies of the repository/branch. Skip pinned and subscriptions tied to another
@@ -123,7 +128,7 @@ public class SubscriptionHealthMetric : HealthMetric
             }
         }
 
-        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts(barClient);
+        Dictionary<string, Subscription> latestAssets = await GetLatestAssetsAndComputeConflicts();
         ComputeSubscriptionUse(latestAssets);
 
         // Determine the result. A conflict or missing subscription is an error.
@@ -186,7 +191,7 @@ public class SubscriptionHealthMetric : HealthMetric
     ///     and compute any conflicts between subscriptionss
     /// </summary>
     /// <returns>Mapping of assets to subscriptions that produce them.</returns>
-    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts(IBasicBarClient barClient)
+    private async Task<Dictionary<string, Subscription>> GetLatestAssetsAndComputeConflicts()
     {
         // Populate the latest build task for each of these. The search for assets would be N*M*A where N is the number of
         // dependencies, M is the number of subscriptions, and A is average the number of assets per build.
@@ -201,7 +206,7 @@ public class SubscriptionHealthMetric : HealthMetric
             Build latestBuild = null;
             try
             {
-                latestBuild = await barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+                latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
             }
             catch (Exception)
             {

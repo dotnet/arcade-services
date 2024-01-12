@@ -712,7 +712,7 @@ internal class GatherDropOperation : Operation
             var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                barClientFactory,
+                await barClientFactory.GetBasicBarClient(Logger),
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
