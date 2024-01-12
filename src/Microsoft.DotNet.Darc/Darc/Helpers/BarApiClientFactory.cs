@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
-internal class BarApiClientFactory : IBarApiClientFactory
+internal class BarApiClientFactory
 {
     private readonly CommandLineOptions _options;
 

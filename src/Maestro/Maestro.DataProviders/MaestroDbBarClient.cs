@@ -17,26 +17,20 @@ using System.Threading.Tasks;
 namespace Maestro.DataProviders;
 
 /// <summary>
-///     A bar client interface for use by DarcLib which talks directly
-///     to the database for diamond dependency resolution.  Only a few features are required.
+///     A bar client interface implementation used by all services which talks directly to the database.
 /// </summary>
-internal class MaestroDbBarClient : IBasicBarClient
+public class MaestroDbBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly KustoClientProvider _kustoClientProvider;
 
-    public MaestroDbBarClient(BuildAssetRegistryContext context)
-    {
-        _context = context;
-    }
-
-    public MaestroDbBarClient(BuildAssetRegistryContext context,
+    public MaestroDbBarClient(
+        BuildAssetRegistryContext context,
         IKustoClientProvider kustoClientProvider)
     {
         _context = context;
         _kustoClientProvider = (KustoClientProvider)kustoClientProvider;
     }
-
 
     public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {

@@ -121,10 +121,6 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         }
 
         Context.SaveChanges();
-
-        BarClientFactory
-            .Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>()))
-            .ReturnsAsync(barMock.Object);
     }
 
     private DependencyFlowGraph CreateGraph(

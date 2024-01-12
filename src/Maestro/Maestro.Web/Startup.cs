@@ -250,7 +250,7 @@ public partial class Startup : StartupBase
 
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        services.AddTransient<IBasicBarClientFactory, BasicBarClientFactory>();
+        services.AddTransient<IBasicBarClient, MaestroDbBarClient>();
         services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
         services.EnableLazy();

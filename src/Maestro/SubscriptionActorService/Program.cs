@@ -36,11 +36,11 @@ public static class Program
     {
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
-        services.AddTransient<ICoherencyUpdateResolverFactory, CoherencyUpdateResolverFactory>();
+        services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        services.AddScoped<IBasicBarClientFactory, BasicBarClientFactory>();
+        services.AddScoped<IBasicBarClient, MaestroDbBarClient>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();
