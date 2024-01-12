@@ -17,15 +17,9 @@ public interface IVmrForwardFlower
 {
     Task<string?> FlowForwardAsync(
         string mapping,
-        ILocalGitRepo sourceRepo,
-        string? shaToFlow = null,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default);
-
-    Task<string?> FlowForwardAsync(
-        string mapping,
         NativePath sourceRepo,
-        string? shaToFlow = null,
+        string? shaToFlow,
+        int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -63,21 +57,16 @@ internal class VmrForwardFlower : VmrCodeflower, IVmrForwardFlower
         _logger = logger;
     }
 
-    public Task<string?> FlowForwardAsync(
-        string mappingName,
-        NativePath sourceRepo,
-        string? shaToFlow = null,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default)
-        => FlowForwardAsync(mappingName, _localGitRepoFactory.Create(sourceRepo), shaToFlow, discardPatches, cancellationToken);
-
     public async Task<string?> FlowForwardAsync(
         string mappingName,
-        ILocalGitRepo sourceRepo,
-        string? shaToFlow = null,
+        NativePath repoPath,
+        string? shaToFlow,
+        int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
+        var sourceRepo = _localGitRepoFactory.Create(repoPath);
+
         if (shaToFlow is null)
         {
             shaToFlow = await sourceRepo.GetShaForRefAsync();

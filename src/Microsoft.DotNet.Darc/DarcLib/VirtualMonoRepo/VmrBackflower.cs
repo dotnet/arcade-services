@@ -18,14 +18,8 @@ public interface IVmrBackFlower
     Task<string?> FlowBackAsync(
         string mapping,
         ILocalGitRepo targetRepo,
-        string? shaToFlow = null,
-        bool discardPatches = false,
-        CancellationToken cancellationToken = default);
-
-    Task<string?> FlowBackAsync(
-        string mapping,
-        NativePath targetRepoDir,
-        string? shaToFlow = null,
+        string? shaToFlow,
+        int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -74,15 +68,17 @@ internal class VmrBackFlower : VmrCodeflower, IVmrBackFlower
     public Task<string?> FlowBackAsync(
         string mapping,
         NativePath targetRepoDir,
-        string? shaToFlow = null,
+        string? shaToFlow,
+        int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
-        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoDir), shaToFlow, discardPatches, cancellationToken);
+        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoDir), shaToFlow, buildToFlow, discardPatches, cancellationToken);
 
     public async Task<string?> FlowBackAsync(
         string mappingName,
         ILocalGitRepo targetRepo,
-        string? shaToFlow = null,
+        string? shaToFlow,
+        int? buildToFlow,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {

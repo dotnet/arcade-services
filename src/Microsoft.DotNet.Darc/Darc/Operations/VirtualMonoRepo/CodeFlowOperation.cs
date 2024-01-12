@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,29 +47,19 @@ internal abstract class CodeFlowOperation : VmrOperationBase
 
         if (_options.Build.HasValue && _options.Commit != null)
         {
-            throw new ArgumentException("Cannot specify both --build and --ref");
-        }
-
-        string refToFlow = _options.Commit ?? DarcLib.Constants.HEAD;
-        if (_options.Build.HasValue)
-        {
-            IBarApiClient barcLient = BarApiClientFactory.GetBarClient(_options, Logger);
-            Maestro.Client.Models.Build build = await barcLient.GetBuildAsync(_options.Build.Value);
-            refToFlow = build.Commit;
+            throw new ArgumentException("Cannot specify both --build and --commit");
         }
 
         await FlowAsync(
             repoName,
             new NativePath(targetDirectory),
-            refToFlow,
-            _options.DiscardPatches,
+            _options.Commit,
             cancellationToken);
     }
 
-    protected abstract Task FlowAsync(
+    protected abstract Task<string?> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
-        string shaToFlow,
-        bool discardPatches,
+        string? shaToFlow,
         CancellationToken cancellationToken);
 }

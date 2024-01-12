@@ -16,17 +16,17 @@ internal class BackflowOperation(BackflowCommandLineOptions options)
 {
     private readonly BackflowCommandLineOptions _options = options;
 
-    protected override async Task FlowAsync(
+    protected override async Task<string?> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
-        string shaToFlow,
-        bool discardPatches,
+        string? shaToFlow,
         CancellationToken cancellationToken)
         => await Provider.GetRequiredService<IVmrBackFlower>()
             .FlowBackAsync(
                 mappingName,
                 new NativePath(targetDirectory),
                 shaToFlow,
+                _options.Build,
                 _options.DiscardPatches,
                 cancellationToken);
 }

@@ -16,17 +16,17 @@ internal class ForwardFlowOperation(ForwardFlowCommandLineOptions options)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
 
-    protected override async Task FlowAsync(
+    protected override async Task<string?> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
-        string shaToFlow,
-        bool discardPatches,
+        string? shaToFlow,
         CancellationToken cancellationToken)
         => await Provider.GetRequiredService<IVmrForwardFlower>()
             .FlowForwardAsync(
                 mappingName,
-                targetDirectory,
+                new NativePath(targetDirectory),
                 shaToFlow,
+                _options.Build,
                 _options.DiscardPatches,
                 cancellationToken);
 }
