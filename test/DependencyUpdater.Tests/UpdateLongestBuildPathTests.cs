@@ -30,7 +30,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             (Repo: "g", BestCaseTime: 10, WorstCaseTime: 70, OnLongestBuildPath: true),
             (Repo: "h", BestCaseTime: 20, WorstCaseTime: 50, OnLongestBuildPath: true));
 
-        SetupRemote(
+        SetupBar(
             (ChannelId: 1, Graph: graph1),
             (ChannelId: 2, Graph: graph2));
 
@@ -72,8 +72,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             (Repo: "a", BestCaseTime: 1, WorstCaseTime: 7, OnLongestBuildPath: false),
             (Repo: "b", BestCaseTime: 2, WorstCaseTime: 5, OnLongestBuildPath: false));
 
-        SetupRemote(
-            (ChannelId: 1, Graph: graph));
+        SetupBar((ChannelId: 1, Graph: graph));
 
         var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
         await updater.UpdateLongestBuildPathAsync(CancellationToken.None);
@@ -87,8 +86,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     {
         var graph = new DependencyFlowGraph([], []);
 
-        SetupRemote(
-            (ChannelId: 1, Graph: graph));
+        SetupBar((ChannelId: 1, Graph: graph));
 
         var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
         await updater.UpdateLongestBuildPathAsync(CancellationToken.None);
@@ -97,10 +95,10 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         longestBuildPaths.Should().BeEmpty();
     }
 
-    private void SetupRemote(
+    private void SetupBar(
         params (int ChannelId, DependencyFlowGraph Graph)[] graphPerChannel)
     {
-        var barMock = new Mock<IBarClient>();
+        var barMock = new Mock<IBasicBarClient>();
 
         foreach (var item in graphPerChannel)
         {
@@ -112,7 +110,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
                     It.IsAny<bool>(),
                     It.IsAny<bool>(),
                     It.IsAny<IReadOnlyList<string>>()))
-                .Returns(Task.FromResult(item.Graph));
+                .ReturnsAsync(item.Graph);
 
             Context.Channels.Add(new Channel
             {
@@ -124,9 +122,9 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
 
         Context.SaveChanges();
 
-        RemoteFactory
-            .Setup(m => m.GetBarClientAsync(It.IsAny<ILogger>()))
-            .Returns(Task.FromResult(barMock.Object));
+        BarClientFactory
+            .Setup(m => m.GetBasicBarClient(It.IsAny<ILogger>()))
+            .ReturnsAsync(barMock.Object);
     }
 
     private DependencyFlowGraph CreateGraph(

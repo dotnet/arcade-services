@@ -21,14 +21,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers;
 public class BuildTimeController : ControllerBase
 {
     private readonly ILogger<BuildTimeController> _logger;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClientFactory _barClientFactory;
 
     public BuildTimeController(
         ILogger<BuildTimeController> logger,
-        IRemoteFactory remoteFactory)
+        IBasicBarClientFactory barClientFactory)
     {
         _logger = logger;
-        _remoteFactory = remoteFactory;
+        _barClientFactory = barClientFactory;
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ public class BuildTimeController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetBuildTimes([Required]int id, int days = 7)
     {
-        var barClient = await _remoteFactory.GetBarClientAsync(_logger);
+        IBasicBarClient barClient = await _barClientFactory.GetBasicBarClient(_logger);
         var buildTime = await barClient.GetBuildTimeAsync(id, days);
         if (buildTime != null)
         {

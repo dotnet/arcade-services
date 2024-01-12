@@ -38,6 +38,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     private Dictionary<ActorId, Mock<ISubscriptionActor>> _subscriptionActors;
 
     private Mock<IRemoteFactory> _remoteFactory;
+    private Mock<IBasicBarClientFactory> _barClientFactory;
     private Mock<ICoherencyUpdateResolver> _updateResolver;
     private Mock<IMergePolicyEvaluator> _mergePolicyEvaluator;
 
@@ -54,6 +55,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         _mergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
         _remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         _updateResolver = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict);
+        _barClientFactory = new Mock<IBasicBarClientFactory>(MockBehavior.Strict);
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -75,8 +77,9 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
         services.AddSingleton(Mock.Of<IPullRequestPolicyFailureNotifier>());
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
 
-        _remoteFactory.Setup(f => f.GetBarClientAsync(It.IsAny<ILogger>()))
-            .ReturnsAsync(Mock.Of<IBarClient>());
+        _barClientFactory.Setup(f => f.GetBasicBarClient(It.IsAny<ILogger>()))
+            .ReturnsAsync(Mock.Of<IBasicBarClient>());
+        services.AddSingleton(_barClientFactory.Object);
 
         _remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
             .ReturnsAsync(
@@ -143,6 +146,7 @@ public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
                     TargetRepo,
                     _newBranch ?? InProgressPrHeadBranch,
                     _remoteFactory.Object,
+                    It.IsAny<IBasicBarClientFactory>(),
                     Capture.In(updatedDependencies),
                     It.IsAny<string>()));
         updatedDependencies.Should()

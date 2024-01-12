@@ -28,7 +28,7 @@ internal class DeleteSubscriptionsOperation : Operation
     {
         try
         {
-            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
             List<Subscription> subscriptionsToDelete = [];

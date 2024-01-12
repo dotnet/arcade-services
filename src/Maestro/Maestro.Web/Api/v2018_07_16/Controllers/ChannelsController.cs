@@ -30,18 +30,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers;
 public class ChannelsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClientFactory _barClientFactory;
+    private readonly ILogger<ChannelsController> _logger;
 
-    public ChannelsController(BuildAssetRegistryContext context,
-        IRemoteFactory factory,
-        ILogger<ChannelsController> logger)
+    public ChannelsController(
+        BuildAssetRegistryContext context,
+        ILogger<ChannelsController> logger,
+        IBasicBarClientFactory barClientFactory)
     {
         _context = context;
-        _remoteFactory = factory;
-        Logger = logger;
+        _logger = logger;
+        _barClientFactory = barClientFactory;
     }
-
-    public ILogger<ChannelsController> Logger { get; }
 
     /// <summary>
     ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
@@ -290,8 +290,8 @@ public class ChannelsController : Controller
         int days = 7,
         bool includeArcade = true)
     {
-        var barClient = await _remoteFactory.GetBarClientAsync(Logger);
-        var flowGraph = await barClient.GetDependencyFlowGraphAsync(
+        IBasicBarClient barClient = await _barClientFactory.GetBasicBarClient(_logger);
+        DependencyFlowGraph flowGraph = await barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
             includeArcade,

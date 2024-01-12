@@ -54,7 +54,7 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
             IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
@@ -200,7 +200,8 @@ internal class GetHealthOperation : Operation
     private List<Func<Task<HealthMetricWithOutput>>> ComputeSubscriptionHealthMetricsToRun(HashSet<string> channelsToEvaluate,
         HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
     {
-        IRemoteFactory remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = new RemoteFactory(_options);
+        var barClientFactory = new BarApiClientFactory(_options);
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -208,12 +209,17 @@ internal class GetHealthOperation : Operation
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    SubscriptionHealthMetric healthMetric = new SubscriptionHealthMetric(t.repo, t.branch, 
-                        d => true, Logger, remoteFactory);
+                    var healthMetric = new SubscriptionHealthMetric(
+                        t.repo,
+                        t.branch,
+                        d => true,
+                        Logger,
+                        remoteFactory,
+                        barClientFactory);
 
                     await healthMetric.EvaluateAsync();
 
-                    StringBuilder outputBuilder = new StringBuilder();
+                    var outputBuilder = new StringBuilder();
 
                     if (healthMetric.ConflictingSubscriptions.Any())
                     {
@@ -263,12 +269,14 @@ internal class GetHealthOperation : Operation
     /// <summary>
     ///     Compute product dependency cycle metrics based on the input repositories and channels.
     /// </summary>
-    /// <param name="channelsToEvaluate"></param>
-    /// <returns></returns>
-    private List<Func<Task<HealthMetricWithOutput>>> ComputeProductDependencyCycleMetricsToRun(HashSet<string> channelsToEvaluate,
-        HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+    private List<Func<Task<HealthMetricWithOutput>>> ComputeProductDependencyCycleMetricsToRun(
+        HashSet<string> channelsToEvaluate,
+        HashSet<string> reposToEvaluate,
+        IEnumerable<Subscription> subscriptions,
+        IEnumerable<DefaultChannel> defaultChannels)
     {
-        IRemoteFactory remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = new RemoteFactory(_options);
+        var barClientFactory = new BarApiClientFactory(_options);
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -276,12 +284,11 @@ internal class GetHealthOperation : Operation
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    ProductDependencyCyclesHealthMetric healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch,
-                        Logger, remoteFactory);
+                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, Logger, remoteFactory, barClientFactory);
 
                     await healthMetric.EvaluateAsync();
 
-                    StringBuilder outputBuilder = new StringBuilder();
+                    var outputBuilder = new StringBuilder();
 
                     if (healthMetric.Cycles.Any())
                     {
@@ -297,16 +304,11 @@ internal class GetHealthOperation : Operation
             .ToList();
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="channels"></param>
-    /// <returns></returns>
     private HashSet<string> ComputeChannelsToEvaluate(IEnumerable<Channel> channels)
     {
         if (!string.IsNullOrEmpty(_options.Channel))
         {
-            HashSet<string> channelsToTarget = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var channelsToTarget = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             Channel targetChannel = UxHelpers.ResolveSingleChannel(channels, _options.Channel);
 
             if (targetChannel != null)

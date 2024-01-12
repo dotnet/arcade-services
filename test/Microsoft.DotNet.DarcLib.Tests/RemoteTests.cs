@@ -17,7 +17,7 @@ public class RemoteTests
     public async Task ValidateCommitMessageTest()
     {
         var client = new Mock<IRemoteGitRepo>();
-        var barClient = new Mock<IBarClient>();
+        var barClient = new Mock<IBarApiClient>();
         var localGitClient = new Mock<ILocalLibGit2Client>();
         var mergePullRequest = new MergePullRequestParameters
         {

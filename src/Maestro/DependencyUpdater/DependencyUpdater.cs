@@ -36,35 +36,34 @@ public class DependencyUpdateItem
 /// </summary>
 public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdater
 {
+    private readonly IBasicBarClientFactory _dbClientFactory;
     private readonly OperationManager _operations;
+    private readonly IReliableStateManager _stateManager;
+    private readonly ILogger<DependencyUpdater> _logger;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
 
     public DependencyUpdater(
         IReliableStateManager stateManager,
         ILogger<DependencyUpdater> logger,
         BuildAssetRegistryContext context,
-        IRemoteFactory factory,
+        IBasicBarClientFactory dbClientFactory,
         IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
         OperationManager operations)
     {
         _operations = operations;
-        StateManager = stateManager;
-        Logger = logger;
-        Context = context;
-        RemoteFactory = factory;
-        SubscriptionActorFactory = subscriptionActorFactory;
+        _stateManager = stateManager;
+        _logger = logger;
+        _context = context;
+        _dbClientFactory = dbClientFactory;
+        _subscriptionActorFactory = subscriptionActorFactory;
     }
-
-    public IReliableStateManager StateManager { get; }
-    public ILogger<DependencyUpdater> Logger { get; }
-    public BuildAssetRegistryContext Context { get; }
-    public IRemoteFactory RemoteFactory { get; }
-    public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
 
     public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
     {
         IReliableConcurrentQueue<DependencyUpdateItem> queue =
-            await StateManager.GetOrAddAsync<IReliableConcurrentQueue<DependencyUpdateItem>>("queue");
-        using (ITransaction tx = StateManager.CreateTransaction())
+            await _stateManager.GetOrAddAsync<IReliableConcurrentQueue<DependencyUpdateItem>>("queue");
+        using (ITransaction tx = _stateManager.CreateTransaction())
         {
             await queue.EnqueueAsync(
                 tx,
@@ -85,7 +84,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     public Task StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId)
     {
         var subscriptionToUpdate = 
-            (from sub in Context.Subscriptions
+            (from sub in _context.Subscriptions
                 where sub.Id == subscriptionId
                 where sub.Enabled
                 let specificBuild =
@@ -116,7 +115,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     public Task StartSubscriptionUpdateAsync(Guid subscriptionId)
     {
         var subscriptionToUpdate = 
-            (from sub in Context.Subscriptions
+            (from sub in _context.Subscriptions
                 where sub.Id == subscriptionId
                 where sub.Enabled
                 let latestBuild =
@@ -141,11 +140,11 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
     {
         IReliableConcurrentQueue<DependencyUpdateItem> queue =
-            await StateManager.GetOrAddAsync<IReliableConcurrentQueue<DependencyUpdateItem>>("queue");
+            await _stateManager.GetOrAddAsync<IReliableConcurrentQueue<DependencyUpdateItem>>("queue");
 
         try
         {
-            using (ITransaction tx = StateManager.CreateTransaction())
+            using (ITransaction tx = _stateManager.CreateTransaction())
             {
                 ConditionalValue<DependencyUpdateItem> maybeItem = await queue.TryDequeueAsync(
                     tx,
@@ -171,7 +170,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Processing queue messages");
+            _logger.LogError(ex, "Processing queue messages");
         }
             
         return TimeSpan.FromSeconds(1);
@@ -214,7 +213,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating {targetUpdateFrequency} subscriptions"))
         {
-            var enabledSubscriptionsWithTargetFrequency = (await Context.Subscriptions
+            var enabledSubscriptionsWithTargetFrequency = (await _context.Subscriptions
                     .Where(s => s.Enabled)
                     .ToListAsync(cancellationToken))
                     .Where(s => s.PolicyObject.UpdateFrequency == targetUpdateFrequency);
@@ -222,7 +221,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
             int subscriptionsUpdated = 0;
             foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
             {
-                Subscription subscriptionWithBuilds = await Context.Subscriptions
+                Subscription subscriptionWithBuilds = await _context.Subscriptions
                     .Where(s => s.Id == subscription.Id)
                     .Include(s => s.Channel)
                     .ThenInclude(c => c.BuildChannels)
@@ -231,7 +230,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
                 if (subscriptionWithBuilds == null)
                 {
-                    Logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
+                    _logger.LogWarning("Subscription {subscriptionId} was not found in the BAR. Not applying updates", subscription.Id.ToString());
                     continue;
                 }
 
@@ -245,13 +244,13 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
                 if (isThereAnUnappliedBuildInTargetChannel)
                 {
-                    Logger.LogInformation("Will update {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
+                    _logger.LogInformation("Will update {subscriptionId} to build {latestBuildInTargetChannelId}", subscription.Id, latestBuildInTargetChannel.Id);
                     await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
                     subscriptionsUpdated++;
                 }
             }
 
-            Logger.LogInformation("Updated '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
+            _logger.LogInformation("Updated '{SubscriptionsUpdated}' '{targetUpdateFrequency}' subscriptions", subscriptionsUpdated, targetUpdateFrequency.ToString());
         }
     }
 
@@ -260,11 +259,12 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
         {
-            IBarClient barClient = await RemoteFactory.GetBarClientAsync(Logger);
-            List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+            IBasicBarClient barClient = await _dbClientFactory.GetBasicBarClient(_logger);
+
+            List<Channel> channels = _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
             IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
-            Logger.LogInformation($"Will update '{channels.Count}' channels");
+            _logger.LogInformation($"Will update '{channels.Count}' channels");
 
             foreach (var channel in channels)
             {
@@ -285,25 +285,25 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
                 if (longestBuildPathNodes.Any())
                 {
-                    LongestBuildPath lbp = new LongestBuildPath()
+                    var lbp = new LongestBuildPath()
                     {
                         ChannelId = channel.Id,
                         BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
                         WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
-                        ContributingRepositories = String.Join(';', longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToArray()),
+                        ContributingRepositories = string.Join(';', longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToArray()),
                         ReportDate = DateTimeOffset.UtcNow,
                     };
 
-                    Logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
-                    await Context.LongestBuildPaths.AddAsync(lbp);
+                    _logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
+                    await _context.LongestBuildPaths.AddAsync(lbp);
                 }
                 else
                 {
-                    Logger.LogInformation($"Will not update {channel.Name} longest build path because no nodes have {nameof(DependencyFlowNode.OnLongestBuildPath)} flag set. Total node count = {flowGraph.Nodes.Count}");
+                    _logger.LogInformation($"Will not update {channel.Name} longest build path because no nodes have {nameof(DependencyFlowNode.OnLongestBuildPath)} flag set. Total node count = {flowGraph.Nodes.Count}");
                 }
             }
 
-            await Context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
         }
     }
 
@@ -315,8 +315,8 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     /// <returns></returns>
     public async Task UpdateDependenciesAsync(int buildId, int channelId)
     {
-        Build build = await Context.Builds.FindAsync(buildId);
-        List<Subscription> subscriptionsToUpdate = await (from sub in Context.Subscriptions
+        Build build = await _context.Builds.FindAsync(buildId);
+        List<Subscription> subscriptionsToUpdate = await (from sub in _context.Subscriptions
             where sub.Enabled
             where sub.ChannelId == channelId
             where (sub.SourceRepository == build.GitHubRepository || sub.SourceRepository == build.AzureDevOpsRepository)
@@ -340,12 +340,12 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
         {
             try
             {
-                ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(subscriptionId));
+                ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscriptionId));
                 await actor.UpdateAsync(buildId);
             }
             catch (Exception e)
             {
-                Logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
+                _logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
             }
         }
     }

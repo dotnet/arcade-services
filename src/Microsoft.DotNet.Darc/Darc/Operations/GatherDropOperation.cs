@@ -209,7 +209,7 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         string repoUri = _options.RepoUri;
 
@@ -687,7 +687,9 @@ internal class GatherDropOperation : Operation
         {
             builds.Add(rootBuild);
         }
-        IRemoteFactory remoteFactory = new RemoteFactory(_options);
+
+        var remoteFactory = new RemoteFactory(_options);
+        var barClientFactory = new BarApiClientFactory(_options);
 
         // Flatten for convenience and remove dependencies of types that we don't want if need be.
         if (!_options.IncludeToolset)
@@ -710,6 +712,7 @@ internal class GatherDropOperation : Operation
             var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
+                barClientFactory,
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
@@ -801,7 +804,7 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);

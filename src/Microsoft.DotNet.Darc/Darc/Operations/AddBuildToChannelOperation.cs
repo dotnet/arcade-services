@@ -64,7 +64,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
             Build build = await barClient.GetBuildAsync(_options.Id);
             if (build == null)
@@ -199,7 +199,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarClient barClient)
+    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarApiClient barClient)
     {
         if (_options.SkipAssetsPublishing)
         {
@@ -418,7 +418,7 @@ internal class AddBuildToChannelOperation : Operation
             build.GitHubRepository;
 
         IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);

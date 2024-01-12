@@ -31,7 +31,7 @@ abstract class UpdateDefaultChannelBaseOperation : Operation
     /// <returns>Default channel or null</returns>
     protected async Task<DefaultChannel> ResolveSingleChannel()
     {
-        IBarClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
 
         IEnumerable<DefaultChannel> potentialDefaultChannels = await barClient.GetDefaultChannelsAsync();
             

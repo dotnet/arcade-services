@@ -25,13 +25,13 @@ public class GetBuildOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IBarClient> _barMock = null!;
+    private Mock<IBarApiClient> _barMock = null!;
 
     [SetUp]
     public void Setup()
     {
         _consoleOutput = new();
-        _barMock = new Mock<IBarClient>();
+        _barMock = new Mock<IBarApiClient>();
         _services = new ServiceCollection();
     }
 
@@ -79,9 +79,9 @@ public class GetBuildOperationTests
         ];
 
         _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
+            .ReturnsAsync(subscriptions.AsEnumerable());
         _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(Task.FromResult(builds.AsEnumerable()));
+            .ReturnsAsync(builds.AsEnumerable());
         _services.AddSingleton(_barMock.Object);
 
         GetBuildCommandLineOptions options = new()
@@ -127,7 +127,7 @@ public class GetBuildOperationTests
         };
 
         _barMock.Setup(t => t.GetBuildAsync(It.IsAny<int>()))
-            .Returns(Task.FromResult(build));
+            .ReturnsAsync(build);
 
         _services.AddSingleton(_barMock.Object);
 

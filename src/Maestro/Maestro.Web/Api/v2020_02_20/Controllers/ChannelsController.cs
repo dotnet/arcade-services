@@ -17,7 +17,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2020_02_20.Models.Channel;
-using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 
@@ -36,15 +35,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers;
 public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IRemoteFactory _remoteFactory;
 
-    public ChannelsController(BuildAssetRegistryContext context,
-        IRemoteFactory factory,
+    public ChannelsController(
+        BuildAssetRegistryContext context,
+        IBasicBarClientFactory barClientFactory,
         ILogger<ChannelsController> logger)
-        : base(context, factory, logger)
+        : base(context, logger, barClientFactory)
     {
         _context = context;
-        _remoteFactory = factory;
     }
 
     [HttpGet]

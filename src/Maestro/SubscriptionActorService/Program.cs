@@ -1,16 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Reflection;
 using Maestro.AzureDevOps;
 using Maestro.Data;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
@@ -41,6 +40,7 @@ public static class Program
         services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddScoped<IBasicBarClientFactory, BasicBarClientFactory>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();

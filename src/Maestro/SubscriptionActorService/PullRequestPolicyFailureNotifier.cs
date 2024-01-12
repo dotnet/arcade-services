@@ -7,28 +7,30 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SubscriptionActorService;
 
 public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifier
 {
-    public ILogger<PullRequestPolicyFailureNotifier> Logger { get; }
-    public IRemoteFactory DarcRemoteFactory { get; }
-    public IGitHubTokenProvider GitHubTokenProvider { get; }
-    public IGitHubClientFactory GitHubClientFactory { get; }
+    private readonly ILogger<PullRequestPolicyFailureNotifier> _logger;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClientFactory _barClientFactory;
+    private readonly IGitHubTokenProvider _gitHubTokenProvider;
+    private readonly IGitHubClientFactory _gitHubClientFactory;
 
     public PullRequestPolicyFailureNotifier(
         IGitHubTokenProvider gitHubTokenProvider,
         IGitHubClientFactory gitHubClientFactory,
         IRemoteFactory darcFactory,
+        IBasicBarClientFactory barClientFactory,
         ILogger<PullRequestPolicyFailureNotifier> logger)
     {
-        Logger = logger;
-        GitHubTokenProvider = gitHubTokenProvider;
-        GitHubClientFactory = gitHubClientFactory;
-        DarcRemoteFactory = darcFactory;
+        _logger = logger;
+        _gitHubTokenProvider = gitHubTokenProvider;
+        _gitHubClientFactory = gitHubClientFactory;
+        _remoteFactory = darcFactory;
+        _barClientFactory = barClientFactory;
     }
 
     public async Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr)
@@ -38,31 +40,31 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         // "Microsoft" Github org, so we can safely use them in any comment.
         if (pr.SourceRepoNotified == true)
         {
-            Logger.LogInformation($"Skipped notifying source repository for {pr.Url}'s failed policies, as it has already been tagged");
+            _logger.LogInformation($"Skipped notifying source repository for {pr.Url}'s failed policies, as it has already been tagged");
             return;
         }
 
         var subscriptionFromPr = pr.ContainedSubscriptions.FirstOrDefault();
         if (subscriptionFromPr == null)
         {
-            Logger.LogWarning("Unable to get any contained subscriptions from this PR for notification; skipping attempts to notify.");
+            _logger.LogWarning("Unable to get any contained subscriptions from this PR for notification; skipping attempts to notify.");
             pr.SourceRepoNotified = true;
             return;
         }
 
         // In practice these all contain the same subscription id, the property is more like "containedBuildsAndTheirSubscriptions"
-        Logger.LogInformation($"PR contains {pr.ContainedSubscriptions.Count} builds.  Using first ({subscriptionFromPr.SubscriptionId}) for notification tagging.");
+        _logger.LogInformation($"PR contains {pr.ContainedSubscriptions.Count} builds.  Using first ({subscriptionFromPr.SubscriptionId}) for notification tagging.");
 
         (string owner, string repo, int prIssueId) = GitHubClient.ParsePullRequestUri(pr.Url);
         if (owner == null || repo == null || prIssueId == 0)
         {
-            Logger.LogInformation($"Unable to parse pull request URI '{pr.Url}' (typically due to Azure DevOps pull requests), will not notify on this PR.");
+            _logger.LogInformation($"Unable to parse pull request URI '{pr.Url}' (typically due to Azure DevOps pull requests), will not notify on this PR.");
             pr.SourceRepoNotified = true;
             return;
         }
 
-        var darcRemote = await DarcRemoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", Logger);
-        var barClient = await DarcRemoteFactory.GetBarClientAsync(Logger);
+        var darcRemote = await _remoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", _logger);
+        var barClient = await _barClientFactory.GetBasicBarClient(_logger);
         var darcSubscriptionObject = await barClient.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId);
         string sourceRepository = darcSubscriptionObject.SourceRepository;
         string targetRepository = darcSubscriptionObject.TargetRepository;
@@ -72,7 +74,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         var failedPrChecks = prChecks.Where(p => !p.IsMaestroMergePolicy && (p.Status == CheckState.Failure || p.Status == CheckState.Error)).AsEnumerable();
         if (failedPrChecks.Count() == 0)
         {
-            Logger.LogInformation($"All failing or error state checks are 'Maestro Merge Policy'-type checks, not notifying subscribed users.");
+            _logger.LogInformation($"All failing or error state checks are 'Maestro Merge Policy'-type checks, not notifying subscribed users.");
             return;
         }
 
@@ -84,12 +86,12 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
 
         if (tagsToNotify.Count == 0)
         {
-            Logger.LogInformation("Found no matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", sourceRepository, targetRepository, darcSubscriptionObject.Channel);
+            _logger.LogInformation("Found no matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", sourceRepository, targetRepository, darcSubscriptionObject.Channel);
             return;
         }
 
         // At this point we definitely have notifications to make, so do it.
-        Logger.LogInformation("Found {count} matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", tagsToNotify.Count, sourceRepository, targetRepository, darcSubscriptionObject.Channel);
+        _logger.LogInformation("Found {count} matching tags for source '{sourceRepo}' to target '{targetRepo}' on channel '{channel}'. ", tagsToNotify.Count, sourceRepository, targetRepository, darcSubscriptionObject.Channel);
 
         // To ensure GitHub notifies the people / teams on the list, forcibly check they are inserted with a preceding '@'
         for (int i = 0; i < tagsToNotify.Count; i++)
@@ -100,8 +102,8 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
             }
         }
 
-        string githubToken = await GitHubTokenProvider.GetTokenForRepository(targetRepository);
-        var gitHubClient = GitHubClientFactory.CreateGitHubClient(githubToken);
+        string githubToken = await _gitHubTokenProvider.GetTokenForRepository(targetRepository);
+        var gitHubClient = _gitHubClientFactory.CreateGitHubClient(githubToken);
 
         string sourceRepoNotificationComment = @$"
 #### Notification for subscribed users from {sourceRepository}:

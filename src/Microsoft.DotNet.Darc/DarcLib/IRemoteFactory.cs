@@ -13,6 +13,4 @@ namespace Microsoft.DotNet.DarcLib;
 public interface IRemoteFactory
 {
     Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger);
-
-    Task<IBarClient> GetBarClientAsync(ILogger logger);
 }

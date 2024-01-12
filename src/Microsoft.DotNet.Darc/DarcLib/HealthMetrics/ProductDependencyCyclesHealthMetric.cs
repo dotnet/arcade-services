@@ -1,12 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.Logging;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib.HealthMetrics;
 
@@ -16,20 +14,30 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics;
 /// </summary>
 public class ProductDependencyCyclesHealthMetric : HealthMetric
 {
-    public ProductDependencyCyclesHealthMetric(string repo, string branch, ILogger logger, IRemoteFactory remoteFactory)
-        : base(logger, remoteFactory)
+    private readonly string _repository;
+    private readonly string _branch;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClientFactory _barClientFactory;
+
+    public ProductDependencyCyclesHealthMetric(
+        string repo,
+        string branch,
+        ILogger logger,
+        IRemoteFactory remoteFactory,
+        IBasicBarClientFactory barClientFactory)
+        : base(logger, remoteFactory, barClientFactory)
     {
-        Repository = repo;
-        Branch = branch;
+        _repository = repo;
+        _branch = branch;
+        _remoteFactory = remoteFactory;
+        _barClientFactory = barClientFactory;
     }
 
-    public readonly string Repository;
-    public readonly string Branch;
-    public IEnumerable<IEnumerable<string>> Cycles;
+    public IEnumerable<IEnumerable<string>> Cycles { get; private set; }
 
     public override string MetricName => "Product Dependency Cycle Health";
 
-    public override string MetricDescription => $"Product dependency cycle health for {Repository} @ {Branch}";
+    public override string MetricDescription => $"Product dependency cycle health for {_repository} @ {_branch}";
 
     public override async Task EvaluateAsync()
     {
@@ -37,7 +45,7 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         // Build without build lookups, toolsets, etc. to minimize time. Toolset dependencies also break
         // product dependency cycles, so that eliminates some analysis
 
-        DependencyGraphBuildOptions options = new DependencyGraphBuildOptions
+        var options = new DependencyGraphBuildOptions
         {
             IncludeToolset = false,
             LookupBuilds = false,
@@ -46,20 +54,25 @@ public class ProductDependencyCyclesHealthMetric : HealthMetric
         };
 
         // Evaluate and find out what the latest is on the branch
-        var remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
-        var commit = await remote.GetLatestCommitAsync(Repository, Branch);
+        var remote = await _remoteFactory.GetRemoteAsync(_repository, Logger);
+        var commit = await remote.GetLatestCommitAsync(_repository, _branch);
 
         if (commit == null)
         {
             // If there were no commits, then there can be no cycles. This would be typical of newly
             // created branches.
             Result = HealthResult.Passed;
-            Cycles = new List<List<string>>();
+            Cycles = [];
             return;
         }
 
-        DependencyGraph graph =
-            await DependencyGraph.BuildRemoteDependencyGraphAsync(RemoteFactory, Repository, commit, options, Logger);
+        DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+            _remoteFactory,
+            _barClientFactory,
+            _repository,
+            commit,
+            options,
+            Logger);
 
         // Check to see whether there are any cycles.
         // Boil down the cycles into just the repositories involved

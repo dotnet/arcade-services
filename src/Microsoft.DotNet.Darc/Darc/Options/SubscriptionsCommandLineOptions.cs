@@ -55,7 +55,7 @@ abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
     public IEnumerable<string> SubscriptionIds { get; set; }
 
-    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IBarClient barClient)
+    public async Task<IEnumerable<Subscription>> FilterSubscriptions(IBarApiClient barClient)
     {
         IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
         return (await barClient.GetSubscriptionsAsync()).Where(subscription =>

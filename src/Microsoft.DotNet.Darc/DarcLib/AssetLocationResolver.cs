@@ -21,10 +21,10 @@ public interface IAssetLocationResolver
 
 public class AssetLocationResolver : IAssetLocationResolver
 {
-    private readonly IBarClient _barClient;
+    private readonly IBasicBarClient _barClient;
     private readonly ILogger _logger;
 
-    public AssetLocationResolver(IBarClient barClient, ILogger logger)
+    public AssetLocationResolver(IBasicBarClient barClient, ILogger logger)
     {
         _barClient = barClient;
         _logger = logger;
