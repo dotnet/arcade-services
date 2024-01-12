@@ -2,8 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
+using Maestro.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration.AddAzureKeyVault(
+    new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
+    new DefaultAzureCredential());
+
+builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
+    options.UseSqlServer(app.Configuration[""]);
 
 builder.AddServiceDefaults();
 
@@ -11,10 +20,6 @@ builder.AddServiceDefaults();
 
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
-
-builder.Configuration.AddAzureKeyVault(
-    new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
-    new DefaultAzureCredential());
 
 var app = builder.Build();
 
