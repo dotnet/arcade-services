@@ -9,6 +9,7 @@ using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,5 +75,6 @@ public static class Program
         });
 
         services.AddMergePolicies();
+        services.AddKustoClientProvider("Kusto");
     }
 }
