@@ -8,6 +8,8 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Darc.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
@@ -45,6 +47,8 @@ public abstract class Operation : IDisposable
             .SetMinimumLevel(level));
             
         services.AddSingleton(options);
+        services.AddSingleton<IBarApiClient>(sp => BarApiClientFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.AddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
