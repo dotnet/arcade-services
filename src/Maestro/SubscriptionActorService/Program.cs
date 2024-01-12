@@ -40,7 +40,7 @@ public static class Program
         services.AddSingleton<ILocalGit, LocalGit>();
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
-        services.AddScoped<IBasicBarClient, MaestroDbBarClient>();
+        services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddSingleton<TemporaryFiles>();
         services.AddGitHubTokenProvider();
         services.AddAzureDevOpsTokenProvider();

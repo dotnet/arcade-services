@@ -19,12 +19,12 @@ namespace Maestro.DataProviders;
 /// <summary>
 ///     A bar client interface implementation used by all services which talks directly to the database.
 /// </summary>
-public class MaestroDbBarClient : IBasicBarClient
+public class SqlBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly KustoClientProvider _kustoClientProvider;
 
-    public MaestroDbBarClient(
+    public SqlBarClient(
         BuildAssetRegistryContext context,
         IKustoClientProvider kustoClientProvider)
     {

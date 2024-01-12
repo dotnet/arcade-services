@@ -23,7 +23,7 @@ internal class BarApiClientFactory
         IBarApiClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
-            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
+            barClient = new BarApiClient(darcSettings.BuildAssetRegistryPassword,
             darcSettings.BuildAssetRegistryBaseUri);
         }
 

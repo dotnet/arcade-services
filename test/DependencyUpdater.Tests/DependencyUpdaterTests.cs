@@ -4,6 +4,7 @@
 using System;
 using Maestro.Contracts;
 using Maestro.Data;
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -54,6 +55,7 @@ public class DependencyUpdaterTests
             });
         services.AddSingleton(proxyFactory.Object);
         services.AddSingleton(RemoteFactory.Object);
+        services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddOperationTracking(o => { });
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();

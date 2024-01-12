@@ -15,11 +15,11 @@ using AsyncEnumerable = Microsoft.DotNet.Maestro.Client.AsyncEnumerable;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class MaestroApiBarClient : IBarApiClient
+public class BarApiClient : IBarApiClient
 {
     private readonly IMaestroApi _barClient;
 
-    public MaestroApiBarClient(string buildAssetRegistryPat, string buildAssetRegistryBaseUri = null)
+    public BarApiClient(string buildAssetRegistryPat, string buildAssetRegistryBaseUri = null)
     {
         if (!string.IsNullOrEmpty(buildAssetRegistryBaseUri))
         {
