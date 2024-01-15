@@ -8,6 +8,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
@@ -47,9 +48,9 @@ public abstract class Operation : IDisposable
             .SetMinimumLevel(level));
             
         services.AddSingleton(options);
-        services.AddSingleton<IRemoteFactory, RemoteFactory>();
-        services.AddSingleton<IBarApiClient>(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
-        services.AddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
+        services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
+        services.TryAddSingleton<IBarApiClient>(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
 
         Provider = services.BuildServiceProvider();
         Logger = Provider.GetRequiredService<ILogger<Operation>>();
