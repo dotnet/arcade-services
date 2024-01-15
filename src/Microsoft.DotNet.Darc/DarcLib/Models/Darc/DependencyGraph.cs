@@ -137,7 +137,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory,
+        IBasicBarClient barClient,
         string repoUri,
         string commit,
         DependencyGraphBuildOptions options,
@@ -145,7 +145,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
-            barClientFactory,
+            barClient,
             null, /* no initial root dependencies */
             repoUri,
             commit,
@@ -169,7 +169,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barClientFactory,
+        IBarApiClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -178,7 +178,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
-            barClientFactory,
+            barClient,
             rootDependencies,
             repoUri,
             commit,
@@ -269,13 +269,11 @@ public class DependencyGraph
 
     private static async Task DoLatestInChannelGraphNodeDiffAsync(
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory,
+        IBasicBarClient barClient,
         ILogger logger,
         Dictionary<string, DependencyGraphNode> nodeCache)
     {
         logger.LogInformation("Running latest in channel node diff.");
-
-        IBasicBarClient barClient = await barClientFactory.GetBasicBarClient(logger);
 
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
@@ -402,7 +400,7 @@ public class DependencyGraph
     /// <returns>New dependency graph</returns>
     private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory,
+        IBasicBarClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -429,13 +427,6 @@ public class DependencyGraph
         else
         {
             logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
-        }
-
-        IBasicBarClient barClient = null;
-        if (remote)
-        {
-            // Look up the dependency and get the creating build.
-            barClient = await barClientFactory.GetBasicBarClient(logger);
         }
 
         List<LinkedList<DependencyGraphNode>> cycles = [];
@@ -631,7 +622,7 @@ public class DependencyGraph
                 await DoLatestInGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
                 break;
             case NodeDiff.LatestInChannel:
-                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, barClientFactory, logger, nodeCache);
+                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, barClient, logger, nodeCache);
                 break;
         }
 

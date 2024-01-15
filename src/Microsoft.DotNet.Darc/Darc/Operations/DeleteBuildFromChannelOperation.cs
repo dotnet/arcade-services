@@ -30,7 +30,7 @@ internal class DeleteBuildFromChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Find the build to give someone info
             Build build = await barClient.GetBuildAsync(_options.Id);

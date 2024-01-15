@@ -1,6 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -8,13 +14,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2020_02_20.Models.Channel;
 
@@ -38,9 +37,8 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        IBasicBarClientFactory barClientFactory,
-        ILogger<ChannelsController> logger)
-        : base(context, logger, barClientFactory)
+        IBasicBarClient barClient)
+        : base(context, barClient)
     {
         _context = context;
     }
@@ -91,7 +89,7 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 
         List<string> repositoryList = await buildChannelList
             .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
-            .Where(b => !String.IsNullOrEmpty(b))
+            .Where(b => !string.IsNullOrEmpty(b))
             .Distinct()
             .ToListAsync();
 
