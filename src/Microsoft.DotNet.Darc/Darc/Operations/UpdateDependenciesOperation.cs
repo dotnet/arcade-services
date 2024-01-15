@@ -13,6 +13,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
 
@@ -48,7 +49,7 @@ class UpdateDependenciesOperation : Operation
                 _options.GitHubPat;
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 
             var local = new Local(_options.GetRemoteConfiguration(), Logger);

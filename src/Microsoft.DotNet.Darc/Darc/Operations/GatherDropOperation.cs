@@ -1,17 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,6 +12,18 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -209,7 +210,7 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
         string repoUri = _options.RepoUri;
 
@@ -711,7 +712,7 @@ internal class GatherDropOperation : Operation
             var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                RemoteFactory.GetBarClient(_options, Logger),
+                Provider.GetRequiredService<IBarApiClient>(),
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
@@ -803,7 +804,7 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);

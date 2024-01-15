@@ -1,19 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -64,7 +65,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             Build build = await barClient.GetBuildAsync(_options.Id);
             if (build == null)
@@ -418,7 +419,7 @@ internal class AddBuildToChannelOperation : Operation
             build.GitHubRepository;
 
         IRemote repoRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
         IEnumerable<DependencyDetail> sourceBuildDependencies = await repoRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
             .ConfigureAwait(false);

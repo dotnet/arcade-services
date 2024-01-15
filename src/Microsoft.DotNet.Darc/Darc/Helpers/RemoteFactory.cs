@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers;
 
@@ -60,7 +60,7 @@ internal class RemoteFactory : IRemoteFactory
         return new Remote(gitClient, new VersionDetailsParser(), logger);
     }
 
-    public static IBarApiClient GetBarClient(CommandLineOptions options, ILogger logger)
+    public static IBarApiClient GetBarClient(ICommandLineOptions options, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
         IBarApiClient barClient = null;

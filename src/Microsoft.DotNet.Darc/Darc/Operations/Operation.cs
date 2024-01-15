@@ -1,15 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Arcade.Common;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Console;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.Arcade.Common;
 using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
@@ -47,7 +47,7 @@ public abstract class Operation : IDisposable
             .SetMinimumLevel(level));
             
         services.AddSingleton(options);
-        services.AddSingleton<IBarApiClient>(sp => BarApiClientFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.AddSingleton<IBarApiClient>(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
         services.AddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
 
         Provider = services.BuildServiceProvider();
