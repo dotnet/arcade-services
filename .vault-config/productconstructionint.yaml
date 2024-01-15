@@ -11,4 +11,4 @@ secrets:
       adminConnection: build-asset-registry-admin-connection-string
       dataSource: tcp:maestro-int-server.database.windows.net,1433
       database: BuildAssetRegistry
-      permissions: rw
+      permissions: r
