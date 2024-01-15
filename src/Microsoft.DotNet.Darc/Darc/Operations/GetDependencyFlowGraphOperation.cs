@@ -30,8 +30,7 @@ internal class GetDependencyFlowGraphOperation : Operation
         try
         {
             var remoteFactory = new RemoteFactory(_options);
-            var barClientFactory = new BarApiClientFactory(_options);
-            IBarApiClient barClient = await barClientFactory.GetBarClientAsync(Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
@@ -73,7 +72,7 @@ internal class GetDependencyFlowGraphOperation : Operation
     /// </summary>
     /// <param name="edge"></param>
     /// <returns></returns>
-    private string GetEdgeStyle(DependencyFlowEdge edge)
+    private static string GetEdgeStyle(DependencyFlowEdge edge)
     {
         string color = edge.OnLongestBuildPath ? "color=\"red:invis:red\"" : "";
         switch (edge.Subscription.Policy.UpdateFrequency)

@@ -30,7 +30,7 @@ internal class DeleteChannelOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Get the ID of the channel with the specified name.
             Channel existingChannel = (await barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
