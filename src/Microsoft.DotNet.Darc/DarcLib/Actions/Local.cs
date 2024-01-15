@@ -68,8 +68,7 @@ public class Local : ILocal
         await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail arcadeItem = dependencies.FirstOrDefault(
-            i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+        DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
         IRemote arcadeRemote = null;
 

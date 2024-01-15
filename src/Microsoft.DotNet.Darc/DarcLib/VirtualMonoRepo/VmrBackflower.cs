@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -46,7 +47,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IBasicBarClient _barClient;
+    private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -61,7 +65,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
         IBasicBarClient basicBarClient,
+        ILocalLibGit2Client libGit2Client,
         ICoherencyUpdateResolver coherencyUpdateResolver,
+        IRemoteFactory remoteFactory,
+        IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
@@ -76,7 +83,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _barClient = basicBarClient;
+        _libGit2Client = libGit2Client;
         _coherencyUpdateResolver = coherencyUpdateResolver;
+        _remoteFactory = remoteFactory;
+        _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -328,24 +338,53 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 Version = a.Version
             });
 
-        var updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-            build.Repository,
+        string sourceRepository = build.GitHubRepository ?? build.AzureDevOpsRepository;
+
+        // TODO: Maybe this should be hidden inside the dependency file manager
+        // However, we need more functionality so that it gets loaded from the local clone
+        string versionDetailsXml = await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
+            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {repo.Path}");
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+
+        List<DependencyUpdate> updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+            sourceRepository,
             build.Commit,
             assetData,
-            [] /* TODO ??? */);
+            versionDetails.Dependencies);
 
-        // TODO: Do a proper full update of all dependencies, not just V.D.xml
-        //var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repo.Path / VersionFiles.VersionDetailsXml));
-        //var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        //_dependencyFileManager.UpdateVersionDetails(
-        //    versionDetailsXml,
-        //    itemsToUpdate: [],
-        //    // TODO: Fix the URL with the URI of the BAR build we're processing
-        //    new SourceDependency("https://github.com/dotnet/dotnet", currentVmrSha),
-        //    oldDependencies: versionDetails.Dependencies);
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(updates.Select(u => u.To).ToList());
 
-        //_fileSystem.WriteToFile(repo.Path / VersionFiles.VersionDetailsXml, new GitFile(VersionFiles.VersionDetailsXml, versionDetailsXml).Content);
-        //await repo.StageAsync([VersionFiles.VersionDetailsXml], cancellationToken);
-        //await repo.CommitAsync($"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
+        var newSource = new SourceDependency(sourceRepository, build.Commit);
+
+        // If we are updating the arcade sdk we need to update the eng/common files as well
+        DependencyDetail? arcadeItem = versionDetails.Dependencies.GetArcadeUpdate();
+        SemanticVersion? targetDotNetVersion = null;
+        IRemote? arcadeRemote = null;
+
+        if (arcadeItem != null)
+        {
+            arcadeRemote = await _remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
+            // TODO: Also read this locally
+            targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+        }
+
+        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
+            updates.Select(u => u.To),
+            newSource,
+            newSource.Uri,
+            build.GitHubBranch ?? build.AzureDevOpsBranch,
+            versionDetails.Dependencies,
+            targetDotNetVersion);
+
+        if (arcadeItem != null)
+        {
+            // TODO: Perform eng/common update
+        }
+
+        // TODO: Stop using LibGit2SharpClient for this
+        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), repo.Path, null, null);
+        await repo.StageAsync(["."], cancellationToken);
+        await repo.CommitAsync($"Update dependency files to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }
 }

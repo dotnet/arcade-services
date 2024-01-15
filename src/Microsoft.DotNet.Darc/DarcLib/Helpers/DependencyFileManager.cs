@@ -20,9 +20,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class DependencyFileManager : IDependencyFileManager
 {
+    public const string ArcadeSdkPackageName = "Microsoft.DotNet.Arcade.Sdk";
+
     private static readonly ImmutableDictionary<string, KnownDependencyType> _knownAssetNames = new Dictionary<string, KnownDependencyType>()
     {
-        { "Microsoft.DotNet.Arcade.Sdk", KnownDependencyType.GlobalJson },
+        { ArcadeSdkPackageName, KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.Helix.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
@@ -33,7 +35,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private static readonly ImmutableDictionary<string, string> _sdkMapping = new Dictionary<string, string>()
     {
-        { "Microsoft.DotNet.Arcade.Sdk", "msbuild-sdks" },
+        { ArcadeSdkPackageName, "msbuild-sdks" },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.Helix.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.SharedFramework.Sdk", "msbuild-sdks" },

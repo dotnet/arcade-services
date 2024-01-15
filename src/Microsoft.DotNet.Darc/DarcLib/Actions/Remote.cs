@@ -178,7 +178,7 @@ public sealed class Remote : IRemote
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
         DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
-            i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+            i => string.Equals(i.Name, DependencyFileManager.ArcadeSdkPackageName, StringComparison.OrdinalIgnoreCase));
             
         SemanticVersion targetDotNetVersion = null;
         bool mayNeedArcadeUpdate = (arcadeItem != null && repoUri != arcadeItem.RepoUri);
