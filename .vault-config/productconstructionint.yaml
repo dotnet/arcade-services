@@ -5,6 +5,14 @@ storageLocation:
     name: ProductConstructionInt
 
 secrets:
+  build-asset-registry-admin-connection-string:
+    type: sql-connection-string
+    parameters:
+      adminConnection: build-asset-registry-admin-connection-string
+      dataSource: tcp:maestro-int-server.database.windows.net,1433
+      database: BuildAssetRegistry
+      permissions: admin
+
   build-asset-registry-sql-connection-string:
     type: sql-connection-string
     parameters:
