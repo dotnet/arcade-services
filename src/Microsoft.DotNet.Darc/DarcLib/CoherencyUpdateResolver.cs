@@ -15,10 +15,19 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
     private readonly IBasicBarClient _barClient;
     private readonly ILogger _logger;
 
-    public CoherencyUpdateResolver(IBasicBarClient barClient, ILogger logger)
+    public CoherencyUpdateResolver(
+        IBasicBarClient barClient,
+        ILogger logger)
     {
         _barClient = barClient;
         _logger = logger;
+    }
+
+    public CoherencyUpdateResolver(
+        IBasicBarClient barClient,
+        ILogger<CoherencyUpdateResolver> logger)
+        : this(barClient, (ILogger)logger)
+    {
     }
 
     public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(

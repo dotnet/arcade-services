@@ -11,7 +11,7 @@ internal interface ILocal
     Task UpdateDependenciesAsync(
         List<DependencyDetail> dependencies,
         IRemoteFactory remoteFactory,
-        IBarApiClientFactory barClientFactory);
+        IBarApiClient barClient);
 
     /// <summary>
     ///     Verify the local repository has correct and consistent dependency information

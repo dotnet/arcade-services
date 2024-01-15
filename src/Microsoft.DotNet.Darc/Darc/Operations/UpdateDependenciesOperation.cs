@@ -48,8 +48,7 @@ class UpdateDependenciesOperation : Operation
                 _options.GitHubPat;
 
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            var barClientFactory = new BarApiClientFactory(_options);
-            IBarApiClient barClient = await barClientFactory.GetBarClientAsync(Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 
             var local = new Local(_options.GetRemoteConfiguration(), Logger);
@@ -233,7 +232,7 @@ class UpdateDependenciesOperation : Operation
             }
 
             // Now call the local updater to run the update.
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, barClientFactory);
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, barClient);
 
             Console.WriteLine(finalMessage);
 

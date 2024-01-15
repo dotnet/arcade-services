@@ -15,7 +15,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
 {
     private readonly ILogger<PullRequestPolicyFailureNotifier> _logger;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IBasicBarClientFactory _barClientFactory;
+    private readonly IBasicBarClient _barClient;
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IGitHubClientFactory _gitHubClientFactory;
 
@@ -23,14 +23,14 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         IGitHubTokenProvider gitHubTokenProvider,
         IGitHubClientFactory gitHubClientFactory,
         IRemoteFactory darcFactory,
-        IBasicBarClientFactory barClientFactory,
+        IBasicBarClient barClient,
         ILogger<PullRequestPolicyFailureNotifier> logger)
     {
         _logger = logger;
         _gitHubTokenProvider = gitHubTokenProvider;
         _gitHubClientFactory = gitHubClientFactory;
         _remoteFactory = darcFactory;
-        _barClientFactory = barClientFactory;
+        _barClient = barClient;
     }
 
     public async Task TagSourceRepositoryGitHubContactsAsync(InProgressPullRequest pr)
@@ -64,8 +64,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         }
 
         var darcRemote = await _remoteFactory.GetRemoteAsync($"https://github.com/{owner}/{repo}", _logger);
-        var barClient = await _barClientFactory.GetBasicBarClient(_logger);
-        var darcSubscriptionObject = await barClient.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId);
+        var darcSubscriptionObject = await _barClient.GetSubscriptionAsync(subscriptionFromPr.SubscriptionId);
         string sourceRepository = darcSubscriptionObject.SourceRepository;
         string targetRepository = darcSubscriptionObject.TargetRepository;
 

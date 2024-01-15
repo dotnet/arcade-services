@@ -148,7 +148,7 @@ public interface IRemote
         string repoUri,
         string branch,
         IRemoteFactory remoteFactory,
-        IBasicBarClientFactory barClientFactory,
+        IBasicBarClient barClient,
         List<DependencyDetail> itemsToUpdate,
         string message);
 

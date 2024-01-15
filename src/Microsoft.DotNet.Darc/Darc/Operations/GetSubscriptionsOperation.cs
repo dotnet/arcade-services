@@ -37,7 +37,7 @@ class GetSubscriptionsOperation : Operation
         try
         {
             IBarApiClient barClient = Provider.GetService<IBarApiClient>()
-                ?? BarApiClientFactory.GetBarClient(_options, Logger);
+                ?? RemoteFactory.GetBarClient(_options, Logger);
 
             IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
 

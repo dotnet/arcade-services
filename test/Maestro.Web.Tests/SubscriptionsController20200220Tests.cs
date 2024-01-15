@@ -451,7 +451,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
                 EnvironmentName = Environments.Development
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
-            collection.AddSingleton(Mock.Of<IBasicBarClientFactory>());
+            collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
         }
 
