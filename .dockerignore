@@ -23,7 +23,6 @@
 **/values.dev.yaml
 LICENSE
 README.md
-src/Maestro/MaestroApplication/
 !**/.gitignore
 !.git/HEAD
 !.git/config
