@@ -1,9 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
-using Microsoft.DotNet.Darc.Helpers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
@@ -11,11 +12,8 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetBuildOperation : Operation
@@ -36,8 +34,7 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IBarApiClient remote = Provider.GetService<IBarApiClient>()
-                ?? RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
@@ -49,7 +46,7 @@ internal class GetBuildOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                matchingBuilds = [await remote.GetBuildAsync(_options.Id)];
+                matchingBuilds = [await barClient.GetBuildAsync(_options.Id)];
             }
             else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
             {
@@ -58,7 +55,7 @@ internal class GetBuildOperation : Operation
                     Console.WriteLine("--repo and --commit should be used together.");
                     return Constants.ErrorCode;
                 }
-                var subscriptions = await remote.GetSubscriptionsAsync();
+                var subscriptions = await barClient.GetSubscriptionsAsync();
                 var possibleRepos = subscriptions
                     .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
                     .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
@@ -67,7 +64,7 @@ internal class GetBuildOperation : Operation
                 matchingBuilds = [];
                 foreach (string repo in possibleRepos)
                 {
-                    matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));
+                    matchingBuilds.AddRange(await barClient.GetBuildsAsync(repo, _options.Commit));
                 }
                 matchingBuilds = matchingBuilds.DistinctBy(build => UxHelpers.GetTextBuildDescription(build)).ToList(); 
             }

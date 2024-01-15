@@ -1,17 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.HealthMetrics;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -54,7 +55,7 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
             IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
@@ -204,8 +205,8 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = new RemoteFactory(_options);
-        var barClient = RemoteFactory.GetBarClient(_options, Logger);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
+        var barClient = Provider.GetRequiredService<IBarApiClient>();
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -279,8 +280,8 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = new RemoteFactory(_options);
-        var barClient = RemoteFactory.GetBarClient(_options, Logger);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
+        var barClient = Provider.GetRequiredService<IBarApiClient>();
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
