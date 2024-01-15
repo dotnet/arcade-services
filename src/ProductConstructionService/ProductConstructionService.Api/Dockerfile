@@ -18,10 +18,10 @@ COPY ["global.json", "."]
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService/ProductConstructionService.Api/"]
 RUN dotnet restore "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 COPY ["src/ProductConstructionService", "./ProductConstructionService"]
-COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
-COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
+COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro/Maestro.MergePolicyEvaluation"]
+COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 RUN dotnet build "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
