@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -252,7 +251,7 @@ internal abstract class VmrCodeFlower
     /// <summary>
     /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
     /// </summary>
-    private async Task<bool> IsAncestorCommit(ILocalGitRepo repo, string parent, string ancestor)
+    private static async Task<bool> IsAncestorCommit(ILocalGitRepo repo, string parent, string ancestor)
     {
         var result = await repo.ExecuteGitCommand("merge-base", "--is-ancestor", parent, ancestor);
 

@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -43,6 +45,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
+    private readonly IBasicBarClient _barClient;
+    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -56,6 +60,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IVersionDetailsParser versionDetailsParser,
         IVmrPatchHandler vmrPatchHandler,
         IWorkBranchFactory workBranchFactory,
+        IBasicBarClient basicBarClient,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
@@ -69,6 +75,8 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
+        _barClient = basicBarClient;
+        _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -308,20 +316,36 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return branchName;
     }
 
-    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
+    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int buildToFlow, CancellationToken cancellationToken)
     {
-        // TODO: Do a proper full update of all dependencies, not just V.D.xml
-        var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repo.Path / VersionFiles.VersionDetailsXml));
-        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        _dependencyFileManager.UpdateVersionDetails(
-            versionDetailsXml,
-            itemsToUpdate: [],
-            // TODO: Fix the URL with the URI of the BAR build we're processing
-            new SourceDependency("https://github.com/dotnet/dotnet", currentVmrSha),
-            oldDependencies: versionDetails.Dependencies);
+        Build build = await _barClient.GetBuildAsync(buildToFlow)
+            ?? throw new Exception($"Failed to find build with ID {buildToFlow}");
 
-        _fileSystem.WriteToFile(repo.Path / VersionFiles.VersionDetailsXml, new GitFile(VersionFiles.VersionDetailsXml, versionDetailsXml).Content);
-        await repo.StageAsync([VersionFiles.VersionDetailsXml], cancellationToken);
-        await repo.CommitAsync($"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
+        IEnumerable<AssetData> assetData = build.Assets.Select(
+            a => new AssetData(a.NonShipping)
+            {
+                Name = a.Name,
+                Version = a.Version
+            });
+
+        var updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+            build.Repository,
+            build.Commit,
+            assetData,
+            [] /* TODO ??? */);
+
+        // TODO: Do a proper full update of all dependencies, not just V.D.xml
+        //var versionDetailsXml = DependencyFileManager.GetXmlDocument(await _fileSystem.ReadAllTextAsync(repo.Path / VersionFiles.VersionDetailsXml));
+        //var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+        //_dependencyFileManager.UpdateVersionDetails(
+        //    versionDetailsXml,
+        //    itemsToUpdate: [],
+        //    // TODO: Fix the URL with the URI of the BAR build we're processing
+        //    new SourceDependency("https://github.com/dotnet/dotnet", currentVmrSha),
+        //    oldDependencies: versionDetails.Dependencies);
+
+        //_fileSystem.WriteToFile(repo.Path / VersionFiles.VersionDetailsXml, new GitFile(VersionFiles.VersionDetailsXml, versionDetailsXml).Content);
+        //await repo.StageAsync([VersionFiles.VersionDetailsXml], cancellationToken);
+        //await repo.CommitAsync($"Update {VersionFiles.VersionDetailsXml} to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }
 }
