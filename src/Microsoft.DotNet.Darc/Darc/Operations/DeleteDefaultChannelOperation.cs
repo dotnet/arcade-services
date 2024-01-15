@@ -25,7 +25,7 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
     {
         try
         {
-            IBarApiClient barClient = BarApiClientFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             DefaultChannel resolvedChannel = await ResolveSingleChannel();
             if (resolvedChannel == null)

@@ -36,7 +36,6 @@ internal class GetDependencyGraphOperation : Operation
             IEnumerable<DependencyDetail> rootDependencies = null;
             DependencyGraph graph;
             var remoteFactory = new RemoteFactory(_options);
-            var barClientFactory = new BarApiClientFactory(_options);
 
             if (!_options.Local)
             {
@@ -116,7 +115,7 @@ internal class GetDependencyGraphOperation : Operation
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    await barClientFactory.GetBarClientAsync(Logger),
+                    RemoteFactory.GetBarClient(_options, Logger),
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
                     _options.Version ?? await _gitClient.GetGitCommitAsync(),
