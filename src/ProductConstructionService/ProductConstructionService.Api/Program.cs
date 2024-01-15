@@ -12,7 +12,9 @@ builder.Configuration.AddAzureKeyVault(
     new DefaultAzureCredential());
 
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
-    options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? ""));
+{
+    options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? "");
+});
 
 builder.AddServiceDefaults();
 
