@@ -141,9 +141,9 @@ internal class CreateMergedManifestBuildModelTests
 
         PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry
         {
-            getEnvProxy = getEnvMock.Object
+            getEnvProxy = getEnvMock.Object,
+            versionIdentifier = new VersionIdentifierMock()
         };
-        pushMetadata.versionIdentifier = new VersionIdentifierMock();
         return pushMetadata;
     }
 

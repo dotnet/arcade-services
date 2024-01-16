@@ -32,8 +32,8 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         {
             Repository = GetCurrentSettingForDisplay(repository, "<required>", false),
             Branch = GetCurrentSettingForDisplay(branch, "<required>", false),
+            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies)
         };
-        _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies);
 
         ISerializer serializer = new SerializerBuilder().Build();
         string yaml = serializer.Serialize(_yamlData);

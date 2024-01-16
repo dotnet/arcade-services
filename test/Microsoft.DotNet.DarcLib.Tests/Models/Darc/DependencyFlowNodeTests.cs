@@ -76,8 +76,9 @@ public class DependencyFlowNodeTests
             WorstCasePathTime = worstCasePathTime,
         };
 
-        var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test", string.Empty);
-        subscription.LastAppliedBuild = new Build(
+        var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test", string.Empty)
+        {
+            LastAppliedBuild = new Build(
             id: 1,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,
@@ -90,7 +91,8 @@ public class DependencyFlowNodeTests
             {
                 new(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
             }.ToImmutableList(),
-            incoherencies: ImmutableList<BuildIncoherence>.Empty);
+            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+        };
 
         var edge = new DependencyFlowEdge(fromNode, toNode, subscription)
         {

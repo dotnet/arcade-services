@@ -43,7 +43,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
-            
+
         _yamlData = new SubscriptionData
         {
             Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
@@ -52,10 +52,9 @@ public class UpdateSubscriptionPopUp : EditorPopUp
             Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
             UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
             Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
-            FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false)
+            FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false),
+            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies)
         };
-
-        _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies);
 
         ISerializer serializer = new SerializerBuilder().Build();
 

@@ -474,8 +474,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>The new check run</returns>
     private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
     {
-        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha);
-        newCheckRun.ExternalId = CheckRunId(result, sha);
+        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha)
+        {
+            ExternalId = CheckRunId(result, sha)
+        };
         UpdateCheckRun(newCheckRun, result);
         return newCheckRun;
     }
@@ -500,10 +502,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>The deleted check run</returns>
     private static CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
     {
-        CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-        updatedCheckRun.CompletedAt = checkRun.CompletedAt;
-        updatedCheckRun.Status = "completed";
-        updatedCheckRun.Conclusion = "skipped";
+        CheckRunUpdate updatedCheckRun = new CheckRunUpdate
+        {
+            CompletedAt = checkRun.CompletedAt,
+            Status = "completed",
+            Conclusion = "skipped"
+        };
         return updatedCheckRun;
     }
 
