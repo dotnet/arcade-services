@@ -51,13 +51,13 @@ public abstract class MergePolicy : IMergePolicy
 
     public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
 
-    public MergePolicyEvaluationResult Pending(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, title, string.Empty, this);
+    public MergePolicyEvaluationResult Pending(string title) => new(MergePolicyEvaluationStatus.Pending, title, string.Empty, this);
 
-    public MergePolicyEvaluationResult Succeed(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, title, string.Empty, this);
+    public MergePolicyEvaluationResult Succeed(string title) => new(MergePolicyEvaluationStatus.Success, title, string.Empty, this);
 
-    public MergePolicyEvaluationResult Fail(string title) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, string.Empty, this);
+    public MergePolicyEvaluationResult Fail(string title) => new(MergePolicyEvaluationStatus.Failure, title, string.Empty, this);
 
-    public MergePolicyEvaluationResult Fail(string title, string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, title, message, this);
+    public MergePolicyEvaluationResult Fail(string title, string message) => new(MergePolicyEvaluationStatus.Failure, title, message, this);
 }
 
 public interface IMergePolicy : IMergePolicyInfo

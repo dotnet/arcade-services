@@ -38,17 +38,17 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         // Initialize line contents.
         Contents = new ReadOnlyCollection<Line>(new List<Line>
         {
-            new Line("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
-            new Line($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
-            new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
-            new Line($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
-            new Line("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
-            new Line("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command", isComment: true),
-            new Line($"{azureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
-            new Line($"{barBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
-            new Line(""),
-            new Line("Storing the required settings...", true),
-            new Line($"Set elements above depending on what you need", true),
+            new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
+            new($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
+            new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
+            new($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
+            new("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
+            new("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command", isComment: true),
+            new($"{azureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
+            new($"{barBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
+            new(""),
+            new("Storing the required settings...", true),
+            new($"Set elements above depending on what you need", true),
         });
     }
 

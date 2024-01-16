@@ -32,10 +32,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private static readonly string CommentMarker =
         "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
-    private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
+    private static readonly Regex RepositoryUriPattern = new(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
     private static readonly Regex PullRequestUriPattern =
-        new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
+        new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
     private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
     private readonly ILogger _logger;

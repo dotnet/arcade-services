@@ -18,9 +18,9 @@ public static class SharedKustoQueries
         int? officialBuildDefinitionId)
     {
         var parameters = new List<KustoParameter> {
-            new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
-            new KustoParameter("_SourceBranch", branch, KustoDataType.String),
-            new KustoParameter("_Days", $"{days}d", KustoDataType.TimeSpan)
+            new("_Repository", repository.Split('/').Last(), KustoDataType.String),
+            new("_SourceBranch", branch, KustoDataType.String),
+            new("_Days", $"{days}d", KustoDataType.TimeSpan)
         };
 
         string prProject = "public";

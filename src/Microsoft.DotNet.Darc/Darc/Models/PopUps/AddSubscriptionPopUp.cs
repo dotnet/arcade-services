@@ -61,18 +61,18 @@ public class AddSubscriptionPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line("Use this form to create a new subscription.", true),
-            new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
-            new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-            new Line("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-            new Line("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
-            new Line("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
-            new Line("logins when monitoring the pull requests, once one or more policy checks fail.", true),
-            new Line("For additional information about subscriptions, please see", true),
-            new Line("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
-            new Line("", true),
-            new Line("Fill out the following form.  Suggested values for fields are shown below.", true),
-            new Line()
+            new("Use this form to create a new subscription.", true),
+            new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
+            new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
+            new("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
+            new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
+            new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
+            new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
+            new("For additional information about subscriptions, please see", true),
+            new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
+            new("", true),
+            new("Fill out the following form.  Suggested values for fields are shown below.", true),
+            new()
         });
         foreach (string line in lines)
         {

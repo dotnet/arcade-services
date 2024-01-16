@@ -40,7 +40,7 @@ public class ParseBuildManifestMetadataTests
     #region Assets
 
     internal static readonly AssetData PackageAsset1 =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -50,7 +50,7 @@ public class ParseBuildManifestMetadataTests
         };
 
     internal static readonly AssetData BlobAsset1 =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -60,7 +60,7 @@ public class ParseBuildManifestMetadataTests
         };
 
     internal static readonly AssetData PackageAsset2 =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -70,7 +70,7 @@ public class ParseBuildManifestMetadataTests
         };
 
     internal static readonly AssetData BlobAsset2 =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -80,7 +80,7 @@ public class ParseBuildManifestMetadataTests
         };
 
     internal static readonly AssetData unversionedPackageAsset =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -90,7 +90,7 @@ public class ParseBuildManifestMetadataTests
         };
 
     internal static readonly AssetData unversionedBlobAsset =
-        new AssetData(true)
+        new(true)
         {
             Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
@@ -103,21 +103,21 @@ public class ParseBuildManifestMetadataTests
 
     #region Individual Assets
 
-    private static readonly Package package1 = new Package()
+    private static readonly Package package1 = new()
     {
         Id = "Microsoft.Cci.Extensions",
         NonShipping = true,
         Version = version
     };
 
-    private static readonly Package package2 = new Package()
+    private static readonly Package package2 = new()
     {
         Id = "Microsoft.DotNet.ApiCompat",
         NonShipping = true,
         Version = version
     };
 
-    private static readonly PackageArtifactModel packageArtifactModel1 = new PackageArtifactModel()
+    private static readonly PackageArtifactModel packageArtifactModel1 = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -127,7 +127,7 @@ public class ParseBuildManifestMetadataTests
         Version = version
     };
 
-    private static readonly PackageArtifactModel packageArtifactModel2 = new PackageArtifactModel()
+    private static readonly PackageArtifactModel packageArtifactModel2 = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -137,7 +137,7 @@ public class ParseBuildManifestMetadataTests
         Version = version
     };
 
-    private static readonly PackageArtifactModel unversionedPackageArtifactModel = new PackageArtifactModel()
+    private static readonly PackageArtifactModel unversionedPackageArtifactModel = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -147,26 +147,26 @@ public class ParseBuildManifestMetadataTests
         Version = null
     };
 
-    private static readonly Package unversionedPackage = new Package()
+    private static readonly Package unversionedPackage = new()
     {
         Id = "Microsoft.Cci.Extensions",
         NonShipping = true
     };
 
-    private static readonly Blob manifestAsBlob = new Blob()
+    private static readonly Blob manifestAsBlob = new()
     {
         Id = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
         NonShipping = true
     };
 
-    private static readonly Blob blob2 = new Blob()
+    private static readonly Blob blob2 = new()
     {
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
         NonShipping = true,
         Category = "Other"
     };
 
-    private static readonly BlobArtifactModel manifestAsBlobArtifactModel = new BlobArtifactModel()
+    private static readonly BlobArtifactModel manifestAsBlobArtifactModel = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -176,7 +176,7 @@ public class ParseBuildManifestMetadataTests
         Id = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml"
     };
 
-    private static readonly BlobArtifactModel blobArtifactModel2 = new BlobArtifactModel()
+    private static readonly BlobArtifactModel blobArtifactModel2 = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -186,7 +186,7 @@ public class ParseBuildManifestMetadataTests
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private static readonly BlobArtifactModel unversionedBlobArtifactModel = new BlobArtifactModel()
+    private static readonly BlobArtifactModel unversionedBlobArtifactModel = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -196,13 +196,13 @@ public class ParseBuildManifestMetadataTests
         Id = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private static readonly Blob unversionedBlob = new Blob()
+    private static readonly Blob unversionedBlob = new()
     {
         Id = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
         NonShipping = true
     };
 
-    private static readonly SigningInformation signingInfo1 = new SigningInformation()
+    private static readonly SigningInformation signingInfo1 = new()
     {
         CertificatesSignInfo =
         [
@@ -251,7 +251,7 @@ public class ParseBuildManifestMetadataTests
     };
 
     public static readonly SigningInformation signingInfo2 =
-        new SigningInformation()
+        new()
         {
             CertificatesSignInfo =
             [
@@ -303,7 +303,7 @@ public class ParseBuildManifestMetadataTests
 
     #region Manifests
 
-    private static readonly Manifest baseManifest = new Manifest()
+    private static readonly Manifest baseManifest = new()
     {
         AzureDevOpsAccount = AzureDevOpsAccount1,
         AzureDevOpsBranch = AzureDevOpsBranch1,
@@ -322,7 +322,7 @@ public class ParseBuildManifestMetadataTests
         SigningInformation = new SigningInformation()
     };
 
-    private static readonly Manifest manifest1 = new Manifest()
+    private static readonly Manifest manifest1 = new()
     {
         AzureDevOpsAccount = AzureDevOpsAccount1,
         AzureDevOpsBranch = AzureDevOpsBranch1,
@@ -341,7 +341,7 @@ public class ParseBuildManifestMetadataTests
         SigningInformation = signingInfo1
     };
 
-    private static readonly Manifest manifest2 = new Manifest()
+    private static readonly Manifest manifest2 = new()
     {
         AzureDevOpsAccount = AzureDevOpsAccount1,
         AzureDevOpsBranch = AzureDevOpsBranch1,
@@ -360,7 +360,7 @@ public class ParseBuildManifestMetadataTests
         SigningInformation = signingInfo2
     };
 
-    BuildModel buildModel = new BuildModel(
+    BuildModel buildModel = new(
         new BuildIdentity
         {
             Attributes = new Dictionary<string, string>()

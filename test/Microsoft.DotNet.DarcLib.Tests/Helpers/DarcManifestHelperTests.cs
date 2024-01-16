@@ -235,7 +235,7 @@ public class DarcManifestHelperTests
                 },
                 DownloadedAssets = new List<DownloadedAsset>()
                 {
-                    new DownloadedAsset()
+                    new()
                     {
                         Asset = new Asset(i, i + 10000, i % 2 == 0, $"DownloadedAsset{i}", $"{i}.0.0", ImmutableList<AssetLocation>.Empty),
                         SourceLocation = "https://github.com/dotnet/fakerepository",
@@ -249,14 +249,14 @@ public class DarcManifestHelperTests
             {
                 buildToAdd.Dependencies = new List<DependencyDetail>()
                 {
-                    new DependencyDetail()
+                    new()
                     {
                         Commit = "fakehash1",
                         Name = "Fake.Dependency.One",
                         RepoUri = "https://github.com/dotnet/fakerepository1",
                         Version = "1.2.3-prerelease"
                     },
-                    new DependencyDetail()
+                    new()
                     {
                         Commit = "fakehash2",
                         Name = "Fake.Dependency.Two",

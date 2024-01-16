@@ -114,7 +114,7 @@ public class SqlBarClient : IBasicBarClient
     }
 
     private static Asset ToClientModelAsset(Data.Models.Asset other)
-        => new Asset(
+        => new(
             other.Id,
             other.BuildId,
             other.NonShipping,

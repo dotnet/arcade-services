@@ -88,7 +88,7 @@ public class DependencyFlowNodeTests
             assets: ImmutableList<Asset>.Empty,
             dependencies: new List<BuildRef>
             {
-                new BuildRef(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
+                new(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
             }.ToImmutableList(),
             incoherencies: ImmutableList<BuildIncoherence>.Empty);
 

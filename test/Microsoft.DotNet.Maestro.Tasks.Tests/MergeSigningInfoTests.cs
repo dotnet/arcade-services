@@ -68,9 +68,9 @@ public class MergeSigningInfoTests
         }
     ];
 
-    public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation();
+    public static readonly SigningInformation PartialSigningInfo1 = new();
 
-    public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation()
+    public static readonly SigningInformation PartialSigningInfo2 = new()
     {
         CertificatesSignInfo =
         [
@@ -87,7 +87,7 @@ public class MergeSigningInfoTests
         ItemsToSign = []
     };
 
-    public static readonly SigningInformation PartialSigningInfo4 = new SigningInformation()
+    public static readonly SigningInformation PartialSigningInfo4 = new()
     {
         CertificatesSignInfo = [],
         FileExtensionSignInfos =
@@ -103,7 +103,7 @@ public class MergeSigningInfoTests
         ItemsToSign = []
     };
 
-    public static readonly SigningInformation MergedPartialMetadataSigningInfos = new SigningInformation()
+    public static readonly SigningInformation MergedPartialMetadataSigningInfos = new()
     {
         CertificatesSignInfo =
         [
@@ -126,7 +126,7 @@ public class MergeSigningInfoTests
         StrongNameSignInfos = []
     };
 
-    public static readonly SigningInformation MergedPartialSigningInfos = new SigningInformation()
+    public static readonly SigningInformation MergedPartialSigningInfos = new()
     {
         CertificatesSignInfo =
         [
@@ -194,7 +194,7 @@ public class MergeSigningInfoTests
     ];
 
     public static readonly SigningInformation ExpectedMergedSigningInfo =
-        new SigningInformation()
+        new()
         {
             CertificatesSignInfo =
             [

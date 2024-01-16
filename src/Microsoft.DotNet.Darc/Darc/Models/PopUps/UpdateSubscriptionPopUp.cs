@@ -68,9 +68,9 @@ public class UpdateSubscriptionPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-            new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-            new Line()
+            new($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+            new($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+            new()
         });
 
         foreach (string line in lines)

@@ -54,7 +54,7 @@ internal class GatherDropOperation : Operation
     public const string AzDoNuGetFeedPattern =
         @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
 
-    private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds = new List<(string, string)>()
+    private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds = new()
     {
         ("https://github.com/dotnet/corefx", "7ee84596d92e178bce54c986df31ccc52479e772"),
         ("https://github.com/aspnet/xdt", "c01a538851a8ab1a1fbeb2e6243f391fff7587b4")

@@ -28,7 +28,7 @@ public sealed class Remote : IRemote
     //- **Bar**: from to 2.2.0
     //[DependencyUpdate]: <> (End)
     private static readonly Regex DependencyUpdatesPattern =
-        new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
+        new(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
     public Remote(
         IRemoteGitRepo remoteGitClient,

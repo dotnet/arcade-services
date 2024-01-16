@@ -42,12 +42,12 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
-            new Line("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
-            new Line("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
-            new Line("", true),
-            new Line("Fill out the following form. Suggested values for merge policies are shown below.", true),
-            new Line()
+            new("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
+            new("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
+            new("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
+            new("", true),
+            new("Fill out the following form. Suggested values for merge policies are shown below.", true),
+            new()
         });
         foreach (string line in lines)
         {

@@ -19,7 +19,7 @@ public class GetManifestAsAssetTests
     public const string repoName ="thisIsARepo";
     public const string assetVersion = "6.0.0-beta.20516.5";
 
-    internal BlobArtifactModel blob = new BlobArtifactModel()
+    internal BlobArtifactModel blob = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -29,7 +29,7 @@ public class GetManifestAsAssetTests
         Id = $"assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNotNull = new BlobArtifactModel()
+    internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNotNull = new()
     {
         Attributes = new Dictionary<string, string>()
         {
@@ -39,7 +39,7 @@ public class GetManifestAsAssetTests
         Id = $"assets/manifests/{repoName}/{assetVersion}/{newManifestName}"
     };
 
-    internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNull = new BlobArtifactModel()
+    internal BlobArtifactModel mergedManifestBlobWhenAssetVersionIsNull = new()
     {
         Attributes = new Dictionary<string, string>()
         {

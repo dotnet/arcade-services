@@ -34,7 +34,7 @@ class CreateMergedManifestBuildModelTests
     private static string mergedManifestName = "MergedManifest.xml";
     private static string version = "6.0.0-beta.20516.5";
 
-    private PackageArtifactModel package1 = new PackageArtifactModel
+    private PackageArtifactModel package1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -44,7 +44,7 @@ class CreateMergedManifestBuildModelTests
         Version = version
     };
 
-    private PackageArtifactModel nonShippingPackage = new PackageArtifactModel
+    private PackageArtifactModel nonShippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -54,7 +54,7 @@ class CreateMergedManifestBuildModelTests
         Version = version
     };
 
-    private PackageArtifactModel packageWithNoVersion = new PackageArtifactModel
+    private PackageArtifactModel packageWithNoVersion = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -64,7 +64,7 @@ class CreateMergedManifestBuildModelTests
         Version = null
     };
 
-    private PackageArtifactModel shippingPackage = new PackageArtifactModel
+    private PackageArtifactModel shippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -77,7 +77,7 @@ class CreateMergedManifestBuildModelTests
     List<PackageArtifactModel> packages;
     List<BlobArtifactModel> blobs;
 
-    private BlobArtifactModel blob1 = new BlobArtifactModel
+    private BlobArtifactModel blob1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -87,7 +87,7 @@ class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private BlobArtifactModel mergedManifest = new BlobArtifactModel
+    private BlobArtifactModel mergedManifest = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -96,7 +96,7 @@ class CreateMergedManifestBuildModelTests
         Id = $"assets/manifests/{buildRepoName}/{id}/{mergedManifestName}"
     };
 
-    private BlobArtifactModel nonShippingBlob = new BlobArtifactModel
+    private BlobArtifactModel nonShippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -106,7 +106,7 @@ class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.DotNet.ApiCompat.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private BlobArtifactModel shippingBlob = new BlobArtifactModel
+    private BlobArtifactModel shippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -116,7 +116,7 @@ class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.DotNet.Maestro.Client.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private readonly Manifest manifest = new Manifest
+    private readonly Manifest manifest = new()
     {
         InitialAssetsLocation = initialAssetsLocation,
         AzureDevOpsBuildId = azDoBuildId,

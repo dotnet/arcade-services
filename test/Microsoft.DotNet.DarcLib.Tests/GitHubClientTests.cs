@@ -52,7 +52,7 @@ public class SimpleCache : IMemoryCache
 {
     public int CacheHits { get; set; }
     public int CacheMisses { get; set; }
-    public ConcurrentDictionary<object, ICacheEntry> cache = new ConcurrentDictionary<object, ICacheEntry>();
+    public ConcurrentDictionary<object, ICacheEntry> cache = new();
 
     public ICacheEntry CreateEntry(object key)
     {

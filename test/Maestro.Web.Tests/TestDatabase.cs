@@ -43,7 +43,7 @@ public class TestDatabase : IDisposable
 {
     private const string TestDatabasePrefix = "TFD_";
     private string _databaseName;
-    private readonly SemaphoreSlim _createLock = new SemaphoreSlim(1);
+    private readonly SemaphoreSlim _createLock = new(1);
 
     protected TestDatabase()
     {
