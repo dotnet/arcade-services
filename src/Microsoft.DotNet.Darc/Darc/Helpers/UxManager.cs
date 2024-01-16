@@ -103,7 +103,7 @@ public class UxManager
 
             while (tries-- > 0 && result != Constants.SuccessCode)
             {
-                using (Process process = new Process())
+                using (var process = new Process())
                 {
                     _popUpClosed = false;
                     process.EnableRaisingEvents = true;

@@ -385,7 +385,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private static bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
     {
-        return locations != null && locations.All(l => IsMaestroManagedFeed(l));
+        return locations != null && locations.All(IsMaestroManagedFeed);
     }
 
     private static bool IsMaestroManagedFeed(string feed)

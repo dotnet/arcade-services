@@ -29,16 +29,16 @@ namespace Maestro.Web.Tests;
 [TestFixture]
 public partial class SubscriptionsController20200220Tests : IDisposable
 {
-    private readonly TestData data;
+    private readonly TestData _data;
 
     public SubscriptionsController20200220Tests()
     {
-        data = TestData.Default.Build();
+        _data = TestData.Default.Build();
     }
 
     public void Dispose()
     {
-        data.Dispose();
+        _data.Dispose();
     }
 
     [Test]
@@ -67,7 +67,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         Subscription createdSubscription1;
         {
-            IActionResult result = await data.SubscriptionsController.Create(subscription1);
+            IActionResult result = await _data.SubscriptionsController.Create(subscription1);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
@@ -94,7 +94,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         Subscription createdSubscription2;
         {
-            IActionResult result = await data.SubscriptionsController.Create(subscription2);
+            IActionResult result = await _data.SubscriptionsController.Create(subscription2);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
@@ -111,7 +111,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // List all (both) subscriptions, spot check that we got both
         {
-            IActionResult result = data.SubscriptionsController.ListSubscriptions();
+            IActionResult result = _data.SubscriptionsController.ListSubscriptions();
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
@@ -126,7 +126,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         }
         // Use ListSubscriptions() params at least superficially to go down those codepaths
         {
-            IActionResult result = data.SubscriptionsController.ListSubscriptions(defaultAzdoSourceRepo, defaultAzdoTargetRepo, createdSubscription2.Channel.Id, false);
+            IActionResult result = _data.SubscriptionsController.ListSubscriptions(defaultAzdoSourceRepo, defaultAzdoTargetRepo, createdSubscription2.Channel.Id, false);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
@@ -138,7 +138,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         }
         // Directly get one of the subscriptions
         {
-            IActionResult result = await data.SubscriptionsController.GetSubscription(createdSubscription1.Id);
+            IActionResult result = await _data.SubscriptionsController.GetSubscription(createdSubscription1.Id);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
@@ -156,14 +156,14 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // No subs added, get a random Guid
         {
-            IActionResult result = await data.SubscriptionsController.GetSubscription(shouldntExist);
+            IActionResult result = await _data.SubscriptionsController.GetSubscription(shouldntExist);
             result.Should().BeAssignableTo<NotFoundResult>();
             var notFoundResult = (NotFoundResult) result;
             notFoundResult.StatusCode.Should().Be((int) HttpStatusCode.NotFound);
         }
 
         {
-            IActionResult result = data.SubscriptionsController.ListSubscriptions(
+            IActionResult result = _data.SubscriptionsController.ListSubscriptions(
                 "https://github.com/dotnet/does-not-exist",
                 "https://github.com/dotnet/does-not-exist-2",
                 123456,
@@ -197,7 +197,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             PullRequestFailureNotificationTags = anInvalidDependencyFlowNotificationList
         };
 
-        IActionResult result = await data.SubscriptionsController.Create(subscription);
+        IActionResult result = await _data.SubscriptionsController.Create(subscription);
         result.Should().BeAssignableTo<BadRequestObjectResult>();
     }
 
@@ -219,7 +219,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             TargetBranch = defaultBranchName
         };
 
-        IActionResult result = await data.SubscriptionsController.Create(subscription);
+        IActionResult result = await _data.SubscriptionsController.Create(subscription);
         result.Should().BeAssignableTo<BadRequestObjectResult>();
     }
 
@@ -243,13 +243,13 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         };
 
         {
-            IActionResult createResult = await data.SubscriptionsController.Create(subscriptionToDelete);
+            IActionResult createResult = await _data.SubscriptionsController.Create(subscriptionToDelete);
             createResult.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) createResult;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
             Subscription createdSubscription = (Subscription) objResult.Value;
 
-            IActionResult deleteResult = await data.SubscriptionsController.DeleteSubscription(createdSubscription.Id);
+            IActionResult deleteResult = await _data.SubscriptionsController.DeleteSubscription(createdSubscription.Id);
             deleteResult.Should().BeAssignableTo<OkObjectResult>();
             var deleteObjResult = (OkObjectResult) deleteResult;
             // Seems like this should be OK but it gives created... 
@@ -278,7 +278,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         Subscription createdSubscription;
         {
-            IActionResult createResult = await data.SubscriptionsController.Create(subscriptionToTrigger);
+            IActionResult createResult = await _data.SubscriptionsController.Create(subscriptionToTrigger);
             createResult.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) createResult;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
@@ -303,19 +303,19 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         Build build1, build3;
         // Add some builds
         {
-            IActionResult createResult1 = await data.BuildsController.Create(build1Data);
+            IActionResult createResult1 = await _data.BuildsController.Create(build1Data);
             createResult1.Should().BeAssignableTo<ObjectResult>();
             var objResult1 = (ObjectResult) createResult1;
             objResult1.StatusCode.Should().Be((int) HttpStatusCode.Created);
             build1 = (Build) objResult1.Value;
 
             // Ignored build, just obviates the previous one.
-            IActionResult createResult2 = await data.BuildsController.Create(build2Data);
+            IActionResult createResult2 = await _data.BuildsController.Create(build2Data);
             createResult2.Should().BeAssignableTo<ObjectResult>();
             var objResult2 = (ObjectResult) createResult2;
             objResult2.StatusCode.Should().Be((int) HttpStatusCode.Created);
 
-            IActionResult createResult3 = await data.BuildsController.Create(build3Data);
+            IActionResult createResult3 = await _data.BuildsController.Create(build3Data);
             createResult3.Should().BeAssignableTo<ObjectResult>();
             var objResult3 = (ObjectResult) createResult3;
             objResult3.StatusCode.Should().Be((int) HttpStatusCode.Created);
@@ -324,7 +324,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // Default scenario; 'trigger a subscription with latest build' codepath.
         {
-            IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id);
+            IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id);
             triggerResult.Should().BeAssignableTo<AcceptedResult>();
             var latestTriggerResult = (AcceptedResult) triggerResult;
             latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.Accepted);
@@ -332,7 +332,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // Scenario2: 'trigger a subscription with specific build' codepath.
         {
-            IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build1.Id);
+            IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build1.Id);
             triggerResult.Should().BeAssignableTo<AcceptedResult>();
             var latestTriggerResult = (AcceptedResult) triggerResult;
             latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.Accepted);
@@ -340,7 +340,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // Failure: Trigger a subscription with non-existent build id.
         {
-            IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, 123456);
+            IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, 123456);
             triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
             var latestTriggerResult = (BadRequestObjectResult) triggerResult;
             latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
@@ -348,7 +348,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         // Failure: Trigger a subscription with non-existent build codepath.
         {
-            IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build3.Id);
+            IActionResult triggerResult = await _data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build3.Id);
             triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
             var latestTriggerResult = (BadRequestObjectResult) triggerResult;
             latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
@@ -378,7 +378,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
         Subscription createdSubscription1;
         {
-            IActionResult result = await data.SubscriptionsController.Create(subscription1);
+            IActionResult result = await _data.SubscriptionsController.Create(subscription1);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
@@ -401,7 +401,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         };
 
         {
-            IActionResult result = await data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, update);
+            IActionResult result = await _data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, update);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
@@ -425,7 +425,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         };
 
         {
-            IActionResult result = await data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, badUpdate);
+            IActionResult result = await _data.SubscriptionsController.UpdateSubscription(createdSubscription1.Id, badUpdate);
             result.Should().BeAssignableTo<BadRequestObjectResult>();
         }
     }

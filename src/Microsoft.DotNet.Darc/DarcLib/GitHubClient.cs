@@ -37,7 +37,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private static readonly Regex PullRequestUriPattern =
         new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-    private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
+    private readonly Lazy<IGitHubClient> _lazyClient;
     private readonly ILogger _logger;
     private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
@@ -502,7 +502,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>The deleted check run</returns>
     private static CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
     {
-        CheckRunUpdate updatedCheckRun = new CheckRunUpdate
+        var updatedCheckRun = new CheckRunUpdate
         {
             CompletedAt = checkRun.CompletedAt,
             Status = "completed",
@@ -984,7 +984,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private Octokit.GitHubClient CreateGitHubClient()
     {
-        return new Octokit.GitHubClient(_product) {Credentials = new Octokit.Credentials(_personalAccessToken)};
+        return new Octokit.GitHubClient(_product) {Credentials = new Credentials(_personalAccessToken)};
     }
 
     private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)

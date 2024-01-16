@@ -14,47 +14,47 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 [TestFixture]
 internal class CreateMergedManifestBuildModelTests
 {
-    private static readonly string initialAssetsLocation = "thisIsALocation";
-    private static readonly int azDoBuildId = 12345;
-    private static readonly int azDoBuildDefId = 67890;
-    private static readonly string azDoAccount = "thisIstheAzDoAccount";
-    private static readonly string azDoProject = "thisIsTheAzDoProject";
-    private static readonly string azDoBuildNumber = "thisIsAnAzDoBuildNumberFromTheManifest";
-    private static readonly string azDoRepo = "thisIsARepoFromTheManifest";
-    private static readonly string azDoBranch = "thisIsAnAzDoBranch";
-    private static readonly int publishingVersion = 1234567890;
-    private static readonly string isReleasePackage = "false";
-    private static readonly string isStable = "true";
+    private const string InitialAssetsLocation = "thisIsALocation";
+    private const int AzDoBuildId = 12345;
+    private const int AzDoBuildDefId = 67890;
+    private const string AzDoAccount = "thisIstheAzDoAccount";
+    private const string AzDoProject = "thisIsTheAzDoProject";
+    private const string AzDoBuildNumber = "thisIsAnAzDoBuildNumberFromTheManifest";
+    private const string AzDoRepo = "thisIsARepoFromTheManifest";
+    private const string AzDoBranch = "thisIsAnAzDoBranch";
+    private const int PublishingVersion = 1234567890;
+    private const string IsReleasePackage = "false";
+    private const string IsStable = "true";
 
-    private static readonly string buildRepoName = "thisIsARepo";
-    private static readonly string buildNumber = "azDevBuildNumber";
-    private static readonly string sourceBranch = "thisIsASourceBranch";
-    private static readonly string commitSourceVersion = "thisIsASourceVersion";
-    private static readonly string id = "12345";
-    private static readonly string mergedManifestName = "MergedManifest.xml";
-    private static readonly string version = "6.0.0-beta.20516.5";
+    private const string BuildRepoName = "thisIsARepo";
+    private const string BuildNumber = "azDevBuildNumber";
+    private const string SourceBranch = "thisIsASourceBranch";
+    private const string CommitSourceVersion = "thisIsASourceVersion";
+    private const string Id = "12345";
+    private const string MergedManifestName = "MergedManifest.xml";
+    private const string Version = "6.0.0-beta.20516.5";
 
-    private readonly PackageArtifactModel package1 = new()
+    private readonly PackageArtifactModel _package1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
             { "NonShipping", "true" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
-        Version = version
+        Version = Version
     };
 
-    private readonly PackageArtifactModel nonShippingPackage = new()
+    private readonly PackageArtifactModel _nonShippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
             { "NonShipping", "true" }
         },
         Id = "Microsoft.Cci.Extensions",
-        Version = version
+        Version = Version
     };
 
-    private readonly PackageArtifactModel packageWithNoVersion = new()
+    private readonly PackageArtifactModel _packageWithNoVersion = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -64,19 +64,19 @@ internal class CreateMergedManifestBuildModelTests
         Version = null
     };
 
-    private readonly PackageArtifactModel shippingPackage = new()
+    private readonly PackageArtifactModel _shippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
             { "NonShipping", "false" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
-        Version = version
+        Version = Version
     };
-    private List<PackageArtifactModel> packages;
-    private List<BlobArtifactModel> blobs;
+    private List<PackageArtifactModel> _packages;
+    private List<BlobArtifactModel> _blobs;
 
-    private readonly BlobArtifactModel blob1 = new()
+    private readonly BlobArtifactModel _blob1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -86,16 +86,16 @@ internal class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private readonly BlobArtifactModel mergedManifest = new()
+    private readonly BlobArtifactModel _mergedManifest = new()
     {
         Attributes = new Dictionary<string, string>
         {
             { "NonShipping", "true" }
         },
-        Id = $"assets/manifests/{buildRepoName}/{id}/{mergedManifestName}"
+        Id = $"assets/manifests/{BuildRepoName}/{Id}/{MergedManifestName}"
     };
 
-    private readonly BlobArtifactModel nonShippingBlob = new()
+    private readonly BlobArtifactModel _nonShippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -105,7 +105,7 @@ internal class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.DotNet.ApiCompat.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private readonly BlobArtifactModel shippingBlob = new()
+    private readonly BlobArtifactModel _shippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -115,34 +115,34 @@ internal class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.DotNet.Maestro.Client.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private readonly Manifest manifest = new()
+    private readonly Manifest _manifest = new()
     {
-        InitialAssetsLocation = initialAssetsLocation,
-        AzureDevOpsBuildId = azDoBuildId,
-        AzureDevOpsBuildDefinitionId = azDoBuildDefId,
-        AzureDevOpsAccount = azDoAccount,
-        AzureDevOpsProject = azDoProject,
-        AzureDevOpsBuildNumber = azDoBuildNumber,
-        AzureDevOpsRepository = azDoRepo,
-        AzureDevOpsBranch = azDoBranch,
-        PublishingVersion = publishingVersion,
-        IsReleaseOnlyPackageVersion = isReleasePackage,
-        IsStable = isStable
+        InitialAssetsLocation = InitialAssetsLocation,
+        AzureDevOpsBuildId = AzDoBuildId,
+        AzureDevOpsBuildDefinitionId = AzDoBuildDefId,
+        AzureDevOpsAccount = AzDoAccount,
+        AzureDevOpsProject = AzDoProject,
+        AzureDevOpsBuildNumber = AzDoBuildNumber,
+        AzureDevOpsRepository = AzDoRepo,
+        AzureDevOpsBranch = AzDoBranch,
+        PublishingVersion = PublishingVersion,
+        IsReleaseOnlyPackageVersion = IsReleasePackage,
+        IsStable = IsStable
     };
 
     private static PushMetadataToBuildAssetRegistry GetPushMetadata()
     {
         Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
-        getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(buildRepoName);
-        getEnvMock.Setup(b => b.GetEnv("BUILD_BUILDNUMBER")).Returns(buildNumber);
-        getEnvMock.Setup(c => c.GetEnv("BUILD_SOURCEBRANCH")).Returns(sourceBranch);
-        getEnvMock.Setup(d => d.GetEnv("BUILD_SOURCEVERSION")).Returns(commitSourceVersion);
+        getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(BuildRepoName);
+        getEnvMock.Setup(b => b.GetEnv("BUILD_BUILDNUMBER")).Returns(BuildNumber);
+        getEnvMock.Setup(c => c.GetEnv("BUILD_SOURCEBRANCH")).Returns(SourceBranch);
+        getEnvMock.Setup(d => d.GetEnv("BUILD_SOURCEVERSION")).Returns(CommitSourceVersion);
         getEnvMock.SetReturnsDefault("MissingEnvVariableCheck!");
 
         PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry
         {
-            getEnvProxy = getEnvMock.Object,
-            versionIdentifier = new VersionIdentifierMock()
+            _getEnvProxy = getEnvMock.Object,
+            _versionIdentifier = new VersionIdentifierMock()
         };
         return pushMetadata;
     }
@@ -154,23 +154,23 @@ internal class CreateMergedManifestBuildModelTests
             {
                 Attributes = new Dictionary<string, string>()
                 {
-                    { "InitialAssetsLocation", initialAssetsLocation },
-                    { "AzureDevOpsBuildId", azDoBuildId.ToString() },
-                    { "AzureDevOpsBuildDefinitionId", azDoBuildDefId.ToString() },
-                    { "AzureDevOpsAccount", azDoAccount },
-                    { "AzureDevOpsProject", azDoProject },
-                    { "AzureDevOpsBuildNumber", azDoBuildNumber },
-                    { "AzureDevOpsRepository", azDoRepo },
-                    { "AzureDevOpsBranch", azDoBranch }
+                    { "InitialAssetsLocation", InitialAssetsLocation },
+                    { "AzureDevOpsBuildId", AzDoBuildId.ToString() },
+                    { "AzureDevOpsBuildDefinitionId", AzDoBuildDefId.ToString() },
+                    { "AzureDevOpsAccount", AzDoAccount },
+                    { "AzureDevOpsProject", AzDoProject },
+                    { "AzureDevOpsBuildNumber", AzDoBuildNumber },
+                    { "AzureDevOpsRepository", AzDoRepo },
+                    { "AzureDevOpsBranch", AzDoBranch }
 
                 },
-                Name = buildRepoName,
-                BuildId = buildNumber,
-                Branch = sourceBranch,
-                Commit = commitSourceVersion,
-                IsStable = bool.Parse(isStable),
-                PublishingVersion = (PublishingInfraVersion)manifest.PublishingVersion,
-                IsReleaseOnlyPackageVersion = bool.Parse(isReleasePackage)
+                Name = BuildRepoName,
+                BuildId = BuildNumber,
+                Branch = SourceBranch,
+                Commit = CommitSourceVersion,
+                IsStable = bool.Parse(IsStable),
+                PublishingVersion = (PublishingInfraVersion)_manifest.PublishingVersion,
+                IsReleaseOnlyPackageVersion = bool.Parse(IsReleasePackage)
             });
 
         return expectedBuildModel;
@@ -184,15 +184,15 @@ internal class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Packages = [package1, nonShippingPackage],
-                Blobs = [blob1, nonShippingBlob]
+                Packages = [_package1, _nonShippingPackage],
+                Blobs = [_blob1, _nonShippingBlob]
             };
         expectedBuildModel.Identity.IsStable = true;
 
-        packages = [package1, nonShippingPackage];
-        blobs = [blob1, nonShippingBlob];
+        _packages = [_package1, _nonShippingPackage];
+        _blobs = [_blob1, _nonShippingBlob];
 
-        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
         actualModel.Should().BeEquivalentTo(expectedBuildModel);
     }
@@ -203,15 +203,15 @@ internal class CreateMergedManifestBuildModelTests
         BuildModel expectedBuildModel = GetBuildModel();
         PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-        packages = [];
-        blobs = [blob1];
+        _packages = [];
+        _blobs = [_blob1];
 
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Blobs = [blob1]
+                Blobs = [_blob1]
             };
-        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
         actualModel.Should().BeEquivalentTo(expectedBuildModel);
     }
@@ -225,13 +225,13 @@ internal class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Packages = [shippingPackage, package1, packageWithNoVersion],
-                Blobs = [blob1]
+                Packages = [_shippingPackage, _package1, _packageWithNoVersion],
+                Blobs = [_blob1]
             };
 
-        packages = [shippingPackage, package1, packageWithNoVersion];
-        blobs = [blob1];
-        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+        _packages = [_shippingPackage, _package1, _packageWithNoVersion];
+        _blobs = [_blob1];
+        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
         actualModel.Should().BeEquivalentTo(expectedBuildModel);
     }
@@ -245,13 +245,13 @@ internal class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Blobs = [blob1, nonShippingBlob, mergedManifest, shippingBlob]
+                Blobs = [_blob1, _nonShippingBlob, _mergedManifest, _shippingBlob]
             };
 
-        packages = [];
-        blobs = [blob1, nonShippingBlob, mergedManifest, shippingBlob];
+        _packages = [];
+        _blobs = [_blob1, _nonShippingBlob, _mergedManifest, _shippingBlob];
 
-        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
+        BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(_packages, _blobs, _manifest);
 
         actualModel.Should().BeEquivalentTo(expectedBuildModel);
     }

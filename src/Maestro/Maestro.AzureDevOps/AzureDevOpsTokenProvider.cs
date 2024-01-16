@@ -25,6 +25,6 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
                                                   $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
         }
 
-        return Task.FromResult<string>(pat);
+        return Task.FromResult(pat);
     }
 }

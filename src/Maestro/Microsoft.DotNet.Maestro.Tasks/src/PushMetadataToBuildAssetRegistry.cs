@@ -46,12 +46,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string MergedManifestFileName = "MergedManifest.xml";
         private const string NoCategory = "NONE";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
-        private string GitHubRepository = "";
-        private string GitHubBranch = "";
+        private string _gitHubRepository = "";
+        private string _gitHubBranch = "";
 
         // Set up proxy objects to allow unit test mocking
-        internal IVersionIdentifierProxy versionIdentifier = new VersionIdentifierProxy();
-        internal IGetEnvProxy getEnvProxy = new GetEnvProxy();
+        internal IVersionIdentifierProxy _versionIdentifier = new VersionIdentifierProxy();
+        internal IGetEnvProxy _getEnvProxy = new GetEnvProxy();
 
         public void Cancel()
         {
@@ -148,8 +148,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     buildData.Dependencies = deps;
                     LookupForMatchingGitHubRepository(manifest);
-                    buildData.GitHubBranch = GitHubBranch;
-                    buildData.GitHubRepository = GitHubRepository;
+                    buildData.GitHubBranch = _gitHubBranch;
+                    buildData.GitHubRepository = _gitHubRepository;
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
@@ -313,7 +313,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetVersion(string assetId)
         {
-            return versionIdentifier.GetVersion(assetId);
+            return _versionIdentifier.GetVersion(assetId);
         }
 
         internal static List<Manifest> GetParsedManifests(
@@ -403,7 +403,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevAccount()
         {
-            var uri = new Uri(getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
+            var uri = new Uri(_getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
             if (uri.Host == "dev.azure.com")
             {
                 return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
@@ -414,47 +414,47 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevProject()
         {
-            return getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
+            return _getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
         }
 
         private string GetAzDevBuildNumber()
         {
-            return getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
+            return _getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
         }
 
         private string GetAzDevRepository()
         {
-            return getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
+            return _getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
         }
 
         private string GetAzDevRepositoryName()
         {
-            return getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
+            return _getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
         }
 
         private string GetAzDevBranch()
         {
-            return getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
+            return _getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
         }
 
         private int GetAzDevBuildId()
         {
-            return int.Parse(getEnvProxy.GetEnv("BUILD_BUILDID"));
+            return int.Parse(_getEnvProxy.GetEnv("BUILD_BUILDID"));
         }
 
         private int GetAzDevBuildDefinitionId()
         {
-            return int.Parse(getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
+            return int.Parse(_getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
         }
 
         private string GetAzDevCommit()
         {
-            return getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
+            return _getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
         }
 
         private string GetAzDevStagingDirectory()
         {
-            return getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
+            return _getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
         }
 
         /// <summary>
@@ -667,15 +667,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 if (response.IsSuccessStatusCode)
                 {
-                    GitHubRepository = $"https://github.com/{repoIdentity}";
-                    GitHubBranch = manifest.AzureDevOpsBranch;
+                    _gitHubRepository = $"https://github.com/{repoIdentity}";
+                    _gitHubBranch = manifest.AzureDevOpsBranch;
                 }
                 else
                 {
                     Log.LogMessage(MessageImportance.High,
                         $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} for repoIdentity: {repoIdentity} and commit: {manifest.Commit}.");
-                    GitHubRepository = null;
-                    GitHubBranch = null;
+                    _gitHubRepository = null;
+                    _gitHubBranch = null;
                 }
             }
         }

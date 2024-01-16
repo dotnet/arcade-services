@@ -22,24 +22,24 @@ namespace FeedCleanerService.Tests;
 public class FeedCleanerServiceTests : IDisposable
 {
     private Lazy<BuildAssetRegistryContext> _context;
-    private Mock<IHostEnvironment> Env;
-    private ServiceProvider Provider;
-    private IServiceScope Scope;
-    private Dictionary<string, AzureDevOpsFeed> Feeds;
-    private Mock<IAzureDevOpsClient> AzdoMock;
+    private Mock<IHostEnvironment> _env;
+    private ServiceProvider _provider;
+    private IServiceScope _scope;
+    private Dictionary<string, AzureDevOpsFeed> _feeds;
+    private Mock<IAzureDevOpsClient> _azdoMock;
 
-    private readonly string SomeAccount = "someAccount";
-    private readonly string UnmanagedFeedName = "some-other-feed";
-    private readonly string ReleaseFeedName = "release-feed";
-    private readonly string FeedWithAllPackagesReleasedName = "darc-pub-some-repo-12345679";
-    private readonly string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
+    private const string SomeAccount = "someAccount";
+    private const string UnmanagedFeedName = "some-other-feed";
+    private const string ReleaseFeedName = "release-feed";
+    private const string FeedWithAllPackagesReleasedName = "darc-pub-some-repo-12345679";
+    private const string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
 
     [SetUp]
     public void FeedCleanerServiceTests_SetUp()
     {
         var services = new ServiceCollection();
-        Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
-        services.AddSingleton(Env.Object);
+        _env = new Mock<IHostEnvironment>(MockBehavior.Strict);
+        services.AddSingleton(_env.Object);
         services.AddLogging();
         services.AddDbContext<BuildAssetRegistryContext>(
             options =>
@@ -69,21 +69,21 @@ public class FeedCleanerServiceTests : IDisposable
                 options.Tokens.Add(SomeAccount, "someToken");
             });
 
-        Provider = services.BuildServiceProvider();
-        Scope = Provider.CreateScope();
+        _provider = services.BuildServiceProvider();
+        _scope = _provider.CreateScope();
         _context = new Lazy<BuildAssetRegistryContext>(GetContext);
 
-        Feeds = SetupFeeds(SomeAccount);
-        AzdoMock = SetupAzdoMock();
+        _feeds = SetupFeeds(SomeAccount);
+        _azdoMock = SetupAzdoMock();
         SetupAssetsFromFeeds();
     }
 
     [TearDown]
     public void Dispose()
     {
-        Env.VerifyAll();
-        Scope.Dispose();
-        Provider.Dispose();
+        _env.VerifyAll();
+        _scope.Dispose();
+        _provider.Dispose();
     }
 
     [Test]
@@ -91,7 +91,7 @@ public class FeedCleanerServiceTests : IDisposable
     {
         FeedCleanerService cleaner = ConfigureFeedCleaner();
         await cleaner.CleanManagedFeedsAsync();
-        var unreleasedFeed = Feeds[FeedWithUnreleasedPackagesName];
+        var unreleasedFeed = _feeds[FeedWithUnreleasedPackagesName];
         unreleasedFeed.Packages.Should().HaveCount(2);
         var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
         packagesWithDeletedVersions.Should().ContainSingle();
@@ -100,7 +100,7 @@ public class FeedCleanerServiceTests : IDisposable
         deletedVersions.Should().ContainSingle();
         deletedVersions.First().Version.Should().Be("1.0");
 
-        Feeds[UnmanagedFeedName].Packages.Should().NotContain(p => p.Versions.Any(v => v.IsDeleted));
+        _feeds[UnmanagedFeedName].Packages.Should().NotContain(p => p.Versions.Any(v => v.IsDeleted));
     }
 
     [Test]
@@ -137,30 +137,30 @@ public class FeedCleanerServiceTests : IDisposable
 
     private BuildAssetRegistryContext GetContext()
     {
-        return Scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
+        return _scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
     }
 
     private Mock<IAzureDevOpsClient> SetupAzdoMock()
     {
         var azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
-        azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).ReturnsAsync(Feeds.Select(kvp => kvp.Value).ToList());
+        azdoClientMock.Setup(a => a.GetFeedsAsync(SomeAccount)).ReturnsAsync(_feeds.Select(kvp => kvp.Value).ToList());
         azdoClientMock.Setup(a => a.GetPackagesForFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string account, string project, string feed) => Task.FromResult(Feeds[feed].Packages));
+            .Returns((string account, string project, string feed) => Task.FromResult(_feeds[feed].Packages));
         azdoClientMock.Setup(a => a.DeleteNuGetPackageVersionFromFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string, string, string, string>((account, project, feed, package, version) => MarkVersionAsDeleted(Feeds[feed].Packages, package, version))
+            .Callback<string, string, string, string, string>((account, project, feed, package, version) => MarkVersionAsDeleted(_feeds[feed].Packages, package, version))
             .Returns(Task.CompletedTask);
         azdoClientMock.Setup(a => a.DeleteFeedAsync(SomeAccount, It.IsAny<string>(), It.IsAny<string>()))
-            .Callback<string, string, string>((account, project, feedIdentifier) => Feeds.Remove(feedIdentifier))
+            .Callback<string, string, string>((account, project, feedIdentifier) => _feeds.Remove(feedIdentifier))
             .Returns(Task.CompletedTask);
         return azdoClientMock;
     }
 
     private FeedCleanerService ConfigureFeedCleaner()
     {
-        FeedCleanerService cleaner = ActivatorUtilities.CreateInstance<FeedCleanerService>(Scope.ServiceProvider);
+        FeedCleanerService cleaner = ActivatorUtilities.CreateInstance<FeedCleanerService>(_scope.ServiceProvider);
         cleaner.AzureDevOpsClients = new Dictionary<string, IAzureDevOpsClient>
         {
-            { SomeAccount, AzdoMock.Object }
+            { SomeAccount, _azdoMock.Object }
         };
         return cleaner;
     }
@@ -185,7 +185,7 @@ public class FeedCleanerServiceTests : IDisposable
     private void SetupAssetsFromFeeds()
     {
         List<Asset> assets = [];
-        foreach ((string feedName, AzureDevOpsFeed feed) in Feeds)
+        foreach ((string feedName, AzureDevOpsFeed feed) in _feeds)
         {
             string projectSection = string.IsNullOrEmpty(feed.Project?.Name) ? "" : $"{feed.Project.Name}/";
             foreach (var package in feed.Packages)

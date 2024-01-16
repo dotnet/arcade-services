@@ -44,7 +44,7 @@ public class AssetsController : Controller
     /// <param name="loadLocations">**true** to include the Asset Location data with the response; **false** otherwise.</param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
-    [Paginated(typeof(Models.Asset))]
+    [Paginated(typeof(Asset))]
     [ValidateModelState]
     public IActionResult ListAssets(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
     {
@@ -136,10 +136,10 @@ public class AssetsController : Controller
         var assetLocation = new Data.Models.AssetLocation
         {
             Location = location,
-            Type = (Maestro.Data.Models.LocationType) assetLocationType,
+            Type = (Data.Models.LocationType) assetLocationType,
         };
 
-        Maestro.Data.Models.Asset asset = await _context.Assets
+        Data.Models.Asset asset = await _context.Assets
             .Include(a => a.Locations)
             .Where(a => a.Id == assetId)
             .SingleOrDefaultAsync();
@@ -179,7 +179,7 @@ public class AssetsController : Controller
     [SwaggerApiResponse(HttpStatusCode.OK, Description = "AssetLocation successfully removed")]
     public async Task<IActionResult> RemoveAssetLocationFromAsset(int assetId, int assetLocationId)
     {
-        Maestro.Data.Models.Asset asset = await _context.Assets
+        Data.Models.Asset asset = await _context.Assets
             .Include(a => a.Locations)
             .Where(a => a.Id == assetId)
             .SingleOrDefaultAsync();

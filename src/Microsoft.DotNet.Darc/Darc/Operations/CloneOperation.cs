@@ -81,7 +81,7 @@ internal class CloneOperation : Operation
             {
                 var local = new Local(_options.GetRemoteConfiguration(), Logger);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetDependency(d));
+                IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
                 {
                     if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
@@ -98,7 +98,7 @@ internal class CloneOperation : Operation
             else
             {
                 // Start with the root repo we were asked to clone
-                StrippedDependency rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
+                var rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
                 accumulatedDependencies.Add(rootDep);
                 Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
             }

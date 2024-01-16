@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 [TestFixture]
 public class MergeSigningInfoTests
 {
-    private PushMetadataToBuildAssetRegistry pushMetadata;
+    private PushMetadataToBuildAssetRegistry _pushMetadata;
 
     public const string Commit = "e7a79ce64f0703c231e6da88b5279dd0bf681b3d";
     public const string AzureDevOpsAccount1 = "dnceng";
@@ -259,7 +259,7 @@ public class MergeSigningInfoTests
     [SetUp]
     public void SetupMergeSigningInfo()
     {
-        pushMetadata = new PushMetadataToBuildAssetRegistry();
+        _pushMetadata = new PushMetadataToBuildAssetRegistry();
     }
 
     [Test]

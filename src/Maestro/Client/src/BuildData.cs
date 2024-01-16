@@ -44,11 +44,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     {
                         Name = asset.Name,
                         Version = asset.Version,
-                        Locations = locationsList.ToImmutableList<AssetLocationData>()
+                        Locations = locationsList.ToImmutableList()
                     });
                 }
 
-                Assets = assetList.ToImmutableList<AssetData>();
+                Assets = assetList.ToImmutableList();
             }
 
             //Dependencies deep copy
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     dependenciesList.Add(new BuildRef(dep.BuildId, dep.IsProduct, dep.TimeToInclusionInMinutes));
                 }
 
-                Dependencies = dependenciesList.ToImmutableList<BuildRef>();
+                Dependencies = dependenciesList.ToImmutableList();
             }
 
 
@@ -81,7 +81,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     });
                 }
 
-                Incoherencies = incoherenciesList.ToImmutableList<BuildIncoherence>();
+                Incoherencies = incoherenciesList.ToImmutableList();
             }
         }
     }

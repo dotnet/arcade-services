@@ -27,13 +27,13 @@ namespace Maestro.Web.Tests;
 [TestFixture]
 public partial class BuildController20200914Tests
 {
-    private static readonly string repository = "FAKE-REPOSITORY";
-    private static readonly string commitHash = "FAKE-COMMIT";
-    private static readonly string commitMessage = "FAKE-COMMIT-MESSAGE";
-    private static readonly string account = "FAKE-ACCOUNT";
-    private static readonly string project = "FAKE-PROJECT";
-    private static readonly string branch = "FAKE-BRANCH";
-    private readonly string buildNumber = "20.9.18.20";
+    private const string Repository = "FAKE-REPOSITORY";
+    private const string CommitHash = "FAKE-COMMIT";
+    private const string CommitMessage = "FAKE-COMMIT-MESSAGE";
+    private const string Account = "FAKE-ACCOUNT";
+    private const string Project = "FAKE-PROJECT";
+    private const string Branch = "FAKE-BRANCH";
+    private const string BuildNumber = "20.9.18.20";
 
     [Test]
     public async Task CommitIsFound()
@@ -44,13 +44,13 @@ public partial class BuildController20200914Tests
         {
             IActionResult result = await data.Controller.Create(new BuildData
             {
-                Commit = commitHash,
-                AzureDevOpsAccount = account,
-                AzureDevOpsProject = project,
-                AzureDevOpsRepository = repository,
-                AzureDevOpsBuildNumber = buildNumber,
-                AzureDevOpsBranch = branch,
-                GitHubBranch = branch,
+                Commit = CommitHash,
+                AzureDevOpsAccount = Account,
+                AzureDevOpsProject = Project,
+                AzureDevOpsRepository = Repository,
+                AzureDevOpsBuildNumber = BuildNumber,
+                AzureDevOpsBranch = Branch,
+                GitHubBranch = Branch,
             });
 
             result.Should().BeAssignableTo<ObjectResult>();
@@ -60,12 +60,12 @@ public partial class BuildController20200914Tests
             var build = (Build)objResult.Value;
 
             id = build.Id;
-            build.Commit.Should().Be(commitHash);
-            build.AzureDevOpsAccount.Should().Be(account);
-            build.AzureDevOpsProject.Should().Be(project);
-            build.AzureDevOpsBuildNumber.Should().Be(buildNumber);
-            build.AzureDevOpsRepository.Should().Be(repository);
-            build.AzureDevOpsBranch.Should().Be(branch);
+            build.Commit.Should().Be(CommitHash);
+            build.AzureDevOpsAccount.Should().Be(Account);
+            build.AzureDevOpsProject.Should().Be(Project);
+            build.AzureDevOpsBuildNumber.Should().Be(BuildNumber);
+            build.AzureDevOpsRepository.Should().Be(Repository);
+            build.AzureDevOpsBranch.Should().Be(Branch);
         }
 
         {
@@ -75,9 +75,9 @@ public partial class BuildController20200914Tests
             objResultCommit.Value.Should().BeAssignableTo<Commit>();
             var commit = (Commit)objResultCommit.Value;
 
-            commit.Message.Should().Be(commitMessage);
-            commit.Sha.Should().Be(commitHash);
-            commit.Author.Should().Be(account);
+            commit.Message.Should().Be(CommitMessage);
+            commit.Sha.Should().Be(CommitHash);
+            commit.Author.Should().Be(Account);
         }
     }
 
@@ -91,8 +91,8 @@ public partial class BuildController20200914Tests
 
             var mockIRemoteFactory = new Mock<IRemoteFactory>();
             var mockIRemote = new Mock<IRemote>();
-            mockIRemoteFactory.Setup(f => f.GetRemoteAsync(repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
-            mockIRemote.Setup(f => f.GetCommitAsync(repository, commitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(account, commitHash, commitMessage));
+            mockIRemoteFactory.Setup(f => f.GetRemoteAsync(Repository, It.IsAny<ILogger>())).ReturnsAsync(mockIRemote.Object);
+            mockIRemote.Setup(f => f.GetCommitAsync(Repository, CommitHash)).ReturnsAsync(new Microsoft.DotNet.DarcLib.Commit(Account, CommitHash, CommitMessage));
 
             collection.AddSingleton(mockIRemote.Object);
             collection.AddSingleton(mockIRemoteFactory.Object);

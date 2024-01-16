@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string SourceRepository { get; set; }
 
         [JsonProperty("policy")]
-        public Models.SubscriptionPolicy Policy { get; set; }
+        public SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("enabled")]
         public bool? Enabled { get; set; }

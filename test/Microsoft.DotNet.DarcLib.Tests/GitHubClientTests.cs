@@ -119,7 +119,7 @@ public class AbuseRateLimitFakeResponse : IResponse
 
     public ApiInfo ApiInfo => throw new NotImplementedException();
 
-    public HttpStatusCode StatusCode { get { return HttpStatusCode.Forbidden; } }
+    public HttpStatusCode StatusCode => HttpStatusCode.Forbidden;
 
     public string ContentType => throw new NotImplementedException();
 }
@@ -165,7 +165,7 @@ public class GitHubClientTests
     protected Mock<IPullRequestReviewsClient> OctoKitPullRequestReviewsClient;
     protected Mock<IGitDatabaseClient> OctoKitGitDatabaseClient;
     protected Mock<IBlobsClient> OctoKitGitBlobsClient;
-    private TestGitHubClient GitHubClientForTest;
+    private TestGitHubClient _gitHubClientForTest;
 
     [SetUp]
     public void GitHubClientTests_SetUp()
@@ -188,8 +188,8 @@ public class GitHubClientTests
         OctoKitGithubClient.Setup(m => m.Git).Returns(OctoKitGitDatabaseClient.Object);
 
         NUnitLogger nUnitLogger = new NUnitLogger();
-        GitHubClientForTest = new TestGitHubClient("git", "fake-token", nUnitLogger, "fake-path", null);
-        GitHubClientForTest.SetGitHubClientObject(OctoKitGithubClient.Object);
+        _gitHubClientForTest = new TestGitHubClient("git", "fake-token", nUnitLogger, "fake-path", null);
+        _gitHubClientForTest.SetGitHubClientObject(OctoKitGithubClient.Object);
     }
     #endregion
 
@@ -403,7 +403,7 @@ public class GitHubClientTests
             })
             .ReturnsAsync(fakeReviews);
 
-        return await GitHubClientForTest.GetLatestPullRequestReviewsAsync(pullRequestUrl);
+        return await _gitHubClientForTest.GetLatestPullRequestReviewsAsync(pullRequestUrl);
     }
 
     #region Functions for creating fake review data

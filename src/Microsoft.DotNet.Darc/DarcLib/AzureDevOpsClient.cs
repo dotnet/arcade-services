@@ -216,7 +216,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
 
         var azureDevOpsRefs = new List<AzureDevOpsRef>();
-        AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+        var azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
         azureDevOpsRefs.Add(azureDevOpsRef);
 
         string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
@@ -655,7 +655,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 $"_apis/git/repositories/{repoName}/commits/{sha}",
                 _logger,
                 versionOverride: "6.0");
-            JObject values = JObject.Parse(content.ToString());
+            var values = JObject.Parse(content.ToString());
                
             return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
         }
@@ -725,7 +725,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             _logger,
             versionOverride: "5.1-preview.1");
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
 
         IList<Check> statuses = new List<Check>();
         foreach (JToken status in values)
@@ -769,7 +769,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             $"_apis/git/repositories/{repo}/pullRequests/{id}/reviewers",
             _logger);
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
 
         IList<Review> reviews = new List<Review>();
         foreach (JToken review in values)
@@ -826,7 +826,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
         using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
         {
-            HttpRequestManager requestManager = new HttpRequestManager(client,
+            var requestManager = new HttpRequestManager(client,
                 method,
                 requestPath,
                 logger,
@@ -898,7 +898,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>New VssConnection</returns>
     private VssConnection CreateVssConnection(string accountName)
     {
-        Uri accountUri = new Uri($"https://dev.azure.com/{accountName}");
+        var accountUri = new Uri($"https://dev.azure.com/{accountName}");
         var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
         return new VssConnection(accountUri, creds);
     }

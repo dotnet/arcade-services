@@ -1581,7 +1581,7 @@ internal class GatherDropOperation : Operation
         // Check all existing locations for the target file. If one exists, copy to the others.
         if (_options.SkipExisting)
         {
-            var existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
+            var existingFile = targetFilePaths.FirstOrDefault(File.Exists);
             if (!string.IsNullOrEmpty(existingFile))
             {
                 foreach (var targetFile in targetFilePaths)

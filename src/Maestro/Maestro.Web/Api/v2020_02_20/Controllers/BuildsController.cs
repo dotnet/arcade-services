@@ -167,7 +167,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
             return NotFound();
         }
 
-        return Ok(new Models.Build(build));
+        return Ok(new Build(build));
     }
 
     [HttpGet("{buildId}/commit")]
@@ -217,7 +217,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
             await _context.SaveChangesAsync();
         }
 
-        return Ok(new Models.Build(build));
+        return Ok(new Build(build));
     }
 
     [ApiRemoved]
@@ -329,7 +329,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
                 action = "GetBuild",
                 id = buildModel.Id
             },
-            new Models.Build(buildModel));
+            new Build(buildModel));
     }
 
     private class BuildCoherencyInfoWorkItem : IBackgroundWorkItem

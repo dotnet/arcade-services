@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 [TestFixture]
 public class ParseBuildManifestMetadataTests
 {
-    private PushMetadataToBuildAssetRegistry pushMetadata;
+    private PushMetadataToBuildAssetRegistry _pushMetadata;
 
     public const string Commit = "e7a79ce64f0703c231e6da88b5279dd0bf681b3d";
     public const string AzureDevOpsAccount1 = "dnceng";
@@ -35,7 +35,7 @@ public class ParseBuildManifestMetadataTests
     private const string GitHubBranch = "refs/heads/main";
     private const string RepoName = "dotnet-arcade";
     private const string SystemTeamCollectionUri = "https://dev.azure.com/dnceng/";
-    private const string version = "6.0.0-beta.20516.5";
+    private const string Version = "6.0.0-beta.20516.5";
 
     #region Assets
 
@@ -107,14 +107,14 @@ public class ParseBuildManifestMetadataTests
     {
         Id = "Microsoft.Cci.Extensions",
         NonShipping = true,
-        Version = version
+        Version = Version
     };
 
     private static readonly Package package2 = new()
     {
         Id = "Microsoft.DotNet.ApiCompat",
         NonShipping = true,
-        Version = version
+        Version = Version
     };
 
     private static readonly PackageArtifactModel packageArtifactModel1 = new()
@@ -124,7 +124,7 @@ public class ParseBuildManifestMetadataTests
             { "NonShipping", "true" }
         },
         Id = "Microsoft.Cci.Extensions",
-        Version = version
+        Version = Version
     };
 
     private static readonly PackageArtifactModel packageArtifactModel2 = new()
@@ -134,7 +134,7 @@ public class ParseBuildManifestMetadataTests
             { "NonShipping", "true" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
-        Version = version
+        Version = Version
     };
 
     private static readonly PackageArtifactModel unversionedPackageArtifactModel = new()
@@ -359,7 +359,7 @@ public class ParseBuildManifestMetadataTests
         Blobs = [blob2],
         SigningInformation = signingInfo2
     };
-    private readonly BuildModel buildModel = new(
+    private readonly BuildModel _buildModel = new(
         new BuildIdentity
         {
             Attributes = new Dictionary<string, string>()
@@ -395,9 +395,9 @@ public class ParseBuildManifestMetadataTests
         getEnvMock.Setup(d => d.GetEnv("BUILD_BUILDID")).Returns(AzureDevOpsBuildId1.ToString());
         getEnvMock.SetReturnsDefault("MissingEnvVariableCheck!");
 
-        pushMetadata = new PushMetadataToBuildAssetRegistry
+        _pushMetadata = new PushMetadataToBuildAssetRegistry
         {
-            getEnvProxy = getEnvMock.Object
+            _getEnvProxy = getEnvMock.Object
         };
     }
 
@@ -472,9 +472,9 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void UpdateAssetAndBuildDataFromBuildModel()
     {
-        buildModel.Artifacts = new ArtifactSet();
-        buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
-        buildModel.Artifacts.Packages.Add(packageArtifactModel1);
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
+        _buildModel.Artifacts.Packages.Add(packageArtifactModel1);
 
         var expectedBuildData = new BuildData(
             commit: Commit,
@@ -497,7 +497,7 @@ public class ParseBuildManifestMetadataTests
         expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
 
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
 
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
@@ -506,8 +506,8 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void NoPackagesInBuildModel()
     {
-        buildModel.Artifacts = new ArtifactSet();
-        buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
         var expectedBuildData = new BuildData(
             commit: Commit,
             azureDevOpsAccount: AzureDevOpsAccount1,
@@ -526,7 +526,7 @@ public class ParseBuildManifestMetadataTests
         };
         expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset1);
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, baseManifest, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, baseManifest, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
@@ -534,8 +534,8 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void NoBlobsInBuildModel()
     {
-        buildModel.Artifacts = new ArtifactSet();
-        buildModel.Artifacts.Packages.Add(packageArtifactModel1);
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Packages.Add(packageArtifactModel1);
         var expectedBuildData = new BuildData(
             commit: Commit,
             azureDevOpsAccount: AzureDevOpsAccount1,
@@ -555,7 +555,7 @@ public class ParseBuildManifestMetadataTests
 
         expectedBuildData.Assets = expectedBuildData.Assets.Add(PackageAsset1);
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
@@ -564,11 +564,11 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void MultipleBlobsAndPackagesToBuildData()
     {
-        buildModel.Artifacts = new ArtifactSet();
-        buildModel.Artifacts.Packages.Add(packageArtifactModel1);
-        buildModel.Artifacts.Packages.Add(packageArtifactModel2);
-        buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
-        buildModel.Artifacts.Blobs.Add(blobArtifactModel2);
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Packages.Add(packageArtifactModel1);
+        _buildModel.Artifacts.Packages.Add(packageArtifactModel2);
+        _buildModel.Artifacts.Blobs.Add(manifestAsBlobArtifactModel);
+        _buildModel.Artifacts.Blobs.Add(blobArtifactModel2);
 
         var expectedBuildData = new BuildData(
             commit: Commit,
@@ -592,7 +592,7 @@ public class ParseBuildManifestMetadataTests
         expectedBuildData.Assets = expectedBuildData.Assets.Add(BlobAsset2);
 
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
@@ -601,7 +601,7 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void NoAssetsInBuildData()
     {
-        buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts = new ArtifactSet();
         var expectedBuildData = new BuildData(
             commit: Commit,
             azureDevOpsAccount: AzureDevOpsAccount1,
@@ -620,7 +620,7 @@ public class ParseBuildManifestMetadataTests
         };
 
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }
@@ -628,9 +628,9 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void UnversionedPackagesToBuildData()
     {
-        pushMetadata.versionIdentifier = new VersionIdentifierMock();
-        buildModel.Artifacts = new ArtifactSet();
-        buildModel.Artifacts.Packages.Add(unversionedPackageArtifactModel);
+        _pushMetadata._versionIdentifier = new VersionIdentifierMock();
+        _buildModel.Artifacts = new ArtifactSet();
+        _buildModel.Artifacts.Packages.Add(unversionedPackageArtifactModel);
 
         var expectedBuildData = new BuildData(
             commit: Commit,
@@ -651,7 +651,7 @@ public class ParseBuildManifestMetadataTests
         expectedBuildData.Assets = expectedBuildData.Assets.Add(unversionedPackageAsset);
 
         var buildData =
-            pushMetadata.GetMaestroBuildDataFromMergedManifest(buildModel, manifest1, CancellationToken.None);
+            _pushMetadata.GetMaestroBuildDataFromMergedManifest(_buildModel, manifest1, CancellationToken.None);
         buildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
         buildData.Should().BeEquivalentTo(expectedBuildData);
     }

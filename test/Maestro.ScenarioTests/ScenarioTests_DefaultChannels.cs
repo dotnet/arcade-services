@@ -12,15 +12,15 @@ namespace Maestro.ScenarioTests;
 [Category("PostDeployment")]
 internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
 {
-    private readonly string repoName = TestRepository.TestRepo1Name;
-    private readonly string branchName;
-    private readonly string branchNameWithRefsHeads;
+    private readonly string _repoName = TestRepository.TestRepo1Name;
+    private readonly string _branchName;
+    private readonly string _branchNameWithRefsHeads;
     private TestParameters _parameters;
 
     public ScenarioTests_DefaultChannels()
     {
-        branchName = $"ChannelTestBranch_{Environment.MachineName}";
-        branchNameWithRefsHeads = $"refs/heads/{branchName}";
+        _branchName = $"ChannelTestBranch_{Environment.MachineName}";
+        _branchNameWithRefsHeads = $"refs/heads/{_branchName}";
     }
 
     [SetUp]
@@ -40,7 +40,7 @@ internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
     [Test]
     public async Task ArcadeChannels_DefaultChannels()
     {
-        string repoUrl = GetGitHubRepoUrl(repoName);
+        string repoUrl = GetGitHubRepoUrl(_repoName);
 
         string testChannelName1 = $"TestChannelDefault1_{Environment.MachineName}";
         string testChannelName2 = $"TestChannelDefault2_{Environment.MachineName}";
@@ -49,17 +49,17 @@ internal class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
         {
             await using (AsyncDisposableValue<string> channel2 = await CreateTestChannelAsync(testChannelName2))
             {
-                await AddDefaultTestChannelAsync(testChannelName1, repoUrl, branchNameWithRefsHeads);
-                await AddDefaultTestChannelAsync(testChannelName2, repoUrl, branchNameWithRefsHeads);
+                await AddDefaultTestChannelAsync(testChannelName1, repoUrl, _branchNameWithRefsHeads);
+                await AddDefaultTestChannelAsync(testChannelName2, repoUrl, _branchNameWithRefsHeads);
 
-                string defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, branchName);
+                string defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
                 defaultChannels.Should().Contain(testChannelName1, $"{testChannelName1} is not a default channel");
                 defaultChannels.Should().Contain(testChannelName2, $"{testChannelName2} is not a default channel");
 
-                await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, branchName);
-                await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, branchName);
+                await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, _branchName);
+                await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, _branchName);
 
-                defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, branchName);
+                defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
                 defaultChannels.Should().NotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
                 defaultChannels.Should().NotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
             }

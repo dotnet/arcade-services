@@ -68,7 +68,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         try
         {
             // Join the lines back into a string and deserialize as YAML.
-            string yamlString = contents.Aggregate<Line, string>("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<RepositoryPoliciesData>(yamlString);
         }
@@ -105,17 +105,17 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 
     private class RepositoryPoliciesData
     {
-        public const string repoElement = "Repository URL";
-        public const string branchElement = "Branch";
-        public const string mergePolicyElement = "Merge Policies";
+        public const string RepoElement = "Repository URL";
+        public const string BranchElement = "Branch";
+        public const string MergePolicyElement = "Merge Policies";
 
-        [YamlMember(Alias = branchElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
         public string Branch { get; set; }
 
-        [YamlMember(Alias = repoElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = RepoElement, ApplyNamingConventions = false)]
         public string Repository { get; set; }
 
-        [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
         public List<MergePolicyData> MergePolicies { get; set; }
     }
 }

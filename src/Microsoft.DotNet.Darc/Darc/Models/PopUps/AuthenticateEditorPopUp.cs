@@ -13,10 +13,10 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
 
-    private const string barPasswordElement = "bar_password";
-    private const string githubTokenElement = "github_token";
-    private const string azureDevOpsTokenElement = "azure_devops_token";
-    private const string barBaseUriElement = "build_asset_registry_base_uri";
+    private const string BarPasswordElement = "bar_password";
+    private const string GithubTokenElement = "github_token";
+    private const string AzureDevOpsTokenElement = "azure_devops_token";
+    private const string BarBaseUriElement = "build_asset_registry_base_uri";
 
     public AuthenticateEditorPopUp(string path, ILogger logger)
         : base(path)
@@ -39,13 +39,13 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         Contents = new ReadOnlyCollection<Line>(new List<Line>
         {
             new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
-            new($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
+            new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
-            new($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
+            new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
             new("Create new Azure Dev Ops tokens using the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
             new("with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command", isComment: true),
-            new($"{azureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
-            new($"{barBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
+            new($"{AzureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
+            new($"{BarBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
             new(""),
             new("Storing the required settings...", true),
             new($"Set elements above depending on what you need", true),
@@ -62,16 +62,16 @@ internal class AuthenticateEditorPopUp : EditorPopUp
 
             switch (keyValue[0])
             {
-                case barPasswordElement:
+                case BarPasswordElement:
                     settings.BuildAssetRegistryPassword = ParseSetting(keyValue[1], settings.BuildAssetRegistryPassword, true);
                     break;
-                case githubTokenElement:
+                case GithubTokenElement:
                     settings.GitHubToken = ParseSetting(keyValue[1], settings.GitHubToken, true);
                     break;
-                case azureDevOpsTokenElement:
+                case AzureDevOpsTokenElement:
                     settings.AzureDevOpsToken = ParseSetting(keyValue[1], settings.AzureDevOpsToken, true);
                     break;
-                case barBaseUriElement:
+                case BarBaseUriElement:
                     settings.BuildAssetRegistryBaseUri = ParseSetting(keyValue[1], settings.BuildAssetRegistryBaseUri, false);
                     break;
                 default:

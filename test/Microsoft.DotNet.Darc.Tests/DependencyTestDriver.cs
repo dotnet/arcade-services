@@ -27,14 +27,14 @@ internal class DependencyTestDriver
 {
     private readonly string _testName;
     private VersionDetailsParser _versionDetailsParser;
-    private const string inputRootDir = "inputs";
-    private const string inputDir = "input";
-    private const string outputDir = "output";
+    private const string InputRootDir = "inputs";
+    private const string InputDir = "input";
+    private const string OutputDir = "output";
 
     public string TemporaryRepositoryPath { get; private set; }
-    public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
-    public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
-    public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
+    public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, _testName, InputDir); }
+    public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, _testName, OutputDir); }
+    public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, OutputDir); }
     public LocalLibGit2Client GitClient { get; private set; }
     public DependencyFileManager DependencyFileManager { get; private set; }
 

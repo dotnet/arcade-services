@@ -22,7 +22,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public Guid Id { get; }
 
         [JsonProperty("channel")]
-        public Models.Channel Channel { get; set; }
+        public Channel Channel { get; set; }
 
         [JsonProperty("sourceRepository")]
         public string SourceRepository { get; }
@@ -34,10 +34,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string TargetBranch { get; }
 
         [JsonProperty("policy")]
-        public Models.SubscriptionPolicy Policy { get; set; }
+        public SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("lastAppliedBuild")]
-        public Models.Build LastAppliedBuild { get; set; }
+        public Build LastAppliedBuild { get; set; }
 
         [JsonProperty("enabled")]
         public bool Enabled { get; }
