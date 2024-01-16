@@ -3,8 +3,6 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Options;
 

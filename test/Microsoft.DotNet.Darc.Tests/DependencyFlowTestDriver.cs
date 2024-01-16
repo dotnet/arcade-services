@@ -5,13 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Serialization;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Tests;

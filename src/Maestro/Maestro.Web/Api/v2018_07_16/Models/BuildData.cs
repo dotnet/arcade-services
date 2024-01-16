@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Data.Models;
 
 namespace Maestro.Web.Api.v2018_07_16.Models;
 

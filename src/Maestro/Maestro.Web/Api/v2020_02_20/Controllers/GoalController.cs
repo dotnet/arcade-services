@@ -11,8 +11,6 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 

@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
