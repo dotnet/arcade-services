@@ -40,6 +40,9 @@ param containerAppsEnvironmentName string = 'product-construction-service-env-in
 @description('Product construction service API name')
 param productConstructionServiceName string = 'product-construction-int'
 
+@description('Storage account name')
+param storageAccountName string = 'productconstructionint'
+
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
@@ -273,4 +276,26 @@ resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvi
         accessPolicies: []
         enableRbacAuthorization: true
     }
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+    name: storageAccountName
+    location: location
+    kind: 'StorageV2'
+    sku: {
+        name: 'Standard_LRS'
+    }
+    properties: {
+        allowBlobPublicAccess: false
+    }
+}
+
+resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServices@2022-09-01' = {
+    name: 'default'
+    parent: storageAccount
+}
+
+resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
+    name: 'workitem-queue'
+    parent: storageAccountQueueService
 }

@@ -16,6 +16,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Aspire.Azure.Storage.Queues" />
   </ItemGroup>
 
   <ItemGroup>

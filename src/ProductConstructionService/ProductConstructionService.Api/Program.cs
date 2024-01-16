@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
+using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +18,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
     options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
 });
 
-builder.AddServiceDefaults();
+builder.AddWorkitemQueues();
 
 // Add services to the container.
 
@@ -37,5 +39,14 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// When running locally, create the 
+if (app.Environment.IsDevelopment())
+{
+    var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration["WorkitemQueueName"]);
+    await queueClient.CreateIfNotExistsAsync();
+    queueClient.SendMessage("random message");
+}
 
 app.Run();
