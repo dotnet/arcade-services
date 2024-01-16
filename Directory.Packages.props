@@ -57,7 +57,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="4.1.0" />
     <PackageVersion Include="Microsoft.CodeCoverage" Version="17.8.0" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="2.1.4" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="3.1.5" />
     <PackageVersion Include="Microsoft.DncEng.CommandLineLib" Version="$(MicrosoftDncEngCommandLineLibVersion)" />
     <PackageVersion Include="Microsoft.DncEng.Configuration.Extensions" Version="$(MicrosoftDncEngConfigurationExtensionsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Authentication.Algorithms" Version="$(MicrosoftDotNetAuthenticationAlgorithmsVersion)" />
