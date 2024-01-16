@@ -295,7 +295,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .. submoduleExclusions,
         ];
 
-        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(["rm", "-r", "-q", "--", .. removalFilters]);
+        ProcessExecutionResult result = await targetRepo.ExecuteGitCommand(["rm", "-r", "-q", "--", .. removalFilters], cancellationToken);
         result.ThrowIfFailed($"Failed to remove files from {targetRepo}");
 
         // Now we insert the VMR files
@@ -326,36 +326,47 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return branchName;
     }
 
-    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int buildToFlow, CancellationToken cancellationToken)
+    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
     {
-        Build build = await _barClient.GetBuildAsync(buildToFlow)
-            ?? throw new Exception($"Failed to find build with ID {buildToFlow}");
-
-        IEnumerable<AssetData> assetData = build.Assets.Select(
-            a => new AssetData(a.NonShipping)
-            {
-                Name = a.Name,
-                Version = a.Version
-            });
-
-        string sourceRepository = build.GitHubRepository ?? build.AzureDevOpsRepository;
-
         // TODO: Maybe this should be hidden inside the dependency file manager
         // However, we need more functionality so that it gets loaded from the local clone
         string versionDetailsXml = await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
             ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {repo.Path}");
         VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-
-        List<DependencyUpdate> updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-            sourceRepository,
-            build.Commit,
-            assetData,
-            versionDetails.Dependencies);
-
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(updates.Select(u => u.To).ToList());
 
-        var newSource = new SourceDependency(sourceRepository, build.Commit);
+        SourceDependency? sourceOrigin;
+        List<DependencyUpdate> updates;
+
+        if (buildToFlow.HasValue)
+        {
+            Build build = await _barClient.GetBuildAsync(buildToFlow.Value)
+                ?? throw new Exception($"Failed to find build with ID {buildToFlow}");
+
+            sourceOrigin = new SourceDependency(
+                build.GitHubRepository ?? build.AzureDevOpsRepository,
+                build.Commit);
+
+            IEnumerable<AssetData> assetData = build.Assets.Select(
+                a => new AssetData(a.NonShipping)
+                {
+                    Name = a.Name,
+                    Version = a.Version
+                });
+
+            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+                sourceOrigin.Uri,
+                sourceOrigin.Sha,
+                assetData,
+                versionDetails.Dependencies);
+
+            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
+        }
+        else
+        {
+            sourceOrigin = versionDetails.Source;
+            updates = [];
+        }
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = versionDetails.Dependencies.GetArcadeUpdate();
@@ -371,9 +382,9 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             updates.Select(u => u.To),
-            newSource,
-            newSource.Uri,
-            build.GitHubBranch ?? build.AzureDevOpsBranch,
+            sourceOrigin,
+            repo.Path,
+            Constants.HEAD,
             versionDetails.Dependencies,
             targetDotNetVersion);
 
