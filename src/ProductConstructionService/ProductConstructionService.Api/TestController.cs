@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class HomeController(BuildAssetRegistryContext dbContext) : Controller
+public class TestController(BuildAssetRegistryContext dbContext) : Controller
 {
     [HttpGet]
     public IActionResult Index()
