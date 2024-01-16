@@ -41,14 +41,11 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             c =>
             {
                 // unify the check statuses to success, pending, and error
-                switch (c.Status)
+                return c.Status switch
                 {
-                    case CheckState.Success:
-                    case CheckState.Pending:
-                        return c.Status;
-                    default:
-                        return CheckState.Error;
-                }
+                    CheckState.Success or CheckState.Pending => c.Status,
+                    _ => CheckState.Error,
+                };
             });
 
         int ListChecksCount(CheckState state)

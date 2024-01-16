@@ -685,20 +685,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             },
             ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
             ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
-
-        ContentEncoding encoding;
-        switch (blob.Encoding.Value)
+        var encoding = blob.Encoding.Value switch
         {
-            case EncodingType.Base64:
-                encoding = ContentEncoding.Base64;
-                break;
-            case EncodingType.Utf8:
-                encoding = ContentEncoding.Utf8;
-                break;
-            default:
-                throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}");
-
-        }
+            EncodingType.Base64 => ContentEncoding.Base64,
+            EncodingType.Utf8 => ContentEncoding.Utf8,
+            _ => throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}"),
+        };
         GitFile newFile = new GitFile(
             path + "/" + treeItem.Path,
             blob.Content,
@@ -926,23 +918,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private ReviewState TranslateReviewState(PullRequestReviewState state)
     {
-        switch (state)
+        return state switch
         {
-            case PullRequestReviewState.Approved:
-                return ReviewState.Approved;
-            case PullRequestReviewState.ChangesRequested:
-                return ReviewState.ChangesRequested;
-            case PullRequestReviewState.Commented:
-                return ReviewState.Commented;
+            PullRequestReviewState.Approved => ReviewState.Approved,
+            PullRequestReviewState.ChangesRequested => ReviewState.ChangesRequested,
+            PullRequestReviewState.Commented => ReviewState.Commented,
             // A PR comment could be dismissed by a new push, so this does not count as a rejection.
             // Change to a comment
-            case PullRequestReviewState.Dismissed:
-                return ReviewState.Commented;
-            case PullRequestReviewState.Pending:
-                return ReviewState.Pending;
-            default:
-                throw new NotImplementedException($"Unexpected pull request review state {state}");
-        }
+            PullRequestReviewState.Dismissed => ReviewState.Commented,
+            PullRequestReviewState.Pending => ReviewState.Pending,
+            _ => throw new NotImplementedException($"Unexpected pull request review state {state}"),
+        };
     }
 
     private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
@@ -954,26 +940,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 {
                     var name = s.Context;
                     var url = s.TargetUrl;
-                    CheckState state;
-                    switch (s.State.Value)
+                    var state = s.State.Value switch
                     {
-                        case CommitState.Pending:
-                            state = CheckState.Pending;
-                            break;
-                        case CommitState.Error:
-                            state = CheckState.Error;
-                            break;
-                        case CommitState.Failure:
-                            state = CheckState.Failure;
-                            break;
-                        case CommitState.Success:
-                            state = CheckState.Success;
-                            break;
-                        default:
-                            state = CheckState.None;
-                            break;
-                    }
-
+                        CommitState.Pending => CheckState.Pending,
+                        CommitState.Error => CheckState.Error,
+                        CommitState.Failure => CheckState.Failure,
+                        CommitState.Success => CheckState.Success,
+                        _ => CheckState.None,
+                    };
                     return new Check(state, name, url, isMaestroMergePolicy: false);
                 })
             .ToList();
@@ -988,37 +962,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     var name = run.Name;
                     var externalID = run.ExternalId;
                     var url = run.HtmlUrl;
-                    CheckState state;
-                    switch (run.Status.Value)
+                    var state = run.Status.Value switch
                     {
-                        case CheckStatus.Queued:
-                        case CheckStatus.InProgress:
-                            state = CheckState.Pending;
-                            break;
-                        case CheckStatus.Completed:
-                            switch (run.Conclusion?.Value)
-                            {
-                                case CheckConclusion.Success:
-                                    state = CheckState.Success;
-                                    break;
-                                case CheckConclusion.ActionRequired:
-                                case CheckConclusion.Cancelled:
-                                case CheckConclusion.Failure:
-                                case CheckConclusion.Neutral:
-                                case CheckConclusion.TimedOut:
-                                    state = CheckState.Failure;
-                                    break;
-                                default:
-                                    state = CheckState.None;
-                                    break;
-                            }
-
-                            break;
-                        default:
-                            state = CheckState.None;
-                            break;
-                    }
-
+                        CheckStatus.Queued or CheckStatus.InProgress => CheckState.Pending,
+                        CheckStatus.Completed => (run.Conclusion?.Value) switch
+                        {
+                            CheckConclusion.Success => CheckState.Success,
+                            CheckConclusion.ActionRequired or CheckConclusion.Cancelled or CheckConclusion.Failure or CheckConclusion.Neutral or CheckConclusion.TimedOut => CheckState.Failure,
+                            _ => CheckState.None,
+                        },
+                        _ => CheckState.None,
+                    };
                     return new Check(state, name, url, isMaestroMergePolicy: run.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix));
                 })
             .ToList();

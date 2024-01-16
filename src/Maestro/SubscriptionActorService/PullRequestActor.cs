@@ -108,36 +108,33 @@ namespace SubscriptionActorService
 
         private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
-            switch (actorId.Kind)
+            return actorId.Kind switch
             {
-                case ActorIdKind.Guid:
-                    return new NonBatchedPullRequestActorImplementation(actorId,
-                        reminderManager,
-                        stateManager,
-                        _mergePolicyEvaluator,
-                        _coherencyUpdateResolver,
-                        _context,
-                        _darcFactory,
-                        _barClient,
-                        _loggerFactory,
-                        _actionRunner,
-                        _subscriptionActorFactory,
-                        _pullRequestPolicyFailureNotifier);
-                case ActorIdKind.String:
-                    return new BatchedPullRequestActorImplementation(actorId,
-                        reminderManager,
-                        stateManager,
-                        _mergePolicyEvaluator,
-                        _coherencyUpdateResolver,
-                        _context,
-                        _darcFactory,
-                        _barClient,
-                        _loggerFactory,
-                        _actionRunner,
-                        _subscriptionActorFactory);
-                default:
-                    throw new NotSupportedException("Only actorIds of type Guid and String are supported");
-            }
+                ActorIdKind.Guid => new NonBatchedPullRequestActorImplementation(actorId,
+                                        reminderManager,
+                                        stateManager,
+                                        _mergePolicyEvaluator,
+                                        _coherencyUpdateResolver,
+                                        _context,
+                                        _darcFactory,
+                                        _barClient,
+                                        _loggerFactory,
+                                        _actionRunner,
+                                        _subscriptionActorFactory,
+                                        _pullRequestPolicyFailureNotifier),
+                ActorIdKind.String => new BatchedPullRequestActorImplementation(actorId,
+                                        reminderManager,
+                                        stateManager,
+                                        _mergePolicyEvaluator,
+                                        _coherencyUpdateResolver,
+                                        _context,
+                                        _darcFactory,
+                                        _barClient,
+                                        _loggerFactory,
+                                        _actionRunner,
+                                        _subscriptionActorFactory),
+                _ => throw new NotSupportedException("Only actorIds of type Guid and String are supported"),
+            };
         }
 
         public PullRequestActorImplementation Implementation { get; private set; }

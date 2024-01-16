@@ -248,24 +248,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
         var query = new StringBuilder();
-        AzureDevOpsPrStatus prStatus;
-
-        switch (status)
+        var prStatus = status switch
         {
-            case PrStatus.Open:
-                prStatus = AzureDevOpsPrStatus.Active;
-                break;
-            case PrStatus.Closed:
-                prStatus = AzureDevOpsPrStatus.Abandoned;
-                break;
-            case PrStatus.Merged:
-                prStatus = AzureDevOpsPrStatus.Completed;
-                break;
-            default:
-                prStatus = AzureDevOpsPrStatus.None;
-                break;
-        }
-
+            PrStatus.Open => AzureDevOpsPrStatus.Active,
+            PrStatus.Closed => AzureDevOpsPrStatus.Abandoned,
+            PrStatus.Merged => AzureDevOpsPrStatus.Completed,
+            _ => AzureDevOpsPrStatus.None,
+        };
         query.Append($"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
 
         if (!string.IsNullOrEmpty(keyword))
@@ -745,28 +734,14 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
             if (isEnabled && Enum.TryParse(status["status"].ToString(), true, out AzureDevOpsCheckState state))
             {
-                CheckState checkState;
-
-                switch (state)
+                var checkState = state switch
                 {
-                    case AzureDevOpsCheckState.Broken:
-                        checkState = CheckState.Error;
-                        break;
-                    case AzureDevOpsCheckState.Rejected:
-                        checkState = CheckState.Failure;
-                        break;
-                    case AzureDevOpsCheckState.Queued:
-                    case AzureDevOpsCheckState.Running:
-                        checkState = CheckState.Pending;
-                        break;
-                    case AzureDevOpsCheckState.Approved:
-                        checkState = CheckState.Success;
-                        break;
-                    default:
-                        checkState = CheckState.None;
-                        break;
-                }
-
+                    AzureDevOpsCheckState.Broken => CheckState.Error,
+                    AzureDevOpsCheckState.Rejected => CheckState.Failure,
+                    AzureDevOpsCheckState.Queued or AzureDevOpsCheckState.Running => CheckState.Pending,
+                    AzureDevOpsCheckState.Approved => CheckState.Success,
+                    _ => CheckState.None,
+                };
                 statuses.Add(
                     new Check(
                         checkState,
@@ -805,30 +780,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             // 10 - approved 5 - approved with suggestions 0 - no vote - 5 - waiting for author - 10 - rejected
 
             int vote = review["vote"].Value<int>();
-
-            ReviewState reviewState;
-
-            switch (vote)
+            var reviewState = vote switch
             {
-                case 10:
-                    reviewState = ReviewState.Approved;
-                    break;
-                case 5:
-                    reviewState = ReviewState.Commented;
-                    break;
-                case 0:
-                    reviewState = ReviewState.Pending;
-                    break;
-                case -5:
-                    reviewState = ReviewState.ChangesRequested;
-                    break;
-                case -10:
-                    reviewState = ReviewState.Rejected;
-                    break;
-                default:
-                    throw new NotImplementedException($"Unknown review vote {vote}");
-            }
-
+                10 => ReviewState.Approved,
+                5 => ReviewState.Commented,
+                0 => ReviewState.Pending,
+                -5 => ReviewState.ChangesRequested,
+                -10 => ReviewState.Rejected,
+                _ => throw new NotImplementedException($"Unknown review vote {vote}"),
+            };
             reviews.Add(new Review(reviewState, pullRequestUrl));
         }
 
