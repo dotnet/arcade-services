@@ -8,7 +8,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 internal interface ILocal
 {
-    Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory);
+    Task UpdateDependenciesAsync(
+        List<DependencyDetail> dependencies,
+        IRemoteFactory remoteFactory,
+        IBarApiClient barClient);
+
     /// <summary>
     ///     Verify the local repository has correct and consistent dependency information
     /// </summary>

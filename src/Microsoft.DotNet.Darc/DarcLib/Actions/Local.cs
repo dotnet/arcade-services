@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
@@ -58,15 +57,15 @@ public class Local : ILocal
     /// <param name="dependencies">Dependencies that need updates.</param>
     /// <param name="remote">Remote instance for gathering eng/common script updates.</param>
     /// <returns></returns>
-    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory)
+    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IBarApiClient barClient)
     {
         // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
         // Update the incoming dependencies with locations.
-        IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync();
+        List<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
-        await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
-        await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
+        var locationResolver = new AssetLocationResolver(barClient, _logger);
+        await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
+        await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.FirstOrDefault(
@@ -127,11 +126,12 @@ public class Local : ILocal
     ///     Gets the local dependencies
     /// </summary>
     /// <returns></returns>
-    public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
+    public async Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
     {
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned);
         return versionDetails.Dependencies
-            .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     /// <summary>

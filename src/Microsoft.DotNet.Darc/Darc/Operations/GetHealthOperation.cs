@@ -43,7 +43,7 @@ class HealthMetricWithOutput
 /// </summary>
 internal class GetHealthOperation : Operation
 {
-    GetHealthCommandLineOptions _options;
+    private readonly GetHealthCommandLineOptions _options;
     public GetHealthOperation(GetHealthCommandLineOptions options)
         : base(options)
     {
@@ -54,11 +54,11 @@ internal class GetHealthOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            IEnumerable<Subscription> subscriptions = await remote.GetSubscriptionsAsync();
-            IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
-            IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+            IEnumerable<Subscription> subscriptions = await barClient.GetSubscriptionsAsync();
+            IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync();
+            IEnumerable<Channel> channels = await barClient.GetChannelsAsync();
 
             HashSet<string> channelsToEvaluate = ComputeChannelsToEvaluate(channels);
             HashSet<string> reposToEvaluate = ComputeRepositoriesToEvaluate(defaultChannels, subscriptions);
@@ -99,11 +99,14 @@ internal class GetHealthOperation : Operation
 
             // Compute metrics, then run in parallel.
 
-            List<Func<Task<HealthMetricWithOutput>>> metricsToRun = ComputeMetricsToRun(channelsToEvaluate, reposToEvaluate,
-                subscriptions, defaultChannels, channels);
+            List<Func<Task<HealthMetricWithOutput>>> metricsToRun = ComputeMetricsToRun(
+                channelsToEvaluate,
+                reposToEvaluate,
+                subscriptions,
+                defaultChannels);
 
             // Run the metrics
-            HealthMetricWithOutput[] results = await Task.WhenAll<HealthMetricWithOutput>(metricsToRun.Select(metric => metric()));
+            HealthMetricWithOutput[] results = await Task.WhenAll(metricsToRun.Select(metric => metric()));
 
             // Walk through and print the results out
             bool passed = true;
@@ -137,17 +140,15 @@ internal class GetHealthOperation : Operation
     /// <param name="channelsToEvaluate">Channels to evaluate</param>
     /// <param name="reposToEvaluate">Repositories to evaluate</param>
     /// <returns>List of Func's that, when evaluated, will produce metrics with output.</returns>
-    private List<Func<Task<HealthMetricWithOutput>>> ComputeMetricsToRun(HashSet<string> channelsToEvaluate,
-        HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions,
-        IEnumerable<DefaultChannel> defaultChannels, IEnumerable<Channel> channels)
-    {
-        var metricsToRun = new List<Func<Task<HealthMetricWithOutput>>>();
-
-        metricsToRun.AddRange(ComputeSubscriptionHealthMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels));
-        metricsToRun.AddRange(ComputeProductDependencyCycleMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels));
-
-        return metricsToRun;
-    }
+    private List<Func<Task<HealthMetricWithOutput>>> ComputeMetricsToRun(
+        HashSet<string> channelsToEvaluate,
+        HashSet<string> reposToEvaluate,
+        IEnumerable<Subscription> subscriptions,
+        IEnumerable<DefaultChannel> defaultChannels) =>
+    [
+        .. ComputeSubscriptionHealthMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels),
+        .. ComputeProductDependencyCycleMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels),
+    ];
 
     /// <summary>
     ///     Get typical repository and branch combinations for use with repo+branch focused metrics.
@@ -197,10 +198,14 @@ internal class GetHealthOperation : Operation
     ///     Note that this will currently miss completely untargeted branches, until those have at least one
     ///     default channel or subscription. This is a fairly benign limitation.
     /// </remarks>
-    private List<Func<Task<HealthMetricWithOutput>>> ComputeSubscriptionHealthMetricsToRun(HashSet<string> channelsToEvaluate,
-        HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+    private List<Func<Task<HealthMetricWithOutput>>> ComputeSubscriptionHealthMetricsToRun(
+        HashSet<string> channelsToEvaluate,
+        HashSet<string> reposToEvaluate,
+        IEnumerable<Subscription> subscriptions,
+        IEnumerable<DefaultChannel> defaultChannels)
     {
-        IRemoteFactory remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = new RemoteFactory(_options);
+        var barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -208,12 +213,17 @@ internal class GetHealthOperation : Operation
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    SubscriptionHealthMetric healthMetric = new SubscriptionHealthMetric(t.repo, t.branch, 
-                        d => true, Logger, remoteFactory);
+                    var healthMetric = new SubscriptionHealthMetric(
+                        t.repo,
+                        t.branch,
+                        d => true,
+                        remoteFactory,
+                        barClient,
+                        Logger);
 
                     await healthMetric.EvaluateAsync();
 
-                    StringBuilder outputBuilder = new StringBuilder();
+                    var outputBuilder = new StringBuilder();
 
                     if (healthMetric.ConflictingSubscriptions.Any())
                     {
@@ -263,12 +273,14 @@ internal class GetHealthOperation : Operation
     /// <summary>
     ///     Compute product dependency cycle metrics based on the input repositories and channels.
     /// </summary>
-    /// <param name="channelsToEvaluate"></param>
-    /// <returns></returns>
-    private List<Func<Task<HealthMetricWithOutput>>> ComputeProductDependencyCycleMetricsToRun(HashSet<string> channelsToEvaluate,
-        HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+    private List<Func<Task<HealthMetricWithOutput>>> ComputeProductDependencyCycleMetricsToRun(
+        HashSet<string> channelsToEvaluate,
+        HashSet<string> reposToEvaluate,
+        IEnumerable<Subscription> subscriptions,
+        IEnumerable<DefaultChannel> defaultChannels)
     {
-        IRemoteFactory remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = new RemoteFactory(_options);
+        var barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
             GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
@@ -276,12 +288,11 @@ internal class GetHealthOperation : Operation
         return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    ProductDependencyCyclesHealthMetric healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch,
-                        Logger, remoteFactory);
+                    var healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch, remoteFactory, barClient, Logger);
 
                     await healthMetric.EvaluateAsync();
 
-                    StringBuilder outputBuilder = new StringBuilder();
+                    var outputBuilder = new StringBuilder();
 
                     if (healthMetric.Cycles.Any())
                     {
@@ -297,16 +308,11 @@ internal class GetHealthOperation : Operation
             .ToList();
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="channels"></param>
-    /// <returns></returns>
     private HashSet<string> ComputeChannelsToEvaluate(IEnumerable<Channel> channels)
     {
         if (!string.IsNullOrEmpty(_options.Channel))
         {
-            HashSet<string> channelsToTarget = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var channelsToTarget = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             Channel targetChannel = UxHelpers.ResolveSingleChannel(channels, _options.Channel);
 
             if (targetChannel != null)

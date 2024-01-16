@@ -49,7 +49,7 @@ public class DependencyFlowGraph
     ///     Recalculate the input channels based on the input edges.
     /// </summary>
     /// <param name="node">Node to calculate the input edges for.</param>
-    private void RecalculateInputChannels(DependencyFlowNode node)
+    private static void RecalculateInputChannels(DependencyFlowNode node)
     {
         node.InputChannels = new HashSet<string>(node.IncomingEdges.Select(e => e.Subscription.Channel.Name));
     }
@@ -296,7 +296,7 @@ public class DependencyFlowGraph
         }
     }
 
-    private void MarkLongestPath(DependencyFlowNode node)
+    private static void MarkLongestPath(DependencyFlowNode node)
     {
         // The edges we are interested in are those that haven't been marked as on the longest build path 
         // and aren't back edges, both of which indicate a cycle
@@ -318,7 +318,7 @@ public class DependencyFlowGraph
     public static async Task<DependencyFlowGraph> BuildAsync(
         List<DefaultChannel> defaultChannels,
         List<Subscription> subscriptions,
-        IBarClient barClient,
+        IBasicBarClient barClient,
         int days)
     {
         // Dictionary of nodes. Key is the repo+branch

@@ -336,6 +336,7 @@ public partial class DefaultChannelsController20200220Tests
             collection.AddSingleton<DefaultChannelsController>();
             collection.AddSingleton<ChannelsController>();
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
+            collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
         }
             

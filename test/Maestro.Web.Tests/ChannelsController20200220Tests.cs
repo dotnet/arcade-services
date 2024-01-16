@@ -171,6 +171,7 @@ public partial class ChannelsController20200220Tests
                 options.EnableServiceProviderCaching(false);
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
+            collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton<IBackgroundQueue, NeverBackgroundQueue>();
         }
 

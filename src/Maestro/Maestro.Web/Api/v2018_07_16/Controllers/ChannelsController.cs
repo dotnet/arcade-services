@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -30,18 +29,15 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers;
 public class ChannelsController : Controller
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClient _barClient;
 
-    public ChannelsController(BuildAssetRegistryContext context,
-        IRemoteFactory factory,
-        ILogger<ChannelsController> logger)
+    public ChannelsController(
+        BuildAssetRegistryContext context,
+        IBasicBarClient barClient)
     {
         _context = context;
-        _remoteFactory = factory;
-        Logger = logger;
+        _barClient = barClient;
     }
-
-    public ILogger<ChannelsController> Logger { get; }
 
     /// <summary>
     ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
@@ -93,7 +89,7 @@ public class ChannelsController : Controller
 
         List<string> repositoryList = await buildChannelList
             .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
-            .Where(b => !String.IsNullOrEmpty(b))
+            .Where(b => !string.IsNullOrEmpty(b))
             .Distinct()
             .ToListAsync();
 
@@ -290,8 +286,7 @@ public class ChannelsController : Controller
         int days = 7,
         bool includeArcade = true)
     {
-        var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
-        var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
+        DependencyFlowGraph flowGraph = await _barClient.GetDependencyFlowGraphAsync(
             channelId,
             days,
             includeArcade,

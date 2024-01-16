@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetDependencyFlowGraphOperation : Operation
 {
-    private GetDependencyFlowGraphCommandLineOptions _options;
+    private readonly GetDependencyFlowGraphCommandLineOptions _options;
 
     public GetDependencyFlowGraphOperation(GetDependencyFlowGraphCommandLineOptions options)
         : base(options)
@@ -25,28 +25,25 @@ internal class GetDependencyFlowGraphOperation : Operation
         _options = options;
     }
 
-    const int engLatestChannelId = 2;
-    const int eng3ChannelId = 344;
-
     public override async Task<int> ExecuteAsync()
     {
         try
         {
-            RemoteFactory remoteFactory = new RemoteFactory(_options);
-            var barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
+            var remoteFactory = new RemoteFactory(_options);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
                 // Resolve the channel.
-                targetChannel = await UxHelpers.ResolveSingleChannel(barOnlyRemote, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
                 }
             }
 
-            var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
+            var flowGraph = await barClient.GetDependencyFlowGraphAsync(
                 targetChannel?.Id ?? 0,
                 _options.Days,
                 includeArcade: true,
@@ -75,7 +72,7 @@ internal class GetDependencyFlowGraphOperation : Operation
     /// </summary>
     /// <param name="edge"></param>
     /// <returns></returns>
-    private string GetEdgeStyle(DependencyFlowEdge edge)
+    private static string GetEdgeStyle(DependencyFlowEdge edge)
     {
         string color = edge.OnLongestBuildPath ? "color=\"red:invis:red\"" : "";
         switch (edge.Subscription.Policy.UpdateFrequency)

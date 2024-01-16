@@ -31,7 +31,7 @@ internal class AddChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // If the user tried to mark as internal, indicate that this is currently
             // unsupported.
@@ -41,7 +41,7 @@ internal class AddChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            Channel newChannelInfo = await remote.CreateChannelAsync(_options.Name, _options.Classification);
+            Channel newChannelInfo = await barClient.CreateChannelAsync(_options.Name, _options.Classification);
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:

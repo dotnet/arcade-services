@@ -69,6 +69,7 @@ public static class Program
 
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddKustoClientProvider("Kusto");
     }
 }

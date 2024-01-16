@@ -137,6 +137,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        IBasicBarClient barClient,
         string repoUri,
         string commit,
         DependencyGraphBuildOptions options,
@@ -144,6 +145,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            barClient,
             null, /* no initial root dependencies */
             repoUri,
             commit,
@@ -167,6 +169,7 @@ public class DependencyGraph
     /// <returns>New dependency graph.</returns>
     public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
         IRemoteFactory remoteFactory,
+        IBarApiClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -175,6 +178,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             remoteFactory,
+            barClient,
             rootDependencies,
             repoUri,
             commit,
@@ -211,6 +215,7 @@ public class DependencyGraph
     {
         return await BuildDependencyGraphImplAsync(
             null,
+            null,
             rootDependencies,
             rootRepoFolder,
             rootRepoCommit,
@@ -225,27 +230,11 @@ public class DependencyGraph
     /// <summary>
     ///     Validate that the graph build options are correct.
     /// </summary>
-    /// <param name="remoteFactory"></param>
-    /// <param name="rootDependencies"></param>
-    /// <param name="repoUri"></param>
-    /// <param name="commit"></param>
-    /// <param name="options"></param>
-    /// <param name="remote"></param>
-    /// <param name="logger"></param>
-    /// <param name="reposFolder"></param>
-    /// <param name="remotesMap"></param>
-    /// <param name="testPath"></param>
     private static void ValidateBuildOptions(
         IRemoteFactory remoteFactory,
         IEnumerable<DependencyDetail> rootDependencies,
-        string repoUri,
-        string commit,
         DependencyGraphBuildOptions options,
-        bool remote,
-        ILogger logger,
-        string reposFolder,
-        IEnumerable<string> remotesMap,
-        string testPath)
+        bool remote)
     {
         // Fail fast if darcSettings is null in a remote scenario
         if (remote && remoteFactory == null)
@@ -280,17 +269,15 @@ public class DependencyGraph
 
     private static async Task DoLatestInChannelGraphNodeDiffAsync(
         IRemoteFactory remoteFactory,
+        IBasicBarClient barClient,
         ILogger logger,
-        Dictionary<string, DependencyGraphNode> nodeCache,
-        Dictionary<string, DependencyGraphNode> visitedRepoUriNodes)
+        Dictionary<string, DependencyGraphNode> nodeCache)
     {
         logger.LogInformation("Running latest in channel node diff.");
 
-        IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
-
         // Walk each node in the graph and diff against the latest build in the channel
         // that was also applied to the node.
-        Dictionary<string, string> latestCommitCache = new Dictionary<string, string>();
+        var latestCommitCache = new Dictionary<string, string>();
         foreach (DependencyGraphNode node in nodeCache.Values)
         {
             // Start with an unknown diff.
@@ -307,12 +294,12 @@ public class DependencyGraph
                 {
                     int channelId = newestBuildWithChannel.Channels.First().Id;
                     // Just choose the first channel. This algorithm is mostly just heuristic.
-                    string latestCommitKey = $"{node.Repository}@{channelId}";
+                    var latestCommitKey = $"{node.Repository}@{channelId}";
                     string latestCommit = null;
                     if (!latestCommitCache.TryGetValue(latestCommitKey, out latestCommit))
                     {
                         // Look up latest build in the channel
-                        var latestBuild = await barOnlyRemote.GetLatestBuildAsync(node.Repository, channelId);
+                        var latestBuild = await barClient.GetLatestBuildAsync(node.Repository, channelId);
                         // Could be null, if the only build was removed from the channel
                         if (latestBuild != null)
                         {
@@ -413,6 +400,7 @@ public class DependencyGraph
     /// <returns>New dependency graph</returns>
     private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
         IRemoteFactory remoteFactory,
+        IBasicBarClient barClient,
         IEnumerable<DependencyDetail> rootDependencies,
         string repoUri,
         string commit,
@@ -425,16 +413,7 @@ public class DependencyGraph
     {
         List<DependencyDetail> rootDependencyList = rootDependencies?.ToList();
         List<string> remotesList = remotesMap?.ToList();
-        ValidateBuildOptions(remoteFactory,
-            rootDependencyList,
-            repoUri,
-            commit,
-            options,
-            remote,
-            logger,
-            reposFolder,
-            remotesList,
-            testPath);
+        ValidateBuildOptions(remoteFactory, rootDependencyList, options, remote);
 
         if (rootDependencies != null)
         {
@@ -450,31 +429,25 @@ public class DependencyGraph
             logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
         }
 
-        IRemote barOnlyRemote = null;
-        if (remote)
-        {
-            // Look up the dependency and get the creating build.
-            barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
-        }
-
-        List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
+        List<LinkedList<DependencyGraphNode>> cycles = [];
         Dictionary<string, List<Build>> buildLookups = null;
 
         if (options.LookupBuilds)
         {
-            buildLookups = new Dictionary<string, List<Build>>();
-
-            // Look up the dependency and get the creating build.
-            buildLookups.Add($"{repoUri}@{commit}", (await barOnlyRemote.GetBuildsAsync(repoUri, commit)).ToList());
+            buildLookups = new Dictionary<string, List<Build>>
+            {
+                // Look up the dependency and get the creating build.
+                { $"{repoUri}@{commit}", (await barClient.GetBuildsAsync(repoUri, commit)).ToList() }
+            };
         }
 
         // Create the root node and add the repo to the visited bit vector.
         List<Build> allContributingBuilds = null;
-        DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencyList, null);
+        var rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencyList, null);
         rootGraphNode.VisitedNodes.Add(repoUri);
         // Nodes to visit is a queue, so that the evaluation order
         // of the graph is breadth first.
-        Queue<DependencyGraphNode> nodesToVisit = new Queue<DependencyGraphNode>();
+        var nodesToVisit = new Queue<DependencyGraphNode>();
         nodesToVisit.Enqueue(rootGraphNode);
         HashSet<DependencyDetail> uniqueDependencyDetails;
 
@@ -492,17 +465,17 @@ public class DependencyGraph
 
         // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
         // we can just add these nodes as a child. The cache key is '{repoUri}@{commit}'
-        Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
-        nodeCache.Add($"{rootGraphNode.Repository}@{rootGraphNode.Commit}", rootGraphNode);
+        var nodeCache = new Dictionary<string, DependencyGraphNode>
+        {
+            { $"{rootGraphNode.Repository}@{rootGraphNode.Commit}", rootGraphNode }
+        };
 
         // Cache of incoherent nodes, looked up by repo URI.
-        Dictionary<string, DependencyGraphNode> visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
-        HashSet<DependencyGraphNode> incoherentNodes = new HashSet<DependencyGraphNode>();
+        var visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
+        var incoherentNodes = new HashSet<DependencyGraphNode>();
         // Cache of incoherent dependencies, looked up by name
-        Dictionary<string, DependencyDetail> incoherentDependenciesCache =
-            new Dictionary<string, DependencyDetail>();
-        HashSet<DependencyDetail> incoherentDependencies =
-            new HashSet<DependencyDetail>(new LooseDependencyDetailComparer());
+        var incoherentDependenciesCache = new Dictionary<string, DependencyDetail>();
+        var incoherentDependencies = new HashSet<DependencyDetail>(new LooseDependencyDetailComparer());
 
         while (nodesToVisit.Count > 0)
         {
@@ -556,7 +529,7 @@ public class DependencyGraph
                         if (!buildLookups.ContainsKey($"{dependency.RepoUri}@{dependency.Commit}"))
                         {
                             buildLookups.Add($"{dependency.RepoUri}@{dependency.Commit}",
-                                (await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                                (await barClient.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
                                 .ToList());
                         }
                     }
@@ -603,7 +576,7 @@ public class DependencyGraph
                     }
 
                     // Otherwise, create a new node for this dependency.
-                    DependencyGraphNode newNode = new DependencyGraphNode(
+                    var newNode = new DependencyGraphNode(
                         dependency.RepoUri,
                         dependency.Commit,
                         null,
@@ -649,7 +622,7 @@ public class DependencyGraph
                 await DoLatestInGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
                 break;
             case NodeDiff.LatestInChannel:
-                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
+                await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, barClient, logger, nodeCache);
                 break;
         }
 
@@ -676,7 +649,7 @@ public class DependencyGraph
     {
         logger.LogInformation("Computing contributing builds");
 
-        List<Build> allContributingBuilds = new List<Build>();
+        var allContributingBuilds = new List<Build>();
 
         foreach (DependencyGraphNode node in allNodes)
         {
@@ -717,7 +690,7 @@ public class DependencyGraph
             return true;
         }
 
-        AssetComparer assetEqualityComparer = new AssetComparer();
+        var assetEqualityComparer = new AssetComparer();
         foreach (DependencyGraphNode parentNode in node.Parents)
         {
             foreach (var dependency in parentNode.Dependencies)
@@ -744,7 +717,7 @@ public class DependencyGraph
     private static List<LinkedList<DependencyGraphNode>> ComputeCyclePaths(
         DependencyGraphNode currentNode, string repoCycleRoot)
     {
-        List<LinkedList<DependencyGraphNode>> allCyclesRootedAtNode = new List<LinkedList<DependencyGraphNode>>();
+        var allCyclesRootedAtNode = new List<LinkedList<DependencyGraphNode>>();
 
         // Find all parents who have a path to the root node.  This set might also
         // be the root node, since the root node has itself marked in VisitedNodes.
@@ -914,15 +887,15 @@ public class DependencyGraph
 
     private static Dictionary<string, string> CreateRemotesMapping(IEnumerable<string> remotesMap)
     {
-        Dictionary<string, string> remotesMapping = new Dictionary<string, string>();
+        var remotesMapping = new Dictionary<string, string>();
 
         foreach (string remotes in remotesMap)
         {
-            string[] keyValuePairs = remotes.Split(';');
+            var keyValuePairs = remotes.Split(';');
 
             foreach (string keyValue in keyValuePairs)
             {
-                string[] kv = keyValue.Split(',');
+                var kv = keyValue.Split(',');
                 remotesMapping.Add(kv[0], kv[1]);
             }
         }

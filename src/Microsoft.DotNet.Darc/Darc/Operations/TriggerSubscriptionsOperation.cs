@@ -12,13 +12,12 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
-using Microsoft.AspNetCore.Http.Features;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class TriggerSubscriptionsOperation : Operation
 {
-    TriggerSubscriptionsCommandLineOptions _options;
+    private readonly TriggerSubscriptionsCommandLineOptions _options;
     public TriggerSubscriptionsOperation(TriggerSubscriptionsCommandLineOptions options)
         : base(options)
     {
@@ -33,17 +32,17 @@ internal class TriggerSubscriptionsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             bool noConfirm = _options.NoConfirmation;
-            List<Subscription> subscriptionsToTrigger = new List<Subscription>();
+            List<Subscription> subscriptionsToTrigger = [];
 
             if (!string.IsNullOrEmpty(_options.Id))
             {
                 // Look up subscription so we can print it later.
                 try
                 {
-                    Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+                    Subscription subscription = await barClient.GetSubscriptionAsync(_options.Id);
                     subscriptionsToTrigger.Add(subscription);
                 }
                 catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
@@ -60,7 +59,7 @@ internal class TriggerSubscriptionsOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
+                IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(barClient);
 
                 if (!subscriptions.Any())
                 {
@@ -73,7 +72,7 @@ internal class TriggerSubscriptionsOperation : Operation
 
             if (_options.Build != 0)
             {
-                var specificBuild = await remote.GetBuildAsync(_options.Build);
+                var specificBuild = await barClient.GetBuildAsync(_options.Build);
                 if (specificBuild == null)
                 {
                     Console.WriteLine($"No build found in the BAR with id '{_options.Build}'");
@@ -135,11 +134,11 @@ internal class TriggerSubscriptionsOperation : Operation
                 }
                 if (_options.Build > 0)
                 {
-                    await remote.TriggerSubscriptionAsync(subscription.Id.ToString(), _options.Build);
+                    await barClient.TriggerSubscriptionAsync(subscription.Id, _options.Build);
                 }
                 else
                 {
-                    await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
+                    await barClient.TriggerSubscriptionAsync(subscription.Id);
                 }
             }
             Console.WriteLine("done");

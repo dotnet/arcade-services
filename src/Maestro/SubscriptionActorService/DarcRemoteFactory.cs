@@ -17,6 +17,17 @@ namespace SubscriptionActorService;
 
 public class DarcRemoteFactory : IRemoteFactory
 {
+    private readonly IConfiguration _configuration;
+    private readonly IGitHubTokenProvider _gitHubTokenProvider;
+    private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly DarcRemoteMemoryCache _cache;
+
+    private readonly TemporaryFiles _tempFiles;
+    private readonly ILocalGit _localGit;
+    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly OperationManager _operations;
+
     public DarcRemoteFactory(
         IConfiguration configuration,
         IGitHubTokenProvider gitHubTokenProvider,
@@ -39,22 +50,6 @@ public class DarcRemoteFactory : IRemoteFactory
         _context = context;
     }
 
-    private readonly IConfiguration _configuration;
-    private readonly IGitHubTokenProvider _gitHubTokenProvider;
-    private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
-    private readonly BuildAssetRegistryContext _context;
-    private readonly DarcRemoteMemoryCache _cache;
-
-    private readonly TemporaryFiles _tempFiles;
-    private readonly ILocalGit _localGit;
-    private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly OperationManager _operations;
-
-    public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
-    {
-        return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), _versionDetailsParser, logger));
-    }
-
     public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
     {
         using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
@@ -63,7 +58,7 @@ public class DarcRemoteFactory : IRemoteFactory
             // get a token. When we do coherency updates we build a repo graph and
             // may end up traversing links to classic azdo uris.
             string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
-            Uri normalizedRepoUri = new Uri(normalizedUrl);
+            var normalizedRepoUri = new Uri(normalizedUrl);
             // Look up the setting for where the repo root should be held.  Default to empty,
             // which will use the temp directory.
             string temporaryRepositoryRoot = _configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
@@ -112,7 +107,7 @@ public class DarcRemoteFactory : IRemoteFactory
                 _ => throw new NotImplementedException($"Unknown repo url type {normalizedUrl}"),
             };
 
-            return new Remote(remoteGitClient, new MaestroBarClient(_context), _versionDetailsParser, logger);
+            return new Remote(remoteGitClient, _versionDetailsParser, logger);
         }
     }
 }

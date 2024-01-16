@@ -733,7 +733,20 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         using (HttpClient client = CreateHttpClient())
         {
             var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
-            return await requestManager.ExecuteAsync(retryCount);
+            try
+            {
+                return await requestManager.ExecuteAsync(retryCount);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
+            {
+                if (logFailure)
+                {
+                    _logger.LogError("Your GitHub token seems to be invalid." +
+                        "Please see https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#step-3-set-additional-pats-for-azure-devops-and-github-operations" +
+                        "Make sure the GitHub token is Single Sign-On (SSO) enabled for the organization associated with the repository.");
+                }
+                throw;
+            }
         }
     }
 

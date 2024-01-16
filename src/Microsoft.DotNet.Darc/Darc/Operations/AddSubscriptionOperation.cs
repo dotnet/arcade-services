@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 class AddSubscriptionOperation : Operation
 {
-    AddSubscriptionCommandLineOptions _options;
+    private readonly AddSubscriptionCommandLineOptions _options;
 
     public AddSubscriptionOperation(AddSubscriptionCommandLineOptions options)
         : base(options)
@@ -35,16 +35,16 @@ class AddSubscriptionOperation : Operation
     /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-        if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
+        if (_options.IgnoreChecks.Any() && !_options.AllChecksSuccessfulMergePolicy)
         {
             Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
             return Constants.ErrorCode;
         }
 
         // Parse the merge policies
-        List<MergePolicy> mergePolicies = new List<MergePolicy>();
+        List<MergePolicy> mergePolicies = [];
 
         if (_options.AllChecksSuccessfulMergePolicy)
         {
@@ -136,28 +136,27 @@ class AddSubscriptionOperation : Operation
             // Grab existing subscriptions to get suggested values.
             // TODO: When this becomes paged, set a max number of results to avoid
             // pulling too much.
-            var suggestedRepos = remote.GetSubscriptionsAsync();
-            var suggestedChannels = remote.GetChannelsAsync();
+            var suggestedRepos = barClient.GetSubscriptionsAsync();
+            var suggestedChannels = barClient.GetChannelsAsync();
 
             // Help the user along with a form.  We'll use the API to gather suggested values
             // from existing subscriptions based on the input parameters.
-            AddSubscriptionPopUp addSubscriptionPopup =
-                new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
-                    Logger,
-                    channel,
-                    sourceRepository,
-                    targetRepository,
-                    targetBranch,
-                    updateFrequency,
-                    batchable,
-                    mergePolicies,
-                    (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
-                    (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                    Constants.AvailableFrequencies,
-                    Constants.AvailableMergePolicyYamlHelp, 
-                    failureNotificationTags);
+            var addSubscriptionPopup = new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
+                Logger,
+                channel,
+                sourceRepository,
+                targetRepository,
+                targetBranch,
+                updateFrequency,
+                batchable,
+                mergePolicies,
+                (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
+                (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
+                Constants.AvailableFrequencies,
+                Constants.AvailableMergePolicyYamlHelp, 
+                failureNotificationTags);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
             int exitCode = _options.ReadStandardIn ? uxManager.ReadFromStdIn(addSubscriptionPopup) : uxManager.PopUp(addSubscriptionPopup);
             if (exitCode != Constants.SuccessCode)
             {
@@ -179,7 +178,7 @@ class AddSubscriptionOperation : Operation
             // target repo/branch, warn the user.
             if (batchable)
             {
-                var existingMergePolicies = await remote.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
+                var existingMergePolicies = await barClient.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
                 if (!existingMergePolicies.Any())
                 {
                     Console.WriteLine("Warning: Batchable subscription doesn't have any repository merge policies. " +
@@ -204,13 +203,13 @@ class AddSubscriptionOperation : Operation
 
             // Verify the source.
             IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, Logger);
-            if (!(await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet)))
+            if (!await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet))
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
             }
 
-            var newSubscription = await remote.CreateSubscriptionAsync(channel,
+            var newSubscription = await barClient.CreateSubscriptionAsync(channel,
                 sourceRepository,
                 targetRepository,
                 targetBranch,
@@ -227,7 +226,7 @@ class AddSubscriptionOperation : Operation
                 bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
                 if (triggerAutomatically)
                 {
-                    await remote.TriggerSubscriptionAsync(newSubscription.Id.ToString());
+                    await barClient.TriggerSubscriptionAsync(newSubscription.Id);
                     Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
                 }
             }

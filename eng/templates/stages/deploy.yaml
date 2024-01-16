@@ -132,6 +132,12 @@ stages:
       inputs:
         versionSpec: 5.3.x
 
+    - powershell: |
+        . .\eng\common\tools.ps1
+        InitializeDotNetCli -install:$true
+        .\.dotnet\dotnet workload install aspire
+      displayName: Install .NET and Aspire Workload 
+
     - powershell: .\eng\common\build.ps1 -restore
       displayName: Install .NET
 

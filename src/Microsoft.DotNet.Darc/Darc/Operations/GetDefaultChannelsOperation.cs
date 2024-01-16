@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal class GetDefaultChannelsOperation : Operation
 {
-    GetDefaultChannelsCommandLineOptions _options;
+    private readonly GetDefaultChannelsCommandLineOptions _options;
     public GetDefaultChannelsOperation(GetDefaultChannelsCommandLineOptions options)
         : base(options)
     {
@@ -35,9 +35,9 @@ internal class GetDefaultChannelsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync())
+            IEnumerable<DefaultChannel> defaultChannels = (await barClient.GetDefaultChannelsAsync())
                 .Where(defaultChannel =>
                 {
                     return (string.IsNullOrEmpty(_options.SourceRepository) ||

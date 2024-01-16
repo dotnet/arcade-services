@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetChannelsOperation : Operation
 {
-    GetChannelsCommandLineOptions _options;
+    private readonly GetChannelsCommandLineOptions _options;
     public GetChannelsOperation(GetChannelsCommandLineOptions options)
         : base(options)
     {
@@ -33,9 +33,9 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
-            var allChannels = await remote.GetChannelsAsync();
+            var allChannels = await barClient.GetChannelsAsync();
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:

@@ -10,7 +10,6 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -21,7 +20,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetBuildOperation : Operation
 {
-    GetBuildCommandLineOptions _options;
+    private readonly GetBuildCommandLineOptions _options;
+
     public GetBuildOperation(GetBuildCommandLineOptions options, IServiceCollection? services = null)
         : base(options, services)
     {
@@ -36,7 +36,8 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            IRemote remote = Provider.GetService<IRemote>() ?? RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient remote = Provider.GetService<IBarApiClient>()
+                ?? RemoteFactory.GetBarClient(_options, Logger);
 
             List<Build>? matchingBuilds = null;
             if (_options.Id != 0)
@@ -48,7 +49,7 @@ internal class GetBuildOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                matchingBuilds = new List<Build>() { await remote.GetBuildAsync(_options.Id) };
+                matchingBuilds = [await remote.GetBuildAsync(_options.Id)];
             }
             else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
             {
@@ -63,7 +64,7 @@ internal class GetBuildOperation : Operation
                     .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                matchingBuilds = new List<Build>();
+                matchingBuilds = [];
                 foreach (string repo in possibleRepos)
                 {
                     matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));

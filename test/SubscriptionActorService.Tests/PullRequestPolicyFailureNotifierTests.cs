@@ -21,7 +21,10 @@ namespace SubscriptionActorService.Tests;
 [TestFixture]
 public class PullRequestPolicyFailureNotifierTests
 {
-    protected Mock<IBarClient> BarClient;
+    private const string FakeOrgName = "orgname";
+    private const string FakeRepoName = "reponame";
+
+    protected Mock<IBarApiClient> BarClient;
     protected Mock<IRemoteGitRepo> GitRepo;
     protected Mock<ILocalLibGit2Client> LocalGitClient;
     protected Mock<IRemoteFactory> RemoteFactory;
@@ -33,14 +36,12 @@ public class PullRequestPolicyFailureNotifierTests
     protected Remote MockRemote;
     protected ServiceProvider Provider;
     protected List<ClientModels.Subscription> FakeSubscriptions;
-    private Dictionary<string, string> PrCommentsMade = new Dictionary<string, string>();
-    private const string FakeOrgName = "orgname";
-    private const string FakeRepoName = "reponame";
+    private Dictionary<string, string> _prCommentsMade = [];
 
     [SetUp]
     public void PullRequestActorTests_SetUp()
     {
-        PrCommentsMade = new Dictionary<string, string>();
+        _prCommentsMade = [];
 
         var services = new ServiceCollection();
         FakeSubscriptions = GenerateFakeSubscriptionModels();
@@ -63,7 +64,7 @@ public class PullRequestPolicyFailureNotifierTests
 
         services.AddLogging();
 
-        BarClient = new Mock<IBarClient>(MockBehavior.Strict);
+        BarClient = new Mock<IBarApiClient>(MockBehavior.Strict);
         BarClient.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>()))
             .Returns((Guid subscriptionToFind) =>
             {
@@ -77,9 +78,11 @@ public class PullRequestPolicyFailureNotifierTests
         GitRepo.Setup(g => g.GetPullRequestChecksAsync(It.IsAny<string>()))
             .Returns((string fakePrsUrl) =>
             {
-                List<Check> checksToReturn = new List<Check>();
-                checksToReturn.Add(new Check(CheckState.Failure, "Some Maestro Policy", "", true));
-                checksToReturn.Add(new Check(CheckState.Error, "Some Other Maestro Policy", "", true));
+                List<Check> checksToReturn =
+                [
+                    new Check(CheckState.Failure, "Some Maestro Policy", "", true),
+                    new Check(CheckState.Error, "Some Other Maestro Policy", "", true),
+                ];
 
                 if (fakePrsUrl.EndsWith("/12345"))
                 {
@@ -89,9 +92,11 @@ public class PullRequestPolicyFailureNotifierTests
                 return Task.FromResult((IList<Check>) checksToReturn);
             });
 
-        MockRemote = new Remote(GitRepo.Object, BarClient.Object, new VersionDetailsParser(), NullLogger.Instance);
+        MockRemote = new Remote(GitRepo.Object, new VersionDetailsParser(), NullLogger.Instance);
+
         RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         RemoteFactory.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(MockRemote);
+
         Provider = services.BuildServiceProvider();
         Scope = Provider.CreateScope();
     }
@@ -109,9 +114,9 @@ public class PullRequestPolicyFailureNotifierTests
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        PrCommentsMade.Count.Should().Be(1);
+        _prCommentsMade.Count.Should().Be(1);
         // Spot check some values
-        PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
+        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
             $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
         foreach (string individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -120,7 +125,7 @@ public class PullRequestPolicyFailureNotifierTests
             if (!individual.StartsWith('@'))
                 valueToCheck = $"@{valueToCheck}";
 
-            PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
+            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
         }
     }
 
@@ -137,9 +142,9 @@ public class PullRequestPolicyFailureNotifierTests
 
         // Second time; no second comment should be made. (If it were made, it'd throw)
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
-        PrCommentsMade.Count.Should().Be(1);
+        _prCommentsMade.Count.Should().Be(1);
         // Spot check some values
-        PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
+        _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(
             $"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
         foreach (string individual in FakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -148,7 +153,7 @@ public class PullRequestPolicyFailureNotifierTests
             if (!individual.StartsWith('@'))
                 valueToCheck = $"@{valueToCheck}";
 
-            PrCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
+            _prCommentsMade[$"{FakeOrgName}/{FakeRepoName}/12345"].Should().Contain(valueToCheck);
         }
     }
 
@@ -163,7 +168,7 @@ public class PullRequestPolicyFailureNotifierTests
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
 
         prToTag.SourceRepoNotified.Should().BeFalse();
-        PrCommentsMade.Count.Should().Be(0);
+        _prCommentsMade.Count.Should().Be(0);
     }
 
     [TestCase()]
@@ -174,14 +179,14 @@ public class PullRequestPolicyFailureNotifierTests
         InProgressPullRequest prToTag = GetInProgressPullRequestWithoutTags("https://api.github.com/repos/orgname/reponame/pulls/23456");
         await testObject.TagSourceRepositoryGitHubContactsAsync(prToTag);
         prToTag.SourceRepoNotified.Should().BeFalse();
-        PrCommentsMade.Count.Should().Be(0);
+        _prCommentsMade.Count.Should().Be(0);
     }
 
     #region Test Helpers
 
     private InProgressPullRequest GetInProgressPullRequest(string url, int containedSubscriptionCount = 1)
     {
-        List<SubscriptionPullRequestUpdate> containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
+        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
 
         for (int i = 0; i < containedSubscriptionCount; i++)
         {
@@ -203,7 +208,7 @@ public class PullRequestPolicyFailureNotifierTests
 
     private InProgressPullRequest GetInProgressPullRequestWithoutTags(string url)
     {
-        List<SubscriptionPullRequestUpdate> containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
+        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
 
         var tagless = FakeSubscriptions.Where(f => string.IsNullOrEmpty(f.PullRequestFailureNotificationTags)).First();
         containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
@@ -222,49 +227,44 @@ public class PullRequestPolicyFailureNotifierTests
 
     private void RecordGitHubClientComment(string owner, string repo, int prIssue, string comment)
     {
-        lock (PrCommentsMade)
+        lock (_prCommentsMade)
         {
             // No need to check for existence; if the same comment gets added twice, it'd be a bug
-            PrCommentsMade.Add($"{owner}/{repo}/{prIssue}", comment);
+            _prCommentsMade.Add($"{owner}/{repo}/{prIssue}", comment);
         }
     }
 
-    public IPullRequestPolicyFailureNotifier GetInstance()
-    {
-        PullRequestPolicyFailureNotifier notifier = new PullRequestPolicyFailureNotifier(
-            GitHubTokenProvider.Object,
-            GitHubClientFactory.Object,
-            RemoteFactory.Object,
-            Scope.ServiceProvider.GetRequiredService<ILogger<PullRequestPolicyFailureNotifier>>());
-        return notifier;
-    }
+    public IPullRequestPolicyFailureNotifier GetInstance() => new PullRequestPolicyFailureNotifier(
+        GitHubTokenProvider.Object,
+        GitHubClientFactory.Object,
+        RemoteFactory.Object,
+        BarClient.Object,
+        Scope.ServiceProvider.GetRequiredService<ILogger<PullRequestPolicyFailureNotifier>>());
 
-    private List<ClientModels.Subscription> GenerateFakeSubscriptionModels()
-    {
-        return new List<ClientModels.Subscription>()
-        {
-            new ClientModels.Subscription(
-                new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
-                true,
-                $"https://github.com/{FakeOrgName}/source-repo1",
-                $"https://github.com/{FakeOrgName}/dest-repo",
-                "fakebranch",
-                "@notifiedUser1;@notifiedUser2;userWithoutAtSign;"),
-            new ClientModels.Subscription(
-                new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
-                true,
-                $"https://github.com/{FakeOrgName}/source-repo2",
-                $"https://github.com/{FakeOrgName}/dest-repo",
-                "fakebranch",
-                "@notifiedUser3;@notifiedUser4"),
-            new ClientModels.Subscription(
-                new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
-                true,
-                $"https://github.com/{FakeOrgName}/source-repo2",
-                $"https://github.com/{FakeOrgName}/dest-repo",
-                "fakebranch",
-                string.Empty)
-        };
-    }
+    private List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
+    [
+        new ClientModels.Subscription(
+            new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
+            true,
+            $"https://github.com/{FakeOrgName}/source-repo1",
+            $"https://github.com/{FakeOrgName}/dest-repo",
+            "fakebranch",
+            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;"),
+        new ClientModels.Subscription(
+            new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
+            true,
+            $"https://github.com/{FakeOrgName}/source-repo2",
+            $"https://github.com/{FakeOrgName}/dest-repo",
+            "fakebranch",
+            "@notifiedUser3;@notifiedUser4"),
+        new ClientModels.Subscription(
+            new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
+            true,
+            $"https://github.com/{FakeOrgName}/source-repo2",
+            $"https://github.com/{FakeOrgName}/dest-repo",
+            "fakebranch",
+            string.Empty)
+    ];
+
     #endregion
 }

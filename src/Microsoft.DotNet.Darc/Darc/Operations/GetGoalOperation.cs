@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class GetGoalOperation : Operation
 {
-    private GetGoalCommandLineOptions _options;
+    private readonly GetGoalCommandLineOptions _options;
 
     public GetGoalOperation(GetGoalCommandLineOptions options)
         : base(options)
@@ -31,8 +31,8 @@ internal class GetGoalOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-            Goal goalInfo = await remote.GetGoalAsync(_options.Channel, _options.DefinitionId);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            Goal goalInfo = await barClient.GetGoalAsync(_options.Channel, _options.DefinitionId);
             Console.Write(goalInfo.Minutes);
             return Constants.SuccessCode;
         }

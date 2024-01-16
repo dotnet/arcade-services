@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal class GetAssetOperation : Operation
 {
-    private GetAssetCommandLineOptions _options;
+    private readonly GetAssetCommandLineOptions _options;
 
     public GetAssetOperation(GetAssetCommandLineOptions options)
         : base(options)
@@ -31,14 +31,20 @@ internal class GetAssetOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+        if (_options.Name == null && _options.Build == null)
+        {
+            Console.WriteLine("You need to specify either an asset name or a build");
+            return Constants.ErrorCode;
+        }
+
+        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
         try
         {
             Channel targetChannel = null;
             if (!string.IsNullOrEmpty(_options.Channel))
             {
-                targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+                targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
                 if (targetChannel == null)
                 {
                     return Constants.ErrorCode;
@@ -47,13 +53,23 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                (await barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
 
-            var queryDescription = new StringBuilder($"name '{_options.Name}'");
+            var queryDescription = new StringBuilder();
+
+            if (!string.IsNullOrEmpty(_options.Name))
+            {
+                queryDescription.Append($" named '{_options.Name}'");
+            }
+
+            if (_options.Build.HasValue)
+            {
+                queryDescription.Append($" from build '{_options.Build}'");
+            }
 
             if (!string.IsNullOrEmpty(_options.Version))
             {
-                queryDescription.Append($" and version '{_options.Version}'");
+                queryDescription.Append($" with version '{_options.Version}'");
             }
 
             if (targetChannel != null)
@@ -61,17 +77,15 @@ internal class GetAssetOperation : Operation
                 queryDescription.Append($" on channel '{targetChannel.Name}'");
             }
 
-            if (_options.Build != null)
+            if (!_options.Build.HasValue)
             {
-                queryDescription.Append($" from build '{_options.Build}'");
+                queryDescription.Append($" in the last {_options.MaxAgeInDays} days");
             }
-
-            queryDescription.Append($" in the last {_options.MaxAgeInDays} days");
 
             // Only print the lookup string if the output type is text.
             if (_options.OutputFormat == DarcOutputType.text)
             {
-                Console.WriteLine($"Looking up assets with {queryDescription}");
+                Console.WriteLine($"Looking up assets{queryDescription}");
             }
 
             // Walk the assets and look up the corresponding builds, potentially filtering based on channel
@@ -82,14 +96,22 @@ internal class GetAssetOperation : Operation
 
             List<(Asset asset, Build build)> matchingAssetsAfterDate = new List<(Asset, Build)>();
 
+            Build buildInfo = null;
+            if (_options.Build.HasValue)
+            {
+                buildInfo = await barClient.GetBuildAsync(_options.Build.Value);
+            }
+
             foreach (Asset asset in matchingAssets)
             {
                 // Get build info for asset
-                Build buildInfo = await remote.GetBuildAsync(asset.BuildId);
-
-                if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                if (!_options.Build.HasValue)
                 {
-                    break;
+                    buildInfo = await barClient.GetBuildAsync(asset.BuildId);
+                    if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                    {
+                        break;
+                    }
                 }
 
                 checkedAssets++;

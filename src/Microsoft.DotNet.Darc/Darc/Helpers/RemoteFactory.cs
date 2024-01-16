@@ -5,7 +5,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -13,20 +12,13 @@ namespace Microsoft.DotNet.Darc.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
-    CommandLineOptions _options;
+    private readonly CommandLineOptions _options;
 
     public RemoteFactory(CommandLineOptions options)
     {
         _options = options;
     }
 
-    /// <summary>
-    ///     Get a remote for a specific repo.
-    /// </summary>
-    /// <param name="options">Command line options</param>
-    /// <param name="repoUrl">Repository url</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
     public static IRemote GetRemote(CommandLineOptions options, string repoUrl, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
@@ -48,7 +40,9 @@ internal class RemoteFactory : IRemoteFactory
         IRemoteGitRepo gitClient = null;
         if (darcSettings.GitType == GitRepoType.GitHub)
         {
-            gitClient = new GitHubClient(options.GitLocation, darcSettings.GitRepoPersonalAccessToken,
+            gitClient = new GitHubClient(
+                options.GitLocation,
+                darcSettings.GitRepoPersonalAccessToken,
                 logger,
                 temporaryRepositoryRoot,
                 // Caching not in use for Darc local client.
@@ -56,46 +50,29 @@ internal class RemoteFactory : IRemoteFactory
         }
         else if (darcSettings.GitType == GitRepoType.AzureDevOps)
         {
-            gitClient = new AzureDevOpsClient(options.GitLocation, darcSettings.GitRepoPersonalAccessToken,
+            gitClient = new AzureDevOpsClient(
+                options.GitLocation,
+                darcSettings.GitRepoPersonalAccessToken,
                 logger,
                 temporaryRepositoryRoot);
         }
 
-        IBarClient barClient = null;
+        return new Remote(gitClient, new VersionDetailsParser(), logger);
+    }
+
+    public static IBarApiClient GetBarClient(CommandLineOptions options, ILogger logger)
+    {
+        DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger);
+        IBarApiClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
-            barClient = new MaestroApiBarClient(darcSettings.BuildAssetRegistryPassword,
-                darcSettings.BuildAssetRegistryBaseUri);
+            barClient = new BarApiClient(darcSettings.BuildAssetRegistryPassword,
+            darcSettings.BuildAssetRegistryBaseUri);
         }
 
-        return new Remote(gitClient, barClient, new VersionDetailsParser(), logger);
+        return barClient;
     }
 
-    /// <summary>
-    ///     Get a build asset registry only remote for a specific repo.
-    /// </summary>
-    /// <param name="options">Command line options</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
-    public static IRemote GetBarOnlyRemote(CommandLineOptions options, ILogger logger)
-    {
-        return GetRemote(options, null, logger);
-    }
-
-    /// <summary>
-    ///     Retrieve a remote based on repository URI, which sets up the git client.
-    ///     Also sets up the BAR client.
-    /// </summary>
-    /// <param name="repoUrl">Repository url to get a remote for</param>
-    /// <param name="logger">Logger</param>
-    /// <returns>New remote</returns>
     public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
-    {
-        return Task.FromResult(GetRemote(this._options, repoUrl, logger));
-    }
-
-    public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
-    {
-        return Task.FromResult(GetRemote(this._options, null, logger));
-    }
+        => Task.FromResult(GetRemote(_options, repoUrl, logger));
 }

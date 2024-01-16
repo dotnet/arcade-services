@@ -1,0 +1,76 @@
+# Changes the format of the Build.BuildNumber variable
+name: $(Date:yyyyMMdd)$(Rev:r)
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+- name: resourceGroupName
+  value: product-construction-service
+- name: containerName
+  value: product-construction-service.api
+- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - group: Product-Construction-Service-Int
+  - name: containerappName
+    value: product-construction-int
+  - name: containerRegistryName
+    value: productconstructionint
+  - name: containerappEnvironmentName
+    value: product-construction-service-env-int
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+    - name: devBranchSuffix
+      value:
+  - ${{ else }}:
+    - name: devBranchSuffix
+      value: -dev
+
+stages:
+- stage: PublishProductConstructionService
+  displayName: Publish Product Construction Service
+  dependsOn: []
+  jobs:
+  - job: Publish
+    displayName: Publish Product Construction Service
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-ubuntu-2004
+
+    steps:
+    - checkout: self
+
+    - powershell: |
+        Write-Host "Dev branch suffix is $(devBranchSuffix)"
+        $shortSha = "$(Build.SourceVersion)".Substring(0,10)
+        $newDockerTag = "$(Build.BuildNumber)-$shortSha$(devBranchSuffix)"
+        Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
+        Write-Host "set newDockerImageTag to $newDockerTag"
+      displayName: Set new docker image tag variable
+
+    - powershell: docker build . -f $(Build.SourcesDirectory)/src/ProductConstructionService/ProductConstructionService.Api/Dockerfile -t "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+      displayName: Build docker image
+
+    - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+      - powershell: |
+          echo $(container-registry-password) | docker login --username $(container-registry-username) --password-stdin $(dockerRegistryUrl)
+          docker push "$(dockerRegistryUrl)/$(containerName):$(newDockerImageTag)"
+        displayName: Push docker image to registry
+
+      # The Service Connection name needs to be known at compile time, so we can't use a variable for the azure subscription
+      - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: NetHelixStaging
+            scriptType: pscore
+            scriptLocation: scriptPath
+            scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
+            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName)
+          displayName: Product Construction Service Deploy

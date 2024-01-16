@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteBuildFromChannelOperation : Operation
 {
-    DeleteBuildFromChannelCommandLineOptions _options;
+    private readonly DeleteBuildFromChannelCommandLineOptions _options;
     public DeleteBuildFromChannelOperation(DeleteBuildFromChannelCommandLineOptions options)
         : base(options)
     {
@@ -30,17 +30,17 @@ internal class DeleteBuildFromChannelOperation : Operation
     {
         try
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
 
             // Find the build to give someone info
-            Build build = await remote.GetBuildAsync(_options.Id);
+            Build build = await barClient.GetBuildAsync(_options.Id);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'");
                 return Constants.ErrorCode;
             }
 
-            Channel targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+            Channel targetChannel = await UxHelpers.ResolveSingleChannel(barClient, _options.Channel);
             if (targetChannel == null)
             {
                 return Constants.ErrorCode;
@@ -56,7 +56,7 @@ internal class DeleteBuildFromChannelOperation : Operation
             Console.WriteLine();
             Console.Write(UxHelpers.GetTextBuildDescription(build));
 
-            await remote.DeleteBuildFromChannelAsync(_options.Id, targetChannel.Id);
+            await barClient.DeleteBuildFromChannelAsync(_options.Id, targetChannel.Id);
 
             // Let the user know they can trigger subscriptions if they'd like.
             Console.WriteLine("Subscriptions can be triggered to revert to the previous state using the following command:");

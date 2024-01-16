@@ -27,7 +27,7 @@ public class GetSubscriptionsOperationTests
 {
     private ConsoleOutputIntercepter _consoleOutput = null!;
     private ServiceCollection _services = null!;
-    private Mock<IRemote> _remoteMock = null!;
+    private Mock<IBarApiClient> _barMock = null!;
 
 
     [SetUp]
@@ -35,7 +35,7 @@ public class GetSubscriptionsOperationTests
     {
         _consoleOutput = new();
 
-        _remoteMock = new Mock<IRemote>();
+        _barMock = new Mock<IBarApiClient>();
         _services = new ServiceCollection();
     }
 
@@ -48,9 +48,9 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_empty_set()
     {
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -63,11 +63,11 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_AuthenticationException()
     {
-        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new AuthenticationException("boo."));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -80,11 +80,11 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_ErrorCode_for_Exception()
     {
-        _remoteMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+        _barMock.Setup(t => t.GetDefaultChannelsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Throws(new Exception("foo."));
-        _services.AddSingleton(_remoteMock.Object);
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -106,16 +106,18 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+
+        List<Subscription> subscriptions =
+        [
             subscription
-        };
+        ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _barMock
+            .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+            .ReturnsAsync(subscriptions.AsEnumerable());
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new(), _services);
+        var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -136,16 +138,17 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+
+        List<Subscription> subscriptions =
+        [
             subscription
-        };
+        ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+            .ReturnsAsync(subscriptions.AsEnumerable());
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.json }, _services);
+        var operation = new GetSubscriptionsOperation(new() { OutputFormat = DarcOutputType.json }, _services);
 
         int result = await operation.ExecuteAsync();
 
@@ -166,6 +169,7 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
+
         Subscription subscription2 = new(Guid.Empty, true, "source1", "target1", "test", string.Empty)
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
@@ -174,17 +178,23 @@ public class GetSubscriptionsOperationTests
                 MergePolicies = ImmutableList<MergePolicy>.Empty
             }
         };
-        List<Subscription> subscriptions = new()
-        {
+
+        List<Subscription> subscriptions =
+        [
             subscription1,
             subscription2,
-        };
+        ];
 
-        _remoteMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
-            .Returns(Task.FromResult(subscriptions.AsEnumerable()));
-        _services.AddSingleton(_remoteMock.Object);
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+            .ReturnsAsync(subscriptions.AsEnumerable());
+        _services.AddSingleton(_barMock.Object);
 
-        GetSubscriptionsOperation operation = new(new() { OutputFormat = DarcOutputType.text }, _services);
+        var operation = new GetSubscriptionsOperation(
+            new GetSubscriptionsCommandLineOptions()
+            {
+                OutputFormat = DarcOutputType.text
+            },
+            _services);
 
         int result = await operation.ExecuteAsync();
 

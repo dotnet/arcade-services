@@ -47,7 +47,6 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using Azure.Identity;
-using Maestro.Web.Pages.Account;
 
 namespace Maestro.Web;
 
@@ -251,6 +250,7 @@ public partial class Startup : StartupBase
 
         services.AddTransient<IVersionDetailsParser, VersionDetailsParser>();
         services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+        services.AddTransient<IBasicBarClient, SqlBarClient>();
         services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
         services.EnableLazy();

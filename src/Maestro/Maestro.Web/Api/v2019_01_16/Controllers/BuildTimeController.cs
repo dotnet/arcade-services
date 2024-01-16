@@ -1,15 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.ComponentModel.DataAnnotations;
+using System.Net;
+using System.Threading.Tasks;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers;
 
@@ -20,15 +19,11 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers;
 [ApiVersion("2019-01-16")]
 public class BuildTimeController : ControllerBase
 {
-    private readonly ILogger<BuildTimeController> _logger;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IBasicBarClient _barClient;
 
-    public BuildTimeController(
-        ILogger<BuildTimeController> logger,
-        IRemoteFactory remoteFactory)
+    public BuildTimeController(IBasicBarClient barClient)
     {
-        _logger = logger;
-        _remoteFactory = remoteFactory;
+        _barClient = barClient;
     }
 
     /// <summary>
@@ -42,19 +37,16 @@ public class BuildTimeController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetBuildTimes([Required]int id, int days = 7)
     {
-        var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(_logger);
-        var buildTime = await barOnlyRemote.GetBuildTimeAsync(id, days);
-        if (buildTime != null)
-        {
-            return Ok(new BuildTime(
-                buildTime.DefaultChannelId ?? 0,
-                buildTime.OfficialBuildTime ?? 0,
-                buildTime.PrBuildTime ?? 0,
-                buildTime.GoalTimeInMinutes ?? 0));
-        }
-        else
+        var buildTime = await _barClient.GetBuildTimeAsync(id, days);
+        if (buildTime == null)
         {
             return NotFound();
         }
+
+        return Ok(new BuildTime(
+            buildTime.DefaultChannelId ?? 0,
+            buildTime.OfficialBuildTime ?? 0,
+            buildTime.PrBuildTime ?? 0,
+            buildTime.GoalTimeInMinutes ?? 0));
     }
 }

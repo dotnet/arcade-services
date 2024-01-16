@@ -1,20 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Maestro.Data.Migrations;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DependencyUpdater.Tests;
 
@@ -33,7 +29,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             (Repo: "g", BestCaseTime: 10, WorstCaseTime: 70, OnLongestBuildPath: true),
             (Repo: "h", BestCaseTime: 20, WorstCaseTime: 50, OnLongestBuildPath: true));
 
-        SetupRemote(
+        SetupBar(
             (ChannelId: 1, Graph: graph1),
             (ChannelId: 2, Graph: graph2));
 
@@ -75,8 +71,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             (Repo: "a", BestCaseTime: 1, WorstCaseTime: 7, OnLongestBuildPath: false),
             (Repo: "b", BestCaseTime: 2, WorstCaseTime: 5, OnLongestBuildPath: false));
 
-        SetupRemote(
-            (ChannelId: 1, Graph: graph));
+        SetupBar((ChannelId: 1, Graph: graph));
 
         var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
         await updater.UpdateLongestBuildPathAsync(CancellationToken.None);
@@ -88,12 +83,9 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
     [Test]
     public async Task ShouldNotAddLongestBuildPathRowWhenGraphIsEmpty()
     {
-        var graph = new DependencyFlowGraph(
-            new List<DependencyFlowNode>(),
-            new List<DependencyFlowEdge>());
+        var graph = new DependencyFlowGraph([], []);
 
-        SetupRemote(
-            (ChannelId: 1, Graph: graph));
+        SetupBar((ChannelId: 1, Graph: graph));
 
         var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
         await updater.UpdateLongestBuildPathAsync(CancellationToken.None);
@@ -102,21 +94,20 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         longestBuildPaths.Should().BeEmpty();
     }
 
-    private void SetupRemote(
+    private void SetupBar(
         params (int ChannelId, DependencyFlowGraph Graph)[] graphPerChannel)
     {
-        var remoteMock = new Mock<IRemote>();
-
         foreach (var item in graphPerChannel)
         {
-            remoteMock.Setup(m => m.GetDependencyFlowGraphAsync(
+            BarMock
+                .Setup(m => m.GetDependencyFlowGraphAsync(
                     item.ChannelId,
                     It.IsAny<int>(),
                     It.IsAny<bool>(),
                     It.IsAny<bool>(),
                     It.IsAny<bool>(),
                     It.IsAny<IReadOnlyList<string>>()))
-                .Returns(Task.FromResult(item.Graph));
+                .ReturnsAsync(item.Graph);
 
             Context.Channels.Add(new Channel
             {
@@ -127,10 +118,6 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         }
 
         Context.SaveChanges();
-
-        RemoteFactory
-            .Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>()))
-            .Returns(Task.FromResult(remoteMock.Object));
     }
 
     private DependencyFlowGraph CreateGraph(
@@ -145,8 +132,6 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
             })
             .ToList();
 
-        return new DependencyFlowGraph(
-            graphNodes,
-            new List<DependencyFlowEdge>());
+        return new DependencyFlowGraph(graphNodes, []);
     }
 }

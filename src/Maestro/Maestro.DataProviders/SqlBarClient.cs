@@ -13,78 +13,123 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders;
 
 /// <summary>
-///     A bar client interface for use by DarcLib which talks directly
-///     to the database for diamond dependency resolution.  Only a few features are required.
+///     A bar client interface implementation used by all services which talks directly to the database.
 /// </summary>
-internal class MaestroBarClient : IBarClient
+public class SqlBarClient : IBasicBarClient
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly KustoClientProvider _kustoClientProvider;
 
-    public MaestroBarClient(BuildAssetRegistryContext context)
-    {
-        _context = context;
-    }
-
-    public MaestroBarClient(BuildAssetRegistryContext context,
+    public SqlBarClient(
+        BuildAssetRegistryContext context,
         IKustoClientProvider kustoClientProvider)
     {
         _context = context;
-        _kustoClientProvider = (KustoClientProvider) kustoClientProvider;
+        _kustoClientProvider = (KustoClientProvider)kustoClientProvider;
     }
 
-    #region Unneeded APIs
-
-    public Task AddDefaultChannelAsync(string repository, string branch, string channel)
+    public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {
-        throw new NotImplementedException();
+        var subscriptionObject = await _context.Subscriptions.FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
+        if (subscriptionObject != null)
+        {
+            return new Subscription(
+                subscriptionObject.Id,
+                subscriptionObject.Enabled,
+                subscriptionObject.SourceRepository,
+                subscriptionObject.TargetRepository,
+                subscriptionObject.TargetBranch,
+                subscriptionObject.PullRequestFailureNotificationTags);
+        }
+        return null;
     }
 
-    public Task<Channel> CreateChannelAsync(string name, string classification)
+    public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
-        throw new NotImplementedException();
+        return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
     }
 
-    public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch,
-        string updateFrequency, bool batchable, List<MergePolicy> mergePolicies, string failureNotificationTags)
+    public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
     {
-        throw new NotImplementedException();
+        Data.Models.Build build = await _context.Builds
+            .Where(b => (repoUri == b.GitHubRepository || repoUri == b.AzureDevOpsRepository) && b.BuildChannels.Any(c => c.ChannelId == channelId))
+            .Include(b => b.Assets)
+            .OrderByDescending(b => b.DateProduced)
+            .FirstOrDefaultAsync();
+
+        return build != null
+            ? ToClientModelBuild(build)
+            : null;
     }
 
-    public Task<Channel> DeleteChannelAsync(int id)
+    public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
     {
-        throw new NotImplementedException();
+        List<Data.Models.Build> builds = await _context.Builds.Where(b =>
+                (repoUri == b.AzureDevOpsRepository || repoUri == b.GitHubRepository) && (commit == b.Commit))
+            .Include(b => b.Assets)
+            .OrderByDescending(b => b.DateProduced)
+            .ToListAsync();
+
+        return builds.Select(ToClientModelBuild);
     }
 
-    public Task DeleteDefaultChannelAsync(int id)
+    public async Task<IEnumerable<Asset>> GetAssetsAsync(
+        string name = null,
+        string version = null,
+        int? buildId = null,
+        bool? nonShipping = null)
     {
-        throw new NotImplementedException();
+        IQueryable<Data.Models.Asset> assets = _context.Assets;
+        if (name != null)
+        {
+            assets = assets.Where(a => a.Name == name);
+        }
+        if (version != null)
+        {
+            assets = assets.Where(a => a.Version == version);
+        }
+        if (buildId != null)
+        {
+            assets = assets.Where(a => a.BuildId == buildId);
+        }
+        if (nonShipping != null)
+        {
+            assets = assets.Where(a => a.NonShipping == nonShipping);
+        }
+
+        var assetList = await assets.Include(a => a.Locations)
+            .OrderByDescending(a => a.BuildId)
+            .ToListAsync();
+
+        return assetList.Select(ToClientModelAsset);
     }
 
-    public Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null)
+    private static AssetLocation ToClientAssetLocation(Data.Models.AssetLocation other)
     {
-        throw new NotImplementedException();
+        return new AssetLocation(other.Id, (LocationType)other.Type, other.Location);
     }
 
-    public Task<Subscription> DeleteSubscriptionAsync(Guid subscriptionId)
-    {
-        throw new NotImplementedException();
-    }
+    private static Asset ToClientModelAsset(Data.Models.Asset other)
+        => new Asset(
+            other.Id,
+            other.BuildId,
+            other.NonShipping,
+            other.Name,
+            other.Version,
+            other.Locations?.Select(ToClientAssetLocation).ToImmutableList());
 
-    public Task<Channel> GetChannelAsync(string channel)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
-    {
-        throw new NotImplementedException();
-    }
+    private static BuildIncoherence ToClientModelBuildIncoherence(Data.Models.BuildIncoherence incoherence)
+        => new()
+        {
+            Name = incoherence.Name,
+            Repository = incoherence.Repository,
+            Version = incoherence.Version,
+            Commit = incoherence.Commit
+        };
 
     public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(string repository = null, string branch = null, string channel = null)
     {
@@ -110,10 +155,10 @@ internal class MaestroBarClient : IBarClient
 
         var defaultChannels = await query.ToListAsync();
 
-        return defaultChannels.Select(dc => ToClientModelDefaultChannel(dc));
+        return defaultChannels.Select(ToClientModelDefaultChannel);
     }
 
-    private DefaultChannel ToClientModelDefaultChannel(Maestro.Data.Models.DefaultChannel other)
+    private DefaultChannel ToClientModelDefaultChannel(Data.Models.DefaultChannel other)
     {
         return new DefaultChannel(other.Id, other.Repository, other.Enabled)
         {
@@ -122,7 +167,7 @@ internal class MaestroBarClient : IBarClient
         };
     }
 
-    private Channel ToClientModelChannel(Maestro.Data.Models.Channel other)
+    private static Channel ToClientModelChannel(Data.Models.Channel other)
     {
         return new Channel(
             other.Id,
@@ -221,17 +266,7 @@ internal class MaestroBarClient : IBarClient
         return flowGraph;
     }
 
-    public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
-    {
-        throw new NotImplementedException();
-    }
-
-    private Subscription ToClientModelSubscription(Maestro.Data.Models.Subscription other)
+    private Subscription ToClientModelSubscription(Data.Models.Subscription other)
     {
         return new Subscription(
             other.Id,
@@ -254,7 +289,7 @@ internal class MaestroBarClient : IBarClient
             .ToImmutableList();
 
         var assets = other.Assets?
-            .Select(a => new Asset(a.Id, a.BuildId, a.NonShipping, a.Name, a.Version, null))
+            .Select(ToClientModelAsset)
             .ToImmutableList();
 
         var dependencies = other.DependentBuildIds?
@@ -275,32 +310,20 @@ internal class MaestroBarClient : IBarClient
             channels,
             assets,
             dependencies,
-            incoherences);
+            incoherences)
+        {
+            AzureDevOpsBranch = other.AzureDevOpsBranch,
+            GitHubBranch = other.GitHubBranch,
+            GitHubRepository = other.GitHubRepository,
+            AzureDevOpsRepository = other.AzureDevOpsRepository,
+        };
     }
 
     private BuildRef ToClientModelBuildDependency(Data.Models.BuildDependency other)
-    {
-        return new BuildRef(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
-    }
+        => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
-    private SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
-    {
-        return new SubscriptionPolicy(
-            other.Batchable,
-            (UpdateFrequency) other.UpdateFrequency
-        );
-    }
-
-    private BuildIncoherence ToClientModelBuildIncoherence(Data.Models.BuildIncoherence other)
-    {
-        return new BuildIncoherence
-        {
-            Commit = other.Commit,
-            Name = other.Name,
-            Repository = other.Repository,
-            Version = other.Version
-        };
-    }
+    private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
+        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
     {
@@ -325,51 +348,14 @@ internal class MaestroBarClient : IBarClient
 
         List<Data.Models.Subscription> results = await query.ToListAsync();
 
-        return results.Select(sub => ToClientModelSubscription(sub));
+        return results.Select(ToClientModelSubscription);
     }
-
-    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task AssignBuildToChannelAsync(int buildId, int channelId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri = null, string branch = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
-    {
-        throw new NotImplementedException();
-    }
-
-    #endregion
 
     public async Task<Build> GetBuildAsync(int buildId)
     {
         var build = await _context.Builds.Where(b => b.Id == buildId)
             .Include(b => b.BuildChannels)
-            .ThenInclude(bc => bc.Channel)
+            .ThenInclude(b => b.Channel)
             .Include(b => b.Assets)
             .FirstOrDefaultAsync();
 
@@ -383,25 +369,6 @@ internal class MaestroBarClient : IBarClient
         }
     }
 
-    public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<IEnumerable<Asset>> GetAssetsAsync(
-        string name = null,
-        string version = null,
-        int? buildId = null,
-        bool? nonShipping = null)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<Channel> GetChannelAsync(int channelId)
     {
         Data.Models.Channel channel = await _context.Channels
@@ -413,23 +380,6 @@ internal class MaestroBarClient : IBarClient
         }
 
         return null;
-    }
-
-    ///  Unsupported method
-    public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
-    {
-        throw new NotImplementedException();
-    }
-
-    ///  Unsupported method
-    public Task<Goal> GetGoalAsync(string channel, int definitionId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task DeleteBuildFromChannelAsync(int buildId, int channelId)
-    {
-        throw new NotImplementedException();
     }
 
     public async Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
@@ -467,7 +417,7 @@ internal class MaestroBarClient : IBarClient
             days,
             defaultChannel.BuildDefinitionId);
 
-        var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal),
+        var results = await Task.WhenAll(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal),
             _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
         (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);

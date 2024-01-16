@@ -336,12 +336,18 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         private readonly BuildAssetRegistryContext _context;
         private readonly IRemoteFactory _remoteFactory;
+        private readonly IBasicBarClient _barClient;
         private readonly ILogger<BuildCoherencyInfoWorkItem> _logger;
 
-        public BuildCoherencyInfoWorkItem(BuildAssetRegistryContext context, IRemoteFactory remoteFactory, ILogger<BuildCoherencyInfoWorkItem> logger)
+        public BuildCoherencyInfoWorkItem(
+            BuildAssetRegistryContext context,
+            IRemoteFactory remoteFactory,
+            IBasicBarClient barClient,
+            ILogger<BuildCoherencyInfoWorkItem> logger)
         {
             _context = context;
             _remoteFactory = remoteFactory;
+            _barClient = barClient;
             _logger = logger;
         }
 
@@ -365,6 +371,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
 
                 DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     _remoteFactory,
+                    _barClient,
                     build.GitHubRepository ?? build.AzureDevOpsRepository,
                     build.Commit,
                     graphBuildOptions,
