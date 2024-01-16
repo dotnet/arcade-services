@@ -5,10 +5,10 @@ using Azure.Storage.Queues;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class QueueInjectorFactory(QueueServiceClient queueServiceClient, string queueName)
+public class QueueMessageSenderFactory(QueueServiceClient queueServiceClient, string queueName)
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public QueueInjector<T> Create<T>() => new(_queueServiceClient, _queueName);
+    public QueueMessageSender<T> Create<T>() => new(_queueServiceClient, _queueName);
 }

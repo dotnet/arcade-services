@@ -8,9 +8,9 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class TestController(BuildAssetRegistryContext dbContext, QueueInjectorFactory queueInjectorFactory, QueueServiceClient client) : Controller
+public class TestController(BuildAssetRegistryContext dbContext, QueueMessageSenderFactory queueInjectorFactory, QueueServiceClient client) : Controller
 {
-    private readonly QueueInjectorFactory _queueInjectorFactory = queueInjectorFactory;
+    private readonly QueueMessageSenderFactory _queueInjectorFactory = queueInjectorFactory;
     private readonly BuildAssetRegistryContext _dbContext = dbContext;
 
     [HttpGet("1")]

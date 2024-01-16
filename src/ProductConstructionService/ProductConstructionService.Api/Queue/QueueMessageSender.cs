@@ -7,7 +7,7 @@ using Azure.Storage.Queues.Models;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class QueueInjector<T>(QueueServiceClient queueServiceClient, string queueName)
+public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName)
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
