@@ -38,7 +38,7 @@ public class LocalGitClient : ILocalGitClient
         _logger = logger;
     }
 
-    public static async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
+    public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
     {
         string fullPath = new NativePath(repoPath) / relativeFilePath;
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))

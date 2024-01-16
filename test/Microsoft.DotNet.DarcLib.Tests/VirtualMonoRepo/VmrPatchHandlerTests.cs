@@ -192,9 +192,8 @@ public class VmrPatchHandlerTests
                 It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
-
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
+        
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
@@ -302,8 +301,7 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().Equal(
             new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
@@ -433,8 +431,7 @@ public class VmrPatchHandlerTests
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(
-            x => x.UpdateSubmodules([]), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -553,8 +550,7 @@ public class VmrPatchHandlerTests
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(
-            x => x.UpdateSubmodules([]), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -633,8 +629,7 @@ public class VmrPatchHandlerTests
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(
-            x => x.UpdateSubmodules([]), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -711,8 +706,7 @@ public class VmrPatchHandlerTests
                         && l[0].Path == IndividualRepoName + '/' + _submoduleInfo.Path)),
             Times.Once);
 
-        _dependencyTracker.Verify(
-            x => x.UpdateSubmodules([]), Times.Once);
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -813,8 +807,7 @@ public class VmrPatchHandlerTests
                         && r.Path == IndividualRepoName + '/' + _submoduleInfo.Path))),
             Times.Once);
 
-        _dependencyTracker.Verify(
-            x => x.UpdateSubmodules([]), Times.Exactly(2));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Exactly(2));
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -943,8 +936,7 @@ public class VmrPatchHandlerTests
                 It.IsAny<CancellationToken>()),
                 Times.Once);
 
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
