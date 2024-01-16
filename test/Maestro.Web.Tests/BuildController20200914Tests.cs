@@ -27,13 +27,13 @@ namespace Maestro.Web.Tests;
 [TestFixture]
 public partial class BuildController20200914Tests
 {
-    static string repository = "FAKE-REPOSITORY";
-    static string commitHash = "FAKE-COMMIT";
-    static string commitMessage = "FAKE-COMMIT-MESSAGE";
-    static string account = "FAKE-ACCOUNT";
-    static string project = "FAKE-PROJECT";
-    static string branch = "FAKE-BRANCH";
-    string buildNumber = "20.9.18.20";
+    private static readonly string repository = "FAKE-REPOSITORY";
+    private static readonly string commitHash = "FAKE-COMMIT";
+    private static readonly string commitMessage = "FAKE-COMMIT-MESSAGE";
+    private static readonly string account = "FAKE-ACCOUNT";
+    private static readonly string project = "FAKE-PROJECT";
+    private static readonly string branch = "FAKE-BRANCH";
+    private readonly string buildNumber = "20.9.18.20";
 
     [Test]
     public async Task CommitIsFound()

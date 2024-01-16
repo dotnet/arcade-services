@@ -10,7 +10,7 @@ using System.Net.Sockets;
 
 namespace Microsoft.DotNet.Maestro.Client
 {
-    partial class MaestroApiResponseClassifier
+    internal partial class MaestroApiResponseClassifier
     {
         public override bool IsRetriableException(Exception exception)
         {
@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
     }
 
-    partial class MaestroApi
+    public partial class MaestroApi
     {
         //Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         //then a generic RestApiException is thrown.

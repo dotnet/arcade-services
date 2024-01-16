@@ -26,36 +26,32 @@ internal class MergedManifestTests
         public const string PackageId = "PackageId";
         public const string BlobId = "BlobId";
         public const string version = "version";
-
-        readonly Package package1 = new()
+        private readonly Package package1 = new()
         {
             Id = PackageId,
             Version = version,
             NonShipping = true,
         };
-
-        readonly Package package2 = new()
+        private readonly Package package2 = new()
         {
             Id = "123",
             Version = "version1",
             NonShipping = false
         };
-
-        readonly Blob blob1 = new()
+        private readonly Blob blob1 = new()
         {
             Id = BlobId,
             Category = "None",
             NonShipping = true
         };
-
-        readonly Blob blob2 = new()
+        private readonly Blob blob2 = new()
         {
             Id = "1",
             Category = "Other",
             NonShipping = false
         };
 
-        Manifest Manifest1() => new()
+        private Manifest Manifest1() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -68,7 +64,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        Manifest Manifest2() => new()
+        private Manifest Manifest2() => new()
         {
             AzureDevOpsAccount = "devdiv",
             AzureDevOpsBranch = "refs/heads/test",
@@ -81,7 +77,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        Manifest Manifest3() => new()
+        private Manifest Manifest3() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -94,7 +90,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        Manifest Manifest4() => new()
+        private Manifest Manifest4() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -107,7 +103,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        Manifest OutputManifest() => new()
+        private Manifest OutputManifest() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,

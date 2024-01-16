@@ -171,7 +171,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.GetStartingReferenceId().Should().Be(expectedResult);
     }
 
-    private const string regexTestString1 = @"
+    private const string RegexTestString1 = @"
 [2]:qqqq
 qqqqq
 qqqq
@@ -181,8 +181,8 @@ qqqq
 qq[234]:qq
  [345]:qq
 ";
-    private const string regexTestString2 = "";
-    private const string regexTestString3 = @"
+    private const string RegexTestString2 = "";
+    private const string RegexTestString3 = @"
 this
 string
 shouldn't
@@ -190,19 +190,18 @@ have
 any
 matches
 ";
-    private const string regexTestString4 = @"
+    private const string RegexTestString4 = @"
 [1]:q
 [2]:1
 [3]:q
 [4]:q
 ";
-
-    static object[] RegexTestCases =
+    private static readonly object[] RegexTestCases =
     [
-        new object[] { regexTestString1, 43},
-        new object[] { regexTestString2, 1},
-        new object[] { regexTestString3, 1},
-        new object [] { regexTestString4, 5},
+        new object[] { RegexTestString1, 43},
+        new object[] { RegexTestString2, 1},
+        new object[] { RegexTestString3, 1},
+        new object [] { RegexTestString4, 5},
     ];
 
     public static void ShouldReturnCorrectChangesURIForGitHub()

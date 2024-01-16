@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class HttpRequestManager
 {
-    private HttpClient _client;
+    private readonly HttpClient _client;
     private readonly ILogger _logger;
     private readonly bool _logFailure;
     private readonly string _body;

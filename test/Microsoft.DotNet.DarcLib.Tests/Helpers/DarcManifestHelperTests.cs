@@ -16,8 +16,8 @@ namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 public class DarcManifestHelperTests
 {
-    const int FakeBuildCount = 10;
-    const string FakeOutputPath = @"F:\A\";
+    private const int FakeBuildCount = 10;
+    private const string FakeOutputPath = @"F:\A\";
 
     [TestCase(true)]
     [TestCase(false)]

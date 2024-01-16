@@ -16,11 +16,11 @@ namespace Microsoft.DotNet.Darc.Tests;
 [TestFixture]
 public class DependencyFileManagerTests
 {
-    const string TestInputsRootDir = "inputs";
-    const string ConfigFilesInput = "NugetConfigFiles";
-    const string VersionPropsFilesInput = "VersionPropsFiles";
-    const string InputNugetConfigFile = "NuGet.input.config";
-    const string OutputNugetConfigFile = "NuGet.output.config";
+    private const string TestInputsRootDir = "inputs";
+    private const string ConfigFilesInput = "NugetConfigFiles";
+    private const string VersionPropsFilesInput = "VersionPropsFiles";
+    private const string InputNugetConfigFile = "NuGet.input.config";
+    private const string OutputNugetConfigFile = "NuGet.output.config";
 
     [TestCase("RemoveAllManagedFeeds", new string[0])]
     [TestCase("AddFeedsToNuGetConfigWithoutManagedFeeds", new string[] {

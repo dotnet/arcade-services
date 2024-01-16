@@ -15,7 +15,7 @@ namespace Maestro.ScenarioTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostDeployment")]
-class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
+internal class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
 {
     private readonly IImmutableList<AssetData> source1Assets;
     private readonly IImmutableList<AssetData> source2Assets;

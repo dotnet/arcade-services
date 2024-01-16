@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AuthenticateOperation : Operation
 {
-    AuthenticateCommandLineOptions _options;
+    private readonly AuthenticateCommandLineOptions _options;
     public AuthenticateOperation(AuthenticateCommandLineOptions options)
         : base(options)
     {

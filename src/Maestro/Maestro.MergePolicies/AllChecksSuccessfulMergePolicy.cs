@@ -18,7 +18,7 @@ namespace Maestro.MergePolicies;
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
-    private HashSet<string> _ignoreChecks;
+    private readonly HashSet<string> _ignoreChecks;
 
     public AllChecksSuccessfulMergePolicy(HashSet<string> ignoreChecks)
     {

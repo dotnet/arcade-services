@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 internal class VmrSyncRepoChangesTest :  VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
-    private string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
+    private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
     private NativePath _productRepoPath = null!;
     private NativePath _productRepoFilePath = null!;
     private NativePath _dependencyRepoFilePath = null!;

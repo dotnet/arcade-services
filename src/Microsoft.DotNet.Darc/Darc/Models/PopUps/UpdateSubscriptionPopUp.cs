@@ -18,7 +18,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
 
-    private SubscriptionData _yamlData;
+    private readonly SubscriptionData _yamlData;
 
     public string Channel => _yamlData.Channel;
 

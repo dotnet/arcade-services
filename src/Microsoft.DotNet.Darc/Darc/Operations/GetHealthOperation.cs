@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 ///     Represents a tuple of a metric and the associated formatted output that
 ///     darc should display after running the metric
 /// </summary>
-class HealthMetricWithOutput
+internal class HealthMetricWithOutput
 {
     public HealthMetricWithOutput(HealthMetric metric, string formattedOutput)
     {

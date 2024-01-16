@@ -22,7 +22,7 @@ namespace Microsoft.DotNet.DarcLib.Tests;
 #region Fakes
 public class SimpleCacheEntry : ICacheEntry
 {
-    private object _key;
+    private readonly object _key;
     private object _value;
     private long? _size;
 
@@ -135,7 +135,7 @@ public class AbuseRateLimitFakeResponse : IResponse
 /// Lacking any DI, this class lets us put a Mock IGitHubClient into something that is effectively the same,
 /// other than providing the ability to stick any IGitHubClient in as desired.
 /// </summary>
-class TestGitHubClient : GitHubClient
+internal class TestGitHubClient : GitHubClient
 {
     private IGitHubClient _client;
     public void SetGitHubClientObject(IGitHubClient value)
@@ -170,8 +170,7 @@ public class GitHubClientTests
     protected Mock<IPullRequestReviewsClient> OctoKitPullRequestReviewsClient;
     protected Mock<IGitDatabaseClient> OctoKitGitDatabaseClient;
     protected Mock<IBlobsClient> OctoKitGitBlobsClient;
-
-    TestGitHubClient GitHubClientForTest;
+    private TestGitHubClient GitHubClientForTest;
 
     [SetUp]
     public void GitHubClientTests_SetUp()

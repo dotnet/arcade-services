@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
-    static class XmlSerializationHelper
+    internal static class XmlSerializationHelper
     {
         public static XElement SigningInfoToXml(SigningInformation signingInformation)
         {

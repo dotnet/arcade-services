@@ -12,7 +12,7 @@ using System.Collections.Generic;
 namespace Microsoft.DotNet.Maestro.Tasks.Tests;
 
 [TestFixture]
-class CreateMergedManifestBuildModelTests
+internal class CreateMergedManifestBuildModelTests
 {
     private static readonly string initialAssetsLocation = "thisIsALocation";
     private static readonly int azDoBuildId = 12345;
@@ -31,10 +31,10 @@ class CreateMergedManifestBuildModelTests
     private static readonly string sourceBranch = "thisIsASourceBranch";
     private static readonly string commitSourceVersion = "thisIsASourceVersion";
     private static readonly string id = "12345";
-    private static string mergedManifestName = "MergedManifest.xml";
-    private static string version = "6.0.0-beta.20516.5";
+    private static readonly string mergedManifestName = "MergedManifest.xml";
+    private static readonly string version = "6.0.0-beta.20516.5";
 
-    private PackageArtifactModel package1 = new()
+    private readonly PackageArtifactModel package1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -44,7 +44,7 @@ class CreateMergedManifestBuildModelTests
         Version = version
     };
 
-    private PackageArtifactModel nonShippingPackage = new()
+    private readonly PackageArtifactModel nonShippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -54,7 +54,7 @@ class CreateMergedManifestBuildModelTests
         Version = version
     };
 
-    private PackageArtifactModel packageWithNoVersion = new()
+    private readonly PackageArtifactModel packageWithNoVersion = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -64,7 +64,7 @@ class CreateMergedManifestBuildModelTests
         Version = null
     };
 
-    private PackageArtifactModel shippingPackage = new()
+    private readonly PackageArtifactModel shippingPackage = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -73,11 +73,10 @@ class CreateMergedManifestBuildModelTests
         Id = "Microsoft.DotNet.ApiCompat",
         Version = version
     };
+    private List<PackageArtifactModel> packages;
+    private List<BlobArtifactModel> blobs;
 
-    List<PackageArtifactModel> packages;
-    List<BlobArtifactModel> blobs;
-
-    private BlobArtifactModel blob1 = new()
+    private readonly BlobArtifactModel blob1 = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -87,7 +86,7 @@ class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private BlobArtifactModel mergedManifest = new()
+    private readonly BlobArtifactModel mergedManifest = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -96,7 +95,7 @@ class CreateMergedManifestBuildModelTests
         Id = $"assets/manifests/{buildRepoName}/{id}/{mergedManifestName}"
     };
 
-    private BlobArtifactModel nonShippingBlob = new()
+    private readonly BlobArtifactModel nonShippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {
@@ -106,7 +105,7 @@ class CreateMergedManifestBuildModelTests
         Id = "assets/symbols/Microsoft.DotNet.ApiCompat.6.0.0-beta.20516.5.symbols.nupkg"
     };
 
-    private BlobArtifactModel shippingBlob = new()
+    private readonly BlobArtifactModel shippingBlob = new()
     {
         Attributes = new Dictionary<string, string>
         {

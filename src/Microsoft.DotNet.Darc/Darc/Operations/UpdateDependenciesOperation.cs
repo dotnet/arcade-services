@@ -19,7 +19,7 @@ using NuGet.Packaging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class UpdateDependenciesOperation : Operation
+internal class UpdateDependenciesOperation : Operation
 {
     private readonly UpdateDependenciesCommandLineOptions _options;
     public UpdateDependenciesOperation(UpdateDependenciesCommandLineOptions options)

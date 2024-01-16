@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class UpdateSubscriptionOperation : Operation
+internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
 

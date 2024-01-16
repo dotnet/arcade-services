@@ -359,8 +359,7 @@ public class ParseBuildManifestMetadataTests
         Blobs = [blob2],
         SigningInformation = signingInfo2
     };
-
-    BuildModel buildModel = new(
+    private readonly BuildModel buildModel = new(
         new BuildIdentity
         {
             Attributes = new Dictionary<string, string>()

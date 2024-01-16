@@ -26,12 +26,12 @@ namespace Microsoft.DotNet.Darc.Tests;
 /// </summary>
 internal class DependencyFlowTestDriver
 {
-    private string _testName;
+    private readonly string _testName;
     private const string TestFilesInput = "DependencyFlowGraph";
-    private const string inputRootDir = "inputs";
+    private const string InputRootDir = "inputs";
     private const string InputJsonFile = "input.json";
     public static string OutputJsonFile { get => "output.json";}
-    private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, TestFilesInput, _testName); }
+    private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, TestFilesInput, _testName); }
          
     public DependencyFlowTestDriver(string testName)
     {

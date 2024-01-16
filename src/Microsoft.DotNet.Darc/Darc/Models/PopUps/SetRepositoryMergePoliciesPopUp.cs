@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private RepositoryPoliciesData _yamlData;
+    private readonly RepositoryPoliciesData _yamlData;
     public string Repository => _yamlData.Repository;
     public string Branch => _yamlData.Branch;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
@@ -103,7 +103,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
-    class RepositoryPoliciesData
+    private class RepositoryPoliciesData
     {
         public const string repoElement = "Repository URL";
         public const string branchElement = "Branch";

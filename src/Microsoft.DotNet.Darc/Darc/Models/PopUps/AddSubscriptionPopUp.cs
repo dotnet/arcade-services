@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 public class AddSubscriptionPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private SubscriptionData _yamlData;
+    private readonly SubscriptionData _yamlData;
     public string Channel => _yamlData.Channel;
     public string SourceRepository => _yamlData.SourceRepository;
     public string TargetRepository => _yamlData.TargetRepository;
@@ -173,7 +173,7 @@ public class AddSubscriptionPopUp : EditorPopUp
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
-    class SubscriptionData
+    private class SubscriptionData
     {
         public const string channelElement = "Channel";
         public const string sourceRepoElement = "Source Repository URL";

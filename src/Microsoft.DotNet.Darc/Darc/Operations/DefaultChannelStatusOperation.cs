@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
+internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
 {
     private readonly DefaultChannelStatusCommandLineOptions _options;
 

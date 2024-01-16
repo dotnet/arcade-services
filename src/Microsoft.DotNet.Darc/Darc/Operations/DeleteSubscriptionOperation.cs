@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteSubscriptionOperation : Operation
 {
-    DeleteSubscriptionCommandLineOptions _options;
+    private readonly DeleteSubscriptionCommandLineOptions _options;
     public DeleteSubscriptionOperation(DeleteSubscriptionCommandLineOptions options)
         : base(options)
     {

@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.Darc.Tests;
 /// </summary>
 internal class DependencyTestDriver
 {
-    private string _testName;
+    private readonly string _testName;
     private VersionDetailsParser _versionDetailsParser;
     private const string inputRootDir = "inputs";
     private const string inputDir = "input";
