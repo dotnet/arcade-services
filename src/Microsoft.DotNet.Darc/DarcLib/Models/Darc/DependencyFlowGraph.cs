@@ -333,7 +333,7 @@ public class DependencyFlowGraph
             DependencyFlowNode flowNode = GetOrCreateNode(channel.Repository, channel.Branch, nodes);
 
             // Add the build times
-            if (channel.Id != default(int))
+            if (channel.Id != default)
             {
                 BuildTime buildTime = await barClient.GetBuildTimeAsync(channel.Id, days);
                 flowNode.OfficialBuildTime = buildTime.OfficialBuildTime ?? 0;

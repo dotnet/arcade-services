@@ -597,7 +597,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/channels/{channelId}/graph".Replace("{channelId}", Uri.EscapeDataString(Client.Serialize(channelId))),
                 false);
 
-            if (includeDisabledSubscriptions != default(bool))
+            if (includeDisabledSubscriptions != default)
             {
                 _url.AppendQuery("includeDisabledSubscriptions", Client.Serialize(includeDisabledSubscriptions));
             }
@@ -608,15 +608,15 @@ namespace Microsoft.DotNet.Maestro.Client
                     _url.AppendQuery("includedFrequencies", Client.Serialize(_item));
                 }
             }
-            if (includeBuildTimes != default(bool))
+            if (includeBuildTimes != default)
             {
                 _url.AppendQuery("includeBuildTimes", Client.Serialize(includeBuildTimes));
             }
-            if (days != default(int))
+            if (days != default)
             {
                 _url.AppendQuery("days", Client.Serialize(days));
             }
-            if (includeArcade != default(bool))
+            if (includeArcade != default)
             {
                 _url.AppendQuery("includeArcade", Client.Serialize(includeArcade));
             }

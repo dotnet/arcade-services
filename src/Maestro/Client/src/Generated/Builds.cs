@@ -198,7 +198,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (azdoBuildId != default(int?))
+            if (azdoBuildId != default)
             {
                 _url.AppendQuery("azdoBuildId", Client.Serialize(azdoBuildId));
             }
@@ -210,27 +210,27 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("azdoProject", Client.Serialize(azdoProject));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset?))
+            if (notBefore != default)
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset?))
+            if (notAfter != default)
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool?))
+            if (loadCollections != default)
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
@@ -548,19 +548,19 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset?))
+            if (notBefore != default)
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset?))
+            if (notAfter != default)
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool?))
+            if (loadCollections != default)
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }

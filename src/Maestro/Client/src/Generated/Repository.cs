@@ -398,11 +398,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }

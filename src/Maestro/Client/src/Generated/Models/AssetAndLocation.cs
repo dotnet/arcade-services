@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
             get
             {
-                if (LocationType == default(Models.LocationType))
+                if (LocationType == default)
                 {
                     return false;
                 }

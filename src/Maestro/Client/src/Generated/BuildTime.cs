@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/buildtime/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (days != default(int))
+            if (days != default)
             {
                 _url.AppendQuery("days", Client.Serialize(days));
             }

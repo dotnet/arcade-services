@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
             get
             {
-                if (UpdateFrequency == default(Models.UpdateFrequency))
+                if (UpdateFrequency == default)
                 {
                     return false;
                 }

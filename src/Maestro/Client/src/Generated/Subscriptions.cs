@@ -115,11 +115,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default(bool?))
+            if (enabled != default)
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
@@ -497,7 +497,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (barBuildId != default(int))
+            if (barBuildId != default)
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }
@@ -676,11 +676,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/history".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
