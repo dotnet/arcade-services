@@ -104,7 +104,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         manifest = parsedManifests[0];
                     }
 
-                    List<SigningInformation> signingInformation = new List<SigningInformation>();
+                    var signingInformation = new List<SigningInformation>();
                     foreach (var m in parsedManifests)
                     {
                         if (m.SigningInformation != null)
@@ -164,7 +164,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         IEnumerable<DefaultChannel> defaultChannels =
                             await GetBuildDefaultChannelsAsync(client, recordedBuild);
 
-                        HashSet<int> targetChannelIds = new HashSet<int>(defaultChannels.Select(dc => dc.Channel.Id));
+                        var targetChannelIds = new HashSet<int>(defaultChannels.Select(dc => dc.Channel.Id));
 
                         var defaultChannelsStr = "[" + string.Join("][", targetChannelIds) + "]";
                         Log.LogMessage(MessageImportance.High,
@@ -320,16 +320,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
-            List<Manifest> parsedManifests = new List<Manifest>();
+            var parsedManifests = new List<Manifest>();
 
             foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern,
                          SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
-                using FileStream stream = new FileStream(manifestPath, FileMode.Open);
-                Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
+                var xmlSerializer = new XmlSerializer(typeof(Manifest));
+                using var stream = new FileStream(manifestPath, FileMode.Open);
+                var manifest = (Manifest)xmlSerializer.Deserialize(stream);
                 parsedManifests.Add(manifest);
             }
 
@@ -482,11 +482,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
-        internal static (List<PackageArtifactModel>,
-            List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
+        internal static (List<PackageArtifactModel>, List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
         {
-            List<PackageArtifactModel> packageArtifacts = new List<PackageArtifactModel>();
-            List<BlobArtifactModel> blobArtifacts = new List<BlobArtifactModel>();
+            var packageArtifacts = new List<PackageArtifactModel>();
+            var blobArtifacts = new List<BlobArtifactModel>();
 
             foreach (var package in manifest.Packages)
             {
@@ -758,7 +757,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             List<BlobArtifactModel> blobs,
             Manifest manifest)
         {
-            BuildModel buildModel = new BuildModel(
+            var buildModel = new BuildModel(
                 new BuildIdentity
                 {
 

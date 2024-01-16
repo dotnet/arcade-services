@@ -36,7 +36,7 @@ public class DarcManifestHelperTests
         var builds = testManifest["builds"].ToList();
         builds.Count.Should().Be(FakeBuildCount);
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
@@ -90,7 +90,7 @@ public class DarcManifestHelperTests
         var builds = testManifest["builds"].ToList();
         builds.Count.Should().Be(FakeBuildCount);
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
@@ -216,7 +216,7 @@ public class DarcManifestHelperTests
             new Channel(456, "fake-channel-release", "release channel"),
         ];
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             var buildToAdd = new DownloadedBuild()
             {

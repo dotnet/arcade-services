@@ -386,7 +386,7 @@ public class ParseBuildManifestMetadataTests
     [SetUp]
     public void SetupGetBuildManifestMetadataTests()
     {
-        Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
+        var getEnvMock = new Mock<IGetEnvProxy>();
         getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(RepoName);
         getEnvMock.Setup(b => b.GetEnv("BUILD_BUILDNUMBER")).Returns(AzureDevOpsBuildNumber1);
         getEnvMock.Setup(c => c.GetEnv("BUILD_SOURCEBRANCH")).Returns(AzureDevOpsBranch1);

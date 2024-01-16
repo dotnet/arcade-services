@@ -444,7 +444,7 @@ public class VmrPatchHandlerTests
     public async Task CreatePatchesWithSubmoduleAndNestedSubmoduleAddedTest()
     {
         // Setup
-        string nestedSubmoduleSha1 = "839e1e3b415fc2747dde68f47d940faa414020eb";
+        var nestedSubmoduleSha1 = "839e1e3b415fc2747dde68f47d940faa414020eb";
 
         GitSubmoduleInfo nestedSubmoduleInfo = new(
             "external-2",

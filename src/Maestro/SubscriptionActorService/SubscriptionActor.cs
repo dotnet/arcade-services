@@ -152,8 +152,9 @@ namespace SubscriptionActorService
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
             if (subscription != null)
             {
-                DependencyFlowEvent dfe = new DependencyFlowEvent { 
-                        SourceRepository = subscription.SourceRepository,
+                var dfe = new DependencyFlowEvent
+                {
+                    SourceRepository = subscription.SourceRepository,
                         TargetRepository = subscription.TargetRepository,
                         ChannelId = subscription.ChannelId,
                         BuildId = updateBuildId,

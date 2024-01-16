@@ -121,7 +121,7 @@ internal class DependencyTestDriver
 
     public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)
     {
-        DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+        var dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
         {
             IncludeToolset = includeToolset,
             LookupBuilds = false,
@@ -144,7 +144,7 @@ internal class DependencyTestDriver
         bool compareOutput,
         Func<DependencyTestDriver, Task> testFunc)
     {
-        DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
+        var dependencyTestDriver = new DependencyTestDriver(testInputsName);
         try
         {
             await dependencyTestDriver.Setup();
@@ -176,7 +176,7 @@ internal class DependencyTestDriver
         Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
         string expectedGraphFile)
     {
-        DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
+        var dependencyTestDriver = new DependencyTestDriver(testInputsName);
 
         try
         {
@@ -184,7 +184,7 @@ internal class DependencyTestDriver
             DependencyGraph dependencyGraph = await testFunc(dependencyTestDriver);
 
             // Load in the expected graph and validate against the dependencyGraph
-            XmlDocument graphDocument = new XmlDocument();
+            var graphDocument = new XmlDocument();
             graphDocument.Load(Path.Combine(dependencyTestDriver.RootInputsPath, expectedGraphFile));
 
             // Compare the root node
@@ -293,8 +293,8 @@ internal class DependencyTestDriver
     {
         string expectedOutputFilePath = Path.Combine(TemporaryRepositoryOutputsPath, expectedOutputPath);
         string actualOutputFilePath = Path.Combine(TemporaryRepositoryPath, actualOutputPath);
-        using (StreamReader expectedOutputsReader = new StreamReader(expectedOutputFilePath))
-        using (StreamReader actualOutputsReader = new StreamReader(actualOutputFilePath))
+        using (var expectedOutputsReader = new StreamReader(expectedOutputFilePath))
+        using (var actualOutputsReader = new StreamReader(actualOutputFilePath))
         {
             string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
             string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
@@ -333,7 +333,7 @@ internal class DependencyTestDriver
             Directory.CreateDirectory(destination);
         }
 
-        DirectoryInfo sourceDir = new DirectoryInfo(source);
+        var sourceDir = new DirectoryInfo(source);
 
         FileInfo[] files = sourceDir.GetFiles();
         foreach (FileInfo file in files)

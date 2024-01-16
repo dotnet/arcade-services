@@ -65,7 +65,7 @@ public class DependencyFileManagerTests
         "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
     public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
     {
-        DependencyFileManager dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
 
         string inputNugetPath = Path.Combine(
             Environment.CurrentDirectory,
@@ -76,7 +76,7 @@ public class DependencyFileManagerTests
         string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
         var inputNuGetConfigFile = DependencyFileManager.GetXmlDocument(inputXmlContent);
 
-        Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>
+        var configFileUpdateData = new Dictionary<string, HashSet<string>>
         {
             { "testKey", new HashSet<string>(managedFeeds) }
         };
@@ -97,7 +97,7 @@ public class DependencyFileManagerTests
         string expectedOutputText = await File.ReadAllTextAsync(outputNugetPath);
 
         // Dump the output xml using the git file manager
-        GitFile file = new GitFile(null, updatedConfigFile);
+        var file = new GitFile(null, updatedConfigFile);
 
         // Normalize the \r\n newlines in the expected output to \n if they
         // exist (GitFile normalizes these before writing)
@@ -109,7 +109,7 @@ public class DependencyFileManagerTests
         // be run more than once for the same XmlDocument.  This should not impact the contents of the file; 
         // Validate this expectation of idempotency by running the same update on the resultant file.
         XmlDocument doubleUpdatedConfigFile = dependencyFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest);
-        GitFile doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
+        var doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
         doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
     }
 
@@ -120,7 +120,7 @@ public class DependencyFileManagerTests
     [TestCase("NoDuplicatedDifferentConditions.props", false)]
     public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
     {
-        DependencyFileManager dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
 
         string inputVersionPropsPath = Path.Combine(
             Environment.CurrentDirectory,

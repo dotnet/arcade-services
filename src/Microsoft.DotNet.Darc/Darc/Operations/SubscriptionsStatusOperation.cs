@@ -116,7 +116,7 @@ internal class SubscriptionsStatusOperation : Operation
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
 
-                SubscriptionUpdate subscriptionToUpdate = new SubscriptionUpdate
+                var subscriptionToUpdate = new SubscriptionUpdate
                 {
                     ChannelName = subscription.Channel.Name,
                     SourceRepository = subscription.SourceRepository,

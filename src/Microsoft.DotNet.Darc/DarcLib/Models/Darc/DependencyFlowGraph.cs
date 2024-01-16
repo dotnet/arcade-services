@@ -78,9 +78,9 @@ public class DependencyFlowGraph
     public void PruneGraph(Func<DependencyFlowNode, bool> isInterestingNode,
         Func<DependencyFlowEdge, bool> isInterestingEdge)
     {
-        HashSet<DependencyFlowNode> unreachableNodes = new HashSet<DependencyFlowNode>(Nodes);
-        HashSet<DependencyFlowEdge> unreachableEdges = new HashSet<DependencyFlowEdge>(Edges);
-        Stack<DependencyFlowNode> nodes = new Stack<DependencyFlowNode>();
+        var unreachableNodes = new HashSet<DependencyFlowNode>(Nodes);
+        var unreachableEdges = new HashSet<DependencyFlowEdge>(Edges);
+        var nodes = new Stack<DependencyFlowNode>();
 
         // Walk each root
         foreach (DependencyFlowNode node in Nodes)
@@ -137,12 +137,12 @@ public class DependencyFlowGraph
         // (call them 'products').  Connect all of these via a start node.
         // Add a start node to the graph (a node that connects all nodes that have no outgoing edges
         // We will also reverse the graph by flipping the interpretation of incoming and outgoing.
-        DependencyFlowNode startNode = new DependencyFlowNode("start", "start", "start");
+        var startNode = new DependencyFlowNode("start", "start", "start");
         foreach (DependencyFlowNode node in Nodes)
         {
             if (!node.OutgoingEdges.Any())
             {
-                DependencyFlowEdge newEdge = new DependencyFlowEdge(node, startNode, null);
+                var newEdge = new DependencyFlowEdge(node, startNode, null);
                 startNode.IncomingEdges.Add(newEdge);
                 node.OutgoingEdges.Add(newEdge);
             }
@@ -156,7 +156,7 @@ public class DependencyFlowGraph
             dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
         }
 
-        Queue<DependencyFlowNode> workList = new Queue<DependencyFlowNode>();
+        var workList = new Queue<DependencyFlowNode>();
         workList.Enqueue(startNode);
 
         while (workList.Count != 0)
@@ -235,7 +235,7 @@ public class DependencyFlowGraph
         List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
         Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = [];
 
-        Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
+        var nodesToVisit = new Queue<DependencyFlowNode>();
 
         foreach (DependencyFlowNode root in roots)
         {
@@ -322,7 +322,7 @@ public class DependencyFlowGraph
         int days)
     {
         // Dictionary of nodes. Key is the repo+branch
-        Dictionary<string, DependencyFlowNode> nodes = new Dictionary<string, DependencyFlowNode>(
+        var nodes = new Dictionary<string, DependencyFlowNode>(
             StringComparer.OrdinalIgnoreCase);
         List<DependencyFlowEdge> edges = [];
 
@@ -365,7 +365,7 @@ public class DependencyFlowGraph
             {
                 DependencyFlowNode sourceNode = GetOrCreateNode(defaultChannel.Repository, defaultChannel.Branch, nodes);
 
-                DependencyFlowEdge newEdge = new DependencyFlowEdge(sourceNode, destinationNode, subscription);
+                var newEdge = new DependencyFlowEdge(sourceNode, destinationNode, subscription);
                 destinationNode.IncomingEdges.Add(newEdge);
                 sourceNode.OutgoingEdges.Add(newEdge);
                 edges.Add(newEdge);
@@ -380,14 +380,14 @@ public class DependencyFlowGraph
         string branch,
         Dictionary<string, DependencyFlowNode> nodes)
     {
-        string key = $"{repo}@{branch}";
+        var key = $"{repo}@{branch}";
         if (nodes.TryGetValue(key, out DependencyFlowNode existingNode))
         {
             return existingNode;
         }
         else
         {
-            DependencyFlowNode newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
+            var newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
             nodes.Add(key, newNode);
             return newNode;
         }

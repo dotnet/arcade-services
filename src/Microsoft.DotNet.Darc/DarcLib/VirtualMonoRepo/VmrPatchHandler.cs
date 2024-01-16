@@ -151,7 +151,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         // If current mapping hosts VMR's non-src/ content, synchronize it too
         // We only do it when processing the root mapping, not its submodules
         var relativeRepoPath = VmrInfo.GetRelativeRepoSourcesPath(mapping);
-        int i = 1;
+        var i = 1;
         foreach (var (source, destination) in _vmrInfo.AdditionalMappings.Where(m => m.Source.StartsWith(relativeRepoPath)))
         {
             var relativeClonePath = source.Substring(relativeRepoPath.Length + 1);
@@ -165,7 +165,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             // We take the content path from the VMR config and map it onto the cloned repo
             var contentDir = repoPath / relativeClonePath;
 
-            string fileName = _fileSystem.GetFileName(source) ?? throw new ArgumentNullException(nameof(source));
+            var fileName = _fileSystem.GetFileName(source) ?? throw new ArgumentNullException(nameof(source));
 
             if (_fileSystem.FileExists(contentDir)
                 || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
@@ -500,7 +500,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         // Pair submodule state from sha1 and sha2
         // When submodule is added/removed, signal this with well known zero commit
-        foreach (string path in submodulePaths)
+        foreach (var path in submodulePaths)
         {
             GitSubmoduleInfo? before = submodulesBefore.FirstOrDefault(s => s.Path == path);
             GitSubmoduleInfo? after = submodulesAfter.FirstOrDefault(s => s.Path == path);

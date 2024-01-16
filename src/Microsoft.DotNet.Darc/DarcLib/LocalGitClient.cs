@@ -43,7 +43,7 @@ public class LocalGitClient : ILocalGitClient
         string fullPath = new NativePath(repoPath) / relativeFilePath;
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
-            string? parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+            var parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
             if (parentTwoDirectoriesUp != null && Directory.Exists(parentTwoDirectoriesUp))
             {
                 throw new DependencyFileNotFoundException($"Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");

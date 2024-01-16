@@ -126,7 +126,7 @@ public sealed class Remote : IRemote
 
         var pr = await _remoteGitClient.GetPullRequestAsync(pullRequestUrl);
         var dependencyUpdate = DependencyUpdatesPattern.Matches(pr.Description).Select(x => x.Groups[1].Value.Trim().Replace("*", string.Empty));
-        string commitMessage = $@"{pr.Title}
+        var commitMessage = $@"{pr.Title}
 {string.Join("\r\n\r\n", dependencyUpdate)}";
         var commits = await _remoteGitClient.GetPullRequestCommitsAsync(pullRequestUrl);
         foreach (Commit commit in commits)

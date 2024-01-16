@@ -85,7 +85,7 @@ internal class UpdateSubscriptionOperation : Operation
         }
         else
         {
-            UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+            var updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
                 "update-subscription/update-subscription-todo",
                 Logger,
                 subscription,
@@ -95,7 +95,7 @@ internal class UpdateSubscriptionOperation : Operation
                 Constants.AvailableMergePolicyYamlHelp,
                 subscription.PullRequestFailureNotificationTags ?? string.Empty);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
 
             int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
 

@@ -132,14 +132,14 @@ internal class CreateMergedManifestBuildModelTests
 
     private static PushMetadataToBuildAssetRegistry GetPushMetadata()
     {
-        Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
+        var getEnvMock = new Mock<IGetEnvProxy>();
         getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(BuildRepoName);
         getEnvMock.Setup(b => b.GetEnv("BUILD_BUILDNUMBER")).Returns(BuildNumber);
         getEnvMock.Setup(c => c.GetEnv("BUILD_SOURCEBRANCH")).Returns(SourceBranch);
         getEnvMock.Setup(d => d.GetEnv("BUILD_SOURCEVERSION")).Returns(CommitSourceVersion);
         getEnvMock.SetReturnsDefault("MissingEnvVariableCheck!");
 
-        PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry
+        var pushMetadata = new PushMetadataToBuildAssetRegistry
         {
             _getEnvProxy = getEnvMock.Object,
             _versionIdentifier = new VersionIdentifierMock()
@@ -149,7 +149,7 @@ internal class CreateMergedManifestBuildModelTests
 
     private BuildModel GetBuildModel()
     {
-        BuildModel expectedBuildModel = new BuildModel(
+        var expectedBuildModel = new BuildModel(
             new BuildIdentity
             {
                 Attributes = new Dictionary<string, string>()

@@ -125,7 +125,7 @@ public class XmlSerializationHelperTests
 
     private SigningInformation GetTestInfo()
     {
-        SigningInformation signingInfo = new SigningInformation()
+        var signingInfo = new SigningInformation()
         {
             CertificatesSignInfo =
             [

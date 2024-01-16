@@ -143,7 +143,7 @@ internal class CloneOperation : Operation
                         Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                         foreach (DependencyDetail d in filteredDeps)
                         {
-                            StrippedDependency dep = StrippedDependency.GetDependency(d);
+                            var dep = StrippedDependency.GetDependency(d);
                             // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                             if (d.RepoUri == repo.RepoUri)
                             {
@@ -164,7 +164,7 @@ internal class CloneOperation : Operation
                             }
                             else
                             {
-                                StrippedDependency stripped = StrippedDependency.GetDependency(d);
+                                var stripped = StrippedDependency.GetDependency(d);
                                 Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
                                 repo.AddDependency(dep);
                                 accumulatedDependencies.Add(stripped);

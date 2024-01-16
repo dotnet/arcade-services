@@ -51,7 +51,7 @@ public class GetManifestAsAssetTests
 
     public PushMetadataToBuildAssetRegistry SetupGetManifestAsAssetTests()
     {
-        Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
+        var getEnvMock = new Mock<IGetEnvProxy>();
         getEnvMock.Setup(s => s.GetEnv("BUILD_REPOSITORY_NAME")).Returns(RepoName);
 
         _pushMetadata = new PushMetadataToBuildAssetRegistry

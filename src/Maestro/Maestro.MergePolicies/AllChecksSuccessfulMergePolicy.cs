@@ -54,7 +54,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
         if (statuses.Contains(CheckState.Error))
         {
-            StringBuilder listChecks = new StringBuilder();
+            var listChecks = new StringBuilder();
             foreach(var status in statuses[CheckState.Error])
             {
                 listChecks.AppendLine($"[{status.Name}]({status.Url})");

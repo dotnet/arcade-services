@@ -219,7 +219,7 @@ public class FeedCleanerServiceTests : IDisposable
 
     private Dictionary<string, AzureDevOpsFeed> SetupFeeds(string account)
     {
-        AzureDevOpsProject someProject = new AzureDevOpsProject("0", "someProject");
+        var someProject = new AzureDevOpsProject("0", "someProject");
         var allFeeds = new Dictionary<string, AzureDevOpsFeed>();
 
         // This is the reference release feed.

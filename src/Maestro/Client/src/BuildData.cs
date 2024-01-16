@@ -27,11 +27,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             // Assets deep copy
             if (buildData.Assets != null)
             {
-                List<AssetData> assetList = new List<AssetData>();
+                var assetList = new List<AssetData>();
 
                 foreach (AssetData asset in buildData.Assets)
                 {
-                    List<AssetLocationData> locationsList = new List<AssetLocationData>();
+                    var locationsList = new List<AssetLocationData>();
                     foreach (AssetLocationData location in asset.Locations)
                     {
                         locationsList.Add(new AssetLocationData(location.Type)
@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             //Dependencies deep copy
             if (buildData.Dependencies != null)
             {
-                List<BuildRef> dependenciesList = new List<BuildRef>();
+                var dependenciesList = new List<BuildRef>();
 
                 foreach (BuildRef dep in buildData.Dependencies)
                 {
@@ -68,7 +68,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             //Incoherencies deep copy
             if (buildData.Incoherencies != null)
             {
-                List<BuildIncoherence> incoherenciesList = new List<BuildIncoherence>();
+                var incoherenciesList = new List<BuildIncoherence>();
 
                 foreach (BuildIncoherence incoherence in buildData.Incoherencies)
                 {

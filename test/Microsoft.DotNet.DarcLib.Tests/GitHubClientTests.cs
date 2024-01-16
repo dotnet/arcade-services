@@ -187,7 +187,7 @@ public class GitHubClientTests
         OctoKitGithubClient.SetupGet(x => x.Repository).Returns(OctoKitRepositoriesClient.Object);
         OctoKitGithubClient.Setup(m => m.Git).Returns(OctoKitGitDatabaseClient.Object);
 
-        NUnitLogger nUnitLogger = new NUnitLogger();
+        var nUnitLogger = new NUnitLogger();
         _gitHubClientForTest = new TestGitHubClient("git", "fake-token", nUnitLogger, "fake-path", null);
         _gitHubClientForTest.SetGitHubClientObject(OctoKitGithubClient.Object);
     }
@@ -198,7 +198,7 @@ public class GitHubClientTests
     public async Task TreeItemCacheTest(bool enableCache)
     {
         SimpleCache cache = enableCache ? new SimpleCache() : null;
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
 
         List<(string, string, TreeItem)> treeItemsToGet =
         [
@@ -214,7 +214,7 @@ public class GitHubClientTests
         var octoKitClientMock = new Mock<IGitHubClient>();
         var octoKitGitMock = new Mock<IGitDatabaseClient>();
         var octoKitBlobClientMock = new Mock<IBlobsClient>();
-        Blob blob = new Blob("foo", "content", EncodingType.Utf8, "somesha", 10);
+        var blob = new Blob("foo", "content", EncodingType.Utf8, "somesha", 10);
 
         foreach (var treeItem in treeItemsToGet)
         {
@@ -297,14 +297,14 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryTest()
     {
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
 
-        Blob blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        TreeItem treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
+        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
+        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
         string path = "fakePath";
         string owner = "fakeOwner";
         string repo = "fakeRepo";
-        AbuseException abuseException = new AbuseException(new AbuseRateLimitFakeResponse());
+        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse());
 
         OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(abuseException)
@@ -322,14 +322,14 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryWithRateLimitTest()
     {
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
 
-        Blob blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        TreeItem treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
+        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
+        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
         string path = "fakePath";
         string owner = "fakeOwner";
         string repo = "fakeRepo";
-        AbuseException abuseException = new AbuseException(new AbuseRateLimitFakeResponse(5));
+        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse(5));
 
         OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(abuseException)

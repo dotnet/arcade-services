@@ -47,7 +47,7 @@ internal class DependencyFlowTestDriver
             DependencyFlowNode to = flowGraph.Nodes.First(n => n.Id == edge.To.Id);
             DependencyFlowNode from = flowGraph.Nodes.First(n => n.Id == edge.From.Id);
 
-            DependencyFlowEdge newEdge = new DependencyFlowEdge(from, to, edge.Subscription);
+            var newEdge = new DependencyFlowEdge(from, to, edge.Subscription);
 
             to.IncomingEdges.Add(newEdge);
             from.OutgoingEdges.Add(newEdge);
@@ -138,7 +138,7 @@ internal class DependencyFlowTestDriver
     public static void GetGraphAndCompare(string testInputsName, 
         Func<DependencyFlowTestDriver, DependencyFlowGraph> testFunc)
     {
-        DependencyFlowTestDriver dependencyFlowTestDriver = new DependencyFlowTestDriver(testInputsName);
+        var dependencyFlowTestDriver = new DependencyFlowTestDriver(testInputsName);
 
         DependencyFlowGraph flowGraph = testFunc(dependencyFlowTestDriver);
             

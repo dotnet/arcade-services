@@ -106,7 +106,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
 
-            string content = responseContent["content"].ToString();
+            var content = responseContent["content"].ToString();
 
             _logger.LogInformation(
                 $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
@@ -135,7 +135,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
         string body;
 
-        string gitRef = $"refs/heads/{newBranch}";
+        var gitRef = $"refs/heads/{newBranch}";
         var githubRef = new GitHubRef(gitRef, latestSha);
         try
         {
@@ -247,7 +247,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
 
-        JArray items = JArray.Parse(responseContent["items"].ToString());
+        var items = JArray.Parse(responseContent["items"].ToString());
 
         IEnumerable<int> prs = items.Select(r => r["number"].ToObject<int>());
 
@@ -658,8 +658,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         Blob blob = await ExponentialRetry.Default.RetryAsync(
             async () =>
             {
-                int attempts = 0;
-                int maxAttempts = 5;
+                var attempts = 0;
+                var maxAttempts = 5;
                 Blob blob;
 
                 while (true)
@@ -672,7 +672,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
                     {
                         // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
-                        int retryAfterSeconds = 60;
+                        var retryAfterSeconds = 60;
                         if (e is AbuseException abuseException && abuseException.RetryAfterSeconds.HasValue)
                         {
                             retryAfterSeconds = abuseException.RetryAfterSeconds.Value;
@@ -695,7 +695,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             EncodingType.Utf8 => ContentEncoding.Utf8,
             _ => throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}"),
         };
-        GitFile newFile = new GitFile(
+        var newFile = new GitFile(
             path + "/" + treeItem.Path,
             blob.Content,
             encoding,

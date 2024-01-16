@@ -54,7 +54,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
 
 
         // Create two subscriptions
-        SubscriptionData subscription1 = new SubscriptionData()
+        var subscription1 = new SubscriptionData()
         {
             ChannelName = testChannelName,
             Enabled = true,
@@ -82,7 +82,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
         }
 
-        SubscriptionData subscription2 = new SubscriptionData()
+        var subscription2 = new SubscriptionData()
         {
             ChannelName = testChannelName,
             Enabled = false,
@@ -142,7 +142,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-            Subscription theSubscription = (Subscription) objResult.Value;
+            Subscription theSubscription = (Subscription)objResult.Value;
             theSubscription.Enabled.Should().Be(true);
             theSubscription.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             theSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
@@ -152,7 +152,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
     [Test]
     public async Task GetAndListNonexistentSubscriptions()
     {
-        Guid shouldntExist = Guid.Parse("00000000-0000-0000-0000-000000000042");
+        var shouldntExist = Guid.Parse("00000000-0000-0000-0000-000000000042");
 
         // No subs added, get a random Guid
         {
@@ -171,7 +171,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
-            List<Subscription> listedSubs = ((IEnumerable<Subscription>) objResult.Value).ToList();
+            List<Subscription> listedSubs = ((IEnumerable<Subscription>)objResult.Value).ToList();
             listedSubs.Should().BeEmpty();
         }
     }
@@ -186,7 +186,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string anInvalidDependencyFlowNotificationList = "@someexternaluser;@somemicrosoftuser;@some-team";
 
         // @someexternaluser will resolve as not in the microsoft org and should fail
-        SubscriptionData subscription = new SubscriptionData()
+        var subscription = new SubscriptionData()
         {
             ChannelName = testChannelName,
             Enabled = true,
@@ -209,7 +209,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string defaultBranchName = "main";
 
         // Create two subscriptions
-        SubscriptionData subscription = new SubscriptionData()
+        var subscription = new SubscriptionData()
         {
             ChannelName = "this-channel-does-not-exist",
             Enabled = true,
@@ -232,7 +232,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string defaultBranchName = "main";
 
         // Create two subscriptions
-        SubscriptionData subscriptionToDelete = new SubscriptionData()
+        var subscriptionToDelete = new SubscriptionData()
         {
             ChannelName = testChannelName,
             Enabled = true,
@@ -247,7 +247,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createResult.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) createResult;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
-            Subscription createdSubscription = (Subscription) objResult.Value;
+            var createdSubscription = (Subscription) objResult.Value;
 
             IActionResult deleteResult = await _data.SubscriptionsController.DeleteSubscription(createdSubscription.Id);
             deleteResult.Should().BeAssignableTo<OkObjectResult>();
@@ -285,17 +285,17 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription = (Subscription) objResult.Value;
         }
 
-        BuildData build1Data = new BuildData()
+        var build1Data = new BuildData()
         {
             GitHubRepository = triggerScenarioSourceRepo,
             AzureDevOpsBuildId = 123
         };
-        BuildData build2Data = new BuildData()
+        var build2Data = new BuildData()
         {
             GitHubRepository = triggerScenarioSourceRepo,
             AzureDevOpsBuildId = 124
         };
-        BuildData build3Data = new BuildData()
+        var build3Data = new BuildData()
         {
             GitHubRepository = $"{triggerScenarioSourceRepo}-different",
             AzureDevOpsBuildId = 125
@@ -366,7 +366,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string anInvalidDependencyFlowNotificationList = "@someExternalUser;@someMicrosoftUser;@some-team";
 
         // Create two subscriptions
-        SubscriptionData subscription1 = new SubscriptionData()
+        var subscription1 = new SubscriptionData()
         {
             ChannelName = testChannelName,
             Enabled = true,
@@ -392,7 +392,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
         }
 
-        SubscriptionUpdate update = new SubscriptionUpdate()
+        var update = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
             Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },
@@ -416,7 +416,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         }
 
         // Update with an invalid list, make sure it fails
-        SubscriptionUpdate badUpdate = new SubscriptionUpdate()
+        var badUpdate = new SubscriptionUpdate()
         {
             Enabled = !subscription1.Enabled,
             Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.EveryDay },

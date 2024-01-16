@@ -275,7 +275,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             $"_apis/git/repositories/{repoName}/pullrequests?{query}",
             _logger);
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
         IEnumerable<int> prs = values.Select(r => r["pullRequestId"].ToObject<int>());
 
         return prs;
@@ -471,7 +471,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        Comment prComment = new Comment()
+        var prComment = new Comment()
         {
             CommentType = CommentType.Text,
             Content = $"{message}{CommentMarker}"
@@ -615,7 +615,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 projectName,
                 $"_apis/git/repositories/{repoName}/commits?branch={branch}",
                 _logger);
-            JArray values = JArray.Parse(content["value"].ToString());
+            var values = JArray.Parse(content["value"].ToString());
 
             return values[0]["commitId"].ToString();
         }

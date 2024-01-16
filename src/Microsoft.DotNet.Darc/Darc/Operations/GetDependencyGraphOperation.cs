@@ -140,7 +140,7 @@ internal class GetDependencyGraphOperation : Operation
 
                 Console.WriteLine($"Building repository dependency graph from local information...");
 
-                DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+                var graphBuildOptions = new DependencyGraphBuildOptions()
                 {
                     IncludeToolset = _options.IncludeToolset,
                     LookupBuilds = false,
@@ -214,7 +214,7 @@ internal class GetDependencyGraphOperation : Operation
         await writer.WriteLineAsync($"{indent}- Repo:     {node.Repository}");
         await writer.WriteLineAsync($"{indent}  Commit:   {node.Commit}");
 
-        StringBuilder deltaString = new StringBuilder($"{indent}  Delta:    ");
+        var deltaString = new StringBuilder($"{indent}  Delta:    ");
         GitDiff diffFrom = node.DiffFrom;
 
         // Log the delta. Depending on user options, deltas from latest build,

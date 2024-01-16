@@ -71,7 +71,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 
     private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps)
     {
-        StringBuilder stringBuilder = new StringBuilder();
+        var stringBuilder = new StringBuilder();
         foreach(DependencyUpdate dep in deps)
         {
             stringBuilder.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
@@ -81,15 +81,15 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 
     private string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
         List<string> urls = [];
-        for(int i = 0; i < deps.Count; i++)
+        for(var i = 0; i < deps.Count; i++)
         {
             urls.Add(PullRequestDescriptionBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
             builder.AppendLine($"  - **{deps[i].To.Name}**: [from {deps[i].From.Version} to {deps[i].To.Version}][{startingId + i}]");
         }
         builder.AppendLine();
-        for(int i = 0; i < urls.Count; i++)
+        for(var i = 0; i < urls.Count; i++)
         {
             builder.AppendLine($"[{i + startingId}]: {urls[i]}");
         }
@@ -99,7 +99,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
         List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
@@ -111,7 +111,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
@@ -121,7 +121,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update1, deps1, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
 
-        string description = pullRequestDescriptionBuilder.ToString();
+        var description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -130,7 +130,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         UpdateAssetsParameters update3 = CreateUpdateAssetsParameters(false, "33333333-3333-3333-3333-333333333333");
@@ -143,7 +143,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update3, deps3, null, build);
 
-        string description = pullRequestDescriptionBuilder.ToString();
+        var description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -164,7 +164,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [TestCaseSource(nameof(RegexTestCases))]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
 
         pullRequestDescriptionBuilder.GetStartingReferenceId().Should().Be(expectedResult);
     }

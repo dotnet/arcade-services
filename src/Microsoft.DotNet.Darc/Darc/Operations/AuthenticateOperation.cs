@@ -32,9 +32,9 @@ internal class AuthenticateOperation : Operation
         }
         else
         {
-            AuthenticateEditorPopUp initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
+            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
             return Task.FromResult(uxManager.PopUp(initEditorPopUp));
         }
     }
