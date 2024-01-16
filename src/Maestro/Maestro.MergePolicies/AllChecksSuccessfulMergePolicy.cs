@@ -78,7 +78,7 @@ public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
     {
-        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? Array.Empty<string>());
+        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
         IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new AllChecksSuccessfulMergePolicy(ignoreChecks) };
         return Task.FromResult(policies);
     }

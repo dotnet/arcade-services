@@ -152,7 +152,7 @@ internal abstract class VmrTestsBase
 
     protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false)
     {
-        await CallDarcUpdate(repository, commit, Array.Empty<AdditionalRemote>(), generateCodeowners);
+        await CallDarcUpdate(repository, commit, [], generateCodeowners);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)

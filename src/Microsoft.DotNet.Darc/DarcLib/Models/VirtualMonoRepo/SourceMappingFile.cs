@@ -22,8 +22,8 @@ public class SourceMappingFile
     public SourceMappingSetting Defaults { get; set; } = new()
     {
         DefaultRef = "main",
-        Include = Array.Empty<string>(),
-        Exclude = Array.Empty<string>(),
+        Include = [],
+        Exclude = [],
     };
 
     /// <summary>

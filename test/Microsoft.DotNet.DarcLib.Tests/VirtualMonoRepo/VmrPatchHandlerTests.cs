@@ -975,7 +975,7 @@ public class VmrPatchHandlerTests
 
         _fileSystem
             .Setup(x => x.GetDirectories(_clone.Path))
-            .Returns(Array.Empty<string>());
+            .Returns([]);
 
         _fileSystem
             .Setup(x => x.GetFiles(_clone.Path))

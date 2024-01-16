@@ -656,7 +656,7 @@ namespace SubscriptionActorService
                         });
                     await _reminders.TryRegisterReminderAsync(
                         PullRequestUpdate,
-                        Array.Empty<byte>(),
+                        [],
                         TimeSpan.FromMinutes(5),
                         TimeSpan.FromMinutes(5));
                     return ActionResult.Create<object>(
