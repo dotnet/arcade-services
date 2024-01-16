@@ -205,7 +205,7 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
         var barClient = Provider.GetRequiredService<IBarApiClient>();
 
         HashSet<(string repo, string branch)> repoBranchCombinations =
@@ -280,7 +280,7 @@ internal class GetHealthOperation : Operation
         IEnumerable<Subscription> subscriptions,
         IEnumerable<DefaultChannel> defaultChannels)
     {
-        var remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
         var barClient = Provider.GetRequiredService<IBarApiClient>();
 
         HashSet<(string repo, string branch)> repoBranchCombinations =

@@ -36,7 +36,7 @@ internal class GetDependencyGraphOperation : Operation
         {
             IEnumerable<DependencyDetail> rootDependencies = null;
             DependencyGraph graph;
-            var remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (!_options.Local)
             {

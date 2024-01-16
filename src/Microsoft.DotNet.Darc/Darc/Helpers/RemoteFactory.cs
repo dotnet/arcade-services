@@ -12,14 +12,14 @@ namespace Microsoft.DotNet.Darc.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
-    private readonly CommandLineOptions _options;
+    private readonly ICommandLineOptions _options;
 
-    public RemoteFactory(CommandLineOptions options)
+    public RemoteFactory(ICommandLineOptions options)
     {
         _options = options;
     }
 
-    public static IRemote GetRemote(CommandLineOptions options, string repoUrl, ILogger logger)
+    public static IRemote GetRemote(ICommandLineOptions options, string repoUrl, ILogger logger)
     {
         DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
 
@@ -66,8 +66,9 @@ internal class RemoteFactory : IRemoteFactory
         IBarApiClient barClient = null;
         if (!string.IsNullOrEmpty(darcSettings.BuildAssetRegistryPassword))
         {
-            barClient = new BarApiClient(darcSettings.BuildAssetRegistryPassword,
-            darcSettings.BuildAssetRegistryBaseUri);
+            barClient = new BarApiClient(
+                darcSettings.BuildAssetRegistryPassword,
+                darcSettings.BuildAssetRegistryBaseUri);
         }
 
         return barClient;

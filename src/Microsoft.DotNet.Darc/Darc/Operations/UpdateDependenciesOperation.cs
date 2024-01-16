@@ -48,7 +48,7 @@ class UpdateDependenciesOperation : Operation
                 localSettings.GitHubToken :
                 _options.GitHubPat;
 
-            IRemoteFactory remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
             IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 

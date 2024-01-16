@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
@@ -30,7 +29,7 @@ internal class GetDependencyFlowGraphOperation : Operation
     {
         try
         {
-            var remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
             IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             Channel targetChannel = null;

@@ -689,7 +689,7 @@ internal class GatherDropOperation : Operation
             builds.Add(rootBuild);
         }
 
-        var remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
         // Flatten for convenience and remove dependencies of types that we don't want if need be.
         if (!_options.IncludeToolset)
