@@ -5,9 +5,9 @@ using System;
 
 namespace Microsoft.DotNet.Darc.Tests;
 
-static internal class TestHelpers
+internal static class TestHelpers
 {
-    static internal string NormalizeLineEndings(string text)
+    internal static string NormalizeLineEndings(string text)
     {
         return text.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", Environment.NewLine);
     }

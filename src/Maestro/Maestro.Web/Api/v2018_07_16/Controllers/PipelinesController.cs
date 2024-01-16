@@ -73,7 +73,7 @@ public class PipelinesController : Controller
     /// <param name="project">The Azure DevOps project</param>
     [HttpPost]
     [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully created")]
-    public async virtual Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
+    public virtual async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
     {
         return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
     }

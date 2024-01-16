@@ -21,7 +21,7 @@ internal class UpdateBuildOperation : Operation
         _options = options;
     }
 
-    public async override Task<int> ExecuteAsync()
+    public override async Task<int> ExecuteAsync()
     {
         if (!(_options.Released ^ _options.NotReleased))
         {
