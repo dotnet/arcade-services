@@ -97,7 +97,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         JObject responseContent;
         try
         {
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger,
@@ -142,7 +142,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             // If this succeeds, then the branch exists and we should
             // update the branch to latest.
 
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/branches/{newBranch}",
                        _logger,
@@ -150,7 +150,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             githubRef.Force = true;
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        new HttpMethod("PATCH"),
                        $"repos/{owner}/{repo}/git/{gitRef}",
                        _logger,
@@ -163,7 +163,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Post,
                        $"repos/{owner}/{repo}/git/refs",
                        _logger,
@@ -239,7 +239,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
 
         JObject responseContent;
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
                    $"search/issues?q={query}",
                    _logger))
@@ -264,7 +264,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         JObject responseContent;
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(HttpMethod.Get,
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(HttpMethod.Get,
                    $"repos/{owner}/{repo}/pulls/{id}", _logger))
         {
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
@@ -780,7 +780,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (response = await this.ExecuteRemoteGitCommandAsync(
+            using (response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger))
@@ -851,7 +851,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/commits/{branch}",
                        _logger))
@@ -1050,7 +1050,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo) = ParseRepoUri(repoUri);
         List<GitHubContent> contents;
 
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
                    $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
                    _logger))
@@ -1156,7 +1156,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/compare/{baseVersion}...{targetVersion}",
                        _logger))
@@ -1190,7 +1190,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         try
         {
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}",
                        _logger,

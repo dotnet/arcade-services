@@ -513,9 +513,9 @@ internal class CloneOperation : Operation
 
         private StrippedDependency(string repoUrl, string commit)
         {
-            this.RepoUri = repoUrl;
-            this.Commit = commit;
-            this.Dependencies = [this];
+            RepoUri = repoUrl;
+            Commit = commit;
+            Dependencies = [this];
         }
 
         private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
@@ -523,12 +523,12 @@ internal class CloneOperation : Operation
         internal void AddDependency(StrippedDependency dep)
         {
             StrippedDependency other = GetDependency(dep);
-            if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
+            if (Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
             {
                 return;
             }
-            this.Dependencies.Add(other);
-            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant()))
+            Dependencies.Add(other);
+            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant()))
             {
                 sameUrl.Dependencies.Add(other);
             }
@@ -536,7 +536,7 @@ internal class CloneOperation : Operation
 
         internal void AddDependency(DependencyDetail dep)
         {
-            this.AddDependency(GetDependency(dep));
+            AddDependency(GetDependency(dep));
         }
 
         internal bool HasDependencyOn(string repoUrl)
@@ -544,13 +544,13 @@ internal class CloneOperation : Operation
             bool hasDep = false;
             lock (AllDependencies)
             {
-                foreach (StrippedDependency dep in this.Dependencies)
+                foreach (StrippedDependency dep in Dependencies)
                 {
                     if (dep.Visited)
                     {
                         return false;
                     }
-                    if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
+                    if (dep.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant())
                     {
                         return false;
                     }
@@ -587,17 +587,17 @@ internal class CloneOperation : Operation
             {
                 return false;
             }
-            return this.RepoUri == other.RepoUri && this.Commit == other.Commit;
+            return RepoUri == other.RepoUri && Commit == other.Commit;
         }
 
         public override int GetHashCode()
         {
-            return this.RepoUri.GetHashCode() ^ this.Commit.GetHashCode();
+            return RepoUri.GetHashCode() ^ Commit.GetHashCode();
         }
 
         public override string ToString()
         {
-            return $"{this.RepoUri}@{this.Commit} ({this.Dependencies.Count} deps)";
+            return $"{RepoUri}@{Commit} ({Dependencies.Count} deps)";
         }
     }
 }

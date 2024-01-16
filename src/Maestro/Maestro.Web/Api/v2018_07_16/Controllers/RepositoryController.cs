@@ -244,7 +244,7 @@ public class RepositoryController : Controller
 
         public PullRequestActionWorkItem(IActorProxyFactory<IPullRequestActor> factory)
         {
-            this._factory = factory;
+            _factory = factory;
         }
 
         public Task ProcessAsync(JToken argumentToken)
