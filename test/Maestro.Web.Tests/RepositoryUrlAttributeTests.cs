@@ -3,7 +3,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using FluentAssertions;
-using Microsoft.DotNet.Internal.Testing.Utility;
 using NUnit.Framework;
 
 namespace Maestro.Web.Tests;

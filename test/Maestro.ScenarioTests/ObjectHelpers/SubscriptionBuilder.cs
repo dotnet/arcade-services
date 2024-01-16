@@ -30,7 +30,7 @@ public class SubscriptionBuilder
 
         if (mergePolicyNames == null)
         {
-            expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>();
+            expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList();
             return expectedSubscription;
         }
 
@@ -72,7 +72,7 @@ public class SubscriptionBuilder
                 });
         }
 
-        expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>();
+        expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList();
         return expectedSubscription;
     }
 }

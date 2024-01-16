@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging;
-using Moq;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -20,8 +18,8 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 {
     private List<DependencyUpdate> CreateDependencyUpdates(char version)
     {
-        return new List<DependencyUpdate>
-        {
+        return
+        [
             new DependencyUpdate
             {
                 From = new DependencyDetail
@@ -58,10 +56,10 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
                     Commit = $"{version} commit to 2"
                 }
             }
-        };
+        ];
     }
 
-    public UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
+    public static UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
     {
         return new UpdateAssetsParameters
         {
@@ -71,9 +69,9 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         };
     }
 
-    private string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps)
+    private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps)
     {
-        StringBuilder stringBuilder = new StringBuilder();
+        var stringBuilder = new StringBuilder();
         foreach(DependencyUpdate dep in deps)
         {
             stringBuilder.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
@@ -83,15 +81,15 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 
     private string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
-        StringBuilder builder = new StringBuilder();
-        List<string> urls = new List<string>();
-        for(int i = 0; i < deps.Count; i++)
+        var builder = new StringBuilder();
+        List<string> urls = [];
+        for(var i = 0; i < deps.Count; i++)
         {
             urls.Add(PullRequestDescriptionBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
             builder.AppendLine($"  - **{deps[i].To.Name}**: [from {deps[i].From.Version} to {deps[i].To.Version}][{startingId + i}]");
         }
         builder.AppendLine();
-        for(int i = 0; i < urls.Count; i++)
+        for(var i = 0; i < urls.Count; i++)
         {
             builder.AppendLine($"[{i + startingId}]: {urls[i]}");
         }
@@ -101,7 +99,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update = CreateUpdateAssetsParameters(true, "11111111-1111-1111-1111-111111111111");
         List<DependencyUpdate> deps = CreateDependencyUpdates('a');
 
@@ -113,7 +111,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = CreateDependencyUpdates('a');
@@ -123,7 +121,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update1, deps1, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
 
-        String description = pullRequestDescriptionBuilder.ToString();
+        var description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -132,7 +130,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [Test]
     public void ShouldReturnCalculateCorrectPRDescriptionWhenUpdatingExistingPR()
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), "");
         UpdateAssetsParameters update1 = CreateUpdateAssetsParameters(false, "11111111-1111-1111-1111-111111111111");
         UpdateAssetsParameters update2 = CreateUpdateAssetsParameters(false, "22222222-2222-2222-2222-222222222222");
         UpdateAssetsParameters update3 = CreateUpdateAssetsParameters(false, "33333333-3333-3333-3333-333333333333");
@@ -145,7 +143,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update3, deps3, null, build);
 
-        String description = pullRequestDescriptionBuilder.ToString();
+        var description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -166,12 +164,12 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     [TestCaseSource(nameof(RegexTestCases))]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
-        PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
+        var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(new NullLoggerFactory(), str);
 
         pullRequestDescriptionBuilder.GetStartingReferenceId().Should().Be(expectedResult);
     }
 
-    private const string regexTestString1 = @"
+    private const string RegexTestString1 = @"
 [2]:qqqq
 qqqqq
 qqqq
@@ -181,8 +179,8 @@ qqqq
 qq[234]:qq
  [345]:qq
 ";
-    private const string regexTestString2 = "";
-    private const string regexTestString3 = @"
+    private const string RegexTestString2 = "";
+    private const string RegexTestString3 = @"
 this
 string
 shouldn't
@@ -190,22 +188,21 @@ have
 any
 matches
 ";
-    private const string regexTestString4 = @"
+    private const string RegexTestString4 = @"
 [1]:q
 [2]:1
 [3]:q
 [4]:q
 ";
+    private static readonly object[] RegexTestCases =
+    [
+        new object[] { RegexTestString1, 43},
+        new object[] { RegexTestString2, 1},
+        new object[] { RegexTestString3, 1},
+        new object [] { RegexTestString4, 5},
+    ];
 
-    static object[] RegexTestCases =
-    {
-        new object[] { regexTestString1, 43},
-        new object[] { regexTestString2, 1},
-        new object[] { regexTestString3, 1},
-        new object [] { regexTestString4, 5},
-    };
-
-    public void ShouldReturnCorrectChangesURIForGitHub()
+    public static void ShouldReturnCorrectChangesURIForGitHub()
     {
         var repoURI = "https://github.com/dotnet/arcade-services";
         var fromSha = "c0b723ce00a751db0dcf93789abd58577bad155a";
@@ -220,7 +217,7 @@ matches
         changesUrl.Should().Be(expectedChangeUrl);
     }
 
-    public void ShouldReturnCorrectChangesURIForAzDo()
+    public static void ShouldReturnCorrectChangesURIForAzDo()
     {
         var repoURI = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services";
         var fromSha = "689a78855b241afedff9919529d812b1f08f6f76";

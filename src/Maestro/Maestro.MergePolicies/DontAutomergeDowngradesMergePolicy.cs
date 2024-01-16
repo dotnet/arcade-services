@@ -47,7 +47,7 @@ The following dependency updates appear to be downgrades or invalid versions: {s
 
     private static List<string> GetDowngradeOrInvalidVersionMessages(IPullRequest pr)
     {
-        List<string> messages = new List<string>();
+        List<string> messages = [];
 
         foreach (var dependency in pr.RequiredUpdates)
         {

@@ -1,13 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Maestro.Web;
 
@@ -40,11 +37,11 @@ public class RepositoryUrlAttribute : ValidationAttribute
     /// <summary>
     ///     To add a new valid URL form, add an entry here
     /// </summary>
-    private static readonly List<Regex> _validUrlForms = new List<Regex>()
-    {
+    private static readonly List<Regex> _validUrlForms =
+    [
         new Regex(@"^https://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-\.]+$"),
         new Regex(@"^https://dev\.azure\.com/[a-zA-Z0-9]+/[a-zA-Z0-9-]+/_git/[a-zA-Z0-9-\.]+$")
-    };
+    ];
 
     protected override ValidationResult IsValid(object value, ValidationContext validationContext)
     {

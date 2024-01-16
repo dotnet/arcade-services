@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// <summary>
 /// Retrieves a list of subscriptions based on input information
 /// </summary>
-class GetSubscriptionsOperation : Operation
+internal class GetSubscriptionsOperation : Operation
 {
     private readonly GetSubscriptionsCommandLineOptions _options;
 

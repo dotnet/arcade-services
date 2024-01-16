@@ -191,16 +191,16 @@ public class BarApiClient : IBarApiClient
         {
             BestCasePathTime = flowRef.BestCasePathTime,
             GoalTimeInMinutes = flowRef.GoalTimeInMinutes,
-            InputChannels = flowRef.InputChannels.ToHashSet(),
+            InputChannels = [.. flowRef.InputChannels],
             OfficialBuildTime = flowRef.OfficialBuildTime,
             OnLongestBuildPath = flowRef.OnLongestBuildPath,
-            OutputChannels = flowRef.OutputChannels.ToHashSet(),
+            OutputChannels = [.. flowRef.OutputChannels],
             PrBuildTime = flowRef.PrBuildTime,
             WorstCasePathTime = flowRef.WorstCasePathTime
         };
     }
 
-    private DependencyFlowEdge ToDependencyFlowEdge(
+    private static DependencyFlowEdge ToDependencyFlowEdge(
         FlowEdge flowEdge,
         IReadOnlyDictionary<string, DependencyFlowNode> nodesById,
         IReadOnlyDictionary<Guid, Subscription> subscriptionsById)

@@ -20,7 +20,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class AddSubscriptionOperation : Operation
+internal class AddSubscriptionOperation : Operation
 {
     private readonly AddSubscriptionCommandLineOptions _options;
 

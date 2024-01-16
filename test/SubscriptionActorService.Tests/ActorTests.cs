@@ -21,8 +21,8 @@ public abstract class ActorTests : TestsWithServices
     [SetUp]
     public void ActorTests_SetUp()
     {
-        ExpectedActorState = new Dictionary<string, object>();
-        ExpectedReminders = new Dictionary<string, MockReminderManager.Reminder>();
+        ExpectedActorState = [];
+        ExpectedReminders = [];
         StateManager = new MockActorStateManager();
         Reminders = new MockReminderManager();
     }

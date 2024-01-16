@@ -58,7 +58,7 @@ public class MergePolicyEvaluator : IMergePolicyEvaluator
 
     private class NotImplementedMergePolicy : MergePolicy
     {
-        private string _definitionName;
+        private readonly string _definitionName;
 
         public NotImplementedMergePolicy(string definitionName)
         {

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.Data.Models;
@@ -37,14 +36,14 @@ public class UpdateDependenciesAsyncTests : DependencyUpdaterTests
             Name = "source.asset",
             Version = "1.0.1",
             NonShipping = true,
-            Locations = new List<AssetLocation>
-            {
+            Locations =
+            [
                 new AssetLocation
                 {
                     Location = location,
                     Type = LocationType.NugetFeed
                 }
-            }
+            ]
         };
         var newBuild = new Build
         {
@@ -53,7 +52,7 @@ public class UpdateDependenciesAsyncTests : DependencyUpdaterTests
             AzureDevOpsBuildNumber = "build.number.2",
             Commit = "sha2",
             DateProduced = DateTimeOffset.UtcNow,
-            Assets = new List<Asset> {newAsset}
+            Assets = [newAsset]
         };
         var buildChannels = new[]
         {
@@ -122,14 +121,14 @@ public class UpdateDependenciesAsyncTests : DependencyUpdaterTests
             Name = "source.asset",
             Version = "1.0.1",
             NonShipping = false,
-            Locations = new List<AssetLocation>
-            {
+            Locations =
+            [
                 new AssetLocation
                 {
                     Location = location,
                     Type = LocationType.NugetFeed
                 }
-            }
+            ]
         };
         var newBuild = new Build
         {
@@ -138,7 +137,7 @@ public class UpdateDependenciesAsyncTests : DependencyUpdaterTests
             AzureDevOpsBuildNumber = "build.number.2",
             Commit = "sha2",
             DateProduced = DateTimeOffset.UtcNow,
-            Assets = new List<Asset> {newAsset}
+            Assets = [newAsset]
         };
         var buildChannels = new[]
         {

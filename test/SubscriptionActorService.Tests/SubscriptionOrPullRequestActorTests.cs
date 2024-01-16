@@ -109,7 +109,7 @@ public abstract class SubscriptionOrPullRequestActorTests : ActorTests
 
     internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[] assets = null)
     {
-        assets = assets ?? new[] {("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true) };
+        assets ??= new[] {("quail.eating.ducks", "1.1.0", false), ("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true) };
         var build = new Build
         {
             GitHubBranch = SourceBranch,

@@ -98,7 +98,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
             return NotFound();
         }
 
-        List<Data.Models.BuildDependency> dependentBuilds = _context.BuildDependencies.Where(b => b.BuildId == id).ToList();
+        List<Data.Models.BuildDependency> dependentBuilds = [.. _context.BuildDependencies.Where(b => b.BuildId == id)];
         build.DependentBuildIds = dependentBuilds;
 
         return Ok(new Build(build));
@@ -160,7 +160,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
             return NotFound();
         }
 
-        return Ok(new Models.Build(build));
+        return Ok(new Build(build));
     }
 
     [HttpPatch("{buildId}")]
@@ -188,7 +188,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
             await _context.SaveChangesAsync();
         }
 
-        return Ok(new Models.Build(build));
+        return Ok(new Build(build));
     }
 
     [ApiRemoved]
@@ -294,6 +294,6 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
                 action = "GetBuild",
                 id = buildModel.Id
             },
-            new Models.Build(buildModel));
+            new Build(buildModel));
     }
 }

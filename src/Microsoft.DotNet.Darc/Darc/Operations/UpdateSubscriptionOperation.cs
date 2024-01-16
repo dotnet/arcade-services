@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class UpdateSubscriptionOperation : Operation
+internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
 
@@ -81,11 +81,11 @@ class UpdateSubscriptionOperation : Operation
             {
                 failureNotificationTags = _options.FailureNotificationTags;
             }
-            mergePolicies = subscription.Policy.MergePolicies.ToList();
+            mergePolicies = [.. subscription.Policy.MergePolicies];
         }
         else
         {
-            UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+            var updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
                 "update-subscription/update-subscription-todo",
                 Logger,
                 subscription,
@@ -95,7 +95,7 @@ class UpdateSubscriptionOperation : Operation
                 Constants.AvailableMergePolicyYamlHelp,
                 subscription.PullRequestFailureNotificationTags ?? string.Empty);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
 
             int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
 

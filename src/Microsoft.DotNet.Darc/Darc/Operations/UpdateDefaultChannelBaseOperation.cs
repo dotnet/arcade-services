@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-abstract class UpdateDefaultChannelBaseOperation : Operation
+internal abstract class UpdateDefaultChannelBaseOperation : Operation
 
 {
     private readonly UpdateDefaultChannelBaseCommandLineOptions _options;
