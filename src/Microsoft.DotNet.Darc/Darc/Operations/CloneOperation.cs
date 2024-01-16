@@ -4,6 +4,7 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -73,10 +74,9 @@ internal class CloneOperation : Operation
         {
             EnsureOptionsCompatibility(_options);
             // use a set to accumulate dependencies as we go
-            HashSet<StrippedDependency> accumulatedDependencies = new HashSet<StrippedDependency>();
+            HashSet<StrippedDependency> accumulatedDependencies = [];
             // at the end of each depth level, these are added to the queue to clone
-            Queue<StrippedDependency> dependenciesToClone = new Queue<StrippedDependency>();
-            RemoteFactory remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
@@ -104,6 +104,7 @@ internal class CloneOperation : Operation
                 Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
             }
 
+            var dependenciesToClone = new Queue<StrippedDependency>();
             while (accumulatedDependencies.Any())
             {
                 // add this level's dependencies to the queue and clear it for the next level
@@ -248,7 +249,7 @@ internal class CloneOperation : Operation
         return local;
     }
 
-    private async Task HandleMasterCopy(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
+    private async Task HandleMasterCopy(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
     {
         if (masterRepoGitDirPath != null)
         {
@@ -262,7 +263,7 @@ internal class CloneOperation : Operation
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
-    private async Task HandleMasterCopyWithDefaultGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
+    private async Task HandleMasterCopyWithDefaultGitDir(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
     {
         Logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with default .gitdir");
 
@@ -286,7 +287,7 @@ internal class CloneOperation : Operation
         }
     }
 
-    private async Task HandleMasterCopyWithGitDirPath(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
+    private async Task HandleMasterCopyWithGitDirPath(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath)
     {
         string gitDirRedirect = GetGitDirRedirectString(masterRepoGitDirPath);
         Logger.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with .gitdir {masterRepoGitDirPath}");
@@ -303,7 +304,7 @@ internal class CloneOperation : Operation
         }
     }
 
-    private async Task HandleMasterCopyAndCreateGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, string gitDirRedirect)
+    private async Task HandleMasterCopyAndCreateGitDir(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, string gitDirRedirect)
     {
         Logger.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
 

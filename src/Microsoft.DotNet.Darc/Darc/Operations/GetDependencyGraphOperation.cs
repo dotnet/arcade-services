@@ -13,6 +13,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -35,7 +36,7 @@ internal class GetDependencyGraphOperation : Operation
         {
             IEnumerable<DependencyDetail> rootDependencies = null;
             DependencyGraph graph;
-            var remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (!_options.Local)
             {
@@ -115,7 +116,7 @@ internal class GetDependencyGraphOperation : Operation
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    RemoteFactory.GetBarClient(_options, Logger),
+                    Provider.GetRequiredService<IBarApiClient>(),
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
                     _options.Version ?? await _gitClient.GetGitCommitAsync(),

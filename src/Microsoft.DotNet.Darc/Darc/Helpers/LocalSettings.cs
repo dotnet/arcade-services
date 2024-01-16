@@ -43,7 +43,7 @@ internal class LocalSettings
         return JsonConvert.DeserializeObject<LocalSettings>(settings);
     }
 
-    public static LocalSettings LoadSettingsFile(CommandLineOptions options)
+    public static LocalSettings LoadSettingsFile(ICommandLineOptions options)
     {
         try
         {
@@ -72,7 +72,7 @@ internal class LocalSettings
     /// <param name="options">Command line options</param>
     /// <returns>Darc settings for use in remote commands</returns>
     /// <remarks>The command line takes precedence over the darc settings file.</remarks>
-    public static DarcSettings GetDarcSettings(CommandLineOptions options, ILogger logger, string repoUri = null)
+    public static DarcSettings GetDarcSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
     {
         LocalSettings localSettings = null;
         DarcSettings darcSettings = new DarcSettings

@@ -1,16 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -28,7 +28,7 @@ internal class GetRepositoryMergePoliciesOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             IEnumerable<RepositoryBranch> allRepositories = await barClient.GetRepositoriesAsync(null, null);
             IEnumerable<RepositoryBranch> filteredRepositories = allRepositories.Where(repositories =>
