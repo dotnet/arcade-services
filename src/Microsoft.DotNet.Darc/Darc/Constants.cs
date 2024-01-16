@@ -14,7 +14,7 @@ public class Constants
     public const int ErrorCode = 42;
     public const int SuccessCode = 0;
     public const int MaxPopupTries = 3;
-    public static string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
+    public static readonly string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
     /// <summary>
     /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available

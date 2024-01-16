@@ -174,7 +174,7 @@ public partial class Startup
 
     private static string ToCamelCase(string value)
     {
-        return value.Substring(0, 1).ToLowerInvariant() + value.Substring(1);
+        return string.Concat(value.Substring(0, 1).ToLowerInvariant(), value.AsSpan(1));
     }
 }
 

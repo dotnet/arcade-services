@@ -22,18 +22,14 @@ namespace Microsoft.DotNet.DarcLib.Tests;
 #region Fakes
 public class SimpleCacheEntry : ICacheEntry
 {
-    private readonly object _key;
-    private object _value;
-    private long? _size;
-
     public SimpleCacheEntry(object key)
     {
-        _key = key;
+        Key = key;
     }
 
-    public object Key => _key;
+    public object Key { get; }
 
-    public object Value { get => _value; set => _value = value; }
+    public object Value { get; set; }
     public DateTimeOffset? AbsoluteExpiration { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public TimeSpan? AbsoluteExpirationRelativeToNow { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public TimeSpan? SlidingExpiration { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -43,7 +39,7 @@ public class SimpleCacheEntry : ICacheEntry
     public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks => throw new NotImplementedException();
 
     public CacheItemPriority Priority { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public long? Size { get => _size; set => _size = value; }
+    public long? Size { get; set; }
 
     public void Dispose() { }
 }
@@ -62,12 +58,11 @@ public class SimpleCache : IMemoryCache
 
     public void Dispose()
     {
-
     }
 
     public void Remove(object key)
     {
-        cache.Remove(key, out ICacheEntry unused);
+        cache.Remove(key, out _);
     }
 
     public bool TryGetValue(object key, out object value)

@@ -48,7 +48,7 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
         // Test the scanner when the .gitattributes file is preserving the cloaked file
         list = await CallDarcCloakedFileScan(baselinesFilePath);
 
-        list.Count().Should().Be(0);
+        list.Count.Should().Be(0);
     }
 
     protected override async Task CopyReposForCurrentTest()

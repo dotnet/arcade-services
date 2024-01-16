@@ -376,10 +376,9 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         else if (potentialBuilds.Count > 1)
         {
             // Gather all matching assets from each of the builds.
-            List<Build> buildsWithMatchingAssets = potentialBuilds
+            List<Build> buildsWithMatchingAssets = [.. potentialBuilds
                 .Where(build => build.Assets.Any(asset => AssetComparer.Equals(asset, cpdDependency)))
-                .OrderByDescending(build => build.Id)
-                .ToList();
+                .OrderByDescending(build => build.Id)];
 
             List<Asset> allMatchingAssets = buildsWithMatchingAssets
                 .Select(build => build.Assets.FirstOrDefault(asset => AssetComparer.Equals(asset, cpdDependency)))

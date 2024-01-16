@@ -38,8 +38,7 @@ public class UxManager
     /// <returns>Success or error code</returns>
     public int ReadFromStdIn(EditorPopUp popUp)
     {
-        int result = Constants.ErrorCode;
-
+        int result;
         try
         {
             // File to write from stdin to, which will be processed by the popup closing handler

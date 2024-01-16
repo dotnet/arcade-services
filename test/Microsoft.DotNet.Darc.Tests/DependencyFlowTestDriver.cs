@@ -106,7 +106,7 @@ internal class DependencyFlowTestDriver
         expectedNode.OnLongestBuildPath.Should().Be(node.OnLongestBuildPath);
     }
 
-    public void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
+    public static void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
     {
         // Check that we have all the expected edges
         foreach (var expectedEdge in expectedEdges)
@@ -146,6 +146,6 @@ internal class DependencyFlowTestDriver
             File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, OutputJsonFile)));
 
         AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
-        dependencyFlowTestDriver.AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);
+        AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);
     }
 }

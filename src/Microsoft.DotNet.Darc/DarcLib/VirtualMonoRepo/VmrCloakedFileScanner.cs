@@ -50,7 +50,7 @@ public class VmrCloakedFileScanner : VmrScanner
             args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
         }
 
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken: cancellationToken);
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, [.. args], cancellationToken: cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
 

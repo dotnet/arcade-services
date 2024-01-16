@@ -409,10 +409,10 @@ namespace Microsoft.DotNet.Maestro.Client
             KeyValuePair<string, string> keyValuePair = this[index];
             if (index != 0)
             {
-                builder.Append("&");
+                builder.Append('&');
             }
             builder.Append(UrlEncoder.Default.Encode(keyValuePair.Key));
-            builder.Append("=");
+            builder.Append('=');
             builder.Append(UrlEncoder.Default.Encode(keyValuePair.Value));
           }
           return builder.ToString();

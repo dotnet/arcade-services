@@ -27,7 +27,7 @@ public class BuildData
 
     public Data.Models.Build ToDb()
     {
-        var isGitHubInfo = Repository.IndexOf("github", StringComparison.OrdinalIgnoreCase) >= 0;
+        var isGitHubInfo = Repository.Contains("github", StringComparison.OrdinalIgnoreCase);
 
         return new Data.Models.Build
         {

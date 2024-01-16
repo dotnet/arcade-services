@@ -60,6 +60,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         // We used the changes from the VMR - let's verify flowing there is a no-op
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+        branch.Should().BeNull();
     }
 
     [Test]

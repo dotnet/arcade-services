@@ -406,7 +406,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <returns>All the commits related to the pull request</returns>
     public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
@@ -710,7 +710,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of status checks.</returns>
     public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string projectName, _, int id) = ParsePullRequestUri(pullRequestUrl);
 
         string projectId = await GetProjectIdAsync(accountName, projectName);
 
@@ -1012,7 +1012,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>AzureDevOpsReleaseDefinition</returns>
     public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
     {
-        if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
+        if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Length == 0)
         {
             releaseDefinition.Artifacts = [
                 new AzureDevOpsArtifact()
@@ -1045,7 +1045,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 }
             ];
         }
-        else if (releaseDefinition.Artifacts.Count() == 1)
+        else if (releaseDefinition.Artifacts.Length == 1)
         {
             var definitionReference = releaseDefinition.Artifacts[0].DefinitionReference;
 
@@ -1084,7 +1084,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
         else
         {
-            throw new ArgumentException($"{releaseDefinition.Artifacts.Count()} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
+            throw new ArgumentException($"{releaseDefinition.Artifacts.Length} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
         }
 
         var _serializerSettings = new JsonSerializerSettings

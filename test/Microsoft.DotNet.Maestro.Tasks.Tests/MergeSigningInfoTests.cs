@@ -265,14 +265,14 @@ public class MergeSigningInfoTests
     [Test]
     public void GivenCompatibleSigningInfo()
     {
-        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2).ToList());
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo([.. ExpectedSigningInfo, .. ExpectedSigningInfo2]);
         actualMerged.Should().BeEquivalentTo(ExpectedMergedSigningInfo);
     }
 
     [Test]
     public void GivenDuplicateSigningInfo()
     {
-        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo).ToList());
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo([.. ExpectedSigningInfo, .. ExpectedSigningInfo]);
         actualMerged.Should().BeEquivalentTo(ExpectedSigningInfo.First());
     }
 

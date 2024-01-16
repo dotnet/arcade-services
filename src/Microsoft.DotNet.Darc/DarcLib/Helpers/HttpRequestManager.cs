@@ -101,10 +101,7 @@ public class HttpRequestManager
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
-                if (response != null)
-                {
-                    response.Dispose();
-                }
+                response?.Dispose();
 
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
                 if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))

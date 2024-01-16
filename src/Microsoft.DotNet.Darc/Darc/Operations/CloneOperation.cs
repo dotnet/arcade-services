@@ -581,8 +581,7 @@ internal class CloneOperation : Operation
 
         public override bool Equals(object obj)
         {
-            StrippedDependency other = obj as StrippedDependency;
-            if (other == null)
+            if (obj is not StrippedDependency other)
             {
                 return false;
             }

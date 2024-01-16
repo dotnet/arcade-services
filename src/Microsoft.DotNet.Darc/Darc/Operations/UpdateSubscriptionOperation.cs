@@ -81,7 +81,7 @@ internal class UpdateSubscriptionOperation : Operation
             {
                 failureNotificationTags = _options.FailureNotificationTags;
             }
-            mergePolicies = subscription.Policy.MergePolicies.ToList();
+            mergePolicies = [.. subscription.Policy.MergePolicies];
         }
         else
         {

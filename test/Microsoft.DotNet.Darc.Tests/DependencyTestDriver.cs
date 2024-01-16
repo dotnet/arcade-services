@@ -192,11 +192,11 @@ internal class DependencyTestDriver
 
             // Compare all the nodes
             XmlNodeList allNodes = graphDocument.SelectNodes("//AllNodes/DependencyGraphNode");
-            dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.Nodes, allNodes);
+            AssetGraphNodeListIsEqual(dependencyGraph.Nodes, allNodes);
 
             // Compare incoherencies
             XmlNodeList incoherentNodes = graphDocument.SelectNodes("//IncoherentNodes/DependencyGraphNode");
-            dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.IncoherentNodes, incoherentNodes);
+            AssetGraphNodeListIsEqual(dependencyGraph.IncoherentNodes, incoherentNodes);
 
             // Compare unique dependencies
             XmlNodeList dependencyNodes = graphDocument.SelectNodes("//UniqueDependencies/Dependency");
@@ -221,7 +221,7 @@ internal class DependencyTestDriver
         }
     }
 
-    private void AssetGraphNodeListIsEqual(IEnumerable<DependencyGraphNode> nodes, XmlNodeList nodeList)
+    private static void AssetGraphNodeListIsEqual(IEnumerable<DependencyGraphNode> nodes, XmlNodeList nodeList)
     {
         foreach (XmlNode node in nodeList)
         {

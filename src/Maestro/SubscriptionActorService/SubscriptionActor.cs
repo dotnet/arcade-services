@@ -146,7 +146,7 @@ namespace SubscriptionActorService
         {
             string updateReason = reason == DependencyFlowEventReason.New || 
                                   reason == DependencyFlowEventReason.AutomaticallyMerged ? 
-                                 reason.ToString() : $"{reason.ToString()}{policy.ToString()}";
+                                 reason.ToString() : $"{reason}{policy}";
 
             Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {updateReason} {flowType}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);

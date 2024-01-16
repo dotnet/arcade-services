@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.HealthMetrics;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.Services.Common;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -336,20 +337,21 @@ internal class GetHealthOperation : Operation
     /// <returns>Repositories to evaluate</returns>
     private HashSet<string> ComputeRepositoriesToEvaluate(IEnumerable<DefaultChannel> defaultChannels, IEnumerable<Subscription> subscriptions)
     {
-        // Compute which repositories to target
-        HashSet<string> reposToTarget = defaultChannels
+        var defaultChannelRepositories = defaultChannels
             .Where(df => string.IsNullOrEmpty(_options.Repo) || df.Repository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(df => df.Repository)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Select(df => df.Repository);
 
-        subscriptions
+        var targetRepositories = subscriptions
             .Where(s => string.IsNullOrEmpty(_options.Repo) || s.TargetRepository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(s => reposToTarget.Add(s.TargetRepository));
+            .Select(s => s.TargetRepository);
 
-        subscriptions
+        var sourceRepositories = subscriptions
             .Where(s => string.IsNullOrEmpty(_options.Repo) || s.SourceRepository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(s => reposToTarget.Add(s.SourceRepository));
+            .Select(s => s.SourceRepository);
 
-        return reposToTarget;
+        return defaultChannelRepositories
+            .Concat(sourceRepositories)
+            .Concat(sourceRepositories)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

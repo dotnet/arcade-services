@@ -49,7 +49,7 @@ internal class GetDefaultChannelsOperation : Operation
                 })
                 .OrderBy(df => df.Repository);
 
-            if (defaultChannels.Count() == 0)
+            if (!defaultChannels.Any())
             {
                 Console.WriteLine("No matching channels were found.");
             }

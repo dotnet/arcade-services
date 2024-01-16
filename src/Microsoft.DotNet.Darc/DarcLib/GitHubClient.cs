@@ -228,7 +228,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         if (!string.IsNullOrEmpty(keyword))
         {
             query.Append(keyword);
-            query.Append("+");
+            query.Append('+');
         }
 
         query.Append($"repo:{owner}/{repo}+head:{pullRequestBranch}+type:pr+is:{status.ToString().ToLower()}");
@@ -602,7 +602,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     {
                         return await GetGitTreeItem(path, treeItem, owner, repo);
                     }));
-        return files.ToList();
+        return [.. files];
     }
 
     /// <summary>
@@ -882,7 +882,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         var commits = await Client.Repository.PullRequest.Commits(owner, repo, id);
-        var lastCommitSha = commits.Last().Sha;
+        var lastCommitSha = commits[commits.Count - 1].Sha;
 
         return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
             .Concat(await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha))

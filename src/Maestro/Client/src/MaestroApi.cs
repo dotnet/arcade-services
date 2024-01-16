@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         //Special error handler to consumes the generated MaestroApi code. If this method returns without throwing a specific exception
         //then a generic RestApiException is thrown.
-        static partial void HandleFailedRequest(RestApiException ex)
+        partial void HandleFailedRequest(RestApiException ex)
         {
             if (ex.Response.Status == (int)HttpStatusCode.BadRequest)
             {

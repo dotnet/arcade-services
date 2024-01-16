@@ -444,7 +444,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                                             || e is NameConflictException
                                             || e is LibGit2SharpException)
                 {
-                    _logger.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." +
+                    _logger.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e})." +
                                     "  Attempting to checkout by individual files.");
                     SafeCheckoutByIndividualFiles(repo, resolvedReference, options);
                 }
@@ -505,7 +505,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                                       || e is NameConflictException
                                       || e is LibGit2SharpException)
             {
-                _logger.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
+                _logger.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e}");
                 if (f.TargetType == TreeEntryTargetType.Tree)
                 {
                     SafeCheckoutTreeByIndividualFiles(repo, f.Target.Peel<Tree>(), Path.Combine(treePath, f.Path), commit, options);

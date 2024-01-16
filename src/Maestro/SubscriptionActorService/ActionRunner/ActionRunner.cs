@@ -48,7 +48,7 @@ public class ActionRunner : IActionRunner
 
     public async Task<T> ExecuteAction<T>(Expression<Func<Task<ActionResult<T>>>> actionExpression)
     {
-        if (!(actionExpression.Body is MethodCallExpression mce))
+        if (actionExpression.Body is not MethodCallExpression mce)
         {
             throw new ArgumentException("Expression must be a call expression.", nameof(actionExpression));
         }
@@ -87,7 +87,7 @@ public class ActionRunner : IActionRunner
     {
         object[]
             argumentsForFormat =
-                arguments.ToArray(); // copy the array because formatted log values modifies the array.
+                [.. arguments]; // copy the array because formatted log values modifies the array.
         string actionMessage = FormattableStringFormatter.Format(method.MessageFormat, argumentsForFormat);
 
         using (_operations.BeginOperation(method.MessageFormat, argumentsForFormat))

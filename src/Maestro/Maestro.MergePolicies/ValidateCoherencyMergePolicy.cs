@@ -25,7 +25,7 @@ public class ValidateCoherencyMergePolicy : MergePolicy
         {
             description.Append("\n * ").Append(error.Error);
 
-            if (error.PotentialSolutions.Count() > 0)
+            if (error.PotentialSolutions.Any())
             {
                 description.Append("\n    PotentialSolutions:");
                 foreach (string solution in error.PotentialSolutions)

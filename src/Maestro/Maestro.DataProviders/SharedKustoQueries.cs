@@ -103,7 +103,7 @@ public static class SharedKustoQueries
         }
 
         // There were no results
-        if (buildTimeResults.Count() == 0)
+        if (buildTimeResults.Count == 0)
         {
             return (-1, default(TimeSpan));
         }

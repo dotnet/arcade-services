@@ -98,7 +98,7 @@ public class BuildsController : v2018_07_16.Controllers.BuildsController
             return NotFound();
         }
 
-        List<Data.Models.BuildDependency> dependentBuilds = _context.BuildDependencies.Where(b => b.BuildId == id).ToList();
+        List<Data.Models.BuildDependency> dependentBuilds = [.. _context.BuildDependencies.Where(b => b.BuildId == id)];
         build.DependentBuildIds = dependentBuilds;
 
         return Ok(new Build(build));

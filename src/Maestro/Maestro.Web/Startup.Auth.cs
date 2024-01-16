@@ -95,7 +95,7 @@ public partial class Startup
                             var gitHubClaimResolver = context.HttpContext.RequestServices
                                 .GetRequiredService<GitHubClaimResolver>();
 
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
 
                             ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                             context.ReplacePrincipal(principal);
@@ -180,7 +180,7 @@ public partial class Startup
                         }
                         else
                         {
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
 
                             ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                             ctx.ReplacePrincipal(principal);
@@ -232,10 +232,10 @@ public partial class Startup
         }
     }
 
-    private static async Task UpdateUserIfNeededAsync(ApplicationUser user,
+    private static async Task UpdateUserIfNeededAsync(
+        ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         GitHubClaimResolver gitHubClaimResolver)
     {
         while (true)
@@ -244,7 +244,7 @@ public partial class Startup
             {
                 if (ShouldUpdateUser(user))
                 {
-                    await UpdateUserAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                    await UpdateUserAsync(user, dbContext, userManager, gitHubClaimResolver);
                 }
 
                 break;
@@ -266,10 +266,10 @@ public partial class Startup
         return DateTimeOffset.UtcNow - user.LastUpdated > new TimeSpan(0, 30, 0);
     }
 
-    private static async Task UpdateUserAsync(ApplicationUser user,
+    private static async Task UpdateUserAsync(
+        ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         GitHubClaimResolver gitHubClaimResolver)
     {
         await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>

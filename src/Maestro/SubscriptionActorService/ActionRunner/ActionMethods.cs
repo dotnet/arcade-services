@@ -11,17 +11,16 @@ namespace SubscriptionActorService;
 
 public static class ActionMethods
 {
-    public static ConditionalWeakTable<Type, IImmutableDictionary<string, ActionMethod>> _cache =
-        [];
+    private static readonly ConditionalWeakTable<Type, IImmutableDictionary<string, ActionMethod>> s_cache = [];
 
     public static IImmutableDictionary<string, ActionMethod> Get<T>()
     {
-        return _cache.GetValue(typeof(T), GetActionMethods);
+        return s_cache.GetValue(typeof(T), GetActionMethods);
     }
 
     public static IImmutableDictionary<string, ActionMethod> Get(Type type)
     {
-        return _cache.GetValue(type, GetActionMethods);
+        return s_cache.GetValue(type, GetActionMethods);
     }
 
     private static IImmutableDictionary<string, ActionMethod> GetActionMethods(Type type)

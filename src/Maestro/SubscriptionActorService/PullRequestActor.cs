@@ -754,7 +754,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate repoDependencyUpdate =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count() < 1)
+            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
             {
                 return null;
             }
@@ -1008,7 +1008,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate targetRepositoryUpdates =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count() < 1)
+            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
                 return;
             }

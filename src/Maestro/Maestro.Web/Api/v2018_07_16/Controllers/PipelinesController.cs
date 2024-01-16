@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data;
-using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Mvc;
 using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers;
@@ -20,13 +19,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers;
 [ApiVersion("2018-07-16")]
 public class PipelinesController : Controller
 {
-    private readonly BuildAssetRegistryContext _context;
-
-    public PipelinesController(BuildAssetRegistryContext context)
-    {
-        _context = context;
-    }
-
     /// <summary>
     ///   Gets a list of all <see cref="ReleasePipeline"/>s that match the given search criteria.
     /// </summary>

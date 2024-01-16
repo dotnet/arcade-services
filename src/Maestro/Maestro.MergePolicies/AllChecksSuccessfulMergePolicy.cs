@@ -59,7 +59,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             {
                 listChecks.AppendLine($"[{status.Name}]({status.Url})");
             }
-            return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks.ToString()}");
+            return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks}");
         }
 
         if (statuses.Contains(CheckState.Pending))

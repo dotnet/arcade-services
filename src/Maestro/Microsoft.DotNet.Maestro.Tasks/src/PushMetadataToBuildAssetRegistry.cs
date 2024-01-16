@@ -35,8 +35,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
-        private bool IsReleaseOnlyPackageVersion { get; set; } = false;
-
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -550,7 +548,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             // Error out for any duplicated packages based on the top level properties of the package.
             var distinctPackages = manifest.Packages.DistinctBy(p => p.Id);
-            if (distinctPackages.Count() < manifest.Packages.Count())
+            if (distinctPackages.Count() < manifest.Packages.Count)
             {
                 var dupes = manifest.Packages.GroupBy(x => new { x.Id, x.Version })
                     .Where(g => g.Count() > 1)
@@ -568,7 +566,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             // Error out for any duplicated blob based on the top level properties of the blob.
             var distinctBlobs = manifest.Blobs.DistinctBy(b => b.Id);
-            if (distinctBlobs.Count() < manifest.Blobs.Count())
+            if (distinctBlobs.Count() < manifest.Blobs.Count)
             {
                 var dupes = manifest.Blobs.GroupBy(x => new { x.Id })
                     .Where(g => g.Count() > 1)

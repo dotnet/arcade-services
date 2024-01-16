@@ -261,7 +261,7 @@ internal class GetDependencyGraphOperation : Operation
                 await writer.WriteLineAsync($"{indent}  Builds:");
                 foreach (var build in node.ContributingBuilds)
                 {
-                    await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.ToLocalTime().ToString("g")})");
+                    await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.ToLocalTime():g})");
                 }
             }
             else
@@ -335,7 +335,7 @@ internal class GetDependencyGraphOperation : Operation
                 nodeBuilder.Append(@"\n");
 
                 // Append short commit sha
-                nodeBuilder.Append(node.Commit.Substring(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
+                nodeBuilder.Append(node.Commit.AsSpan(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
 
                 // Append a build string (with newline) if available
                 if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
@@ -413,16 +413,16 @@ internal class GetDependencyGraphOperation : Operation
         await writer.WriteLineAsync("Incoherent Repositories:");
         foreach (DependencyGraphNode incoherentRoot in graph.IncoherentNodes)
         {
-            await LogIncoherentPath(writer, incoherentRoot, null, "  ");
+            await LogIncoherentPath(writer, incoherentRoot, "  ");
         }
     }
 
-    private static async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
+    private static async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, string indent)
     {
         await LogBasicNodeDetails(writer, currentNode, indent);
         foreach (DependencyGraphNode parentNode in currentNode.Parents)
         {
-            await LogIncoherentPath(writer, parentNode, currentNode, indent + "  ");
+            await LogIncoherentPath(writer, parentNode, indent + "  ");
         }
     }
 

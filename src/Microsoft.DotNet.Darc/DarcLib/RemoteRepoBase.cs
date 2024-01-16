@@ -109,7 +109,7 @@ public class RemoteRepoBase : GitRepoCloner
                     using (FileStream stream = File.Create(filePath))
                     {
                         byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
-                        await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
+                        await stream.WriteAsync(contentBytes);
                     }
                 }
                 else if (file.Operation == GitFileOperation.Delete)
