@@ -20,6 +20,8 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 
 builder.AddWorkitemQueues();
 
+builder.AddServiceDefaults();
+
 // Add services to the container.
 
 builder.Services.AddControllers();
