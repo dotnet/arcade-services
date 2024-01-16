@@ -20,8 +20,8 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 {
     private List<DependencyUpdate> CreateDependencyUpdates(char version)
     {
-        return new List<DependencyUpdate>
-        {
+        return
+        [
             new DependencyUpdate
             {
                 From = new DependencyDetail
@@ -58,7 +58,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
                     Commit = $"{version} commit to 2"
                 }
             }
-        };
+        ];
     }
 
     public UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
@@ -84,7 +84,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
     private string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
         StringBuilder builder = new StringBuilder();
-        List<string> urls = new List<string>();
+        List<string> urls = [];
         for(int i = 0; i < deps.Count; i++)
         {
             urls.Add(PullRequestDescriptionBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));

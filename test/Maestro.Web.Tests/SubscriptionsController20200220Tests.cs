@@ -474,7 +474,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             static async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
             {
                 await Task.Delay(0); // Added just to suppress green squiggles
-                List<Octokit.Organization> returnValue = new List<Octokit.Organization>();
+                List<Octokit.Organization> returnValue = [];
 
                 switch (userLogin.ToLower())
                 {

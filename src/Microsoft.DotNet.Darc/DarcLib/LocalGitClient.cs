@@ -258,7 +258,7 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
         args = [ "fetch", "--tags", "--force", remoteName ];
-        envVars = new Dictionary<string, string>();
+        envVars = [];
         AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);

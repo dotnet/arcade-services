@@ -64,8 +64,8 @@ internal class MergedManifestTests
             AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
             AzureDevOpsProject = AzureDevOpsProject1,
             AzureDevOpsRepository = AzureDevOpsRepository1,
-            Packages = new List<Package>(),
-            Blobs = new List<Blob>()
+            Packages = [],
+            Blobs = []
         };
 
         Manifest Manifest2() => new Manifest()
@@ -77,8 +77,8 @@ internal class MergedManifestTests
             AzureDevOpsBuildNumber = "20201016.8",
             AzureDevOpsProject = "internal",
             AzureDevOpsRepository = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade",
-            Packages = new List<Package>(),
-            Blobs = new List<Blob>()
+            Packages = [],
+            Blobs = []
         };
 
         Manifest Manifest3() => new Manifest()
@@ -90,8 +90,8 @@ internal class MergedManifestTests
             AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
             AzureDevOpsProject = AzureDevOpsProject1,
             AzureDevOpsRepository = AzureDevOpsRepository1,
-            Packages = new List<Package>(),
-            Blobs = new List<Blob>()
+            Packages = [],
+            Blobs = []
         };
 
         Manifest Manifest4() => new Manifest()
@@ -103,8 +103,8 @@ internal class MergedManifestTests
             AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
             AzureDevOpsProject = AzureDevOpsProject1,
             AzureDevOpsRepository = AzureDevOpsRepository1,
-            Packages = new List<Package>(),
-            Blobs = new List<Blob>()
+            Packages = [],
+            Blobs = []
         };
 
         Manifest OutputManifest() => new Manifest()
@@ -116,8 +116,8 @@ internal class MergedManifestTests
             AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
             AzureDevOpsProject = AzureDevOpsProject1,
             AzureDevOpsRepository = AzureDevOpsRepository1,
-            Packages = new List<Package>(),
-            Blobs = new List<Blob>()
+            Packages = [],
+            Blobs = []
         };
 
         [SetUp]
@@ -133,7 +133,7 @@ internal class MergedManifestTests
         [Test]
         public void ErrorWhenManifestDoesNotMatch()
         {
-            List<Manifest> manifests = new List<Manifest>() { Manifest1(), Manifest2() };
+            List<Manifest> manifests = [Manifest1(), Manifest2()];
 
             Action act = () => pushMetadata.MergeManifests(manifests);
             act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
@@ -144,16 +144,16 @@ internal class MergedManifestTests
         {
             var manifest1 = Manifest1();
             var manifest3 = Manifest3();
-            manifest1.Packages = new List<Package>() { package1 };
-            manifest3.Packages = new List<Package>() { package2 };
-            manifest1.Blobs = new List<Blob>() { blob1 };
-            manifest3.Blobs = new List<Blob>() { blob2 };
+            manifest1.Packages = [package1];
+            manifest3.Packages = [package2];
+            manifest1.Blobs = [blob1];
+            manifest3.Blobs = [blob2];
 
             var outputManifest = OutputManifest();
 
-            outputManifest.Packages = new List<Package>() { package1, package2 };
-            outputManifest.Blobs = new List<Blob>() { blob1, blob2 };
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            outputManifest.Packages = [package1, package2];
+            outputManifest.Blobs = [blob1, blob2];
+            List<Manifest> manifests = [manifest1, manifest3];
             Manifest expectedManifest =  pushMetadata.MergeManifests(manifests);
             expectedManifest.Should().BeEquivalentTo(outputManifest);
         }
@@ -177,7 +177,7 @@ internal class MergedManifestTests
             outputManifest.Blobs.Add(blob1);
             outputManifest.Blobs.Add(blob2);
 
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3, manifest4 };
+            List<Manifest> manifests = [manifest1, manifest3, manifest4];
             Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
             expectedManifest.Should().BeEquivalentTo(outputManifest);
         }
@@ -185,7 +185,7 @@ internal class MergedManifestTests
         [Test]
         public void ManifestWithPartiallyEmptyAssets()
         {
-            List<Manifest> manifests = new List<Manifest>() { Manifest1(), Manifest3() };
+            List<Manifest> manifests = [Manifest1(), Manifest3()];
             Manifest expectedManifest = pushMetadata.MergeManifests(manifests);
             expectedManifest.Should().BeEquivalentTo(OutputManifest());
         }
@@ -211,10 +211,10 @@ internal class MergedManifestTests
             var manifest1 = Manifest1();
             var manifest3 = Manifest3();
 
-            manifest1.Packages = new List<Package>() { package1 };
-            manifest3.Packages = new List<Package>() { package1 };
+            manifest1.Packages = [package1];
+            manifest3.Packages = [package1];
 
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => pushMetadata.MergeManifests(manifests);
             act.Should().Throw<Exception>().WithMessage("Duplicate package entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
             pushMetadata.Log.HasLoggedErrors.Should().BeTrue();
@@ -226,10 +226,10 @@ internal class MergedManifestTests
             var manifest1 = Manifest1();
             var manifest3 = Manifest3();
 
-            manifest1.Blobs = new List<Blob>() { blob1 };
-            manifest3.Blobs = new List<Blob>() { blob1 };
+            manifest1.Blobs = [blob1];
+            manifest3.Blobs = [blob1];
 
-            List<Manifest> manifests = new List<Manifest>() { manifest1, manifest3 };
+            List<Manifest> manifests = [manifest1, manifest3];
             Action act = () => pushMetadata.MergeManifests(manifests);
             act.Should().Throw<Exception>().WithMessage("Duplicate blob entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
             pushMetadata.Log.HasLoggedErrors.Should().BeTrue();

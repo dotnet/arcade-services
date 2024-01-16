@@ -346,7 +346,7 @@ class UpdateDependenciesOperation : Operation
 
     private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
-        Dictionary<string, string> dependencyVersionMap = new Dictionary<string, string>();
+        Dictionary<string, string> dependencyVersionMap = [];
 
         // Not using Linq to make sure there are no duplicates
         foreach (DependencyDetail dependency in dependencies)
@@ -357,7 +357,7 @@ class UpdateDependenciesOperation : Operation
             }
         }
 
-        List<DependencyDetail> updatedDependencies = new List<DependencyDetail>();
+        List<DependencyDetail> updatedDependencies = [];
 
         if (!Directory.Exists(pathToFolder))
         {

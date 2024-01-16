@@ -53,15 +53,15 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         //Update the mapping to exclude .exe files and add a new .exe file into the repo at the same time
         //the file shouldn't be ingested into the VMR
 
-        _sourceMappings.Mappings = new List<SourceMappingSetting>
-        {
+        _sourceMappings.Mappings =
+        [
             new SourceMappingSetting
             {
                 Name = Constants.InstallerRepoName,
                 DefaultRemote = InstallerRepoPath,
                 Exclude = new[] { "src/*.dll", "src/*.exe" }
             }
-        };
+        ];
 
         File.WriteAllText(InstallerRepoPath / _sourceMappingsRelativePath,
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
@@ -142,23 +142,23 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         {
             PatchesPath = "src/installer/patches/",
             SourceMappingsPath = "src/installer/src/SourceBuild/content/source-mappings.json",
-            AdditionalMappings = new List<AdditionalMappingSetting>
-            {
+            AdditionalMappings =
+            [
                 new AdditionalMappingSetting
                 {
                     Source = "src/installer/src/SourceBuild/content/source-mappings.json",
                     Destination = "src"
                 }
-            },
-            Mappings = new List<SourceMappingSetting>
-            {
+            ],
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
                     DefaultRemote = InstallerRepoPath,
                     Exclude = new[] { "src/*.dll" }
                 },
-            }
+            ]
         };
 
         Directory.CreateDirectory(InstallerRepoPath / "src" / "SourceBuild" / "content");

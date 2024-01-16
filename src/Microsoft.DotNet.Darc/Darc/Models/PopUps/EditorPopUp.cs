@@ -36,7 +36,7 @@ public abstract class EditorPopUp
 
     private List<Line> GetContentValues(IEnumerable<string> contents)
     {
-        List<Line> values = new List<Line>();
+        List<Line> values = [];
 
         foreach (string content in contents)
         {

@@ -72,22 +72,22 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile()
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            },
-            AdditionalMappings = new List<AdditionalMappingSetting>
-            {
+            ],
+            AdditionalMappings =
+            [
                 new AdditionalMappingSetting
                 {
                     Source = new UnixPath(VmrInfo.SourcesDir) / Constants.ProductRepoName / "content",
                     Destination = ""
                 }
-            }
+            ]
         };
 
         sourceMappings.Defaults.Exclude = new[]

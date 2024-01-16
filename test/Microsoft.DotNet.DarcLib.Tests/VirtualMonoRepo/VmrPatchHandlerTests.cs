@@ -194,7 +194,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
@@ -303,7 +303,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
 
         patches.Should().Equal(
             new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
@@ -320,11 +320,11 @@ public class VmrPatchHandlerTests
         // Return the same info for both
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -374,11 +374,11 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo>());
+            .ReturnsAsync([]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -434,7 +434,7 @@ public class VmrPatchHandlerTests
             Times.Once);
 
         _dependencyTracker.Verify(
-            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+            x => x.UpdateSubmodules([]), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -462,15 +462,15 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo>());
+            .ReturnsAsync([]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(TmpDir / "external-1", SubmoduleSha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { nestedSubmoduleInfo });
+            .ReturnsAsync([nestedSubmoduleInfo]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -554,7 +554,7 @@ public class VmrPatchHandlerTests
             Times.Once);
 
         _dependencyTracker.Verify(
-            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+            x => x.UpdateSubmodules([]), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -574,11 +574,11 @@ public class VmrPatchHandlerTests
         // Return no submodule for first SHA, one for second
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo>());
+            .ReturnsAsync([]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -634,7 +634,7 @@ public class VmrPatchHandlerTests
             Times.Once);
 
         _dependencyTracker.Verify(
-            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+            x => x.UpdateSubmodules([]), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -652,11 +652,11 @@ public class VmrPatchHandlerTests
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2 } });
+            .ReturnsAsync([_submoduleInfo with { Commit = SubmoduleSha2 }]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -712,7 +712,7 @@ public class VmrPatchHandlerTests
             Times.Once);
 
         _dependencyTracker.Verify(
-            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Once);
+            x => x.UpdateSubmodules([]), Times.Once);
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -731,11 +731,11 @@ public class VmrPatchHandlerTests
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha1))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo });
+            .ReturnsAsync([_submoduleInfo]);
 
         _localGitRepo
             .Setup(x => x.GetGitSubmodulesAsync(_clone.Path, Sha2))
-            .ReturnsAsync(new List<GitSubmoduleInfo> { _submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" } });
+            .ReturnsAsync([_submoduleInfo with { Commit = SubmoduleSha2, Url = "https://github.com/dotnet/external-2" }]);
 
         // Act
         var patches = await _patchHandler.CreatePatches(
@@ -814,7 +814,7 @@ public class VmrPatchHandlerTests
             Times.Once);
 
         _dependencyTracker.Verify(
-            x => x.UpdateSubmodules(new List<SubmoduleRecord>()), Times.Exactly(2));
+            x => x.UpdateSubmodules([]), Times.Exactly(2));
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {
@@ -944,7 +944,7 @@ public class VmrPatchHandlerTests
                 Times.Once);
 
         _dependencyTracker.Verify(x => x.UpdateSubmodules(It.IsAny<List<SubmoduleRecord>>()), Times.Once);
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(new List<SubmoduleRecord>()));
+        _dependencyTracker.Verify(x => x.UpdateSubmodules([]));
 
         patches.Should().BeEquivalentTo(new List<VmrIngestionPatch>
         {

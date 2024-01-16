@@ -204,26 +204,26 @@ public class ParseBuildManifestMetadataTests
 
     private static readonly SigningInformation signingInfo1 = new SigningInformation()
     {
-        CertificatesSignInfo = new List<CertificatesSignInfo>()
-        {
+        CertificatesSignInfo =
+        [
             new CertificatesSignInfo()
             {
                 DualSigningAllowed = true,
                 Include = "ThisIsACert"
             }
-        },
+        ],
 
-        FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-        {
+        FileExtensionSignInfos =
+        [
             new FileExtensionSignInfo()
             {
                 CertificateName = "ThisIsACert",
                 Include = ".dll"
             }
-        },
+        ],
 
-        FileSignInfos = new List<FileSignInfo>()
-        {
+        FileSignInfos =
+        [
             new FileSignInfo()
             {
                 CertificateName = "ThisIsACert",
@@ -236,43 +236,43 @@ public class ParseBuildManifestMetadataTests
                 PublicKeyToken = "4258675309abcdef",
                 TargetFramework = ".NETFramework,Version=v2.0"
             }
-        },
+        ],
 
-        StrongNameSignInfos = new List<StrongNameSignInfo>()
-        {
+        StrongNameSignInfos =
+        [
             new StrongNameSignInfo()
             {
                 CertificateName = "ThisIsACert",
                 Include = "IncludeMe",
                 PublicKeyToken = "123456789abcde12"
             }
-        },
-        ItemsToSign = new List<ItemsToSign>()
+        ],
+        ItemsToSign = []
     };
 
     public static readonly SigningInformation signingInfo2 =
         new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
                     Include = "AnotherCert"
                 }
-            },
+            ],
 
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = "None",
                     Include = ".zip"
                 }
-            },
+            ],
 
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = "AnotherCert",
@@ -285,18 +285,18 @@ public class ParseBuildManifestMetadataTests
                     PublicKeyToken = "4258675309abcdef",
                     TargetFramework = ".NETFramework,Version=v1.3"
                 }
-            },
+            ],
 
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = "AnotherCert",
                     Include = "StrongName",
                     PublicKeyToken = "123456789abcde12"
                 }
-            },
-            ItemsToSign = new List<ItemsToSign>()
+            ],
+            ItemsToSign = []
         };
 
     #endregion
@@ -317,8 +317,8 @@ public class ParseBuildManifestMetadataTests
         Commit = Commit,
         Name = GitHubRepositoryName,
         Branch = GitHubBranch,
-        Packages = new List<Package>(),
-        Blobs = new List<Blob>(),
+        Packages = [],
+        Blobs = [],
         SigningInformation = new SigningInformation()
     };
 
@@ -336,8 +336,8 @@ public class ParseBuildManifestMetadataTests
         Commit = Commit,
         Name = GitHubRepositoryName,
         Branch = GitHubBranch,
-        Packages = new List<Package> { package1, package2 },
-        Blobs = new List<Blob> { manifestAsBlob, blob2 },
+        Packages = [package1, package2],
+        Blobs = [manifestAsBlob, blob2],
         SigningInformation = signingInfo1
     };
 
@@ -355,8 +355,8 @@ public class ParseBuildManifestMetadataTests
         Commit = Commit,
         Name = GitHubRepositoryName,
         Branch = GitHubBranch,
-        Packages = new List<Package> { package2 },
-        Blobs = new List<Blob> { blob2 },
+        Packages = [package2],
+        Blobs = [blob2],
         SigningInformation = signingInfo2
     };
 
@@ -405,11 +405,9 @@ public class ParseBuildManifestMetadataTests
     [Test]
     public void CheckPackagesAndBlobsTest()
     {
-        List<PackageArtifactModel> expectedPackageArtifactModel = new List<PackageArtifactModel>()
-            { packageArtifactModel1, packageArtifactModel2 };
+        List<PackageArtifactModel> expectedPackageArtifactModel = [packageArtifactModel1, packageArtifactModel2];
 
-        List<BlobArtifactModel> expectedBlobArtifactModel = new List<BlobArtifactModel>()
-            { manifestAsBlobArtifactModel, blobArtifactModel2 };
+        List<BlobArtifactModel> expectedBlobArtifactModel = [manifestAsBlobArtifactModel, blobArtifactModel2];
 
         (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
             pushMetadata.GetPackagesAndBlobsInfo(manifest1);
@@ -430,7 +428,7 @@ public class ParseBuildManifestMetadataTests
     public void GivenManifestWithoutPackages()
     {
         Manifest manifestWithoutPackages = SharedMethods.GetCopyOfManifest(baseManifest);
-        manifestWithoutPackages.Blobs = new List<Blob> { manifestAsBlob };
+        manifestWithoutPackages.Blobs = [manifestAsBlob];
 
         var expectedBlobs = new List<BlobArtifactModel>() { manifestAsBlobArtifactModel };
         var (packages, blobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithoutPackages);
@@ -442,7 +440,7 @@ public class ParseBuildManifestMetadataTests
     public void GivenManifestWithUnversionedPackage()
     {
         Manifest manifestWithUnversionedPackage = SharedMethods.GetCopyOfManifest(baseManifest);
-        manifestWithUnversionedPackage.Packages = new List<Package> { unversionedPackage };
+        manifestWithUnversionedPackage.Packages = [unversionedPackage];
         var expectedPackages = new List<PackageArtifactModel>() { unversionedPackageArtifactModel };
         var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
         actualPackages.Should().BeEquivalentTo(expectedPackages);
@@ -452,7 +450,7 @@ public class ParseBuildManifestMetadataTests
     public void GivenManifestWithoutBlobs()
     {
         Manifest manifestWithoutBlobs = SharedMethods.GetCopyOfManifest(baseManifest);
-        manifestWithoutBlobs.Packages = new List<Package> { package1 };
+        manifestWithoutBlobs.Packages = [package1];
 
         var expectedPackages = new List<PackageArtifactModel>() { packageArtifactModel1 };
         var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithoutBlobs);
@@ -464,7 +462,7 @@ public class ParseBuildManifestMetadataTests
     public void GivenUnversionedBlob()
     {
         Manifest manifestWithUnversionedBlob = SharedMethods.GetCopyOfManifest(baseManifest);
-        manifestWithUnversionedBlob.Blobs = new List<Blob> { unversionedBlob };
+        manifestWithUnversionedBlob.Blobs = [unversionedBlob];
 
         var expectedBlobs = new List<BlobArtifactModel>() { unversionedBlobArtifactModel };
         var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);

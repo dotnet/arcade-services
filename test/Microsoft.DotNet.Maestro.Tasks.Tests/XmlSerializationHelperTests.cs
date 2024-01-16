@@ -128,8 +128,8 @@ public class XmlSerializationHelperTests
     {
         SigningInformation signingInfo = new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
@@ -140,9 +140,9 @@ public class XmlSerializationHelperTests
                     DualSigningAllowed = false,
                     Include = Certificate2Name,
                 },
-            },
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            ],
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -153,9 +153,9 @@ public class XmlSerializationHelperTests
                     CertificateName = Certificate2Name,
                     Include = ".xbap",
                 }
-            },
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            ],
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -175,14 +175,14 @@ public class XmlSerializationHelperTests
                     CertificateName = Certificate2Name,
                     Include = "SomeOtherAssembly.dll",
                 },
-            },
-            ItemsToSign = new List<ItemsToSign>()
-            {
+            ],
+            ItemsToSign =
+            [
                 new ItemsToSign() { Include = "SomeAssembly.dll" },
                 new ItemsToSign() { Include = "SomeOtherAssembly.dll" },
-            },
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            ],
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -195,7 +195,7 @@ public class XmlSerializationHelperTests
                     Include = "StrongName2",
                     PublicKeyToken = PublicKeyToken2
                 }
-            }
+            ]
         };
         return signingInfo;
     }

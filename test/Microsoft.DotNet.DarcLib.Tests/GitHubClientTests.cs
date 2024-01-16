@@ -206,15 +206,15 @@ public class GitHubClientTests
         SimpleCache cache = enableCache ? new SimpleCache() : null;
         Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
 
-        List<(string, string, TreeItem)> treeItemsToGet = new List<(string, string, TreeItem)>
-        {
+        List<(string, string, TreeItem)> treeItemsToGet =
+        [
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "1", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "2", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "3", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "4", "https://url")),
             ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "11", "https://url")),
             ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "12", "https://url")),
-        };
+        ];
 
         // Mock up the github client
         var octoKitClientMock = new Mock<IGitHubClient>();
@@ -394,7 +394,7 @@ public class GitHubClientTests
 
     private async Task<IList<Review>> GetLatestReviewsForPullRequestWrapperAsync(Dictionary<Tuple<string, string, int>, List<PullRequestReview>> data, string pullRequestUrl)
     {
-        List<PullRequestReview> fakeReviews = new List<PullRequestReview>();
+        List<PullRequestReview> fakeReviews = [];
 
         // Use Moq to put the return value 
         OctoKitPullRequestReviewsClient.Setup(x => x.GetAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
@@ -418,7 +418,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)
@@ -436,7 +436,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)
@@ -456,7 +456,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)

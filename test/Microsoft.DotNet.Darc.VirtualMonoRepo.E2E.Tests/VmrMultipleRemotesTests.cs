@@ -146,8 +146,8 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -158,7 +158,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
                     Name = Constants.DependencyRepoName,
                     DefaultRemote = FirstDependencyPath
                 }
-            },
+            ],
             PatchesPath = "src/installer/patches/"
         };
 

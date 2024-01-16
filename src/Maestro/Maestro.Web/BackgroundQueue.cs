@@ -34,7 +34,7 @@ public static class BackgroundQueueExtensions
 
 public class BackgroundQueue : BackgroundService, IBackgroundQueue
 {
-    private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
+    private readonly BlockingCollection<(Type type, JToken args)> _workItems = [];
     private readonly OperationManager _operations;
 
     public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)

@@ -19,6 +19,6 @@ public class AzureDevOpsFeed: AzureDevOpsIdNamePair
         Name = name;
         Id = id;
         Project = project;
-        Packages = new List<AzureDevOpsPackage>();
+        Packages = [];
     }
 }

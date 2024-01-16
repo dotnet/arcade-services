@@ -45,7 +45,7 @@ internal class DependencyFlowTestDriver
 
         DependencyFlowGraph flowGraph = JsonConvert.DeserializeObject<DependencyFlowGraph>(File.ReadAllText(inputGraphPath));
 
-        List<DependencyFlowEdge> newEdgeList = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> newEdgeList = [];
 
         foreach (var edge in flowGraph.Edges)
         {

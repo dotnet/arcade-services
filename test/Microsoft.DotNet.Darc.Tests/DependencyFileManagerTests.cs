@@ -76,8 +76,10 @@ public class DependencyFileManagerTests
         string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
         var inputNuGetConfigFile = DependencyFileManager.GetXmlDocument(inputXmlContent);
 
-        Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>();
-        configFileUpdateData.Add("testKey", new HashSet<string>(managedFeeds));
+        Dictionary<string, HashSet<string>> configFileUpdateData = new Dictionary<string, HashSet<string>>
+        {
+            { "testKey", new HashSet<string>(managedFeeds) }
+        };
         var managedFeedsForTest = dependencyFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
 
         // 'unknown' = regex failed to match and extract repo name from feed

@@ -94,7 +94,7 @@ public partial class Startup
                         if (schema.Type == "object")
                         {
                             var required = schema.Required == null
-                                ? new HashSet<string>()
+                                ? []
                                 : new HashSet<string>(schema.Required.Select(ToCamelCase));
                             schema.Properties =
                                 schema.Properties.ToDictionary(

@@ -47,8 +47,8 @@ internal class VmrPatchesTestsBase : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -59,7 +59,7 @@ internal class VmrPatchesTestsBase : VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            },
+            ],
             PatchesPath = "src/installer/patches/"
         };
 

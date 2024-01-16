@@ -21,7 +21,7 @@ public class DependencyAddUpdateTests
     {
         await DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions1), async driver =>
         {
-            await driver.UpdateDependenciesAsync(new List<DependencyDetail>());
+            await driver.UpdateDependenciesAsync([]);
             await driver.VerifyAsync();
         });
     }
@@ -34,7 +34,7 @@ public class DependencyAddUpdateTests
     {
         await DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions2), async driver =>
         {
-            await driver.UpdateDependenciesAsync(new List<DependencyDetail>());
+            await driver.UpdateDependenciesAsync([]);
             await driver.VerifyAsync();
         });
     }
@@ -208,7 +208,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies1), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -216,7 +216,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -231,7 +231,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestNoCompare(nameof(UpdateDependencies1), async driver =>
         {
             await (((System.Func<Task>)(async () => await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -239,7 +239,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                })))).Should().ThrowExactlyAsync<DependencyException>();
+                ])))).Should().ThrowExactlyAsync<DependencyException>();
         });
     }
 
@@ -253,7 +253,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies3), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -261,7 +261,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -276,7 +276,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies4), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -284,7 +284,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -344,7 +344,7 @@ public class DependencyAddUpdateTests
                     Type = DependencyType.Product,
                 });
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -352,7 +352,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6",
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -413,7 +413,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency1), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "456",
@@ -421,7 +421,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "2.0"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -435,7 +435,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency2), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "456",
@@ -443,7 +443,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "2.0"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -457,7 +457,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependencyWithSdkUpdate), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "456",
@@ -465,7 +465,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "2.0"
                     }
-                }, new NuGet.Versioning.SemanticVersion(10, 1, 1, "preview-1234"));
+                ], new NuGet.Versioning.SemanticVersion(10, 1, 1, "preview-1234"));
             await driver.VerifyAsync();
         });
     }
@@ -493,7 +493,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateToolsJsonFile1), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -501,7 +501,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }
@@ -517,7 +517,7 @@ public class DependencyAddUpdateTests
         await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateToolsJsonNotPresent), async driver =>
         {
             await driver.UpdateDependenciesAsync(
-                new List<DependencyDetail> {
+                [
                     new DependencyDetail
                     {
                         Commit = "4",
@@ -525,7 +525,7 @@ public class DependencyAddUpdateTests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6"
                     }
-                });
+                ]);
             await driver.VerifyAsync();
         });
     }

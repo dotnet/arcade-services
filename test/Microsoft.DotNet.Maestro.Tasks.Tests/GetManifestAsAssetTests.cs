@@ -66,7 +66,7 @@ public class GetManifestAsAssetTests
     {
         pushMetadata = SetupGetManifestAsAssetTests();
         pushMetadata.AssetVersion = assetVersion;
-        List<BlobArtifactModel> blobs = new List<BlobArtifactModel>();
+        List<BlobArtifactModel> blobs = [];
         var actualBlob = pushMetadata.GetManifestAsAsset(blobs, newManifestName);
         actualBlob.Id.Should().BeEquivalentTo(mergedManifestBlobWhenAssetVersionIsNotNull.Id);
         actualBlob.NonShipping.Should().Be(mergedManifestBlobWhenAssetVersionIsNotNull.NonShipping);
@@ -76,7 +76,7 @@ public class GetManifestAsAssetTests
     public void AssetVersionIsNull()
     {
         pushMetadata = SetupGetManifestAsAssetTests();
-        List<BlobArtifactModel> blobs = new List<BlobArtifactModel>() { blob };
+        List<BlobArtifactModel> blobs = [blob];
         var actualBlob = pushMetadata.GetManifestAsAsset(blobs, newManifestName);
         actualBlob.Id.Should().BeEquivalentTo(mergedManifestBlobWhenAssetVersionIsNull.Id);
         actualBlob.NonShipping.Should().Be(mergedManifestBlobWhenAssetVersionIsNull.NonShipping);

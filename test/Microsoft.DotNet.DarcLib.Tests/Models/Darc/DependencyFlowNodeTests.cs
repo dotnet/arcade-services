@@ -18,7 +18,7 @@ public class DependencyFlowNodeTests
         var node = new DependencyFlowNode("test", "test", Guid.NewGuid().ToString())
         {
             OfficialBuildTime = 100.0,
-            OutgoingEdges = new List<DependencyFlowEdge>()
+            OutgoingEdges = []
         };
 
         node.CalculateLongestPathTime();

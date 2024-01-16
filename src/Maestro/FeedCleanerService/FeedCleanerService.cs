@@ -38,7 +38,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         Context = context;
         _httpClient = new HttpClient(new HttpClientHandler() { CheckCertificateRevocationList = true });
         _options = options;
-        AzureDevOpsClients = new Dictionary<string, IAzureDevOpsClient>();
+        AzureDevOpsClients = [];
         foreach (string account in _options.Value.AzdoAccounts)
         {
             AzureDevOpsClients.Add(account, GetAzureDevOpsClientForAccountAsync(account));
@@ -299,7 +299,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         string version,
         Dictionary<string, Dictionary<string, HashSet<string>>> packageMappings)
     {
-        List<string> feeds = new List<string>();
+        List<string> feeds = [];
         foreach ((string feedName, Dictionary<string, HashSet<string>> packages) in packageMappings)
         {
             if (packages.TryGetValue(name, out HashSet<string> versions) && versions.Contains(version))

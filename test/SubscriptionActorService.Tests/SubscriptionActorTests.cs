@@ -27,7 +27,7 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     [SetUp]
     public void SubscriptionActorTests_SetUp()
     {
-        PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        PullRequestActors = [];
     }
 
     protected override void RegisterServices(IServiceCollection services)

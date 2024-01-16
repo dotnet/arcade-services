@@ -84,7 +84,7 @@ public static class MergePoliciesPopUpHelpers
                                 default:
                                     throw new NotImplementedException($"Unexpected property value type {p.Value.Type}");
                             }
-                        })) : new Dictionary<string, object>()
+                        })) : []
                 })
             .ToList();
     }

@@ -175,7 +175,7 @@ public class DarcManifestHelperTests
     [Test]
     public void NoDownloadedBuildsProvided()
     {
-        List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
+        List<DownloadedBuild> downloadedBuilds = [];
         JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
         var builds = emptyManifest["builds"].ToList();
         builds.Count.Should().Be(0);
@@ -184,35 +184,37 @@ public class DarcManifestHelperTests
 
     private List<DownloadedAsset> GetSomeExtraDownloadedAssets()
     {
-        List<DownloadedAsset> fakeAssets = new List<DownloadedAsset>();
-        fakeAssets.Add(new DownloadedAsset()
-        {
-            Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
-            LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
-            UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
-            SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
-        });
-        fakeAssets.Add(new DownloadedAsset()
-        {
-            Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
-            LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
-            UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
-            SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
-        });
+        List<DownloadedAsset> fakeAssets =
+        [
+            new DownloadedAsset()
+            {
+                Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
+            },
+            new DownloadedAsset()
+            {
+                Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
+            },
+        ];
         return fakeAssets;
     }
 
     private List<DownloadedBuild> GetSomeShippingAssetsBuilds()
     {
-        List<DownloadedBuild> fakeDownloadedBuilds = new List<DownloadedBuild>();
+        List<DownloadedBuild> fakeDownloadedBuilds = [];
 
-        List<Channel> channels = new List<Channel>()
-        {
+        List<Channel> channels =
+        [
             new Channel(123, "fake-channel-general", "general testing"),
             new Channel(456, "fake-channel-release", "release channel"),
-        };
+        ];
 
         for (int i = 0; i < FakeBuildCount; i++)
         {

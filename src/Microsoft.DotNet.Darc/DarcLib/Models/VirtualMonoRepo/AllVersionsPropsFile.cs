@@ -40,7 +40,7 @@ public class AllVersionsPropsFile : MsBuildPropsFile, IAllVersionsPropsFile
     public AllVersionsPropsFile(IReadOnlyCollection<IVersionedSourceComponent> repositoryRecords)
         : base(orderPropertiesAscending: true)
     {
-        Versions = new Dictionary<string, string>();
+        Versions = [];
         foreach(var repo in repositoryRecords)
         {
             UpdateVersion(repo.Path, repo.CommitSha, repo.PackageVersion);

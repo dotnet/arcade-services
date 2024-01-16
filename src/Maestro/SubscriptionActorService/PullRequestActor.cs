@@ -267,7 +267,7 @@ namespace SubscriptionActorService
 
         private class ReferenceLinksMap
         {
-            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = new Dictionary<(string from, string to), int>();
+            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = [];
         }
 
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
@@ -669,11 +669,11 @@ namespace SubscriptionActorService
 
                 if (pr != null)
                 {
-                    await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> { updateParameter });
+                    await UpdatePullRequestAsync(pr, [updateParameter]);
                     return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
                 }
 
-                string prUrl = await CreatePullRequestAsync(new List<UpdateAssetsParameters> { updateParameter });
+                string prUrl = await CreatePullRequestAsync([updateParameter]);
                 if (prUrl == null)
                 {
                     return ActionResult.Create<object>(null, "Updates require no changes, no pull request created.");
@@ -1124,7 +1124,7 @@ namespace SubscriptionActorService
         {
             public bool CoherencyCheckSuccessful { get; set; } = true;
             public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
-            public List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = new();
+            public List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = [];
         }
 
         /// <summary>

@@ -185,13 +185,13 @@ class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Packages = new List<PackageArtifactModel> { package1, nonShippingPackage },
-                Blobs = new List<BlobArtifactModel> { blob1, nonShippingBlob }
+                Packages = [package1, nonShippingPackage],
+                Blobs = [blob1, nonShippingBlob]
             };
         expectedBuildModel.Identity.IsStable = true;
 
-        packages = new List<PackageArtifactModel>() { package1, nonShippingPackage };
-        blobs = new List<BlobArtifactModel>() { blob1, nonShippingBlob };
+        packages = [package1, nonShippingPackage];
+        blobs = [blob1, nonShippingBlob];
 
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
@@ -204,14 +204,13 @@ class CreateMergedManifestBuildModelTests
         BuildModel expectedBuildModel = GetBuildModel();
         PushMetadataToBuildAssetRegistry pushMetadata = GetPushMetadata();
 
-        packages = new List<PackageArtifactModel>();
-        blobs = new List<BlobArtifactModel>();
-        blobs.Add(blob1);
+        packages = [];
+        blobs = [blob1];
 
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Blobs = new List<BlobArtifactModel> { blob1 }
+                Blobs = [blob1]
             };
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
@@ -227,12 +226,12 @@ class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Packages = new List<PackageArtifactModel> { shippingPackage, package1, packageWithNoVersion },
-                Blobs = new List<BlobArtifactModel> { blob1 }
+                Packages = [shippingPackage, package1, packageWithNoVersion],
+                Blobs = [blob1]
             };
 
-        packages = new List<PackageArtifactModel>() { shippingPackage, package1, packageWithNoVersion };
-        blobs = new List<BlobArtifactModel>() { blob1 };
+        packages = [shippingPackage, package1, packageWithNoVersion];
+        blobs = [blob1];
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 
         actualModel.Should().BeEquivalentTo(expectedBuildModel);
@@ -247,11 +246,11 @@ class CreateMergedManifestBuildModelTests
         expectedBuildModel.Artifacts =
             new ArtifactSet
             {
-                Blobs = new List<BlobArtifactModel> { blob1, nonShippingBlob, mergedManifest, shippingBlob }
+                Blobs = [blob1, nonShippingBlob, mergedManifest, shippingBlob]
             };
 
-        packages = new List<PackageArtifactModel>();
-        blobs = new List<BlobArtifactModel>() { blob1, nonShippingBlob, mergedManifest, shippingBlob };
+        packages = [];
+        blobs = [blob1, nonShippingBlob, mergedManifest, shippingBlob];
 
         BuildModel actualModel = pushMetadata.CreateMergedManifestBuildModel(packages, blobs, manifest);
 

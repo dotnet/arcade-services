@@ -69,7 +69,7 @@ public class AssetsController : v2018_07_16.Controllers.AssetsController
                     continue;
                 }
 
-                asset.Locations = asset.Locations ?? new List<Data.Models.AssetLocation>();
+                asset.Locations = asset.Locations ?? [];
                 asset.Locations.Add(assetLocation);
                 _context.Assets.Update(asset);
             }

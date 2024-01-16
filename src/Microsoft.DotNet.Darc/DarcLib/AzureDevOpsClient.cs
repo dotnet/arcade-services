@@ -88,7 +88,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
     }
 
-    private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
+    private static readonly List<string> VersionTypes = ["branch", "commit", "tag"];
     /// <summary>
     ///     Retrieve the contents of a text file in a repo on a specific branch
     /// </summary>
@@ -1194,11 +1194,11 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         var variables = queueTimeVariables?
             .ToDictionary(x => x.Key, x => new AzureDevOpsVariable(x.Value))
-            ?? new Dictionary<string, AzureDevOpsVariable>();
+            ?? [];
 
         var pipelineResourceParameters = pipelineResources?
             .ToDictionary(x => x.Key, x => new AzureDevOpsPipelineResourceParameter(x.Value))
-            ?? new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
+            ?? [];
 
         var repositoryBranch = sourceBranch.StartsWith(RefsHeadsPrefix) ? sourceBranch : RefsHeadsPrefix + sourceBranch;
 

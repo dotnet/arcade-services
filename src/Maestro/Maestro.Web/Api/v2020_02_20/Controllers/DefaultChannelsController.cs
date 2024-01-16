@@ -70,7 +70,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
 
         if (!string.IsNullOrEmpty(branch))
         {
-            List<DefaultChannel> branchFilteredResults = new List<DefaultChannel>();
+            List<DefaultChannel> branchFilteredResults = [];
             foreach (DefaultChannel defaultChannel in results)
             {
                 // Branch name expressed as a regular expression: must start with '-regex:' and have at least one more character.

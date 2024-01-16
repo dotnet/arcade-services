@@ -150,7 +150,7 @@ public class DependencyFlowGraph
         Nodes.Add(startNode);
 
         // Dominator set for each node starts with the full set of nodes.
-        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = [];
         foreach (DependencyFlowNode node in Nodes)
         {
             dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
@@ -185,7 +185,7 @@ public class DependencyFlowGraph
 
             if (newDom == null)
             {
-                newDom = new HashSet<DependencyFlowNode>();
+                newDom = [];
             }
 
             // Add the current node
@@ -205,7 +205,7 @@ public class DependencyFlowGraph
         }
 
         // Determine backedges
-        List<DependencyFlowEdge> toRemove = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> toRemove = [];
         foreach (DependencyFlowEdge edge in Edges)
         {
             if (dominators[edge.To].Contains(edge.From))
@@ -233,7 +233,7 @@ public class DependencyFlowGraph
     public void CalculateLongestBuildPaths()
     {
         List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
-        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = [];
 
         Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
 
@@ -250,7 +250,7 @@ public class DependencyFlowGraph
                 }
                 else
                 {
-                    visitedNodes.Add(node, new HashSet<DependencyFlowNode>() { node });
+                    visitedNodes.Add(node, [node]);
                 }
 
                 foreach (DependencyFlowEdge edge in node.IncomingEdges)
@@ -324,7 +324,7 @@ public class DependencyFlowGraph
         // Dictionary of nodes. Key is the repo+branch
         Dictionary<string, DependencyFlowNode> nodes = new Dictionary<string, DependencyFlowNode>(
             StringComparer.OrdinalIgnoreCase);
-        List<DependencyFlowEdge> edges = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> edges = [];
 
         // First create all the channel nodes. There may be disconnected
         // nodes in the graph, so we must process all channels and all subscriptions

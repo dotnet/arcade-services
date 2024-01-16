@@ -584,7 +584,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             _logger.LogInformation($"'owner' or 'repository' couldn't be inferred from '{repoUri}'. " +
                                    $"Not getting files from 'eng/common...'");
-            return new List<GitFile>();
+            return [];
         }
 
         TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit, path);

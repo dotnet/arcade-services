@@ -157,7 +157,7 @@ public class AssetsController : Controller
             return StatusCode((int)HttpStatusCode.NotModified);
         }
 
-        asset.Locations = asset.Locations ?? new List<Data.Models.AssetLocation>();
+        asset.Locations = asset.Locations ?? [];
         asset.Locations.Add(assetLocation);
 
         await _context.SaveChangesAsync();

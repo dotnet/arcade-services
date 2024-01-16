@@ -24,180 +24,180 @@ public class MergeSigningInfoTests
     public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
     public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
 
-    public static readonly List<SigningInformation> ExpectedSigningInfo = new List<SigningInformation>()
-    {
+    public static readonly List<SigningInformation> ExpectedSigningInfo =
+    [
         new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
                     Include = "ThisIsACert"
                 }
-            },
+            ],
 
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = "ThisIsACert",
                     Include = ".dll"
                 }
-            },
+            ],
 
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = "ThisIsACert",
                     Include = "ALibrary.dll"
                 }
-            },
+            ],
 
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = "ThisIsACert",
                     Include = "IncludeMe",
                     PublicKeyToken = "123456789abcde12"
                 }
-            },
-            ItemsToSign = new List<ItemsToSign>()
+            ],
+            ItemsToSign = []
         }
-    };
+    ];
 
     public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation();
 
     public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation()
     {
-        CertificatesSignInfo = new List<CertificatesSignInfo>()
-        {
+        CertificatesSignInfo =
+        [
             new CertificatesSignInfo()
             {
                 DualSigningAllowed = true,
                 Include = "ThisIsACert"
             }
-        },
+        ],
 
-        FileExtensionSignInfos = new List<FileExtensionSignInfo>(),
-        FileSignInfos = new List<FileSignInfo>(),
-        StrongNameSignInfos = new List<StrongNameSignInfo>(),
-        ItemsToSign = new List<ItemsToSign>()
+        FileExtensionSignInfos = [],
+        FileSignInfos = [],
+        StrongNameSignInfos = [],
+        ItemsToSign = []
     };
 
     public static readonly SigningInformation PartialSigningInfo4 = new SigningInformation()
     {
-        CertificatesSignInfo = new List<CertificatesSignInfo>(),
-        FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-        {
+        CertificatesSignInfo = [],
+        FileExtensionSignInfos =
+        [
             new FileExtensionSignInfo()
             {
                 CertificateName = "ThisIsACert",
                 Include = ".dll"
             }
-        },
-        FileSignInfos = new List<FileSignInfo>(),
-        StrongNameSignInfos = new List<StrongNameSignInfo>(),
-        ItemsToSign = new List<ItemsToSign>()
+        ],
+        FileSignInfos = [],
+        StrongNameSignInfos = [],
+        ItemsToSign = []
     };
 
     public static readonly SigningInformation MergedPartialMetadataSigningInfos = new SigningInformation()
     {
-        CertificatesSignInfo = new List<CertificatesSignInfo>()
-        {
+        CertificatesSignInfo =
+        [
             new CertificatesSignInfo()
             {
                 DualSigningAllowed = true,
                 Include = "ThisIsACert"
             }
-        },
-        FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-        {
+        ],
+        FileExtensionSignInfos =
+        [
             new FileExtensionSignInfo()
             {
                 CertificateName = "ThisIsACert",
                 Include = ".dll"
             }
-        },
-        FileSignInfos = new List<FileSignInfo>(),
-        ItemsToSign = new List<ItemsToSign>(),
-        StrongNameSignInfos = new List<StrongNameSignInfo>()
+        ],
+        FileSignInfos = [],
+        ItemsToSign = [],
+        StrongNameSignInfos = []
     };
 
     public static readonly SigningInformation MergedPartialSigningInfos = new SigningInformation()
     {
-        CertificatesSignInfo = new List<CertificatesSignInfo>()
-        {
+        CertificatesSignInfo =
+        [
             new CertificatesSignInfo()
             {
                 DualSigningAllowed = true,
                 Include = "ThisIsACert"
             }
-        },
-        FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-        {
+        ],
+        FileExtensionSignInfos =
+        [
             new FileExtensionSignInfo()
             {
                 CertificateName = "ThisIsACert",
                 Include = ".dll"
             }
-        },
-        FileSignInfos = new List<FileSignInfo>(),
-        StrongNameSignInfos = new List<StrongNameSignInfo>(),
-        ItemsToSign = new List<ItemsToSign>()
+        ],
+        FileSignInfos = [],
+        StrongNameSignInfos = [],
+        ItemsToSign = []
     };
 
-    public static readonly List<SigningInformation> ExpectedSigningInfo2 = new List<SigningInformation>()
-    {
+    public static readonly List<SigningInformation> ExpectedSigningInfo2 =
+    [
         new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
                     Include = "AnotherCert"
                 }
-            },
+            ],
 
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = "None",
                     Include = ".zip"
                 }
-            },
+            ],
 
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = "AnotherCert",
                     Include = "AnotherLibrary.dll"
                 }
-            },
+            ],
 
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = "AnotherCert",
                     Include = "StrongName",
                     PublicKeyToken = "123456789abcde12"
                 }
-            },
-            ItemsToSign = new List<ItemsToSign>()
+            ],
+            ItemsToSign = []
         }
-    };
+    ];
 
     public static readonly SigningInformation ExpectedMergedSigningInfo =
         new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
@@ -208,10 +208,10 @@ public class MergeSigningInfoTests
                     DualSigningAllowed = true,
                     Include = "AnotherCert"
                 }
-            },
+            ],
 
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = "ThisIsACert",
@@ -222,10 +222,10 @@ public class MergeSigningInfoTests
                     CertificateName = "None",
                     Include = ".zip"
                 }
-            },
+            ],
 
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = "ThisIsACert",
@@ -236,10 +236,10 @@ public class MergeSigningInfoTests
                     CertificateName = "AnotherCert",
                     Include = "AnotherLibrary.dll"
                 }
-            },
+            ],
 
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = "ThisIsACert",
@@ -252,8 +252,8 @@ public class MergeSigningInfoTests
                     Include = "StrongName",
                     PublicKeyToken = "123456789abcde12"
                 }
-            },
-            ItemsToSign = new List<ItemsToSign>()
+            ],
+            ItemsToSign = []
         };
 
     [SetUp]
@@ -279,7 +279,7 @@ public class MergeSigningInfoTests
     [Test]
     public void GivenTwoPartialSigningInfosWithEmptySections()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { PartialSigningInfo2, PartialSigningInfo4 });
+        SigningInformation actualMerged = pushMetadata.MergeSigningInfo([PartialSigningInfo2, PartialSigningInfo4]);
         actualMerged.Should().BeEquivalentTo(MergedPartialMetadataSigningInfos);
     }
 
@@ -293,7 +293,7 @@ public class MergeSigningInfoTests
     [Test]
     public void GivenEmptySigningInfoList()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation>());
+        SigningInformation actualMerged = pushMetadata.MergeSigningInfo([]);
         actualMerged.Should().Be(null);
     }
 }

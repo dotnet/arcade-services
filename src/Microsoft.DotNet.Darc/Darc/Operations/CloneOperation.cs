@@ -482,7 +482,7 @@ internal class CloneOperation : Operation
 
         static StrippedDependency()
         {
-            AllDependencies = new HashSet<StrippedDependency>();
+            AllDependencies = [];
         }
 
         internal static StrippedDependency GetDependency(DependencyDetail d)
@@ -515,8 +515,7 @@ internal class CloneOperation : Operation
         {
             this.RepoUri = repoUrl;
             this.Commit = commit;
-            this.Dependencies = new HashSet<StrippedDependency>();
-            this.Dependencies.Add(this);
+            this.Dependencies = [this];
         }
 
         private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }

@@ -40,11 +40,11 @@ public class RepositoryUrlAttribute : ValidationAttribute
     /// <summary>
     ///     To add a new valid URL form, add an entry here
     /// </summary>
-    private static readonly List<Regex> _validUrlForms = new List<Regex>()
-    {
+    private static readonly List<Regex> _validUrlForms =
+    [
         new Regex(@"^https://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-\.]+$"),
         new Regex(@"^https://dev\.azure\.com/[a-zA-Z0-9]+/[a-zA-Z0-9-]+/_git/[a-zA-Z0-9-\.]+$")
-    };
+    ];
 
     protected override ValidationResult IsValid(object value, ValidationContext validationContext)
     {

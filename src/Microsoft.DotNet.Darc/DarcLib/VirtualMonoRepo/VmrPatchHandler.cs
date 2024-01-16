@@ -362,7 +362,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         if (_fileSystem.GetFileInfo(patch.Path).Length < MaxPatchSize)
         {
-            return new() { patch };
+            return [patch];
         }
 
         _logger.LogWarning("Patch {name} targeting {path} is too large (>1GB). Repo will be split into smaller patches." +

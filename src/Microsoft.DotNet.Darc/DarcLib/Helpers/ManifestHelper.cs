@@ -86,19 +86,19 @@ public class ManifestHelper
         {
             if (makeAssetsRelativePaths)
             {
-                return new List<string>
-                {
+                return
+                [
                     Path.GetRelativePath(outputPath, asset.ReleaseLayoutTargetLocation),
                     Path.GetRelativePath(outputPath, asset.UnifiedLayoutTargetLocation)
-                };
+                ];
             }
             else
             {
-                return new List<string>
-                {
+                return
+                [
                     asset.ReleaseLayoutTargetLocation,
                     asset.UnifiedLayoutTargetLocation
-                };
+                ];
             }
         }
         return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));

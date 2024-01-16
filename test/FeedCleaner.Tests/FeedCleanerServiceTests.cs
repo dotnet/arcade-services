@@ -51,15 +51,15 @@ public class FeedCleanerServiceTests : IDisposable
             (options) =>
             {
                 options.Enabled = true;
-                options.ReleasePackageFeeds = new List<(string account, string project, string name)>()
-                {
+                options.ReleasePackageFeeds =
+                [
                     (SomeAccount, "someProject", ReleaseFeedName),
-                };
+                ];
 
-                options.AzdoAccounts = new List<string>()
-                {
+                options.AzdoAccounts =
+                [
                     SomeAccount
-                };
+                ];
             }
         );
         services.AddAzureDevOpsTokenProvider();
@@ -184,7 +184,7 @@ public class FeedCleanerServiceTests : IDisposable
 
     private void SetupAssetsFromFeeds()
     {
-        List<Asset> assets = new List<Asset>();
+        List<Asset> assets = [];
         foreach ((string feedName, AzureDevOpsFeed feed) in Feeds)
         {
             string projectSection = string.IsNullOrEmpty(feed.Project?.Name) ? "" : $"{feed.Project.Name}/";
@@ -198,14 +198,14 @@ public class FeedCleanerServiceTests : IDisposable
                         BuildId = 0,
                         NonShipping = false,
                         Version = version.Version,
-                        Locations = new List<AssetLocation>()
-                        {
+                        Locations =
+                        [
                             new AssetLocation()
                             {
                                 Type = LocationType.NugetFeed,
                                 Location = $"https://pkgs.dev.azure.com/{feed.Account}/{projectSection}_packaging/{feedName}/nuget/v3/index.json"
                             }
-                        }
+                        ]
                     });
                 }
 
@@ -225,8 +225,8 @@ public class FeedCleanerServiceTests : IDisposable
         // This is the reference release feed.
         var releaseFeed = new AzureDevOpsFeed(account, "0", ReleaseFeedName, someProject)
         {
-            Packages = new List<AzureDevOpsPackage>()
-            {
+            Packages =
+            [
                 new AzureDevOpsPackage("releasedPackage1", "nuget")
                 {
                     Versions = new AzureDevOpsPackageVersion[]
@@ -243,14 +243,14 @@ public class FeedCleanerServiceTests : IDisposable
                         new AzureDevOpsPackageVersion("2.0", isDeleted: false),
                     }
                 }
-            }
+            ]
         };
         allFeeds.Add(releaseFeed.Name, releaseFeed);
 
         var managedFeedWithUnreleasedPackages = new AzureDevOpsFeed(account, "1", FeedWithUnreleasedPackagesName, null)
         {
-            Packages = new List<AzureDevOpsPackage>()
-            {
+            Packages =
+            [
                 new AzureDevOpsPackage("unreleasedPackage1", "nuget")
                 {
                     Versions = new AzureDevOpsPackageVersion[]
@@ -265,14 +265,14 @@ public class FeedCleanerServiceTests : IDisposable
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
                     }
                 }
-            }
+            ]
         };
         allFeeds.Add(managedFeedWithUnreleasedPackages.Name, managedFeedWithUnreleasedPackages);
 
         var managedFeedWithEveryPackageReleased = new AzureDevOpsFeed(account, "2", FeedWithAllPackagesReleasedName, someProject)
         {
-            Packages = new List<AzureDevOpsPackage>()
-            {
+            Packages =
+            [
                 new AzureDevOpsPackage("Newtonsoft.Json", "nuget")
                 {
                     Versions = new AzureDevOpsPackageVersion[]
@@ -295,15 +295,15 @@ public class FeedCleanerServiceTests : IDisposable
                         new AzureDevOpsPackageVersion("2.0", false)
                     }
                 }
-            }
+            ]
         };
         allFeeds.Add(managedFeedWithEveryPackageReleased.Name, managedFeedWithEveryPackageReleased);
 
         // add a feed with all released packages, but that doesn't match the name pattern. It shouldn't be touched by the cleaner.
         var nonManagedFeedWithEveryPackageReleased = new AzureDevOpsFeed(account, "3", UnmanagedFeedName, someProject)
         {
-            Packages = new List<AzureDevOpsPackage>()
-            {
+            Packages =
+            [
                 new AzureDevOpsPackage("Newtonsoft.Json", "nuget")
                 {
                     Versions = new AzureDevOpsPackageVersion[]
@@ -326,7 +326,7 @@ public class FeedCleanerServiceTests : IDisposable
                         new AzureDevOpsPackageVersion("2.0", isDeleted: false)
                     }
                 }
-            }
+            ]
         };
         allFeeds.Add(nonManagedFeedWithEveryPackageReleased.Name, nonManagedFeedWithEveryPackageReleased);
 

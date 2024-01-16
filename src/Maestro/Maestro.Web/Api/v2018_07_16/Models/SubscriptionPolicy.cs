@@ -61,7 +61,7 @@ public class SubscriptionPolicy : IValidatableObject
         return new Data.Models.SubscriptionPolicy
         {
             Batchable = Batchable,
-            MergePolicies = MergePolicies?.Select(p => p.ToDb()).ToList() ?? new List<MergePolicyDefinition>(),
+            MergePolicies = MergePolicies?.Select(p => p.ToDb()).ToList() ?? [],
             UpdateFrequency = (Data.Models.UpdateFrequency) (int) UpdateFrequency
         };
     }

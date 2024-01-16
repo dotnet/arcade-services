@@ -20,21 +20,21 @@ public class Constants
     /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
     /// through the generated API client.  When/if they ever are, this can be removed.
     /// </summary>
-    public static readonly List<string> AvailableFrequencies = new List<string>
-    {
+    public static readonly List<string> AvailableFrequencies =
+    [
         "none",
         "everyDay",
         "everyBuild",
         "twiceDaily",
         "everyWeek",
-    };
+    ];
 
     /// <summary>
     /// This maybe should be implemented in the API in the future, help info for the available merge policies.  For now,
     /// this is just generic help for available merge policies
     /// </summary>
-    public static readonly List<string> AvailableMergePolicyYamlHelp = new List<string>
-    {
+    public static readonly List<string> AvailableMergePolicyYamlHelp =
+    [
         "Merge policies are an optional set of rules that, if satisfied, mean that an",
         "auto-update PR will be automatically merged. A PR is only merged automatically if policies",
         "exist and all are satisfied.",
@@ -82,5 +82,5 @@ public class Constants
         "YAML format:",
         $"- Name: {MergePolicyConstants.ValidateCoherencyMergePolicyName}",
 
-    };
+    ];
 }

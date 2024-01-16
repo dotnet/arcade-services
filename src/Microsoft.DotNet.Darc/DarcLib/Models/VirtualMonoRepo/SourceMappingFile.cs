@@ -40,7 +40,7 @@ public class SourceMappingFile
     /// <summary>
     /// Each of these mappings has a corresponding folder in the src/ directory
     /// </summary>
-    public List<SourceMappingSetting> Mappings { get; set; } = new();
+    public List<SourceMappingSetting> Mappings { get; set; } = [];
 
     /// <summary>
     /// Some files are copied outside of the src/ directory into other locations

@@ -93,7 +93,7 @@ public static class SharedKustoQueries
         {
             return (-1, default(TimeSpan));
         }
-        Dictionary<int, TimeSpan> buildTimeResults = new Dictionary<int, TimeSpan>();
+        Dictionary<int, TimeSpan> buildTimeResults = [];
 
         while (reader.Read())
         {

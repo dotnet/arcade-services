@@ -18,10 +18,10 @@ public class MockBuildEngine : IBuildEngine
 
     public string ProjectFileOfTaskNode => "Fake File";
 
-    public List<CustomBuildEventArgs> CustomBuildEvents = new List<CustomBuildEventArgs>();
-    public List<BuildErrorEventArgs> BuildErrorEvents = new List<BuildErrorEventArgs>();
-    public List<BuildMessageEventArgs> BuildMessageEvents = new List<BuildMessageEventArgs>();
-    public List<BuildWarningEventArgs> BuildWarningEvents = new List<BuildWarningEventArgs>();
+    public List<CustomBuildEventArgs> CustomBuildEvents = [];
+    public List<BuildErrorEventArgs> BuildErrorEvents = [];
+    public List<BuildMessageEventArgs> BuildMessageEvents = [];
+    public List<BuildWarningEventArgs> BuildWarningEvents = [];
 
     public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties, IDictionary targetOutputs)
     {

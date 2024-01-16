@@ -12,7 +12,7 @@ namespace SubscriptionActorService;
 public static class ActionMethods
 {
     public static ConditionalWeakTable<Type, IImmutableDictionary<string, ActionMethod>> _cache =
-        new ConditionalWeakTable<Type, IImmutableDictionary<string, ActionMethod>>();
+        [];
 
     public static IImmutableDictionary<string, ActionMethod> Get<T>()
     {

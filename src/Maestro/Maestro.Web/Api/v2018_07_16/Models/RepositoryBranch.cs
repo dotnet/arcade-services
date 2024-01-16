@@ -16,7 +16,7 @@ public class RepositoryBranch : IValidatableObject
     {
         Repository = other.RepositoryName;
         Branch = other.BranchName;
-        MergePolicies = (other.PolicyObject?.MergePolicies ?? new List<Data.Models.MergePolicyDefinition>()).Select(p => new MergePolicy(p)).ToImmutableList();
+        MergePolicies = (other.PolicyObject?.MergePolicies ?? []).Select(p => new MergePolicy(p)).ToImmutableList();
     }
 
     public string Repository { get; set; }

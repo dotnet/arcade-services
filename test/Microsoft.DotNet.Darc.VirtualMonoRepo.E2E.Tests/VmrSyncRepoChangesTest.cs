@@ -267,8 +267,8 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var sourceMappings = new SourceMappingFile()
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.DependencyRepoName,
@@ -279,7 +279,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            }
+            ]
         };
 
         sourceMappings.Defaults.Exclude = new[] 
