@@ -123,7 +123,7 @@ public class ActionRunner : IActionRunner
         return default;
     }
 
-    private IEnumerable<object> GetArguments(IEnumerable<Expression> arguments)
+    private static IEnumerable<object> GetArguments(IEnumerable<Expression> arguments)
     {
         foreach (Expression argument in arguments)
         {

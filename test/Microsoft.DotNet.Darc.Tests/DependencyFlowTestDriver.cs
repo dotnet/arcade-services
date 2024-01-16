@@ -74,7 +74,7 @@ internal class DependencyFlowTestDriver
         return flowGraph;
     }
 
-    public void AssertFlowNodeListIsEqual(IEnumerable<DependencyFlowNode> nodes, IEnumerable<DependencyFlowNode> expectedNodes)
+    public static void AssertFlowNodeListIsEqual(IEnumerable<DependencyFlowNode> nodes, IEnumerable<DependencyFlowNode> expectedNodes)
     {
         // Check that we have all of the expected nodes
         foreach (var expectedNode in expectedNodes)
@@ -127,7 +127,7 @@ internal class DependencyFlowTestDriver
         }
     }
 
-    public void AssertFlowEdgeIsEqual(DependencyFlowEdge edge, DependencyFlowEdge expectedEdge)
+    public static void AssertFlowEdgeIsEqual(DependencyFlowEdge edge, DependencyFlowEdge expectedEdge)
     {
         AssertFlowNodeIsEqual(edge.To, expectedEdge.To);
         AssertFlowNodeIsEqual(edge.From, expectedEdge.From);
@@ -145,7 +145,7 @@ internal class DependencyFlowTestDriver
         DependencyFlowGraph expectedGraph = JsonConvert.DeserializeObject<DependencyFlowGraph>(
             File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, OutputJsonFile)));
 
-        dependencyFlowTestDriver.AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
+        AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
         dependencyFlowTestDriver.AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);
     }
 }

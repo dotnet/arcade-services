@@ -293,7 +293,7 @@ internal class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private async Task<int> CoherencyUpdatesAsync(
+    private static async Task<int> CoherencyUpdatesAsync(
         ICoherencyUpdateResolver updateResolver,
         IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,

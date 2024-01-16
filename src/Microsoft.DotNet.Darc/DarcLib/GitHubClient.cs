@@ -472,7 +472,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="result">The evaluation of the merge policy</param>
     /// <param name="sha">Sha of the latest commit</param>
     /// <returns>The new check run</returns>
-    private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
+    private static NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
     {
         var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha)
         {
@@ -488,7 +488,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
     /// <param name="eval">The result of that updated check run</param>
     /// <returns>The updated CheckRun</returns>
-    private CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
+    private static CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
     {
         CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
         UpdateCheckRun(updatedCheckRun, eval);

@@ -107,7 +107,7 @@ internal abstract class VmrTestsBase
         return expectedFiles;
     }
 
-    protected void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
+    protected static void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
     {
         var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
         filesInDir.Should().BeEquivalentTo(expectedFiles);

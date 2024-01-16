@@ -232,7 +232,7 @@ public partial class Startup
         }
     }
 
-    private async Task UpdateUserIfNeededAsync(ApplicationUser user,
+    private static async Task UpdateUserIfNeededAsync(ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,

@@ -417,7 +417,7 @@ internal class GetDependencyGraphOperation : Operation
         }
     }
 
-    private async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
+    private static async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
     {
         await LogBasicNodeDetails(writer, currentNode, indent);
         foreach (DependencyGraphNode parentNode in currentNode.Parents)

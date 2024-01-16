@@ -465,7 +465,7 @@ public class GitHubClientTests
         return data;
     }
 
-    private PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
+    private static PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
     {
         return new PullRequestReview(
             0,

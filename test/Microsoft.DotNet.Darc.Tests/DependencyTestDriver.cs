@@ -188,7 +188,7 @@ internal class DependencyTestDriver
             graphDocument.Load(Path.Combine(dependencyTestDriver.RootInputsPath, expectedGraphFile));
 
             // Compare the root node
-            dependencyTestDriver.AssertDependencyGraphNodeIsEqual(dependencyGraph.Root, graphDocument.SelectSingleNode("//RootNode/DependencyGraphNode"));
+            AssertDependencyGraphNodeIsEqual(dependencyGraph.Root, graphDocument.SelectSingleNode("//RootNode/DependencyGraphNode"));
 
             // Compare all the nodes
             XmlNodeList allNodes = graphDocument.SelectNodes("//AllNodes/DependencyGraphNode");
@@ -236,7 +236,7 @@ internal class DependencyTestDriver
         }
     }
 
-    private void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
+    private static void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
     {
         // Check root commit info
         xmlNode.SelectSingleNode("RepoUri").InnerText.Should().Be(graphNode.Repository);
