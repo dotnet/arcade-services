@@ -172,7 +172,7 @@ public class PullRequestDescriptionBuilder
         //example: given [23]:sometext as input, it will attempt to capture "23"
         Regex regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
 
-        return regex.Matches(_description.ToString()).Select(m => Int32.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
+        return regex.Matches(_description.ToString()).Select(m => int.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
     }
 
     public static string GetChangesURI(string repoURI, string fromSha, string toSha)

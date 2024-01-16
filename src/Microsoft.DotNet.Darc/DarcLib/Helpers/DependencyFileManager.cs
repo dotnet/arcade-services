@@ -1141,8 +1141,8 @@ public class DependencyFileManager : IDependencyFileManager
                     var element = property as XmlElement;
                     var propertyName = element.Name;
 
-                    propertyName = Regex.Replace(propertyName, @"PackageVersion$", String.Empty);
-                    propertyName = Regex.Replace(propertyName, @"Version$", String.Empty);
+                    propertyName = Regex.Replace(propertyName, @"PackageVersion$", string.Empty);
+                    propertyName = Regex.Replace(propertyName, @"Version$", string.Empty);
 
                     propertyName += element.GetAttribute("Condition");
                     propertyName += element.GetAttribute("condition");

@@ -24,7 +24,7 @@ public class GoalController : v2019_01_16.Controllers.GoalController
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] String channelName, [Required] int definitionId)
+    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         throw new NotImplementedException();
     }
@@ -39,7 +39,7 @@ public class GoalController : v2019_01_16.Controllers.GoalController
     [HttpPut("channelName/{channelName}/definitionId/{definitionId}")]
     [SwaggerApiResponse(System.Net.HttpStatusCode.OK, Type = typeof(Models.Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
     [ValidateModelState]
-    public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData, [Required] String channelName, [Required] int definitionId)
+    public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         Data.Models.Channel channel = await _context.Channels
             .FirstOrDefaultAsync(c => c.Name == channelName);

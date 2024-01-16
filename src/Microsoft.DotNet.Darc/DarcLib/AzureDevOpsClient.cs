@@ -971,7 +971,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         return (m.Groups["account"].Value,
             m.Groups["project"].Value,
             m.Groups["repo"].Value,
-            Int32.Parse(m.Groups["id"].Value));
+            int.Parse(m.Groups["id"].Value));
     }
 
     /// <summary>

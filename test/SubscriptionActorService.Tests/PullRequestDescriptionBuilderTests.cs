@@ -121,7 +121,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update1, deps1, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
 
-        String description = pullRequestDescriptionBuilder.ToString();
+        string description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));
@@ -143,7 +143,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         pullRequestDescriptionBuilder.AppendBuildDescription(update2, deps2, null, build);
         pullRequestDescriptionBuilder.AppendBuildDescription(update3, deps3, null, build);
 
-        String description = pullRequestDescriptionBuilder.ToString();
+        string description = pullRequestDescriptionBuilder.ToString();
 
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps1, 1));
         description.Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps2, 3));

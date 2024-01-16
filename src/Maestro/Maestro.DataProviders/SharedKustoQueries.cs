@@ -97,7 +97,7 @@ public static class SharedKustoQueries
 
         while (reader.Read())
         {
-            int definitionId = Int32.Parse(reader.GetString(0));
+            int definitionId = int.Parse(reader.GetString(0));
             TimeSpan duration = (TimeSpan) reader.GetValue(1);
             buildTimeResults[definitionId] = duration;
         }
