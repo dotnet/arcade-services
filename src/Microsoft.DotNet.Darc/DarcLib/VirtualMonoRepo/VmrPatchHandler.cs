@@ -265,7 +265,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _logger.LogInformation("Applying patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(targetDirectory, new[] { "config", "apply.ignoreWhitespace", "change" }, cancellationToken: cancellationToken))
+        (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         var args = new List<string>
@@ -329,7 +329,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             return files;
         }
 
-        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, new string[] { "apply", "--numstat", patchPath }, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(_vmrInfo.VmrPath, ["apply", "--numstat", patchPath], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
         foreach (var line in result.StandardOutput.Split(Environment.NewLine))

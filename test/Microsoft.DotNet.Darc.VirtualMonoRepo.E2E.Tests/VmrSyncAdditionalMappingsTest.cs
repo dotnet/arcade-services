@@ -35,7 +35,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName },
+            [Constants.ProductRepoName],
             expectedFilesFromRepos
         );
 
@@ -90,13 +90,13 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
             ]
         };
 
-        sourceMappings.Defaults.Exclude = new[]
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }

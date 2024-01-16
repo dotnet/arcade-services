@@ -906,7 +906,7 @@ public class DependencyGraph
     private static async Task<string> GitShowAsync(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
     {
         var processManager = new ProcessManager(logger, gitLocation);
-        var result = await processManager.ExecuteGit(repoFolderPath, new[] { "show", $"{commit}:{fileName}" });
+        var result = await processManager.ExecuteGit(repoFolderPath, ["show", $"{commit}:{fileName}"]);
 
         if (!result.Succeeded || string.IsNullOrEmpty(result.StandardOutput))
         {

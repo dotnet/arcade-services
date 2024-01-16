@@ -229,19 +229,19 @@ public class FeedCleanerServiceTests : IDisposable
             [
                 new AzureDevOpsPackage("releasedPackage1", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
                         new AzureDevOpsPackageVersion("2.0", isDeleted: true),
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage2", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
                         new AzureDevOpsPackageVersion("2.0", isDeleted: false),
-                    }
+                    ]
                 }
             ]
         };
@@ -253,17 +253,17 @@ public class FeedCleanerServiceTests : IDisposable
             [
                 new AzureDevOpsPackage("unreleasedPackage1", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false)
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage1", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
-                    }
+                    ]
                 }
             ]
         };
@@ -275,25 +275,25 @@ public class FeedCleanerServiceTests : IDisposable
             [
                 new AzureDevOpsPackage("Newtonsoft.Json", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("12.0.2", isDeleted: false)
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage1", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false)
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage2", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
                         new AzureDevOpsPackageVersion("2.0", false)
-                    }
+                    ]
                 }
             ]
         };
@@ -306,25 +306,25 @@ public class FeedCleanerServiceTests : IDisposable
             [
                 new AzureDevOpsPackage("Newtonsoft.Json", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("12.0.2", isDeleted: false)
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage1", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false)
-                    }
+                    ]
                 },
                 new AzureDevOpsPackage("releasedPackage2", "nuget")
                 {
-                    Versions = new AzureDevOpsPackageVersion[]
-                    {
+                    Versions =
+                    [
                         new AzureDevOpsPackageVersion("1.0", isDeleted: false),
                         new AzureDevOpsPackageVersion("2.0", isDeleted: false)
-                    }
+                    ]
                 }
             ]
         };

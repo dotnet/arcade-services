@@ -170,8 +170,8 @@ public partial class DefaultChannelsController20200220Tests
             defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
         }
 
-        string[] branchesThatMatch = new string[] { "FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2" };
-        string[] branchesThatDontMatch = new string[] { "I-DONT-MATCH", "REAL-BRANCH-REGEX" };
+        string[] branchesThatMatch = ["FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2"];
+        string[] branchesThatDontMatch = ["I-DONT-MATCH", "REAL-BRANCH-REGEX"];
 
         foreach (string branchName in branchesThatMatch)
         {

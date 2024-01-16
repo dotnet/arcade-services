@@ -1054,7 +1054,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
         {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
+            releaseDefinition.Artifacts = [
                 new AzureDevOpsArtifact()
                 {
                     Alias = "PrimaryArtifact",
@@ -1083,7 +1083,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                         }
                     }
                 }
-            };
+            ];
         }
         else if (releaseDefinition.Artifacts.Count() == 1)
         {

@@ -50,7 +50,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName, Constants.ProductRepoName },
+            [Constants.InstallerRepoName, Constants.ProductRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -82,13 +82,13 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName },
+            [Constants.InstallerRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
-        versions.Versions.Keys.Should().BeEquivalentTo(new string[] { "installerGitCommitHash" });
+        versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
 
         var sourceManifest = SourceManifest.FromJson(Info.SourceManifestPath);
         sourceManifest.Repositories.Should().HaveCount(1);

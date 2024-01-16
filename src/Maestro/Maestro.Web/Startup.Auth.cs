@@ -159,7 +159,7 @@ public partial class Startup
                         // replace the ClaimsPrincipal we are about to serialize to the cookie with a reference
                         Claim claim = ctx.Principal.Claims.First(
                             c => c.Type == identityOptions.ClaimsIdentity.UserIdClaimType);
-                        Claim[] claims = {claim};
+                        Claim[] claims = [claim];
                         var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
                         ctx.Principal = new ClaimsPrincipal(identity);
                     },

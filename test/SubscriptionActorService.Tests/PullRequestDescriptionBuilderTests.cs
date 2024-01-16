@@ -198,12 +198,12 @@ matches
 ";
 
     static object[] RegexTestCases =
-    {
+    [
         new object[] { regexTestString1, 43},
         new object[] { regexTestString2, 1},
         new object[] { regexTestString3, 1},
         new object [] { regexTestString4, 5},
-    };
+    ];
 
     public void ShouldReturnCorrectChangesURIForGitHub()
     {

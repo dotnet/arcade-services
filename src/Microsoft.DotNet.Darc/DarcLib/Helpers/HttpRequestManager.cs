@@ -50,12 +50,12 @@ public class HttpRequestManager
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
-        HttpStatusCode[] stopRetriesHttpStatusCodes = new HttpStatusCode[] {
+        HttpStatusCode[] stopRetriesHttpStatusCodes = [
             HttpStatusCode.NotFound,
             HttpStatusCode.UnprocessableEntity,
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized,
-            HttpStatusCode.Forbidden };
+            HttpStatusCode.Forbidden ];
 
         while (true)
         {

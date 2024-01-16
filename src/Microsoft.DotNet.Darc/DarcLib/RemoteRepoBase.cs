@@ -117,11 +117,11 @@ public class RemoteRepoBase : GitRepoCloner
                     File.Delete(filePath);
                 }
 
-                await _processManager.ExecuteGit(clonedRepo, new[] { "add", filePath });
+                await _processManager.ExecuteGit(clonedRepo, ["add", filePath]);
             }
 
-            await _processManager.ExecuteGit(clonedRepo, new[] { "commit", "--allow-empty", "-m", commitMessage });
-            await _processManager.ExecuteGit(clonedRepo, new[] { "-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch });
+            await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "-m", commitMessage]);
+            await _processManager.ExecuteGit(clonedRepo, ["-c", "core.askpass=", "-c", "credential.helper=", "push", remote, branch]);
         }
         catch (Exception exc)
         {
@@ -174,21 +174,21 @@ public class RemoteRepoBase : GitRepoCloner
     {
         Directory.CreateDirectory(workingDirectory);
 
-        await ExecuteGitCommand(new[] { "init", repoFolderName }, workingDirectory);
+        await ExecuteGitCommand(["init", repoFolderName], workingDirectory);
 
         workingDirectory = Path.Combine(workingDirectory, repoFolderName);
         repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
 
-        await ExecuteGitCommand(new[] { "remote", "add", remote, repoUri }, workingDirectory, secretToMask: pat);
-        await ExecuteGitCommand(new[] { "config", "core.sparsecheckout", "true" }, workingDirectory);
-        await ExecuteGitCommand(new[] { "config", "core.longpaths", "true" }, workingDirectory);
-        await ExecuteGitCommand(new[] { "config", "user.name", user }, workingDirectory);
-        await ExecuteGitCommand(new[] { "config", "user.email", email }, workingDirectory);
+        await ExecuteGitCommand(["remote", "add", remote, repoUri], workingDirectory, secretToMask: pat);
+        await ExecuteGitCommand(["config", "core.sparsecheckout", "true"], workingDirectory);
+        await ExecuteGitCommand(["config", "core.longpaths", "true"], workingDirectory);
+        await ExecuteGitCommand(["config", "user.name", user], workingDirectory);
+        await ExecuteGitCommand(["config", "user.email", email], workingDirectory);
 
-        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), ["eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}"]);
 
-        await ExecuteGitCommand(new[] { $"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch }, workingDirectory, secretToMask: pat);
-        await ExecuteGitCommand(new[] { $"checkout", branch }, workingDirectory);
+        await ExecuteGitCommand([$"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch], workingDirectory, secretToMask: pat);
+        await ExecuteGitCommand([$"checkout", branch], workingDirectory);
 
         return workingDirectory;
     }

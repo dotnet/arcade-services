@@ -49,7 +49,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -80,7 +80,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -121,7 +121,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -159,7 +159,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         List<LocalPath> expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -282,13 +282,13 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             ]
         };
 
-        sourceMappings.Defaults.Exclude = new[] 
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "externals/external-repo/**/*.exe", 
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }
@@ -305,7 +305,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 

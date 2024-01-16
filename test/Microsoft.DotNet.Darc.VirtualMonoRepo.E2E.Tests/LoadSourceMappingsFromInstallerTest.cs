@@ -45,7 +45,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName },
+            [Constants.InstallerRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -59,7 +59,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
             {
                 Name = Constants.InstallerRepoName,
                 DefaultRemote = InstallerRepoPath,
-                Exclude = new[] { "src/*.dll", "src/*.exe" }
+                Exclude = ["src/*.dll", "src/*.exe"]
             }
         ];
 
@@ -91,7 +91,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName },
+            [Constants.InstallerRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -122,11 +122,10 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 
         expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[]
-            {
+            [
                 Constants.InstallerRepoName,
                 Constants.ProductRepoName,
-            },
+            ],
             expectedFilesFromRepos);
 
         expectedFiles.Add(VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName));
@@ -156,7 +155,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
                 {
                     Name = Constants.InstallerRepoName,
                     DefaultRemote = InstallerRepoPath,
-                    Exclude = new[] { "src/*.dll" }
+                    Exclude = ["src/*.dll"]
                 },
             ]
         };

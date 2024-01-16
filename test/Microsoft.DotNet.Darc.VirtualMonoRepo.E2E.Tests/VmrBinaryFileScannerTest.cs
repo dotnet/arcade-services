@@ -74,10 +74,10 @@ internal class VmrBinaryFileScannerTest : VmrTestsBase
             ]
         };
 
-        sourceMappings.Defaults.Exclude = new[]
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "**/*.dll"
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }

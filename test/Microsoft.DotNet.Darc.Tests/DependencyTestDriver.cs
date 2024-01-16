@@ -69,9 +69,9 @@ internal class DependencyTestDriver
         _versionDetailsParser = new VersionDetailsParser();
         DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["init"]);
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.email", DarcLib.Constants.DarcBotEmail]);
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.name", DarcLib.Constants.DarcBotName]);
         await GitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
         await GitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }

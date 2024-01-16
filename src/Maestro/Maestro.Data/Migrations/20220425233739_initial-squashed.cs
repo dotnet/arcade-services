@@ -586,7 +586,7 @@ namespace Maestro.Data.Migrations
                         name: "FK_RepositoryBranchUpdates_RepositoryBranches_RepositoryName_BranchName",
                         columns: x => new { x.RepositoryName, x.BranchName },
                         principalTable: "RepositoryBranches",
-                        principalColumns: new[] { "RepositoryName", "BranchName" },
+                        principalColumns: ["RepositoryName", "BranchName"],
                         onDelete: ReferentialAction.Restrict);
                 })
                 .Annotation("SqlServer:IsTemporal", true)
@@ -620,7 +620,7 @@ namespace Maestro.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserPersonalAccessTokens_ApplicationUserId_Name",
                 table: "AspNetUserPersonalAccessTokens",
-                columns: new[] { "ApplicationUserId", "Name" },
+                columns: ["ApplicationUserId", "Name"],
                 unique: true,
                 filter: "[Name] IS NOT NULL");
 
@@ -654,7 +654,7 @@ namespace Maestro.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Assets_Name_Version",
                 table: "Assets",
-                columns: new[] { "Name", "Version" });
+                columns: ["Name", "Version"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_BuildChannels_ChannelId",
@@ -685,7 +685,7 @@ namespace Maestro.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_DefaultChannels_Repository_Branch_ChannelId",
                 table: "DefaultChannels",
-                columns: new[] { "Repository", "Branch", "ChannelId" },
+                columns: ["Repository", "Branch", "ChannelId"],
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -706,12 +706,12 @@ namespace Maestro.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_RepositoryBranchUpdateHistory_RepositoryName_BranchName_SysEndTime_SysStartTime",
                 table: "RepositoryBranchUpdateHistory",
-                columns: new[] { "RepositoryName", "BranchName", "SysEndTime", "SysStartTime" });
+                columns: ["RepositoryName", "BranchName", "SysEndTime", "SysStartTime"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepositoryBranchUpdateHistory_SysEndTime_SysStartTime",
                 table: "RepositoryBranchUpdateHistory",
-                columns: new[] { "SysEndTime", "SysStartTime" })
+                columns: ["SysEndTime", "SysStartTime"])
                 .Annotation("SqlServer:Clustered", true);
 
             migrationBuilder.CreateIndex(
@@ -727,12 +727,12 @@ namespace Maestro.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionUpdateHistory_SubscriptionId_SysEndTime_SysStartTime",
                 table: "SubscriptionUpdateHistory",
-                columns: new[] { "SubscriptionId", "SysEndTime", "SysStartTime" });
+                columns: ["SubscriptionId", "SysEndTime", "SysStartTime"]);
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionUpdateHistory_SysEndTime_SysStartTime",
                 table: "SubscriptionUpdateHistory",
-                columns: new[] { "SysEndTime", "SysStartTime" })
+                columns: ["SysEndTime", "SysStartTime"])
                 .Annotation("SqlServer:Clustered", true);
 
             migrationBuilder.Sql(

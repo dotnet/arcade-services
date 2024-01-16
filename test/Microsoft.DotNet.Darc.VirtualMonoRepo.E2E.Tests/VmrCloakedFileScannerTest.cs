@@ -73,10 +73,10 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
             ]
         };
 
-        sourceMappings.Defaults.Exclude = new[]
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "**/*.dll"
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }

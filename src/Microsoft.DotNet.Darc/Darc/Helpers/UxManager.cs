@@ -204,7 +204,7 @@ public class UxManager
 
     private async Task<string> GetEditorPathAsync()
     {
-        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "config", "--get", "core.editor" });
+        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["config", "--get", "core.editor"]);
         string editor = result.StandardOutput;
 
         // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
@@ -213,12 +213,12 @@ public class UxManager
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "where", "notepad" });
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["where", "notepad"]);
                 editor = result.StandardOutput;
             }
             else
             {
-                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "which", "vi" });
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["which", "vi"]);
                 editor = result.StandardOutput;
             }
         }

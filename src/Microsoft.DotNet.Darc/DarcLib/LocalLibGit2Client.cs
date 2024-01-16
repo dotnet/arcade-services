@@ -111,7 +111,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         const string lf = "\n";
 
         // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
+        var result = await _processManager.ExecuteGit(repoPath, ["check-attr", "eol", "--", filePath]);
         result.ThrowIfFailed($"Failed to determine eol for {filePath}");
 
         string eofAttr = result.StandardOutput.Trim();

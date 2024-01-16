@@ -43,7 +43,7 @@ public class ActionRunner : IActionRunner
 
         object[] args = actionMethod.DeserializeArguments(arguments);
         return (Task<string>) InvokeActionNoResultMethod.MakeGenericMethod(actionMethod.ResultType)
-            .Invoke(this, new object[] {tracker, actionMethod, args});
+            .Invoke(this, [tracker, actionMethod, args]);
     }
 
     public async Task<T> ExecuteAction<T>(Expression<Func<Task<ActionResult<T>>>> actionExpression)

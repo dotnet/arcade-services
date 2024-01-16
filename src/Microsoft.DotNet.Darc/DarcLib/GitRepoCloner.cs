@@ -133,7 +133,7 @@ public class GitRepoCloner : IGitRepoCloner
 
             log.LogDebug($"Submodule {sub.Name} has .gitdir {relativeGitDirPath}");
             string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
-            string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+            string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(['/', '\\']), gitDirParentPath.TrimEnd(['/', '\\']));
             string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
 
             log.LogDebug($"Writing new .gitdir path {relocatedGitDirPath} to submodule at {subRepoPath}");
