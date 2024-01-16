@@ -188,15 +188,15 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(commit))
             {
-                _url.AppendQuery("commit", Client.Serialize(commit));
+                _url.AppendQuery("commit", MaestroApi.Serialize(commit));
             }
             if (!string.IsNullOrEmpty(buildNumber))
             {
-                _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
+                _url.AppendQuery("buildNumber", MaestroApi.Serialize(buildNumber));
             }
             if (azdoBuildId != default)
             {
@@ -204,11 +204,11 @@ namespace Microsoft.DotNet.Maestro.Client
             }
             if (!string.IsNullOrEmpty(azdoAccount))
             {
-                _url.AppendQuery("azdoAccount", Client.Serialize(azdoAccount));
+                _url.AppendQuery("azdoAccount", MaestroApi.Serialize(azdoAccount));
             }
             if (!string.IsNullOrEmpty(azdoProject))
             {
-                _url.AppendQuery("azdoProject", Client.Serialize(azdoProject));
+                _url.AppendQuery("azdoProject", MaestroApi.Serialize(azdoProject));
             }
             if (channelId != default)
             {
@@ -234,7 +234,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -314,7 +314,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/builds",
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -387,10 +387,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/builds/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/builds/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -457,10 +457,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/builds/{id}/graph".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/builds/{id}/graph".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -538,15 +538,15 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(commit))
             {
-                _url.AppendQuery("commit", Client.Serialize(commit));
+                _url.AppendQuery("commit", MaestroApi.Serialize(commit));
             }
             if (!string.IsNullOrEmpty(buildNumber))
             {
-                _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
+                _url.AppendQuery("buildNumber", MaestroApi.Serialize(buildNumber));
             }
             if (channelId != default)
             {
@@ -564,7 +564,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -631,10 +631,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/builds/{buildId}/commit".Replace("{buildId}", Uri.EscapeDataString(Client.Serialize(buildId))),
+                "/api/builds/{buildId}/commit".Replace("{buildId}", Uri.EscapeDataString(MaestroApi.Serialize(buildId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -707,10 +707,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/builds/{buildId}".Replace("{buildId}", Uri.EscapeDataString(Client.Serialize(buildId))),
+                "/api/builds/{buildId}".Replace("{buildId}", Uri.EscapeDataString(MaestroApi.Serialize(buildId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

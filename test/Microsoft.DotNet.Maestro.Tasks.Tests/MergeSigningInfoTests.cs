@@ -265,35 +265,35 @@ public class MergeSigningInfoTests
     [Test]
     public void GivenCompatibleSigningInfo()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2).ToList());
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo2).ToList());
         actualMerged.Should().BeEquivalentTo(ExpectedMergedSigningInfo);
     }
 
     [Test]
     public void GivenDuplicateSigningInfo()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo).ToList());
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo(ExpectedSigningInfo.Concat(ExpectedSigningInfo).ToList());
         actualMerged.Should().BeEquivalentTo(ExpectedSigningInfo.First());
     }
 
     [Test]
     public void GivenTwoPartialSigningInfosWithEmptySections()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo([PartialSigningInfo2, PartialSigningInfo4]);
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo([PartialSigningInfo2, PartialSigningInfo4]);
         actualMerged.Should().BeEquivalentTo(MergedPartialMetadataSigningInfos);
     }
 
     [Test]
     public void GivenNullSigningInfoList()
     {
-        Action act = () => pushMetadata.MergeSigningInfo(null);
+        Action act = () => PushMetadataToBuildAssetRegistry.MergeSigningInfo(null);
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Test]
     public void GivenEmptySigningInfoList()
     {
-        SigningInformation actualMerged = pushMetadata.MergeSigningInfo([]);
+        SigningInformation actualMerged = PushMetadataToBuildAssetRegistry.MergeSigningInfo([]);
         actualMerged.Should().Be(null);
     }
 }

@@ -199,7 +199,7 @@ public class PullRequestDescriptionBuilder
         return _description.ToString();
     }
 
-    private StringBuilder GetDescriptionStringBuilder(string description)
+    private static StringBuilder GetDescriptionStringBuilder(string description)
     {
         if(string.IsNullOrEmpty(description))
         {

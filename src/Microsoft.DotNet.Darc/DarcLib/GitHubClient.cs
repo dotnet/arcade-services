@@ -425,7 +425,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="mergePolicyName">Name of the merge policy</param>
     /// <param name="sha">Sha of the latest commit in the PR</param>
-    private string CheckRunId(MergePolicyEvaluationResult result, string sha)
+    private static string CheckRunId(MergePolicyEvaluationResult result, string sha)
     {
         return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
     }
@@ -498,7 +498,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="checkRun">The check run that needs to be deleted</param>
     /// <returns>The deleted check run</returns>
-    private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
+    private static CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
     {
         CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
         updatedCheckRun.CompletedAt = checkRun.CompletedAt;
@@ -512,7 +512,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
     /// <param name="result">The result of that new check run</param>
-    private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
+    private static void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
     {
         var output = FormatOutput(result);
         newCheckRun.Output = output;
@@ -544,7 +544,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
     /// <param name="result">The result of that new check run</param>
-    private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
+    private static void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
     {
         var output = FormatOutput(result);
         newUpdateCheckRun.Output = output;
@@ -916,7 +916,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
     }
 
-    private ReviewState TranslateReviewState(PullRequestReviewState state)
+    private static ReviewState TranslateReviewState(PullRequestReviewState state)
     {
         return state switch
         {

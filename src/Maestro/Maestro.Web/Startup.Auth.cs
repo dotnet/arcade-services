@@ -262,13 +262,13 @@ public partial class Startup
         }
     }
 
-    private bool ShouldUpdateUser(ApplicationUser user)
+    private static bool ShouldUpdateUser(ApplicationUser user)
     {
         // If we haven't updated the user in the last 30 minutes
         return DateTimeOffset.UtcNow - user.LastUpdated > new TimeSpan(0, 30, 0);
     }
 
-    private async Task UpdateUserAsync(ApplicationUser user,
+    private static async Task UpdateUserAsync(ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,

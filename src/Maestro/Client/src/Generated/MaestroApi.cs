@@ -169,43 +169,43 @@ namespace Microsoft.DotNet.Maestro.Client
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(string value)
+        public static string Serialize(string value)
         {
             return value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(bool value)
+        public static string Serialize(bool value)
         {
             return value ? "true" : "false";
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(int value)
+        public static string Serialize(int value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(long value)
+        public static string Serialize(long value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(float value)
+        public static string Serialize(float value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(double value)
+        public static string Serialize(double value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string Serialize(Guid value)
+        public static string Serialize(Guid value)
         {
             return value.ToString("D", CultureInfo.InvariantCulture);
         }

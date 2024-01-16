@@ -481,7 +481,7 @@ public class GitHubClientTests
             reviewTime);
     }
 
-    private User GetFakeUser(string userId)
+    private static User GetFakeUser(string userId)
     {
         // We mostly only care about the user's login id (userId)", this ctor is huge, sorry about that.
         return new User(null, null, null, 0, null, DateTimeOffset.MinValue, DateTimeOffset.MinValue,

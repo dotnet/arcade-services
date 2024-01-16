@@ -131,7 +131,7 @@ class CreateMergedManifestBuildModelTests
         IsStable = isStable
     };
 
-    private PushMetadataToBuildAssetRegistry GetPushMetadata()
+    private static PushMetadataToBuildAssetRegistry GetPushMetadata()
     {
         Mock<IGetEnvProxy> getEnvMock = new Mock<IGetEnvProxy>();
         getEnvMock.Setup(a => a.GetEnv("BUILD_REPOSITORY_NAME")).Returns(buildRepoName);

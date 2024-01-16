@@ -54,7 +54,7 @@ public class ActionRunner : IActionRunner
         }
 
         MethodInfo methodInfo = mce.Method;
-        var target = (IActionTracker) GetValue(mce.Object);
+        var target = (IActionTracker)GetValue(mce.Object);
         ActionMethod method = ActionMethods.Get(target.GetType())[methodInfo.Name];
         object[] arguments = GetArguments(mce.Arguments).ToArray();
         ActionResult<T> result = await InvokeAction<T>(target, method, arguments);
@@ -66,7 +66,7 @@ public class ActionRunner : IActionRunner
         return result.Result;
     }
 
-    private bool IsDisplayableException(Exception ex)
+    private static bool IsDisplayableException(Exception ex)
     {
         return ex is DarcException || ex is SubscriptionException;
     }
@@ -131,7 +131,7 @@ public class ActionRunner : IActionRunner
         }
     }
 
-    private object GetValue(Expression argument)
+    private static object GetValue(Expression argument)
     {
         switch (argument.NodeType)
         {

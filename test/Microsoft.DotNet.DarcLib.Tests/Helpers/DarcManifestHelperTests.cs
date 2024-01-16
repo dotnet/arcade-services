@@ -127,7 +127,7 @@ public class DarcManifestHelperTests
         }
     }
 
-    private void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
+    private static void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
     {
         extraAssetsNode.Children().Count().Should().Be(2);
         extraAssetsNode[0]["name"].Value<string>().Should().Be("FakeExtraAssetOne");
@@ -157,7 +157,7 @@ public class DarcManifestHelperTests
         }
     }
 
-    private void CheckExpectedDependencies(JToken dependenciesNode)
+    private static void CheckExpectedDependencies(JToken dependenciesNode)
     {
         dependenciesNode.Children().Count().Should().Be(2);
         dependenciesNode.Children().ToArray()[0]["commit"].Value<string>().Should().Be("fakehash1");

@@ -21,7 +21,7 @@ public class AddAssetTests
         List<AssetData> assetData = [];
         AssetData expectedAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-        pushMetadata.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
+        PushMetadataToBuildAssetRegistry.AddAsset(assetData, expectedAssetData.Name, expectedAssetData.Version, "testLocation", LocationType.None, true);
         assetData.Count.Should().Be(1);
         assetData.First().Should().BeEquivalentTo(expectedAssetData);
     }
@@ -41,7 +41,7 @@ public class AddAssetTests
 
         AssetData newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-        pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
+        PushMetadataToBuildAssetRegistry.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
         assetData.Count.Should().Be(2);
         assetData[0].Should().BeEquivalentTo(existingAssetData);
         assetData[1].Should().BeEquivalentTo(newAssetData);
@@ -53,7 +53,7 @@ public class AddAssetTests
         PushMetadataToBuildAssetRegistry pushMetadata = new PushMetadataToBuildAssetRegistry();
 
         Action act = () =>
-            pushMetadata.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true);
+            PushMetadataToBuildAssetRegistry.AddAsset(null, "testName", "12345", "testLocation", LocationType.None, true);
         act.Should().Throw<NullReferenceException>();
     }
 }

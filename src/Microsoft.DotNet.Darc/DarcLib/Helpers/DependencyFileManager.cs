@@ -383,7 +383,7 @@ public class DependencyFileManager : IDependencyFileManager
         return null;
     }
 
-    private bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
+    private static bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
     {
         return locations != null && locations.All(l => IsMaestroManagedFeed(l));
     }
@@ -977,7 +977,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
-    private void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
+    private static void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
     {
         string versionElementName = VersionFiles.CalculateGlobalJsonElementName(itemToUpdate.Name);
 
@@ -1341,7 +1341,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <param name="currentToken">Current token to walk.</param>
     /// <param name="elementName">Property name to find.</param>
     /// <returns>Token with name 'name' or null if it does not exist.</returns>
-    private JToken FindDependency(JToken currentToken, string elementName)
+    private static JToken FindDependency(JToken currentToken, string elementName)
     {
         foreach (JProperty property in currentToken.Children<JProperty>())
         {

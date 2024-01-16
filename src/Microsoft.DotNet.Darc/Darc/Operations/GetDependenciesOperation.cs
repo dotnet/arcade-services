@@ -65,7 +65,7 @@ internal class GetDependenciesOperation : Operation
         }
     }
 
-    private void LogDependency(DependencyDetail dependency)
+    private static void LogDependency(DependencyDetail dependency)
     {
         Console.Write(UxHelpers.DependencyToString(dependency));
     }

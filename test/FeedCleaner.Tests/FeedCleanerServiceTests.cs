@@ -165,7 +165,7 @@ public class FeedCleanerServiceTests : IDisposable
         return cleaner;
     }
 
-    private void MarkVersionAsDeleted(List<AzureDevOpsPackage> packages, string packageName, string version)
+    private static void MarkVersionAsDeleted(List<AzureDevOpsPackage> packages, string packageName, string version)
     {
         foreach (var package in packages)
         {

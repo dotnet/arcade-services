@@ -77,7 +77,7 @@ public abstract class EditorPopUp
     ///     - Empty string if the setting starts+ends with <>
     ///     - New value if anything else.
     /// </returns>
-    protected string ParseSetting(string inputSetting, string originalSetting, bool isSecret)
+    protected static string ParseSetting(string inputSetting, string originalSetting, bool isSecret)
     {
         string trimmedSetting = inputSetting.Trim();
         if (trimmedSetting.StartsWith('<') && trimmedSetting.EndsWith('>'))

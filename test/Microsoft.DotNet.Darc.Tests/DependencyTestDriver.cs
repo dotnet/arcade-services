@@ -269,7 +269,7 @@ internal class DependencyTestDriver
         AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Parents/Parent"), graphNode.Parents);
     }
 
-    private void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
+    private static void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
     {
         foreach (XmlNode node in xmlNodes)
         {
@@ -326,7 +326,7 @@ internal class DependencyTestDriver
     /// </summary>
     /// <param name="source">Source directory to copy</param>
     /// <param name="destination">Destination directory to copy</param>
-    private void CopyDirectoryAndRenameTestAssets(string source, string destination)
+    private static void CopyDirectoryAndRenameTestAssets(string source, string destination)
     {
         if (!Directory.Exists(destination))
         {

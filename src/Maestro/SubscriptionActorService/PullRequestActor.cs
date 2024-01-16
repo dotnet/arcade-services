@@ -564,7 +564,7 @@ namespace SubscriptionActorService
         /// <param name="darc">Darc remote</param>
         /// <param name="evaluations">List of merge policies</param>
         /// <returns>Result of the policy check.</returns>
-        private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+        private static Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
@@ -1084,7 +1084,7 @@ namespace SubscriptionActorService
         /// <param name="existingUpdates">pr object to update</param>
         /// <param name="incomingUpdates">list of new incoming updates</param>
         /// <returns>Merged list of existing updates along with the new</returns>
-        private List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
+        private static List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
             List<DependencyUpdateSummary> existingUpdates,
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> incomingUpdates)
         {

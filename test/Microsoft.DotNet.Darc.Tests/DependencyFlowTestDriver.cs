@@ -30,7 +30,7 @@ internal class DependencyFlowTestDriver
     private const string TestFilesInput = "DependencyFlowGraph";
     private const string inputRootDir = "inputs";
     private const string InputJsonFile = "input.json";
-    public string OutputJsonFile { get => "output.json";}
+    public static string OutputJsonFile { get => "output.json";}
     private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, TestFilesInput, _testName); }
          
     public DependencyFlowTestDriver(string testName)
@@ -100,7 +100,7 @@ internal class DependencyFlowTestDriver
         }
     }
 
-    public void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
+    public static void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
     {
         expectedNode.Repository.Should().Be(node.Repository);
         expectedNode.Branch.Should().Be(node.Branch);
@@ -148,7 +148,7 @@ internal class DependencyFlowTestDriver
         DependencyFlowGraph flowGraph = testFunc(dependencyFlowTestDriver);
             
         DependencyFlowGraph expectedGraph = JsonConvert.DeserializeObject<DependencyFlowGraph>(
-            File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, dependencyFlowTestDriver.OutputJsonFile)));
+            File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, OutputJsonFile)));
 
         dependencyFlowTestDriver.AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
         dependencyFlowTestDriver.AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);

@@ -210,7 +210,7 @@ internal class GetDependencyGraphOperation : Operation
     ///         Builds:
     ///         - 20190228.4 (2/28/2019 12:57 PM)
     /// </example>
-    private async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
+    private static async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
     {
         await writer.WriteLineAsync($"{indent}- Repo:     {node.Repository}");
         await writer.WriteLineAsync($"{indent}  Commit:   {node.Commit}");

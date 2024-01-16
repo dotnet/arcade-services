@@ -330,7 +330,7 @@ class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private void PrettyPrintCoherencyErrors(DarcCoherencyException e)
+    private static void PrettyPrintCoherencyErrors(DarcCoherencyException e)
     {
         Console.WriteLine("Coherency updates failed for the following dependencies:");
         foreach (var error in e.Errors)

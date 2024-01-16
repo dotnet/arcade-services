@@ -97,9 +97,9 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(classification))
             {
-                _url.AppendQuery("classification", Client.Serialize(classification));
+                _url.AppendQuery("classification", MaestroApi.Serialize(classification));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -182,13 +182,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(name))
             {
-                _url.AppendQuery("name", Client.Serialize(name));
+                _url.AppendQuery("name", MaestroApi.Serialize(name));
             }
             if (!string.IsNullOrEmpty(classification))
             {
-                _url.AppendQuery("classification", Client.Serialize(classification));
+                _url.AppendQuery("classification", MaestroApi.Serialize(classification));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -255,10 +255,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{id}/repositories".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/channels/{id}/repositories".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -325,10 +325,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/channels/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -395,10 +395,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/channels/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -466,10 +466,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{channelId}/builds/{buildId}".Replace("{channelId}", Uri.EscapeDataString(Client.Serialize(channelId))).Replace("{buildId}", Uri.EscapeDataString(Client.Serialize(buildId))),
+                "/api/channels/{channelId}/builds/{buildId}".Replace("{channelId}", Uri.EscapeDataString(MaestroApi.Serialize(channelId))).Replace("{buildId}", Uri.EscapeDataString(MaestroApi.Serialize(buildId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -528,10 +528,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{channelId}/builds/{buildId}".Replace("{channelId}", Uri.EscapeDataString(Client.Serialize(channelId))).Replace("{buildId}", Uri.EscapeDataString(Client.Serialize(buildId))),
+                "/api/channels/{channelId}/builds/{buildId}".Replace("{channelId}", Uri.EscapeDataString(MaestroApi.Serialize(channelId))).Replace("{buildId}", Uri.EscapeDataString(MaestroApi.Serialize(buildId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -594,33 +594,33 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/channels/{channelId}/graph".Replace("{channelId}", Uri.EscapeDataString(Client.Serialize(channelId))),
+                "/api/channels/{channelId}/graph".Replace("{channelId}", Uri.EscapeDataString(MaestroApi.Serialize(channelId))),
                 false);
 
             if (includeDisabledSubscriptions != default)
             {
-                _url.AppendQuery("includeDisabledSubscriptions", Client.Serialize(includeDisabledSubscriptions));
+                _url.AppendQuery("includeDisabledSubscriptions", MaestroApi.Serialize(includeDisabledSubscriptions));
             }
             if (includedFrequencies != default(IImmutableList<string>))
             {
                 foreach (var _item in includedFrequencies)
                 {
-                    _url.AppendQuery("includedFrequencies", Client.Serialize(_item));
+                    _url.AppendQuery("includedFrequencies", MaestroApi.Serialize(_item));
                 }
             }
             if (includeBuildTimes != default)
             {
-                _url.AppendQuery("includeBuildTimes", Client.Serialize(includeBuildTimes));
+                _url.AppendQuery("includeBuildTimes", MaestroApi.Serialize(includeBuildTimes));
             }
             if (days != default)
             {
-                _url.AppendQuery("days", Client.Serialize(days));
+                _url.AppendQuery("days", MaestroApi.Serialize(days));
             }
             if (includeArcade != default)
             {
-                _url.AppendQuery("includeArcade", Client.Serialize(includeArcade));
+                _url.AppendQuery("includeArcade", MaestroApi.Serialize(includeArcade));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

@@ -201,7 +201,7 @@ internal class MergedManifestTests
         [TestCase("https://dev.azure.com/devdiv/DevDiv/_git/NuGet-NuGet.Client-Trusted", "nuget/nuget.client")]
         public void GetGithubRepoNameTest(string azdoRepoUrl, string expectedRepo)
         {
-            string actualRepo = pushMetadata.GetGithubRepoName(azdoRepoUrl);
+            string actualRepo = PushMetadataToBuildAssetRegistry.GetGithubRepoName(azdoRepoUrl);
             actualRepo.Should().Be(expectedRepo);
         }
 

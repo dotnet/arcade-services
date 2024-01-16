@@ -410,7 +410,7 @@ public class ParseBuildManifestMetadataTests
         List<BlobArtifactModel> expectedBlobArtifactModel = [manifestAsBlobArtifactModel, blobArtifactModel2];
 
         (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
-            pushMetadata.GetPackagesAndBlobsInfo(manifest1);
+            PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifest1);
         packages.Should().BeEquivalentTo(expectedPackageArtifactModel);
         blobs.Should().BeEquivalentTo(expectedBlobArtifactModel);
     }
@@ -419,7 +419,7 @@ public class ParseBuildManifestMetadataTests
     public void EmptyManifestShouldReturnEmptyObjects()
     {
         (List<PackageArtifactModel> packages, List<BlobArtifactModel> blobs) =
-            pushMetadata.GetPackagesAndBlobsInfo(baseManifest);
+            PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(baseManifest);
         packages.Should().BeEmpty();
         blobs.Should().BeEmpty();
     }
@@ -431,7 +431,7 @@ public class ParseBuildManifestMetadataTests
         manifestWithoutPackages.Blobs = [manifestAsBlob];
 
         var expectedBlobs = new List<BlobArtifactModel>() { manifestAsBlobArtifactModel };
-        var (packages, blobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithoutPackages);
+        var (packages, blobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithoutPackages);
         packages.Should().BeEmpty();
         blobs.Should().BeEquivalentTo(expectedBlobs);
     }
@@ -442,7 +442,7 @@ public class ParseBuildManifestMetadataTests
         Manifest manifestWithUnversionedPackage = SharedMethods.GetCopyOfManifest(baseManifest);
         manifestWithUnversionedPackage.Packages = [unversionedPackage];
         var expectedPackages = new List<PackageArtifactModel>() { unversionedPackageArtifactModel };
-        var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
+        var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
         actualPackages.Should().BeEquivalentTo(expectedPackages);
     }
 
@@ -453,7 +453,7 @@ public class ParseBuildManifestMetadataTests
         manifestWithoutBlobs.Packages = [package1];
 
         var expectedPackages = new List<PackageArtifactModel>() { packageArtifactModel1 };
-        var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithoutBlobs);
+        var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithoutBlobs);
         actualPackages.Should().BeEquivalentTo(expectedPackages);
         actualBlobs.Should().BeEmpty();
     }
@@ -465,7 +465,7 @@ public class ParseBuildManifestMetadataTests
         manifestWithUnversionedBlob.Blobs = [unversionedBlob];
 
         var expectedBlobs = new List<BlobArtifactModel>() { unversionedBlobArtifactModel };
-        var (actualPackages, actualBlobs) = pushMetadata.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);
+        var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedBlob);
         actualBlobs.Should().BeEquivalentTo(expectedBlobs);
         actualPackages.Should().BeEmpty();
     }

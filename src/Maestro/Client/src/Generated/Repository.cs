@@ -90,13 +90,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -179,13 +179,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -269,13 +269,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -392,11 +392,11 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
             }
             if (page != default)
             {
@@ -406,7 +406,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -485,18 +485,18 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/repo-config/retry/{timestamp}".Replace("{timestamp}", Uri.EscapeDataString(Client.Serialize(timestamp))),
+                "/api/repo-config/retry/{timestamp}".Replace("{timestamp}", Uri.EscapeDataString(MaestroApi.Serialize(timestamp))),
                 false);
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

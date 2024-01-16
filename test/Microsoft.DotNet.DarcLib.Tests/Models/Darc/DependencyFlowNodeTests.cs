@@ -62,7 +62,7 @@ public class DependencyFlowNodeTests
         node.BestCasePathTime.Should().Be(node.OfficialBuildTime + edge1.To.BestCasePathTime);
     }
 
-    private DependencyFlowEdge AddEdge(
+    private static DependencyFlowEdge AddEdge(
         DependencyFlowNode fromNode,
         double worstCasePathTime,
         double bestCasePathTime,

@@ -318,7 +318,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return versionIdentifier.GetVersion(assetId);
         }
 
-        internal List<Manifest> GetParsedManifests(
+        internal static List<Manifest> GetParsedManifests(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
@@ -468,7 +468,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location,
+        internal static void AddAsset(List<AssetData> assets, string assetName, string version, string location,
             LocationType locationType, bool nonShipping)
         {
             assets.Add(new AssetData(nonShipping)
@@ -484,7 +484,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
-        internal (List<PackageArtifactModel>,
+        internal static (List<PackageArtifactModel>,
             List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
         {
             List<PackageArtifactModel> packageArtifacts = new List<PackageArtifactModel>();
@@ -587,7 +587,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return manifest;
         }
 
-        internal SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
+        internal static SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
         {
             SigningInformation mergedInfo = null;
 
@@ -687,7 +687,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <returns></returns>
-        public string GetGithubRepoName(string repoUrl)
+        public static string GetGithubRepoName(string repoUrl)
         {
             // In case the URL comes in ending with a '/', prevent an indexing exception
             repoUrl = repoUrl.TrimEnd('/');

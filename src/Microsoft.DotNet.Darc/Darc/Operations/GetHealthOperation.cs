@@ -159,7 +159,7 @@ internal class GetHealthOperation : Operation
     /// <param name="subscriptions">All subscriptions.</param>
     /// <param name="defaultChannels">All default channel associations.</param>
     /// <returns>Set of repo+branch combinations that should be evaluated.</returns>
-    private HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
+    private static HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
         HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
     {
         // Compute the combinations that make sense.

@@ -200,7 +200,7 @@ public class BarApiClient : IBarApiClient
         };
     }
 
-    private DependencyFlowEdge ToDependencyFlowEdge(
+    private static DependencyFlowEdge ToDependencyFlowEdge(
         FlowEdge flowEdge,
         IReadOnlyDictionary<string, DependencyFlowNode> nodesById,
         IReadOnlyDictionary<Guid, Subscription> subscriptionsById)

@@ -61,7 +61,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         ];
     }
 
-    public UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
+    public static UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
     {
         return new UpdateAssetsParameters
         {
@@ -71,7 +71,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         };
     }
 
-    private string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps)
+    private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps)
     {
         StringBuilder stringBuilder = new StringBuilder();
         foreach(DependencyUpdate dep in deps)
@@ -205,7 +205,7 @@ matches
         new object [] { regexTestString4, 5},
     ];
 
-    public void ShouldReturnCorrectChangesURIForGitHub()
+    public static void ShouldReturnCorrectChangesURIForGitHub()
     {
         var repoURI = "https://github.com/dotnet/arcade-services";
         var fromSha = "c0b723ce00a751db0dcf93789abd58577bad155a";
@@ -220,7 +220,7 @@ matches
         changesUrl.Should().Be(expectedChangeUrl);
     }
 
-    public void ShouldReturnCorrectChangesURIForAzDo()
+    public static void ShouldReturnCorrectChangesURIForAzDo()
     {
         var repoURI = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade-services";
         var fromSha = "689a78855b241afedff9919529d812b1f08f6f76";
