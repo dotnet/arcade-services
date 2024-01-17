@@ -4,10 +4,11 @@
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName)
+public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;

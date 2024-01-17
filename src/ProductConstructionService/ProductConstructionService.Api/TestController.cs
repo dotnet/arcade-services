@@ -5,6 +5,7 @@ using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
@@ -16,8 +17,8 @@ public class TestController(BuildAssetRegistryContext dbContext, QueueMessageSen
     [HttpGet("1")]
     public async Task<IActionResult> Index()
     {
-        var queueInjector = _queueInjectorFactory.Create<string>();
-        await queueInjector.SendAsync("some message");
+        var queueInjector = _queueInjectorFactory.Create<TextWorkitem>();
+        await queueInjector.SendAsync(new("some message"));
         return Ok("Message sent");
     }
 
