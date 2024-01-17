@@ -42,13 +42,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// When running locally, create the 
+// When running locally, create the workitem queue, if it doesn't already exist
 if (app.Environment.IsDevelopment())
 {
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration["WorkitemQueueName"]);
     await queueClient.CreateIfNotExistsAsync();
-    queueClient.SendMessage("random message");
 }
 
 app.Run();
