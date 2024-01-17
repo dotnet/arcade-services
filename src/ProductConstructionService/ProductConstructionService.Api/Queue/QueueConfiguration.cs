@@ -7,10 +7,7 @@ public static class QueueConfiguration
 {
     public static void AddWorkitemQueues(this WebApplicationBuilder builder)
     {
-        builder.AddAzureQueueService("queues", settings =>
-        {
-            settings.HealthChecks = false;
-        });
+        builder.AddAzureQueueService("queues");
 
         var queueName = builder.Configuration["WorkitemQueueName"] ??
             throw new ArgumentException("WorkItemQueueName missing from the configuration");
