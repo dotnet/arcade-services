@@ -16,6 +16,8 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Services.Utility" />
+    <!-- Thiss is needed to bump the package version past what Microsoft.EntityFrameworkCore.SqlServer requires. Can be removed once we update to .NET 8 -->
+    <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
 
   <ItemGroup>
