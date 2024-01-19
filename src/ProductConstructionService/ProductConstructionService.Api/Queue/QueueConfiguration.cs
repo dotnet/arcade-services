@@ -12,7 +12,10 @@ public static class QueueConfiguration
         var queueName = builder.Configuration["WorkitemQueueName"] ??
             throw new ArgumentException("WorkItemQueueName missing from the configuration");
 
+        builder.Services.AddSingleton<WorkItemProcessorStatus>();
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<QueueMessageSenderFactory>(sp, queueName));
+        builder.Services.AddHostedService(sp =>
+            ActivatorUtilities.CreateInstance<WorkItemProcessor>(sp, queueName));
     }
 }

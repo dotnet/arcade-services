@@ -9,7 +9,11 @@ using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class TestController(BuildAssetRegistryContext dbContext, QueueMessageSenderFactory queueInjectorFactory, QueueServiceClient client) : Controller
+public class TestController(
+    BuildAssetRegistryContext dbContext,
+    QueueMessageSenderFactory queueInjectorFactory,
+    QueueServiceClient client,
+    WorkItemProcessorStatus status) : Controller
 {
     private readonly QueueMessageSenderFactory _queueInjectorFactory = queueInjectorFactory;
     private readonly BuildAssetRegistryContext _dbContext = dbContext;
@@ -27,6 +31,11 @@ public class TestController(BuildAssetRegistryContext dbContext, QueueMessageSen
     {
         var q = client.GetQueueClient("workitem-queue");
         var message = q.ReceiveMessage();
-        return Ok(message.Value.Body.ToString());
+        status.ContinueWorking = false;
+        while(!status.StoppedWorking)
+        {
+            Thread.Sleep(2000);
+        }
+        return Ok("Done!");
     }
 }
