@@ -17,10 +17,10 @@ public class PcsJobsProcessor(
     : BackgroundService
 {
     private readonly ILogger<PcsJobsProcessor> _logger = logger;
-    private const int jobInvisibilityTimeoutSeconds = 30;
-    private const int emptyQueueTimeoutSeconds = 60;
+    private const int _jobInvisibilityTimeoutSeconds = 30;
+    private const int _emptyQueueTimeoutSeconds = 60;
 
-    protected async override Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         QueueClient queueClient = queueServiceClient.GetQueueClient(queueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", queueName);
@@ -31,12 +31,12 @@ public class PcsJobsProcessor(
             if (pcsJob == null)
             {
                 // Queue is empty, wait a bit
-                _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", queueName, emptyQueueTimeoutSeconds);
-                await Task.Delay(TimeSpan.FromSeconds(emptyQueueTimeoutSeconds));
+                _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", queueName, _emptyQueueTimeoutSeconds);
+                await Task.Delay(TimeSpan.FromSeconds(_emptyQueueTimeoutSeconds), cancellationToken);
                 continue;
             }
 
-            ProcessPcsJob(pcsJob, cancellationToken);
+            ProcessPcsJob(pcsJob);
         }
         status.StoppedWorking = true;
         _logger.LogInformation("Stopped processing PCS jobs");
@@ -44,7 +44,7 @@ public class PcsJobsProcessor(
 
     private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)
     {
-        QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(jobInvisibilityTimeoutSeconds), cancellationToken);
+        QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(_jobInvisibilityTimeoutSeconds), cancellationToken);
         if (message.Body == null)
         {
             return null;
@@ -55,7 +55,7 @@ public class PcsJobsProcessor(
         return JsonSerializer.Deserialize<PcsJob>(message.Body) ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(PcsJob)}");
     }
 
-    private void ProcessPcsJob(PcsJob pcsJob, CancellationToken cancellationToken)
+    private void ProcessPcsJob(PcsJob pcsJob)
     {
         switch (pcsJob)
         {
