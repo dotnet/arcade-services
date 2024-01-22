@@ -99,7 +99,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/assets/bulk-add-locations",
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -225,33 +225,33 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(name))
             {
-                _url.AppendQuery("name", Client.Serialize(name));
+                _url.AppendQuery("name", MaestroApi.Serialize(name));
             }
             if (!string.IsNullOrEmpty(version))
             {
-                _url.AppendQuery("version", Client.Serialize(version));
+                _url.AppendQuery("version", MaestroApi.Serialize(version));
             }
-            if (buildId != default(int?))
+            if (buildId != default)
             {
                 _url.AppendQuery("buildId", Client.Serialize(buildId));
             }
-            if (nonShipping != default(bool?))
+            if (nonShipping != default)
             {
                 _url.AppendQuery("nonShipping", Client.Serialize(nonShipping));
             }
-            if (loadLocations != default(bool?))
+            if (loadLocations != default)
             {
                 _url.AppendQuery("loadLocations", Client.Serialize(loadLocations));
             }
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -320,7 +320,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/assets/darc-version",
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -387,10 +387,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/assets/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -453,7 +453,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (assetLocationType == default(Models.LocationType))
+            if (assetLocationType == default)
             {
                 throw new ArgumentNullException(nameof(assetLocationType));
             }
@@ -469,18 +469,18 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{assetId}/locations".Replace("{assetId}", Uri.EscapeDataString(Client.Serialize(assetId))),
+                "/api/assets/{assetId}/locations".Replace("{assetId}", Uri.EscapeDataString(MaestroApi.Serialize(assetId))),
                 false);
 
             if (!string.IsNullOrEmpty(location))
             {
-                _url.AppendQuery("location", Client.Serialize(location));
+                _url.AppendQuery("location", MaestroApi.Serialize(location));
             }
-            if (assetLocationType != default(Models.LocationType))
+            if (assetLocationType != default)
             {
                 _url.AppendQuery("assetLocationType", Client.Serialize(assetLocationType));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -548,10 +548,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{assetId}/locations/{assetLocationId}".Replace("{assetId}", Uri.EscapeDataString(Client.Serialize(assetId))).Replace("{assetLocationId}", Uri.EscapeDataString(Client.Serialize(assetLocationId))),
+                "/api/assets/{assetId}/locations/{assetLocationId}".Replace("{assetId}", Uri.EscapeDataString(MaestroApi.Serialize(assetId))).Replace("{assetLocationId}", Uri.EscapeDataString(MaestroApi.Serialize(assetLocationId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

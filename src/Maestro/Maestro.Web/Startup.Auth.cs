@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
@@ -21,7 +20,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Octokit;
 
 namespace Maestro.Web;
 
@@ -97,7 +95,7 @@ public partial class Startup
                             var gitHubClaimResolver = context.HttpContext.RequestServices
                                 .GetRequiredService<GitHubClaimResolver>();
 
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
 
                             ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                             context.ReplacePrincipal(principal);
@@ -159,7 +157,7 @@ public partial class Startup
                         // replace the ClaimsPrincipal we are about to serialize to the cookie with a reference
                         Claim claim = ctx.Principal.Claims.First(
                             c => c.Type == identityOptions.ClaimsIdentity.UserIdClaimType);
-                        Claim[] claims = {claim};
+                        Claim[] claims = [claim];
                         var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
                         ctx.Principal = new ClaimsPrincipal(identity);
                     },
@@ -182,7 +180,7 @@ public partial class Startup
                         }
                         else
                         {
-                            await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                            await UpdateUserIfNeededAsync(user, dbContext, userManager, gitHubClaimResolver);
 
                             ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                             ctx.ReplacePrincipal(principal);
@@ -234,10 +232,10 @@ public partial class Startup
         }
     }
 
-    private async Task UpdateUserIfNeededAsync(ApplicationUser user,
+    private static async Task UpdateUserIfNeededAsync(
+        ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         GitHubClaimResolver gitHubClaimResolver)
     {
         while (true)
@@ -246,7 +244,7 @@ public partial class Startup
             {
                 if (ShouldUpdateUser(user))
                 {
-                    await UpdateUserAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
+                    await UpdateUserAsync(user, dbContext, userManager, gitHubClaimResolver);
                 }
 
                 break;
@@ -262,16 +260,16 @@ public partial class Startup
         }
     }
 
-    private bool ShouldUpdateUser(ApplicationUser user)
+    private static bool ShouldUpdateUser(ApplicationUser user)
     {
         // If we haven't updated the user in the last 30 minutes
         return DateTimeOffset.UtcNow - user.LastUpdated > new TimeSpan(0, 30, 0);
     }
 
-    private async Task UpdateUserAsync(ApplicationUser user,
+    private static async Task UpdateUserAsync(
+        ApplicationUser user,
         BuildAssetRegistryContext dbContext,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
         GitHubClaimResolver gitHubClaimResolver)
     {
         await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async () =>

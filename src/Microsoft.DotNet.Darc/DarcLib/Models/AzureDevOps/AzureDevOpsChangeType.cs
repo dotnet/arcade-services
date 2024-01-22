@@ -5,9 +5,9 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class AzureDevOpsChangeType
 {
-    public static int Add = 1;
+    public const int Add = 1;
 
-    public static int Edit = 2;
+    public const int Edit = 2;
 
-    public static int Delete = 16;
+    public const int Delete = 16;
 }

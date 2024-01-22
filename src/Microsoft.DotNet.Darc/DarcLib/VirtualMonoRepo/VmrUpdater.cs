@@ -458,10 +458,9 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         // We order the possible sources by length so that when a patch applies onto a submodule we will
         // detect the most nested one
-        List<ISourceComponent> sources = _sourceManifest.Submodules
+        List<ISourceComponent> sources = [.. _sourceManifest.Submodules
             .Concat(_sourceManifest.Repositories)
-            .OrderByDescending(s => s.Path.Length)
-            .ToList();
+            .OrderByDescending(s => s.Path.Length)];
 
         ISourceComponent FindComponentForFile(string file)
         {

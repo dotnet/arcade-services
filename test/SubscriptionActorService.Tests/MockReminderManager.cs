@@ -11,7 +11,7 @@ namespace SubscriptionActorService.Tests;
 
 public class MockReminderManager : IReminderManager
 {
-    public readonly Dictionary<string, Reminder> Data = new Dictionary<string, Reminder>();
+    public readonly Dictionary<string, Reminder> Data = [];
 
     public Task<IActorReminder> TryRegisterReminderAsync(
         string reminderName,

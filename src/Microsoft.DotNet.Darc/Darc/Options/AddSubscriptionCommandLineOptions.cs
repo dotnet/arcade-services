@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-subscription", HelpText = "Add a new subscription.")]
-class AddSubscriptionCommandLineOptions : CommandLineOptions
+internal class AddSubscriptionCommandLineOptions : CommandLineOptions
 {
     [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }

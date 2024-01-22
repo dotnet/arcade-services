@@ -12,7 +12,7 @@ public class FlowGraph
 {
     public static FlowGraph Create(DependencyFlowGraph other)
     {
-        return new FlowGraph(other.Nodes.Select(n => FlowRef.Create(n)).ToList(), other.Edges.Select(e => FlowEdge.Create(e)).ToList());
+        return new FlowGraph(other.Nodes.Select(FlowRef.Create).ToList(), other.Edges.Select(FlowEdge.Create).ToList());
     }
         
     public FlowGraph(List<FlowRef> flowRefs, List<FlowEdge> flowEdges)

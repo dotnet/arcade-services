@@ -114,7 +114,7 @@ public class SqlBarClient : IBasicBarClient
     }
 
     private static Asset ToClientModelAsset(Data.Models.Asset other)
-        => new Asset(
+        => new(
             other.Id,
             other.BuildId,
             other.NonShipping,
@@ -226,7 +226,7 @@ public class SqlBarClient : IBasicBarClient
             days);
 
         IEnumerable<string> frequencies
-            = includedFrequencies == default || includedFrequencies.Count() == 0
+            = includedFrequencies == default || includedFrequencies.Count == 0
                 ? new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", }
                 : includedFrequencies;
 

@@ -35,13 +35,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     private static readonly string CommentMarker =
         "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
-    private static readonly Regex RepositoryUriPattern = new Regex(
+    private static readonly Regex RepositoryUriPattern = new(
         $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\\.]+)");
 
-    private static readonly Regex LegacyRepositoryUriPattern = new Regex(
+    private static readonly Regex LegacyRepositoryUriPattern = new(
         @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
-    private static readonly Regex PullRequestApiUriPattern = new Regex(
+    private static readonly Regex PullRequestApiUriPattern = new(
         $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\\.]+)/pullRequests/(?<id>\\d+)");
 
     // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
@@ -88,7 +88,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
     }
 
-    private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
+    private static readonly List<string> VersionTypes = ["branch", "commit", "tag"];
     /// <summary>
     ///     Retrieve the contents of a text file in a repo on a specific branch
     /// </summary>
@@ -117,7 +117,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             try
             {
-                JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
                     HttpMethod.Get,
                     accountName,
                     projectName,
@@ -150,7 +150,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         var azureDevOpsRefs = new List<AzureDevOpsRef>();
         string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, baseBranch);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -181,7 +181,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
 
-        await this.ExecuteAzureDevOpsAPIRequestAsync(
+        await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Post,
             accountName,
             projectName,
@@ -216,12 +216,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
 
         var azureDevOpsRefs = new List<AzureDevOpsRef>();
-        AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+        var azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
         azureDevOpsRefs.Add(azureDevOpsRef);
 
         string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
 
-        await this.ExecuteAzureDevOpsAPIRequestAsync(
+        await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Post,
             accountName,
             projectName,
@@ -248,24 +248,13 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
         var query = new StringBuilder();
-        AzureDevOpsPrStatus prStatus;
-
-        switch (status)
+        var prStatus = status switch
         {
-            case PrStatus.Open:
-                prStatus = AzureDevOpsPrStatus.Active;
-                break;
-            case PrStatus.Closed:
-                prStatus = AzureDevOpsPrStatus.Abandoned;
-                break;
-            case PrStatus.Merged:
-                prStatus = AzureDevOpsPrStatus.Completed;
-                break;
-            default:
-                prStatus = AzureDevOpsPrStatus.None;
-                break;
-        }
-
+            PrStatus.Open => AzureDevOpsPrStatus.Active,
+            PrStatus.Closed => AzureDevOpsPrStatus.Abandoned,
+            PrStatus.Merged => AzureDevOpsPrStatus.Completed,
+            _ => AzureDevOpsPrStatus.None,
+        };
         query.Append($"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
 
         if (!string.IsNullOrEmpty(keyword))
@@ -279,14 +268,14 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             query.Append($"&searchCriteria.creatorId={author}");
         }
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
             $"_apis/git/repositories/{repoName}/pullrequests?{query}",
             _logger);
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
         IEnumerable<int> prs = values.Select(r => r["pullRequestId"].ToObject<int>());
 
         return prs;
@@ -301,7 +290,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     {
         (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
             accountName, projectName, $"_apis/git/repositories/{repoName}/pullRequests/{id}", _logger);
 
         if (Enum.TryParse(content["status"].ToString(), true, out AzureDevOpsPrStatus status))
@@ -417,7 +406,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <returns>All the commits related to the pull request</returns>
     public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
@@ -482,7 +471,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        Comment prComment = new Comment()
+        var prComment = new Comment()
         {
             CommentType = CommentType.Text,
             Content = $"{message}{CommentMarker}"
@@ -569,7 +558,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -620,13 +609,13 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         try
         {
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+            JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
                 $"_apis/git/repositories/{repoName}/commits?branch={branch}",
                 _logger);
-            JArray values = JArray.Parse(content["value"].ToString());
+            var values = JArray.Parse(content["value"].ToString());
 
             return values[0]["commitId"].ToString();
         }
@@ -659,14 +648,14 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         try
         {
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+            JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
                 $"_apis/git/repositories/{repoName}/commits/{sha}",
                 _logger,
                 versionOverride: "6.0");
-            JObject values = JObject.Parse(content.ToString());
+            var values = JObject.Parse(content.ToString());
                
             return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
         }
@@ -691,7 +680,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         try
         {
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+            JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -721,7 +710,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of status checks.</returns>
     public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string projectName, _, int id) = ParsePullRequestUri(pullRequestUrl);
 
         string projectId = await GetProjectIdAsync(accountName, projectName);
 
@@ -729,14 +718,14 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         string statusesPath = $"_apis/policy/evaluations?artifactId={artifactId}";
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
             accountName,
             projectName,
             statusesPath,
             _logger,
             versionOverride: "5.1-preview.1");
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
 
         IList<Check> statuses = new List<Check>();
         foreach (JToken status in values)
@@ -745,28 +734,14 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
             if (isEnabled && Enum.TryParse(status["status"].ToString(), true, out AzureDevOpsCheckState state))
             {
-                CheckState checkState;
-
-                switch (state)
+                var checkState = state switch
                 {
-                    case AzureDevOpsCheckState.Broken:
-                        checkState = CheckState.Error;
-                        break;
-                    case AzureDevOpsCheckState.Rejected:
-                        checkState = CheckState.Failure;
-                        break;
-                    case AzureDevOpsCheckState.Queued:
-                    case AzureDevOpsCheckState.Running:
-                        checkState = CheckState.Pending;
-                        break;
-                    case AzureDevOpsCheckState.Approved:
-                        checkState = CheckState.Success;
-                        break;
-                    default:
-                        checkState = CheckState.None;
-                        break;
-                }
-
+                    AzureDevOpsCheckState.Broken => CheckState.Error,
+                    AzureDevOpsCheckState.Rejected => CheckState.Failure,
+                    AzureDevOpsCheckState.Queued or AzureDevOpsCheckState.Running => CheckState.Pending,
+                    AzureDevOpsCheckState.Approved => CheckState.Success,
+                    _ => CheckState.None,
+                };
                 statuses.Add(
                     new Check(
                         checkState,
@@ -787,14 +762,14 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
             $"_apis/git/repositories/{repo}/pullRequests/{id}/reviewers",
             _logger);
 
-        JArray values = JArray.Parse(content["value"].ToString());
+        var values = JArray.Parse(content["value"].ToString());
 
         IList<Review> reviews = new List<Review>();
         foreach (JToken review in values)
@@ -805,30 +780,15 @@ This pull request has not been merged because Maestro++ is waiting on the follow
             // 10 - approved 5 - approved with suggestions 0 - no vote - 5 - waiting for author - 10 - rejected
 
             int vote = review["vote"].Value<int>();
-
-            ReviewState reviewState;
-
-            switch (vote)
+            var reviewState = vote switch
             {
-                case 10:
-                    reviewState = ReviewState.Approved;
-                    break;
-                case 5:
-                    reviewState = ReviewState.Commented;
-                    break;
-                case 0:
-                    reviewState = ReviewState.Pending;
-                    break;
-                case -5:
-                    reviewState = ReviewState.ChangesRequested;
-                    break;
-                case -10:
-                    reviewState = ReviewState.Rejected;
-                    break;
-                default:
-                    throw new NotImplementedException($"Unknown review vote {vote}");
-            }
-
+                10 => ReviewState.Approved,
+                5 => ReviewState.Commented,
+                0 => ReviewState.Pending,
+                -5 => ReviewState.ChangesRequested,
+                -10 => ReviewState.Rejected,
+                _ => throw new NotImplementedException($"Unknown review vote {vote}"),
+            };
             reviews.Add(new Review(reviewState, pullRequestUrl));
         }
 
@@ -866,7 +826,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
         using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
         {
-            HttpRequestManager requestManager = new HttpRequestManager(client,
+            var requestManager = new HttpRequestManager(client,
                 method,
                 requestPath,
                 logger,
@@ -938,7 +898,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>New VssConnection</returns>
     private VssConnection CreateVssConnection(string accountName)
     {
-        Uri accountUri = new Uri($"https://dev.azure.com/{accountName}");
+        var accountUri = new Uri($"https://dev.azure.com/{accountName}");
         var creds = new VssCredentials(new VssBasicCredential("", _personalAccessToken));
         return new VssConnection(accountUri, creds);
     }
@@ -984,7 +944,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>Project Id</returns>
     public async Task<string> GetProjectIdAsync(string accountName, string projectName)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             "",
@@ -1011,7 +971,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         return (m.Groups["account"].Value,
             m.Groups["project"].Value,
             m.Groups["repo"].Value,
-            Int32.Parse(m.Groups["id"].Value));
+            int.Parse(m.Groups["id"].Value));
     }
 
     /// <summary>
@@ -1052,9 +1012,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>AzureDevOpsReleaseDefinition</returns>
     public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
     {
-        if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
+        if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Length == 0)
         {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
+            releaseDefinition.Artifacts = [
                 new AzureDevOpsArtifact()
                 {
                     Alias = "PrimaryArtifact",
@@ -1083,9 +1043,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                         }
                     }
                 }
-            };
+            ];
         }
-        else if (releaseDefinition.Artifacts.Count() == 1)
+        else if (releaseDefinition.Artifacts.Length == 1)
         {
             var definitionReference = releaseDefinition.Artifacts[0].DefinitionReference;
 
@@ -1124,7 +1084,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
         else
         {
-            throw new ArgumentException($"{releaseDefinition.Artifacts.Count()} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
+            throw new ArgumentException($"{releaseDefinition.Artifacts.Length} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
         }
 
         var _serializerSettings = new JsonSerializerSettings
@@ -1135,7 +1095,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         var body = JsonConvert.SerializeObject(releaseDefinition, _serializerSettings);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Put,
             accountName,
             projectName,
@@ -1160,7 +1120,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }} }} }}";
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Post,
             accountName,
             projectName,
@@ -1194,11 +1154,11 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     {
         var variables = queueTimeVariables?
             .ToDictionary(x => x.Key, x => new AzureDevOpsVariable(x.Value))
-            ?? new Dictionary<string, AzureDevOpsVariable>();
+            ?? [];
 
         var pipelineResourceParameters = pipelineResources?
             .ToDictionary(x => x.Key, x => new AzureDevOpsPipelineResourceParameter(x.Value))
-            ?? new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
+            ?? [];
 
         var repositoryBranch = sourceBranch.StartsWith(RefsHeadsPrefix) ? sourceBranch : RefsHeadsPrefix + sourceBranch;
 
@@ -1218,7 +1178,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         string bodyAsString = JsonConvert.SerializeObject(body, Formatting.Indented);
 
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Post,
             accountName,
             projectName,
@@ -1239,7 +1199,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>AzureDevOpsRelease</returns>
     public async Task<AzureDevOpsRelease> GetReleaseAsync(string accountName, string projectName, int releaseId)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -1258,7 +1218,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of Azure DevOps feeds in the account</returns>
     public async Task<List<AzureDevOpsFeed>> GetFeedsAsync(string accountName)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             null,
@@ -1280,7 +1240,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of Azure DevOps build artifacts names.</returns>
     public async Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int azureDevOpsBuildId, int maxRetries = 15)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -1313,7 +1273,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of Azure DevOps feeds in the account</returns>
     public async Task<AzureDevOpsFeed> GetFeedAsync(string accountName, string project, string feedIdentifier)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             project,
@@ -1351,7 +1311,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>List of packages in the feed</returns>
     public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             project,
@@ -1372,7 +1332,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>Async task</returns>
     public async Task DeleteFeedAsync(string accountName, string project, string feedIdentifier)
     {
-        await this.ExecuteAzureDevOpsAPIRequestAsync(
+        await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Delete,
             accountName,
             project,
@@ -1393,7 +1353,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>Async task</returns>
     public async Task DeleteNuGetPackageVersionFromFeedAsync(string accountName, string project, string feedIdentifier, string packageName, string version)
     {
-        await this.ExecuteAzureDevOpsAPIRequestAsync(
+        await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Delete,
             accountName,
             project,
@@ -1412,7 +1372,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>AzureDevOpsBuild</returns>
     public async Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -1432,7 +1392,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
     /// <returns>AzureDevOpsReleaseDefinition</returns>
     public async Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId)
     {
-        JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
             accountName,
             projectName,
@@ -1504,7 +1464,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
         try
         {
-            await this.ExecuteAzureDevOpsAPIRequestAsync(
+            await ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,

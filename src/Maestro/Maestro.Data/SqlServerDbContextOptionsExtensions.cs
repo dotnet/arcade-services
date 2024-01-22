@@ -32,10 +32,7 @@ public static class SqlServerDbContextOptionsExtensions
         return optionsBuilder.UseSqlServer(connectionString, opts =>
         {
             opts.EnableRetryOnFailure();
-            if (sqlServerOptionsAction != null)
-            {
-                sqlServerOptionsAction(opts);
-            }
+            sqlServerOptionsAction?.Invoke(opts);
         });
     }
 }

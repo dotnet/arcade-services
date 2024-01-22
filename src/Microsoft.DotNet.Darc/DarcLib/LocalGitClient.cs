@@ -43,7 +43,7 @@ public class LocalGitClient : ILocalGitClient
         string fullPath = new NativePath(repoPath) / relativeFilePath;
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
-            string? parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+            var parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
             if (parentTwoDirectoriesUp != null && Directory.Exists(parentTwoDirectoriesUp))
             {
                 throw new DependencyFileNotFoundException($"Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
@@ -67,7 +67,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task CheckoutAsync(string repoPath, string refToCheckout)
     {
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "checkout", refToCheckout });
+        var result = await _processManager.ExecuteGit(repoPath, ["checkout", refToCheckout]);
         result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoPath}");
     }
 
@@ -146,7 +146,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string> GetRootDirAsync(string? repoPath = null, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, new[] { "rev-parse", "--show-toplevel" }, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath ?? Environment.CurrentDirectory, ["rev-parse", "--show-toplevel"], cancellationToken: cancellationToken);
         result.ThrowIfFailed("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
         return result.StandardOutput.Trim();
     }
@@ -158,7 +158,7 @@ public class LocalGitClient : ILocalGitClient
     {
         repoPath ??= Environment.CurrentDirectory;
 
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "rev-parse", "HEAD" }, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["rev-parse", "HEAD"], cancellationToken: cancellationToken);
         result.ThrowIfFailed("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
         return result.StandardOutput.Trim();
     }
@@ -212,7 +212,7 @@ public class LocalGitClient : ILocalGitClient
     /// <returns>Name of the remote</returns>
     public async Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "-v" }, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["remote", "-v"], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to get remotes for {repoPath}");
 
         string? remoteName = null;
@@ -237,7 +237,7 @@ public class LocalGitClient : ILocalGitClient
             // Remote names don't matter much but should be stable
             remoteName = StringUtils.GetXxHash64(repoUrl);
 
-            result = await _processManager.ExecuteGit(repoPath, new[] { "remote", "add", remoteName, repoUrl }, cancellationToken: cancellationToken);
+            result = await _processManager.ExecuteGit(repoPath, ["remote", "add", remoteName, repoUrl], cancellationToken: cancellationToken);
             result.ThrowIfFailed($"Failed to add remote {remoteName} ({repoUrl}) to {repoPath}");
         }
 
@@ -246,7 +246,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task UpdateRemoteAsync(string repoPath, string remoteName, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "ls-remote", "--get-url", remoteName }, cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["ls-remote", "--get-url", remoteName], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"No remote named {remoteName} in {repoPath}");
         var remoteUri = result.StandardOutput.Trim();
 
@@ -258,7 +258,7 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
         args = [ "fetch", "--tags", "--force", remoteName ];
-        envVars = new Dictionary<string, string>();
+        envVars = [];
         AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);

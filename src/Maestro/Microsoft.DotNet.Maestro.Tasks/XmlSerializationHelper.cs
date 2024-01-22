@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
-    static class XmlSerializationHelper
+    internal static class XmlSerializationHelper
     {
         public static XElement SigningInfoToXml(SigningInformation signingInformation)
         {
@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 return null;
             }
 
-            List<XElement> signingMetadata = new List<XElement>();
+            var signingMetadata = new List<XElement>();
 
             foreach (FileExtensionSignInfo fileExtensionSignInfo in signingInformation.FileExtensionSignInfos)
             {
@@ -30,7 +30,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             foreach (FileSignInfo fileSignInfo in signingInformation.FileSignInfos)
             {
-                List<XAttribute> xAttributes = new List<XAttribute>()
+                var xAttributes = new List<XAttribute>()
                 {
                     new XAttribute(nameof(fileSignInfo.Include), fileSignInfo.Include),
                     new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)

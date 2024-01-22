@@ -23,7 +23,7 @@ internal class GetDependenciesOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        Local local = new Local(_options.GetRemoteConfiguration(), Logger);
+        var local = new Local(_options.GetRemoteConfiguration(), Logger);
 
         try
         {
@@ -65,7 +65,7 @@ internal class GetDependenciesOperation : Operation
         }
     }
 
-    private void LogDependency(DependencyDetail dependency)
+    private static void LogDependency(DependencyDetail dependency)
     {
         Console.Write(UxHelpers.DependencyToString(dependency));
     }

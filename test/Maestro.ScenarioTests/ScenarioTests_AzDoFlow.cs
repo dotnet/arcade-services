@@ -15,25 +15,25 @@ namespace Maestro.ScenarioTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostDeployment")]
-class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
+internal class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
 {
-    private readonly IImmutableList<AssetData> source1Assets;
-    private readonly IImmutableList<AssetData> source2Assets;
-    private readonly IImmutableList<AssetData> source1AssetsUpdated;
-    private readonly List<DependencyDetail> expectedAzDoDependenciesSource1;
-    private readonly List<DependencyDetail> expectedAzDoDependenciesSource2;
-    private readonly List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
+    private readonly IImmutableList<AssetData> _source1Assets;
+    private readonly IImmutableList<AssetData> _source2Assets;
+    private readonly IImmutableList<AssetData> _source1AssetsUpdated;
+    private readonly List<DependencyDetail> _expectedAzDoDependenciesSource1;
+    private readonly List<DependencyDetail> _expectedAzDoDependenciesSource2;
+    private readonly List<DependencyDetail> _expectedAzDoDependenciesSource1Updated;
 
     public ScenarioTests_AzDoFlow()
     {
-        source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
-        source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
-        source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
+        _source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        _source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
+        _source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
 
         var sourceRepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name);
         var source2RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name);
 
-        expectedAzDoDependenciesSource1 =
+        _expectedAzDoDependenciesSource1 =
         [
             new DependencyDetail
             {
@@ -55,7 +55,7 @@ class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
             },
         ];
 
-        expectedAzDoDependenciesSource2 =
+        _expectedAzDoDependenciesSource2 =
         [
             new DependencyDetail
             {
@@ -77,7 +77,7 @@ class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
             },
         ];
 
-        expectedAzDoDependenciesSource1Updated =
+        _expectedAzDoDependenciesSource1Updated =
         [
             new DependencyDetail
             {
@@ -108,13 +108,13 @@ class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
         TestParameters parameters = await TestParameters.GetAsync(useNonPrimaryEndpoint: true);
         SetTestParameters(parameters);
         var testLogic = new EndToEndFlowLogic(parameters);
-        var expectedDependencies = expectedAzDoDependenciesSource1.Concat(expectedAzDoDependenciesSource2).ToList();
+        var expectedDependencies = _expectedAzDoDependenciesSource1.Concat(_expectedAzDoDependenciesSource2).ToList();
 
         await testLogic.DarcBatchedFlowTestBase(
             $"AzDo_BatchedTestBranch_{Environment.MachineName}",
             $"AzDo Batched Channel {Environment.MachineName}",
-            source1Assets,
-            source2Assets,
+            _source1Assets,
+            _source2Assets,
             expectedDependencies,
             true);
     }
@@ -131,8 +131,8 @@ class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
         await testLogic.NonBatchedAzDoFlowTestBase(
             $"AzDo_NonBatchedTestBranch_AllChecks_{Environment.MachineName}",
             $"AzDo Non-Batched All Checks Channel {Environment.MachineName}",
-            source1Assets,
-            expectedAzDoDependenciesSource1,
+            _source1Assets,
+            _expectedAzDoDependenciesSource1,
             allChecks: true).ConfigureAwait(true);
     }
 
@@ -148,10 +148,10 @@ class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
         await testLogic.NonBatchedUpdatingAzDoFlowTestBase(
             $"AzDo_NonBatchedTestBranch_{Environment.MachineName}",
             $"AzDo Non-Batched Channel {Environment.MachineName}",
-            source1Assets,
-            source1AssetsUpdated,
-            expectedAzDoDependenciesSource1,
-            expectedAzDoDependenciesSource1Updated).ConfigureAwait(false);
+            _source1Assets,
+            _source1AssetsUpdated,
+            _expectedAzDoDependenciesSource1,
+            _expectedAzDoDependenciesSource1Updated).ConfigureAwait(false);
     }
 
     [Test]

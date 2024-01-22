@@ -24,6 +24,6 @@ public class DependencyRegistrationTests
                 s.AddScoped<SubscriptionActor>();
                 s.AddScoped<PullRequestActor>();
             },
-            out string message).Should().BeTrue(message);
+            out var message).Should().BeTrue(message);
     }
 }

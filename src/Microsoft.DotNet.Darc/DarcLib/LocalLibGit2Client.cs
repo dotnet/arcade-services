@@ -111,7 +111,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         const string lf = "\n";
 
         // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.ExecuteGit(repoPath, new[] { "check-attr", "eol", "--", filePath });
+        var result = await _processManager.ExecuteGit(repoPath, ["check-attr", "eol", "--", filePath]);
         result.ThrowIfFailed($"Failed to determine eol for {filePath}");
 
         string eofAttr = result.StandardOutput.Trim();
@@ -444,7 +444,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                                             || e is NameConflictException
                                             || e is LibGit2SharpException)
                 {
-                    _logger.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." +
+                    _logger.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e})." +
                                     "  Attempting to checkout by individual files.");
                     SafeCheckoutByIndividualFiles(repo, resolvedReference, options);
                 }
@@ -505,7 +505,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                                       || e is NameConflictException
                                       || e is LibGit2SharpException)
             {
-                _logger.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
+                _logger.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e}");
                 if (f.TargetType == TreeEntryTargetType.Tree)
                 {
                     SafeCheckoutTreeByIndividualFiles(repo, f.Target.Peel<Tree>(), Path.Combine(treePath, f.Path), commit, options);

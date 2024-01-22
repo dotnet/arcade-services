@@ -78,9 +78,9 @@ public class DependencyFlowGraph
     public void PruneGraph(Func<DependencyFlowNode, bool> isInterestingNode,
         Func<DependencyFlowEdge, bool> isInterestingEdge)
     {
-        HashSet<DependencyFlowNode> unreachableNodes = new HashSet<DependencyFlowNode>(Nodes);
-        HashSet<DependencyFlowEdge> unreachableEdges = new HashSet<DependencyFlowEdge>(Edges);
-        Stack<DependencyFlowNode> nodes = new Stack<DependencyFlowNode>();
+        var unreachableNodes = new HashSet<DependencyFlowNode>(Nodes);
+        var unreachableEdges = new HashSet<DependencyFlowEdge>(Edges);
+        var nodes = new Stack<DependencyFlowNode>();
 
         // Walk each root
         foreach (DependencyFlowNode node in Nodes)
@@ -137,12 +137,12 @@ public class DependencyFlowGraph
         // (call them 'products').  Connect all of these via a start node.
         // Add a start node to the graph (a node that connects all nodes that have no outgoing edges
         // We will also reverse the graph by flipping the interpretation of incoming and outgoing.
-        DependencyFlowNode startNode = new DependencyFlowNode("start", "start", "start");
+        var startNode = new DependencyFlowNode("start", "start", "start");
         foreach (DependencyFlowNode node in Nodes)
         {
             if (!node.OutgoingEdges.Any())
             {
-                DependencyFlowEdge newEdge = new DependencyFlowEdge(node, startNode, null);
+                var newEdge = new DependencyFlowEdge(node, startNode, null);
                 startNode.IncomingEdges.Add(newEdge);
                 node.OutgoingEdges.Add(newEdge);
             }
@@ -150,13 +150,13 @@ public class DependencyFlowGraph
         Nodes.Add(startNode);
 
         // Dominator set for each node starts with the full set of nodes.
-        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = [];
         foreach (DependencyFlowNode node in Nodes)
         {
             dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
         }
 
-        Queue<DependencyFlowNode> workList = new Queue<DependencyFlowNode>();
+        var workList = new Queue<DependencyFlowNode>();
         workList.Enqueue(startNode);
 
         while (workList.Count != 0)
@@ -185,7 +185,7 @@ public class DependencyFlowGraph
 
             if (newDom == null)
             {
-                newDom = new HashSet<DependencyFlowNode>();
+                newDom = [];
             }
 
             // Add the current node
@@ -205,7 +205,7 @@ public class DependencyFlowGraph
         }
 
         // Determine backedges
-        List<DependencyFlowEdge> toRemove = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> toRemove = [];
         foreach (DependencyFlowEdge edge in Edges)
         {
             if (dominators[edge.To].Contains(edge.From))
@@ -233,9 +233,9 @@ public class DependencyFlowGraph
     public void CalculateLongestBuildPaths()
     {
         List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
-        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+        Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = [];
 
-        Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
+        var nodesToVisit = new Queue<DependencyFlowNode>();
 
         foreach (DependencyFlowNode root in roots)
         {
@@ -250,7 +250,7 @@ public class DependencyFlowGraph
                 }
                 else
                 {
-                    visitedNodes.Add(node, new HashSet<DependencyFlowNode>() { node });
+                    visitedNodes.Add(node, [node]);
                 }
 
                 foreach (DependencyFlowEdge edge in node.IncomingEdges)
@@ -322,9 +322,9 @@ public class DependencyFlowGraph
         int days)
     {
         // Dictionary of nodes. Key is the repo+branch
-        Dictionary<string, DependencyFlowNode> nodes = new Dictionary<string, DependencyFlowNode>(
+        var nodes = new Dictionary<string, DependencyFlowNode>(
             StringComparer.OrdinalIgnoreCase);
-        List<DependencyFlowEdge> edges = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> edges = [];
 
         // First create all the channel nodes. There may be disconnected
         // nodes in the graph, so we must process all channels and all subscriptions
@@ -333,7 +333,7 @@ public class DependencyFlowGraph
             DependencyFlowNode flowNode = GetOrCreateNode(channel.Repository, channel.Branch, nodes);
 
             // Add the build times
-            if (channel.Id != default(int))
+            if (channel.Id != default)
             {
                 BuildTime buildTime = await barClient.GetBuildTimeAsync(channel.Id, days);
                 flowNode.OfficialBuildTime = buildTime.OfficialBuildTime ?? 0;
@@ -365,7 +365,7 @@ public class DependencyFlowGraph
             {
                 DependencyFlowNode sourceNode = GetOrCreateNode(defaultChannel.Repository, defaultChannel.Branch, nodes);
 
-                DependencyFlowEdge newEdge = new DependencyFlowEdge(sourceNode, destinationNode, subscription);
+                var newEdge = new DependencyFlowEdge(sourceNode, destinationNode, subscription);
                 destinationNode.IncomingEdges.Add(newEdge);
                 sourceNode.OutgoingEdges.Add(newEdge);
                 edges.Add(newEdge);
@@ -380,14 +380,14 @@ public class DependencyFlowGraph
         string branch,
         Dictionary<string, DependencyFlowNode> nodes)
     {
-        string key = $"{repo}@{branch}";
+        var key = $"{repo}@{branch}";
         if (nodes.TryGetValue(key, out DependencyFlowNode existingNode))
         {
             return existingNode;
         }
         else
         {
-            DependencyFlowNode newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
+            var newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
             nodes.Add(key, newNode);
             return newNode;
         }

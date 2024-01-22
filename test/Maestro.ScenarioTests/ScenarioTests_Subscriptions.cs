@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.MergePolicyEvaluation;
@@ -11,7 +10,6 @@ using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using NUnit.Framework.Legacy;
 
 namespace Maestro.ScenarioTests;
 

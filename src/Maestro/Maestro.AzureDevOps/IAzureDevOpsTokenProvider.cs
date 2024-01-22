@@ -14,7 +14,7 @@ public interface IAzureDevOpsTokenProvider
 
 public static class AzureDevOpsTokenProviderExtensions
 {
-    private static readonly Regex AccountNameRegex = new Regex(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
+    private static readonly Regex AccountNameRegex = new(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
 
     public static Task<string> GetTokenForRepository(this IAzureDevOpsTokenProvider that, string repositoryUrl)
     {

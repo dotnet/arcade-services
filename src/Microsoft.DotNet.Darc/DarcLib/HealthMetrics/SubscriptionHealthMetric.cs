@@ -238,7 +238,7 @@ public class SubscriptionHealthMetric : HealthMetric
                     else
                     {
                         SubscriptionConflict newConflict = new SubscriptionConflict(assetName,
-                            new List<Subscription>() { otherSubscription, subscription },
+                            [otherSubscription, subscription],
                             Dependencies.Any(d => d.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)));
                         subscriptionConflicts.Add(assetName, newConflict);
                     }

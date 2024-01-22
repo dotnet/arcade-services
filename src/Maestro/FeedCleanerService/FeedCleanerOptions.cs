@@ -9,7 +9,7 @@ public class FeedCleanerOptions
 {
     public bool Enabled { get; set; }
 
-    public List<(string account, string project, string name)> ReleasePackageFeeds = new List<(string account, string project, string name)>();
+    public List<(string account, string project, string name)> ReleasePackageFeeds = [];
 
-    public List<string> AzdoAccounts = new List<string>();
+    public List<string> AzdoAccounts = [];
 }

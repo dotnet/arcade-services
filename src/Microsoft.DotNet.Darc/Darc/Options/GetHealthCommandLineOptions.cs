@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-health", HelpText = "Evaluate health")]
-class GetHealthCommandLineOptions : CommandLineOptions
+internal class GetHealthCommandLineOptions : CommandLineOptions
 {
     [Option("repo", HelpText = "Narrow health checkups by this repository.")]
     public string Repo { get; set; }

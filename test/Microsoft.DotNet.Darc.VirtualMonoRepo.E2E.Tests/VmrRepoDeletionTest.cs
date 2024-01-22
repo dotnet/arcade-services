@@ -50,21 +50,21 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName, Constants.ProductRepoName },
+            [Constants.InstallerRepoName, Constants.ProductRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         // Remove product-repo1 mapping
 
-        _sourceMappings.Mappings = new List<SourceMappingSetting>
-        {
+        _sourceMappings.Mappings =
+        [
             new SourceMappingSetting
             {
                 Name = Constants.InstallerRepoName,
                 DefaultRemote = InstallerRepoPath,
             }
-        };
+        ];
 
         await File.WriteAllTextAsync(InstallerRepoPath / _sourceMappingsRelativePath,
             JsonSerializer.Serialize(_sourceMappings, _jsonSettings));
@@ -73,22 +73,22 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
         await UpdateRepoToLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        expectedFilesFromRepos = new List<LocalPath>
-        {
+        expectedFilesFromRepos =
+        [
             VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / _sourceMappingsRelativePath,
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName),
-        };
+        ];
 
         expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.InstallerRepoName },
+            [Constants.InstallerRepoName],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
         var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
-        versions.Versions.Keys.Should().BeEquivalentTo(new string[] { "installerGitCommitHash" });
+        versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
 
         var sourceManifest = SourceManifest.FromJson(Info.SourceManifestPath);
         sourceManifest.Repositories.Should().HaveCount(1);
@@ -106,16 +106,16 @@ internal class VmrRepoDeletionTest : VmrTestsBase
         {
             PatchesPath = "src/installer/patches/",
             SourceMappingsPath = "src/installer/src/SourceBuild/content/source-mappings.json",
-            AdditionalMappings = new List<AdditionalMappingSetting>
-            {
+            AdditionalMappings =
+            [
                 new AdditionalMappingSetting
                 {
                     Source = "src/installer/src/SourceBuild/content/source-mappings.json",
                     Destination = "src"
                 }
-            },
-            Mappings = new List<SourceMappingSetting>
-            {
+            ],
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -126,7 +126,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath,
                 },
-            }
+            ]
         };
 
         Directory.CreateDirectory(InstallerRepoPath / "src" / "SourceBuild" / "content");
