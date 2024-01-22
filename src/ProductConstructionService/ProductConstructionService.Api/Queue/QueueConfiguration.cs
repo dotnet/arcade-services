@@ -5,14 +5,14 @@ namespace ProductConstructionService.Api.Queue;
 
 public static class QueueConfiguration
 {
-    public const string PcsJobQueueName = "PcsJobQueueName";
+    public const string PcsJobQueueConfigurationKey = "PcsJobQueueName";
 
     public static void AddWorkitemQueues(this WebApplicationBuilder builder)
     {
         builder.AddAzureQueueService("queues");
 
-        var queueName = builder.Configuration[PcsJobQueueName] ??
-            throw new ArgumentException("PcsJobQueueName missing from the configuration");
+        var queueName = builder.Configuration[PcsJobQueueConfigurationKey] ??
+            throw new ArgumentException($"{PcsJobQueueConfigurationKey} missing from the configuration");
 
         builder.Services.AddSingleton<PcsJobsProcessorStatus>();
         builder.Services.AddTransient(sp =>
