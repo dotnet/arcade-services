@@ -16,6 +16,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Aspire.Azure.Storage.Queues" />
+	  <!-- Health check for the Azure Storage Queue fails if this is not pinned to 7.0.0. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting" />
+    <PackageReference Include="Aspire.Hosting.Azure" />
+    <PackageReference Include="Aspire.Azure.Storage.Queues" />
   </ItemGroup>
 
   <ItemGroup>
