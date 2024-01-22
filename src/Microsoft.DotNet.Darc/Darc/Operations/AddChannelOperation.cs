@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddChannelOperation : Operation
 {
-    AddChannelCommandLineOptions _options;
+    private readonly AddChannelCommandLineOptions _options;
     public AddChannelOperation(AddChannelCommandLineOptions options)
         : base(options)
     {

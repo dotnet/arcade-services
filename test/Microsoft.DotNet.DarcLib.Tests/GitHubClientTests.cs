@@ -22,18 +22,14 @@ namespace Microsoft.DotNet.DarcLib.Tests;
 #region Fakes
 public class SimpleCacheEntry : ICacheEntry
 {
-    private object _key;
-    private object _value;
-    private long? _size;
-
     public SimpleCacheEntry(object key)
     {
-        _key = key;
+        Key = key;
     }
 
-    public object Key => _key;
+    public object Key { get; }
 
-    public object Value { get => _value; set => _value = value; }
+    public object Value { get; set; }
     public DateTimeOffset? AbsoluteExpiration { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public TimeSpan? AbsoluteExpirationRelativeToNow { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     public TimeSpan? SlidingExpiration { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -43,7 +39,7 @@ public class SimpleCacheEntry : ICacheEntry
     public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks => throw new NotImplementedException();
 
     public CacheItemPriority Priority { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-    public long? Size { get => _size; set => _size = value; }
+    public long? Size { get; set; }
 
     public void Dispose() { }
 }
@@ -52,7 +48,7 @@ public class SimpleCache : IMemoryCache
 {
     public int CacheHits { get; set; }
     public int CacheMisses { get; set; }
-    public ConcurrentDictionary<object, ICacheEntry> cache = new ConcurrentDictionary<object, ICacheEntry>();
+    public ConcurrentDictionary<object, ICacheEntry> cache = new();
 
     public ICacheEntry CreateEntry(object key)
     {
@@ -62,12 +58,11 @@ public class SimpleCache : IMemoryCache
 
     public void Dispose()
     {
-
     }
 
     public void Remove(object key)
     {
-        cache.Remove(key, out ICacheEntry unused);
+        cache.Remove(key, out _);
     }
 
     public bool TryGetValue(object key, out object value)
@@ -124,7 +119,7 @@ public class AbuseRateLimitFakeResponse : IResponse
 
     public ApiInfo ApiInfo => throw new NotImplementedException();
 
-    public HttpStatusCode StatusCode { get { return HttpStatusCode.Forbidden; } }
+    public HttpStatusCode StatusCode => HttpStatusCode.Forbidden;
 
     public string ContentType => throw new NotImplementedException();
 }
@@ -135,7 +130,7 @@ public class AbuseRateLimitFakeResponse : IResponse
 /// Lacking any DI, this class lets us put a Mock IGitHubClient into something that is effectively the same,
 /// other than providing the ability to stick any IGitHubClient in as desired.
 /// </summary>
-class TestGitHubClient : GitHubClient
+internal class TestGitHubClient : GitHubClient
 {
     private IGitHubClient _client;
     public void SetGitHubClientObject(IGitHubClient value)
@@ -170,8 +165,7 @@ public class GitHubClientTests
     protected Mock<IPullRequestReviewsClient> OctoKitPullRequestReviewsClient;
     protected Mock<IGitDatabaseClient> OctoKitGitDatabaseClient;
     protected Mock<IBlobsClient> OctoKitGitBlobsClient;
-
-    TestGitHubClient GitHubClientForTest;
+    private TestGitHubClient _gitHubClientForTest;
 
     [SetUp]
     public void GitHubClientTests_SetUp()
@@ -193,9 +187,9 @@ public class GitHubClientTests
         OctoKitGithubClient.SetupGet(x => x.Repository).Returns(OctoKitRepositoriesClient.Object);
         OctoKitGithubClient.Setup(m => m.Git).Returns(OctoKitGitDatabaseClient.Object);
 
-        NUnitLogger nUnitLogger = new NUnitLogger();
-        GitHubClientForTest = new TestGitHubClient("git", "fake-token", nUnitLogger, "fake-path", null);
-        GitHubClientForTest.SetGitHubClientObject(OctoKitGithubClient.Object);
+        var nUnitLogger = new NUnitLogger();
+        _gitHubClientForTest = new TestGitHubClient("git", "fake-token", nUnitLogger, "fake-path", null);
+        _gitHubClientForTest.SetGitHubClientObject(OctoKitGithubClient.Object);
     }
     #endregion
 
@@ -204,23 +198,23 @@ public class GitHubClientTests
     public async Task TreeItemCacheTest(bool enableCache)
     {
         SimpleCache cache = enableCache ? new SimpleCache() : null;
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
 
-        List<(string, string, TreeItem)> treeItemsToGet = new List<(string, string, TreeItem)>
-        {
+        List<(string, string, TreeItem)> treeItemsToGet =
+        [
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "1", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "2", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "3", "https://url")),
             ("a", "b", new TreeItem("path", "mode", TreeType.Blob, 10, "4", "https://url")),
             ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "11", "https://url")),
             ("dotnet", "corefx", new TreeItem("path", "mode", TreeType.Blob, 10, "12", "https://url")),
-        };
+        ];
 
         // Mock up the github client
         var octoKitClientMock = new Mock<IGitHubClient>();
         var octoKitGitMock = new Mock<IGitDatabaseClient>();
         var octoKitBlobClientMock = new Mock<IBlobsClient>();
-        Blob blob = new Blob("foo", "content", EncodingType.Utf8, "somesha", 10);
+        var blob = new Blob("foo", "content", EncodingType.Utf8, "somesha", 10);
 
         foreach (var treeItem in treeItemsToGet)
         {
@@ -303,14 +297,14 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryTest()
     {
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
 
-        Blob blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        TreeItem treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
+        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
+        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
         string path = "fakePath";
         string owner = "fakeOwner";
         string repo = "fakeRepo";
-        AbuseException abuseException = new AbuseException(new AbuseRateLimitFakeResponse());
+        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse());
 
         OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(abuseException)
@@ -328,14 +322,14 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryWithRateLimitTest()
     {
-        Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
 
-        Blob blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
-        TreeItem treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
+        var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
+        var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
         string path = "fakePath";
         string owner = "fakeOwner";
         string repo = "fakeRepo";
-        AbuseException abuseException = new AbuseException(new AbuseRateLimitFakeResponse(5));
+        var abuseException = new AbuseException(new AbuseRateLimitFakeResponse(5));
 
         OctoKitGitBlobsClient.SetupSequence(m => m.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .ThrowsAsync(abuseException)
@@ -394,7 +388,7 @@ public class GitHubClientTests
 
     private async Task<IList<Review>> GetLatestReviewsForPullRequestWrapperAsync(Dictionary<Tuple<string, string, int>, List<PullRequestReview>> data, string pullRequestUrl)
     {
-        List<PullRequestReview> fakeReviews = new List<PullRequestReview>();
+        List<PullRequestReview> fakeReviews = [];
 
         // Use Moq to put the return value 
         OctoKitPullRequestReviewsClient.Setup(x => x.GetAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
@@ -409,7 +403,7 @@ public class GitHubClientTests
             })
             .ReturnsAsync(fakeReviews);
 
-        return await GitHubClientForTest.GetLatestPullRequestReviewsAsync(pullRequestUrl);
+        return await _gitHubClientForTest.GetLatestPullRequestReviewsAsync(pullRequestUrl);
     }
 
     #region Functions for creating fake review data
@@ -418,7 +412,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)
@@ -436,7 +430,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)
@@ -456,7 +450,7 @@ public class GitHubClientTests
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
-        data.Add(keyValue, new List<PullRequestReview>());
+        data.Add(keyValue, []);
         DateTimeOffset baseOffset = DateTimeOffset.UtcNow;
 
         for (int i = 0; i < userCount; i++)
@@ -466,7 +460,7 @@ public class GitHubClientTests
         return data;
     }
 
-    private PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
+    private static PullRequestReview CreateFakePullRequestReview(PullRequestReviewState reviewState, string owner, string repoName, int requestId, DateTimeOffset reviewTime, string userName)
     {
         return new PullRequestReview(
             0,
@@ -481,7 +475,7 @@ public class GitHubClientTests
             reviewTime);
     }
 
-    private User GetFakeUser(string userId)
+    private static User GetFakeUser(string userId)
     {
         // We mostly only care about the user's login id (userId)", this ctor is huge, sorry about that.
         return new User(null, null, null, 0, null, DateTimeOffset.MinValue, DateTimeOffset.MinValue,

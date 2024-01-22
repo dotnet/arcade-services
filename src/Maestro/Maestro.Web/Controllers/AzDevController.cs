@@ -15,9 +15,9 @@ namespace Maestro.Web.Controllers;
 [Route("_/[controller]")]
 public class AzDevController : ControllerBase
 {
-    private static readonly Lazy<HttpClient> s_lazyClient = new Lazy<HttpClient>(CreateHttpClient);
+    private static readonly Lazy<HttpClient> s_lazyClient = new(CreateHttpClient);
     private static HttpClient CreateHttpClient() =>
-        new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+        new(new HttpClientHandler { CheckCertificateRevocationList = true })
         {
             DefaultRequestHeaders =
             {

@@ -49,7 +49,7 @@ public abstract class Operation : IDisposable
             
         services.AddSingleton(options);
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
-        services.TryAddSingleton<IBarApiClient>(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
+        services.TryAddSingleton(sp => RemoteFactory.GetBarClient(options, sp.GetRequiredService<ILogger<BarApiClient>>()));
         services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
 
         Provider = services.BuildServiceProvider();

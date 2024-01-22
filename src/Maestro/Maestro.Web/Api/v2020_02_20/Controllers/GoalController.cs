@@ -11,8 +11,6 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 
@@ -26,7 +24,7 @@ public class GoalController : v2019_01_16.Controllers.GoalController
     }
 
     [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] String channelName, [Required] int definitionId)
+    public override Task<IActionResult> Create([FromBody, Required] v2019_01_16.Models.Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         throw new NotImplementedException();
     }
@@ -39,9 +37,9 @@ public class GoalController : v2019_01_16.Controllers.GoalController
     /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
     /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
     [HttpPut("channelName/{channelName}/definitionId/{definitionId}")]
-    [SwaggerApiResponse(System.Net.HttpStatusCode.OK, Type = typeof(Models.Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
+    [SwaggerApiResponse(System.Net.HttpStatusCode.OK, Type = typeof(Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
     [ValidateModelState]
-    public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData, [Required] String channelName, [Required] int definitionId)
+    public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData, [Required] string channelName, [Required] int definitionId)
     {
         Data.Models.Channel channel = await _context.Channels
             .FirstOrDefaultAsync(c => c.Name == channelName);

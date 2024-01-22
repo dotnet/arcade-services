@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +81,7 @@ internal class CloneOperation : Operation
             {
                 var local = new Local(_options.GetRemoteConfiguration(), Logger);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetDependency(d));
+                IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
                 {
                     if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
@@ -99,7 +98,7 @@ internal class CloneOperation : Operation
             else
             {
                 // Start with the root repo we were asked to clone
-                StrippedDependency rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
+                var rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
                 accumulatedDependencies.Add(rootDep);
                 Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
             }
@@ -144,7 +143,7 @@ internal class CloneOperation : Operation
                         Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                         foreach (DependencyDetail d in filteredDeps)
                         {
-                            StrippedDependency dep = StrippedDependency.GetDependency(d);
+                            var dep = StrippedDependency.GetDependency(d);
                             // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                             if (d.RepoUri == repo.RepoUri)
                             {
@@ -165,7 +164,7 @@ internal class CloneOperation : Operation
                             }
                             else
                             {
-                                StrippedDependency stripped = StrippedDependency.GetDependency(d);
+                                var stripped = StrippedDependency.GetDependency(d);
                                 Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
                                 repo.AddDependency(dep);
                                 accumulatedDependencies.Add(stripped);
@@ -482,7 +481,7 @@ internal class CloneOperation : Operation
 
         static StrippedDependency()
         {
-            AllDependencies = new HashSet<StrippedDependency>();
+            AllDependencies = [];
         }
 
         internal static StrippedDependency GetDependency(DependencyDetail d)
@@ -513,10 +512,9 @@ internal class CloneOperation : Operation
 
         private StrippedDependency(string repoUrl, string commit)
         {
-            this.RepoUri = repoUrl;
-            this.Commit = commit;
-            this.Dependencies = new HashSet<StrippedDependency>();
-            this.Dependencies.Add(this);
+            RepoUri = repoUrl;
+            Commit = commit;
+            Dependencies = [this];
         }
 
         private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
@@ -524,12 +522,12 @@ internal class CloneOperation : Operation
         internal void AddDependency(StrippedDependency dep)
         {
             StrippedDependency other = GetDependency(dep);
-            if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
+            if (Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
             {
                 return;
             }
-            this.Dependencies.Add(other);
-            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant()))
+            Dependencies.Add(other);
+            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant()))
             {
                 sameUrl.Dependencies.Add(other);
             }
@@ -537,7 +535,7 @@ internal class CloneOperation : Operation
 
         internal void AddDependency(DependencyDetail dep)
         {
-            this.AddDependency(GetDependency(dep));
+            AddDependency(GetDependency(dep));
         }
 
         internal bool HasDependencyOn(string repoUrl)
@@ -545,13 +543,13 @@ internal class CloneOperation : Operation
             bool hasDep = false;
             lock (AllDependencies)
             {
-                foreach (StrippedDependency dep in this.Dependencies)
+                foreach (StrippedDependency dep in Dependencies)
                 {
                     if (dep.Visited)
                     {
                         return false;
                     }
-                    if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
+                    if (dep.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant())
                     {
                         return false;
                     }
@@ -583,22 +581,21 @@ internal class CloneOperation : Operation
 
         public override bool Equals(object obj)
         {
-            StrippedDependency other = obj as StrippedDependency;
-            if (other == null)
+            if (obj is not StrippedDependency other)
             {
                 return false;
             }
-            return this.RepoUri == other.RepoUri && this.Commit == other.Commit;
+            return RepoUri == other.RepoUri && Commit == other.Commit;
         }
 
         public override int GetHashCode()
         {
-            return this.RepoUri.GetHashCode() ^ this.Commit.GetHashCode();
+            return RepoUri.GetHashCode() ^ Commit.GetHashCode();
         }
 
         public override string ToString()
         {
-            return $"{this.RepoUri}@{this.Commit} ({this.Dependencies.Count} deps)";
+            return $"{RepoUri}@{Commit} ({Dependencies.Count} deps)";
         }
     }
 }

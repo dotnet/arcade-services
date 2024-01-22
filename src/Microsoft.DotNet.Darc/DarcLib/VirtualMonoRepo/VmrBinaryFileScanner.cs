@@ -47,7 +47,7 @@ public class VmrBinaryFileScanner : VmrScanner
             args.AddRange(await GetExclusionFilters(sourceMapping.Name, baselineFilePath));
         }
 
-        return await ScanAndParseResult(args.ToArray(), sourceMapping.Name, cancellationToken);
+        return await ScanAndParseResult([.. args], sourceMapping.Name, cancellationToken);
     }
 
     protected override async Task<IEnumerable<string>> ScanBaseRepository(string? baselineFilePath, CancellationToken cancellationToken)
@@ -67,12 +67,12 @@ public class VmrBinaryFileScanner : VmrScanner
             args.AddRange(await GetExclusionFilters(null, baselineFilePath));
         }
 
-        return await ScanAndParseResult(args.ToArray(), "base VMR", cancellationToken);
+        return await ScanAndParseResult([.. args], "base VMR", cancellationToken);
     }
 
     private async Task<IEnumerable<string>> ScanAndParseResult(string[] args, string repoName, CancellationToken cancellationToken)
     {
-        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, args.ToArray(), cancellationToken: cancellationToken);
+        var ret = await _processManager.ExecuteGit(_vmrInfo.VmrPath, [.. args], cancellationToken: cancellationToken);
 
         ret.ThrowIfFailed($"Failed to scan the {repoName} repository");
 

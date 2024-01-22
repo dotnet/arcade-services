@@ -16,8 +16,8 @@ namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 public class DarcManifestHelperTests
 {
-    const int FakeBuildCount = 10;
-    const string FakeOutputPath = @"F:\A\";
+    private const int FakeBuildCount = 10;
+    private const string FakeOutputPath = @"F:\A\";
 
     [TestCase(true)]
     [TestCase(false)]
@@ -36,7 +36,7 @@ public class DarcManifestHelperTests
         var builds = testManifest["builds"].ToList();
         builds.Count.Should().Be(FakeBuildCount);
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
@@ -90,7 +90,7 @@ public class DarcManifestHelperTests
         var builds = testManifest["builds"].ToList();
         builds.Count.Should().Be(FakeBuildCount);
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             // Make sure everything has its distinct, correctly calculated target paths
             var targetPaths = builds[i]["assets"].First()["targets"];
@@ -127,7 +127,7 @@ public class DarcManifestHelperTests
         }
     }
 
-    private void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
+    private static void CheckExpectedExtraAssets(JToken extraAssetsNode, bool relativePaths)
     {
         extraAssetsNode.Children().Count().Should().Be(2);
         extraAssetsNode[0]["name"].Value<string>().Should().Be("FakeExtraAssetOne");
@@ -157,7 +157,7 @@ public class DarcManifestHelperTests
         }
     }
 
-    private void CheckExpectedDependencies(JToken dependenciesNode)
+    private static void CheckExpectedDependencies(JToken dependenciesNode)
     {
         dependenciesNode.Children().Count().Should().Be(2);
         dependenciesNode.Children().ToArray()[0]["commit"].Value<string>().Should().Be("fakehash1");
@@ -175,7 +175,7 @@ public class DarcManifestHelperTests
     [Test]
     public void NoDownloadedBuildsProvided()
     {
-        List<DownloadedBuild> downloadedBuilds = new List<DownloadedBuild>();
+        List<DownloadedBuild> downloadedBuilds = [];
         JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
         var builds = emptyManifest["builds"].ToList();
         builds.Count.Should().Be(0);
@@ -184,37 +184,39 @@ public class DarcManifestHelperTests
 
     private List<DownloadedAsset> GetSomeExtraDownloadedAssets()
     {
-        List<DownloadedAsset> fakeAssets = new List<DownloadedAsset>();
-        fakeAssets.Add(new DownloadedAsset()
-        {
-            Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
-            LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
-            UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
-            SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
-        });
-        fakeAssets.Add(new DownloadedAsset()
-        {
-            Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
-            LocationType = LocationType.Container,
-            ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
-            UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
-            SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
-        });
+        List<DownloadedAsset> fakeAssets =
+        [
+            new DownloadedAsset()
+            {
+                Asset = new Asset(123, 456, false, "FakeExtraAssetOne", "1.0.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetOne.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetOne.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-one.zip"
+            },
+            new DownloadedAsset()
+            {
+                Asset = new Asset(789, 101, true, "FakeExtraAssetTwo", "1.2.0", null),
+                LocationType = LocationType.Container,
+                ReleaseLayoutTargetLocation = @"F:\A\KE\Path\FakeExtraAssetTwo.blob",
+                UnifiedLayoutTargetLocation = @"F:\A\K\E\OtherPath\FakeExtraAssetTwo.blob",
+                SourceLocation = "https://fakeplace.blob.core.windows.net/dotnet/assets/fake-blob-two.zip"
+            },
+        ];
         return fakeAssets;
     }
 
     private List<DownloadedBuild> GetSomeShippingAssetsBuilds()
     {
-        List<DownloadedBuild> fakeDownloadedBuilds = new List<DownloadedBuild>();
+        List<DownloadedBuild> fakeDownloadedBuilds = [];
 
-        List<Channel> channels = new List<Channel>()
-        {
+        List<Channel> channels =
+        [
             new Channel(123, "fake-channel-general", "general testing"),
             new Channel(456, "fake-channel-release", "release channel"),
-        };
+        ];
 
-        for (int i = 0; i < FakeBuildCount; i++)
+        for (var i = 0; i < FakeBuildCount; i++)
         {
             var buildToAdd = new DownloadedBuild()
             {
@@ -233,7 +235,7 @@ public class DarcManifestHelperTests
                 },
                 DownloadedAssets = new List<DownloadedAsset>()
                 {
-                    new DownloadedAsset()
+                    new()
                     {
                         Asset = new Asset(i, i + 10000, i % 2 == 0, $"DownloadedAsset{i}", $"{i}.0.0", ImmutableList<AssetLocation>.Empty),
                         SourceLocation = "https://github.com/dotnet/fakerepository",
@@ -247,14 +249,14 @@ public class DarcManifestHelperTests
             {
                 buildToAdd.Dependencies = new List<DependencyDetail>()
                 {
-                    new DependencyDetail()
+                    new()
                     {
                         Commit = "fakehash1",
                         Name = "Fake.Dependency.One",
                         RepoUri = "https://github.com/dotnet/fakerepository1",
                         Version = "1.2.3-prerelease"
                     },
-                    new DependencyDetail()
+                    new()
                     {
                         Commit = "fakehash2",
                         Name = "Fake.Dependency.Two",

@@ -94,7 +94,7 @@ public partial class Startup
                         if (schema.Type == "object")
                         {
                             var required = schema.Required == null
-                                ? new HashSet<string>()
+                                ? []
                                 : new HashSet<string>(schema.Required.Select(ToCamelCase));
                             schema.Properties =
                                 schema.Properties.ToDictionary(
@@ -174,7 +174,7 @@ public partial class Startup
 
     private static string ToCamelCase(string value)
     {
-        return value.Substring(0, 1).ToLowerInvariant() + value.Substring(1);
+        return string.Concat(value.Substring(0, 1).ToLowerInvariant(), value.AsSpan(1));
     }
 }
 

@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
-using System.Text.RegularExpressions;
-using System;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;

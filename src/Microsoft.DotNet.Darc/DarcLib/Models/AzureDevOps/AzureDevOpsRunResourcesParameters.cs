@@ -12,7 +12,7 @@ public class AzureDevOpsRunResourcesParameters
 
     public AzureDevOpsRunResourcesParameters()
     {
-        Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>();
-        Pipelines = new Dictionary<string, AzureDevOpsPipelineResourceParameter>();
+        Repositories = [];
+        Pipelines = [];
     }
 }

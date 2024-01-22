@@ -67,7 +67,7 @@ public class VmrPusherTests
     [Test]
     public async Task PublicCommitsArePushedTest()
     {
-        NativePath vmrPath = new NativePath("vmr");
+        var vmrPath = new NativePath("vmr");
 
         _vmrInfo.Reset();
         _vmrInfo.SetupGet(i => i.VmrPath).Returns(vmrPath);

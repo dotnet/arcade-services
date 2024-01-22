@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
-    public class MSBuildLogger : Microsoft.Extensions.Logging.ILogger
+    public class MSBuildLogger : Extensions.Logging.ILogger
     {
         private readonly Build.Utilities.TaskLoggingHelper _log;
 

@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,7 +17,7 @@ namespace Maestro.MergePolicies;
 /// </summary>
 public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
-    private HashSet<string> _ignoreChecks;
+    private readonly HashSet<string> _ignoreChecks;
 
     public AllChecksSuccessfulMergePolicy(HashSet<string> ignoreChecks)
     {
@@ -41,14 +40,11 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
             c =>
             {
                 // unify the check statuses to success, pending, and error
-                switch (c.Status)
+                return c.Status switch
                 {
-                    case CheckState.Success:
-                    case CheckState.Pending:
-                        return c.Status;
-                    default:
-                        return CheckState.Error;
-                }
+                    CheckState.Success or CheckState.Pending => c.Status,
+                    _ => CheckState.Error,
+                };
             });
 
         int ListChecksCount(CheckState state)
@@ -58,12 +54,12 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
         if (statuses.Contains(CheckState.Error))
         {
-            StringBuilder listChecks = new StringBuilder();
+            var listChecks = new StringBuilder();
             foreach(var status in statuses[CheckState.Error])
             {
                 listChecks.AppendLine($"[{status.Name}]({status.Url})");
             }
-            return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks.ToString()}");
+            return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}", $"{listChecks}");
         }
 
         if (statuses.Contains(CheckState.Pending))
@@ -81,7 +77,7 @@ public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
     {
-        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? Array.Empty<string>());
+        var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? []);
         IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new AllChecksSuccessfulMergePolicy(ignoreChecks) };
         return Task.FromResult(policies);
     }

@@ -160,7 +160,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
             // Path should be returned the same for all invocations
             // We checkout a default ref
             path = await PrepareCloneInternal(remoteUri, mapping.Name, cancellationToken);
-            bool missingCommit = false;
+            var missingCommit = false;
 
             // Verify that all requested commits are available
             foreach (string commit in refsToVerify.ToArray())

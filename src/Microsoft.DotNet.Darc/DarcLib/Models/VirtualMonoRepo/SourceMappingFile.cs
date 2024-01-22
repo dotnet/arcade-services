@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 
 #nullable enable
@@ -22,8 +21,8 @@ public class SourceMappingFile
     public SourceMappingSetting Defaults { get; set; } = new()
     {
         DefaultRef = "main",
-        Include = Array.Empty<string>(),
-        Exclude = Array.Empty<string>(),
+        Include = [],
+        Exclude = [],
     };
 
     /// <summary>
@@ -40,7 +39,7 @@ public class SourceMappingFile
     /// <summary>
     /// Each of these mappings has a corresponding folder in the src/ directory
     /// </summary>
-    public List<SourceMappingSetting> Mappings { get; set; } = new();
+    public List<SourceMappingSetting> Mappings { get; set; } = [];
 
     /// <summary>
     /// Some files are copied outside of the src/ directory into other locations

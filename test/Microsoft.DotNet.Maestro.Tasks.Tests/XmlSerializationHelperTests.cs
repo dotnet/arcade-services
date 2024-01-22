@@ -3,7 +3,6 @@
 
 using FluentAssertions;
 using NUnit.Framework;
-using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -26,7 +25,7 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var fileSignInfos = serializationResult.Descendants("FileSignInfo").ToList();
-        fileSignInfos.Count().Should().Be(3);
+        fileSignInfos.Count.Should().Be(3);
 
         // Validate that the PKT and TFM are only included if supplied
         var someAssemblySignInfos = fileSignInfos.Where(x => x.Attribute("Include").Value.Equals("SomeAssembly.dll"));
@@ -53,7 +52,7 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var fileExtensionSignInfos = serializationResult.Descendants("FileExtensionSignInfo").ToList();
-        fileExtensionSignInfos.Count().Should().Be(2);
+        fileExtensionSignInfos.Count.Should().Be(2);
 
         var fileExtensionSignInfo1 = fileExtensionSignInfos.Where(x => x.Attribute("Include").Value.Equals(".dll")).Single();
         fileExtensionSignInfo1.Attribute("CertificateName").Value.Should().Be(Certificate1Name);
@@ -69,7 +68,7 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var certificatesSignInfos = serializationResult.Descendants("CertificatesSignInfo").ToList();
-        certificatesSignInfos.Count().Should().Be(2);
+        certificatesSignInfos.Count.Should().Be(2);
 
         var certificatesSignInfo1 = certificatesSignInfos.Where(x => x.Attribute("Include").Value.Equals(Certificate1Name)).Single();
         certificatesSignInfo1.Attribute("DualSigningAllowed").Value.Should().Be("true");
@@ -85,7 +84,7 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var strongNameSignInfos = serializationResult.Descendants("StrongNameSignInfo").ToList();
-        strongNameSignInfos.Count().Should().Be(2);
+        strongNameSignInfos.Count.Should().Be(2);
 
         var strongNameSignInfo1 = strongNameSignInfos.Where(x => x.Attribute("Include").Value.Equals("StrongName1")).Single();
         strongNameSignInfo1.Attribute("PublicKeyToken").Value.Should().Be(PublicKeyToken1);
@@ -103,7 +102,7 @@ public class XmlSerializationHelperTests
         XElement serializationResult = XmlSerializationHelper.SigningInfoToXml(signingInformation);
 
         var items = serializationResult.Descendants("ItemsToSign").ToList();
-        items.Count().Should().Be(2);
+        items.Count.Should().Be(2);
 
         items.Where(i => i.Attribute("Include").Value.Equals("SomeAssembly.dll")).Count().Should().Be(1);
         items.Where(i => i.Attribute("Include").Value.Equals("SomeOtherAssembly.dll")).Count().Should().Be(1);
@@ -126,10 +125,10 @@ public class XmlSerializationHelperTests
 
     private SigningInformation GetTestInfo()
     {
-        SigningInformation signingInfo = new SigningInformation()
+        var signingInfo = new SigningInformation()
         {
-            CertificatesSignInfo = new List<CertificatesSignInfo>()
-            {
+            CertificatesSignInfo =
+            [
                 new CertificatesSignInfo()
                 {
                     DualSigningAllowed = true,
@@ -140,9 +139,9 @@ public class XmlSerializationHelperTests
                     DualSigningAllowed = false,
                     Include = Certificate2Name,
                 },
-            },
-            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
-            {
+            ],
+            FileExtensionSignInfos =
+            [
                 new FileExtensionSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -153,9 +152,9 @@ public class XmlSerializationHelperTests
                     CertificateName = Certificate2Name,
                     Include = ".xbap",
                 }
-            },
-            FileSignInfos = new List<FileSignInfo>()
-            {
+            ],
+            FileSignInfos =
+            [
                 new FileSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -175,14 +174,14 @@ public class XmlSerializationHelperTests
                     CertificateName = Certificate2Name,
                     Include = "SomeOtherAssembly.dll",
                 },
-            },
-            ItemsToSign = new List<ItemsToSign>()
-            {
+            ],
+            ItemsToSign =
+            [
                 new ItemsToSign() { Include = "SomeAssembly.dll" },
                 new ItemsToSign() { Include = "SomeOtherAssembly.dll" },
-            },
-            StrongNameSignInfos = new List<StrongNameSignInfo>()
-            {
+            ],
+            StrongNameSignInfos =
+            [
                 new StrongNameSignInfo()
                 {
                     CertificateName = Certificate1Name,
@@ -195,7 +194,7 @@ public class XmlSerializationHelperTests
                     Include = "StrongName2",
                     PublicKeyToken = PublicKeyToken2
                 }
-            }
+            ]
         };
         return signingInfo;
     }

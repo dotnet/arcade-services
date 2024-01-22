@@ -259,7 +259,7 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
     {
         using (_operations.BeginOperation($"Updating Longest Build Path table"))
         {
-            List<Channel> channels = _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+            List<Channel> channels = [.. _context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name })];
             IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
             _logger.LogInformation($"Will update '{channels.Count}' channels");
@@ -276,10 +276,9 @@ public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdat
 
                 // Get the nodes on the longest path and order them by path time so that the
                 // contributing repos are in the right order
-                List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
+                List<DependencyFlowNode> longestBuildPathNodes = [.. flowGraph.Nodes
                     .Where(n => n.OnLongestBuildPath)
-                    .OrderByDescending(n => n.BestCasePathTime)
-                    .ToList();
+                    .OrderByDescending(n => n.BestCasePathTime)];
 
                 if (longestBuildPathNodes.Any())
                 {

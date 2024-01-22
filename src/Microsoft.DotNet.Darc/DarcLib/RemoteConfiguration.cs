@@ -15,7 +15,7 @@ public class RemoteConfiguration
         AzureDevOpsToken = azureDevOpsToken;
     }
 
-    public string GitRemoteUser => Constants.GitHubBotUserName;
+    public static string GitRemoteUser => Constants.GitHubBotUserName;
 
     public string? GitHubToken { get; }
 

@@ -3,13 +3,11 @@
 
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
@@ -18,7 +16,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
 
-    private SubscriptionData _yamlData;
+    private readonly SubscriptionData _yamlData;
 
     public string Channel => _yamlData.Channel;
 
@@ -45,7 +43,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
-            
+
         _yamlData = new SubscriptionData
         {
             Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
@@ -54,10 +52,9 @@ public class UpdateSubscriptionPopUp : EditorPopUp
             Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
             UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
             Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
-            FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false)
+            FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false),
+            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies)
         };
-
-        _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies);
 
         ISerializer serializer = new SerializerBuilder().Build();
 
@@ -68,9 +65,9 @@ public class UpdateSubscriptionPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-            new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-            new Line()
+            new($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+            new($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+            new()
         });
 
         foreach (string line in lines)
@@ -79,7 +76,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
         }
 
         // Add helper comments
-        Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.sourceRepoElement}':", true));
+        Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}':", true));
 
         foreach (string suggestedRepo in suggestedRepositories)
         {
@@ -109,7 +106,7 @@ public class UpdateSubscriptionPopUp : EditorPopUp
 
         try
         {
-            string yamlString = contents.Aggregate<Line, string>("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
         }
@@ -171,36 +168,36 @@ public class UpdateSubscriptionPopUp : EditorPopUp
     /// </summary>
     private class SubscriptionData
     {
-        public const string channelElement = "Channel";
-        public const string sourceRepoElement = "Source Repository URL";
-        public const string batchable = "Batchable";
-        public const string updateFrequencyElement = "Update Frequency";
-        public const string mergePolicyElement = "Merge Policies";
-        public const string enabled = "Enabled";
-        public const string failureNotificationTagsElement = "Pull Request Failure Notification Tags";
+        public const string ChannelElement = "Channel";
+        public const string SourceRepoElement = "Source Repository URL";
+        public const string BatchableElement = "Batchable";
+        public const string UpdateFrequencyElement = "Update Frequency";
+        public const string MergePolicyElement = "Merge Policies";
+        public const string EnabledElement = "Enabled";
+        public const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
 
         [YamlMember(ApplyNamingConventions = false)]
         public string Id { get; set; }
 
-        [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
         public string Channel { get; set; }
 
-        [YamlMember(Alias = sourceRepoElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
         public string SourceRepository { get; set; }
 
-        [YamlMember(Alias = batchable, ApplyNamingConventions = false)]
+        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
         public string Batchable { get; set; }
 
-        [YamlMember(Alias = updateFrequencyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
         public string UpdateFrequency { get; set; }
 
-        [YamlMember(Alias = enabled, ApplyNamingConventions = false)]
+        [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
         public string Enabled { get; set; }
 
-        [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
         public List<MergePolicyData> MergePolicies { get; set; }
 
-        [YamlMember(Alias = failureNotificationTagsElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
         public string FailureNotificationTags { get; set; }
     }
 }

@@ -29,7 +29,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     private readonly BuildAssetRegistryContext _context;
     // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 
     // wants to use a regex, and not direct matching.
-    private const string _regexBranchPrefix = "-regex:";
+    private const string RegexBranchPrefix = "-regex:";
 
     public DefaultChannelsController(BuildAssetRegistryContext context)
         : base(context)
@@ -70,15 +70,15 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
 
         if (!string.IsNullOrEmpty(branch))
         {
-            List<DefaultChannel> branchFilteredResults = new List<DefaultChannel>();
+            List<DefaultChannel> branchFilteredResults = [];
             foreach (DefaultChannel defaultChannel in results)
             {
                 // Branch name expressed as a regular expression: must start with '-regex:' and have at least one more character.
                 // - Skips NormalizeBranchName here because internally everything is stored without that.
                 //   If there's a pattern of users doing '-regex:/refs/heads/release.*' this could be revisited.
-                if (defaultChannel.Branch.StartsWith(_regexBranchPrefix, StringComparison.InvariantCultureIgnoreCase) &&
-                    defaultChannel.Branch.Length > _regexBranchPrefix.Length &&
-                    new Regex(defaultChannel.Branch.Substring(_regexBranchPrefix.Length)).IsMatch(branch))
+                if (defaultChannel.Branch.StartsWith(RegexBranchPrefix, StringComparison.InvariantCultureIgnoreCase) &&
+                    defaultChannel.Branch.Length > RegexBranchPrefix.Length &&
+                    new Regex(defaultChannel.Branch.Substring(RegexBranchPrefix.Length)).IsMatch(branch))
                 {
                     branchFilteredResults.Add(defaultChannel);
                 }
