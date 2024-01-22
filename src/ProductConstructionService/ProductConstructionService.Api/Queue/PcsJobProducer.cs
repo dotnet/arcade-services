@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName) where T : WorkItem
+public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName) where T : PcsJob
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;

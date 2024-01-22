@@ -13,6 +13,6 @@ public static class QueueConfiguration
             throw new ArgumentException("WorkItemQueueName missing from the configuration");
 
         builder.Services.AddTransient(sp =>
-            ActivatorUtilities.CreateInstance<QueueMessageSenderFactory>(sp, queueName));
+            ActivatorUtilities.CreateInstance<PcsJobProducerFactory>(sp, queueName));
     }
 }

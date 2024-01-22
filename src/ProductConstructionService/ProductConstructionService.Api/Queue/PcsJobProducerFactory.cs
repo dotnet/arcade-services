@@ -11,6 +11,6 @@ public class QueueMessageSenderFactory(QueueServiceClient queueServiceClient, st
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public QueueMessageSender<T> Create<T>() where T : WorkItem 
+    public PcsJobProducer<T> Create<T>() where T : PcsJob 
         => new(_queueServiceClient, _queueName);
 }
