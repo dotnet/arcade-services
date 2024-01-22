@@ -46,7 +46,7 @@ app.MapControllers();
 if (app.Environment.IsDevelopment())
 {
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-    var queueClient = queueServiceClient.GetQueueClient(app.Configuration["WorkitemQueueName"]);
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration["PcsJobQueueName"]);
     await queueClient.CreateIfNotExistsAsync();
 }
 

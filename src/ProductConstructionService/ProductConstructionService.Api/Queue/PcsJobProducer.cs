@@ -8,14 +8,14 @@ using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class QueueMessageSender<T>(QueueServiceClient queueServiceClient, string queueName) where T : PcsJob
+public class PcsJobProducer<T>(QueueServiceClient queueServiceClient, string queueName) where T : PcsJob
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public async Task<SendReceipt> SendAsync(T message)
+    public async Task<SendReceipt> ProduceJobAsync(T payload)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize(message));
+        return await client.SendMessageAsync(JsonSerializer.Serialize(payload));
     }
 }

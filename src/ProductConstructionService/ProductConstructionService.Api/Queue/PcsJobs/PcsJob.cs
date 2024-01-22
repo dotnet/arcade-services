@@ -8,5 +8,10 @@ namespace ProductConstructionService.Api.Queue.WorkItems;
 [JsonDerivedType(typeof(TextPcsJob), typeDiscriminator: nameof(TextPcsJob))]
 public abstract class PcsJob
 {
-    public Guid Id { get; } = Guid.NewGuid();
+    public PcsJob(Guid? id = null)
+    {
+        Id = id ?? Guid.NewGuid();
+    }
+
+    public Guid Id { get; }
 }

@@ -9,8 +9,8 @@ public static class QueueConfiguration
     {
         builder.AddAzureQueueService("queues");
 
-        var queueName = builder.Configuration["WorkitemQueueName"] ??
-            throw new ArgumentException("WorkItemQueueName missing from the configuration");
+        var queueName = builder.Configuration["PcsJobQueueName"] ??
+            throw new ArgumentException("PcsJobQueueName missing from the configuration");
 
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<PcsJobProducerFactory>(sp, queueName));
