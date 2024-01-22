@@ -12,10 +12,10 @@ public static class QueueConfiguration
         var queueName = builder.Configuration["PcsJobQueueName"] ??
             throw new ArgumentException("PcsJobQueueName missing from the configuration");
 
-        builder.Services.AddSingleton<WorkItemProcessorStatus>();
+        builder.Services.AddSingleton<PcsJobsProcessorStatus>();
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<PcsJobProducerFactory>(sp, queueName));
         builder.Services.AddHostedService(sp => 
-            ActivatorUtilities.CreateInstance<WorkItemProcessor>(sp, queueName));
+            ActivatorUtilities.CreateInstance<PcsJobsProcessor>(sp, queueName));
     }
 }

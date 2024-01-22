@@ -13,7 +13,7 @@ public class TestController(
     BuildAssetRegistryContext dbContext,
     PcsJobProducerFactory pcsJobProducerFactory,
     QueueServiceClient client,
-    WorkItemProcessorStatus status) : Controller
+    PcsJobsProcessorStatus status) : Controller
 {
     private readonly PcsJobProducerFactory _pcsJobProducerFactory = pcsJobProducerFactory;
     private readonly BuildAssetRegistryContext _dbContext = dbContext;

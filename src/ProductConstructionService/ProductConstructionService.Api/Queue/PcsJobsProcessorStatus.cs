@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public class WorkItemProcessorStatus
+public class PcsJobsProcessorStatus
 {
     public bool ContinueWorking { get; set; } = true;
     public bool StoppedWorking { get; set; } = false;
