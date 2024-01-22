@@ -22,7 +22,7 @@ internal class GetRepoVersionOperation : Operation
         _options = options;
     }
 
-    public async override Task<int> ExecuteAsync()
+    public override async Task<int> ExecuteAsync()
     {
         var repositories = _options.Repositories.ToList();
 

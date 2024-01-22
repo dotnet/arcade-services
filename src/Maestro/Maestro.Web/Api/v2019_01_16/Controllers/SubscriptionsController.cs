@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Maestro.Web.Api.v2019_01_16.Models;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers;
 

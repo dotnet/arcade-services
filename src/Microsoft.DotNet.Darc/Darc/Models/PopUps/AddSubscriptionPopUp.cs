@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 public class AddSubscriptionPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private SubscriptionData _yamlData;
+    private readonly SubscriptionData _yamlData;
     public string Channel => _yamlData.Channel;
     public string SourceRepository => _yamlData.SourceRepository;
     public string TargetRepository => _yamlData.TargetRepository;
@@ -61,25 +61,25 @@ public class AddSubscriptionPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line("Use this form to create a new subscription.", true),
-            new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
-            new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-            new Line("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-            new Line("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
-            new Line("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
-            new Line("logins when monitoring the pull requests, once one or more policy checks fail.", true),
-            new Line("For additional information about subscriptions, please see", true),
-            new Line("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
-            new Line("", true),
-            new Line("Fill out the following form.  Suggested values for fields are shown below.", true),
-            new Line()
+            new("Use this form to create a new subscription.", true),
+            new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
+            new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
+            new("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
+            new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
+            new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
+            new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
+            new("For additional information about subscriptions, please see", true),
+            new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
+            new("", true),
+            new("Fill out the following form.  Suggested values for fields are shown below.", true),
+            new()
         });
         foreach (string line in lines)
         {
             Contents.Add(new Line(line));
         }
         // Add helper comments
-        Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.sourceRepoElement}' or '{SubscriptionData.targetRepoElement}':", true));
+        Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}' or '{SubscriptionData.TargetRepoElement}':", true));
         foreach (string suggestedRepo in suggestedRepositories) {
             Contents.Add(new Line($"  {suggestedRepo}", true));
         }
@@ -106,7 +106,7 @@ public class AddSubscriptionPopUp : EditorPopUp
             // Join the lines back into a string and deserialize as YAML.
             // TODO: Alter the popup/ux manager to pass along the raw file to avoid this unnecessary
             // operation once authenticate ends up as YAML.
-            string yamlString = contents.Aggregate<Line, string>("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
         }
@@ -173,39 +173,39 @@ public class AddSubscriptionPopUp : EditorPopUp
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
-    class SubscriptionData
+    private class SubscriptionData
     {
-        public const string channelElement = "Channel";
-        public const string sourceRepoElement = "Source Repository URL";
-        public const string targetRepoElement = "Target Repository URL";
-        public const string targetBranchElement = "Target Branch";
-        public const string updateFrequencyElement = "Update Frequency";
-        public const string mergePolicyElement = "Merge Policies";
-        public const string batchableElement = "Batchable";
-        public const string failureNotificationTagsElement = "Pull Request Failure Notification Tags";
+        public const string ChannelElement = "Channel";
+        public const string SourceRepoElement = "Source Repository URL";
+        public const string TargetRepoElement = "Target Repository URL";
+        public const string TargetBranchElement = "Target Branch";
+        public const string UpdateFrequencyElement = "Update Frequency";
+        public const string MergePolicyElement = "Merge Policies";
+        public const string BatchableElement = "Batchable";
+        public const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
 
-        [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
         public string Channel { get; set; }
 
-        [YamlMember(Alias = sourceRepoElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
         public string SourceRepository { get; set; }
 
-        [YamlMember(Alias = targetRepoElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = TargetRepoElement, ApplyNamingConventions = false)]
         public string TargetRepository { get; set; }
 
-        [YamlMember(Alias = targetBranchElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
         public string TargetBranch { get; set; }
 
-        [YamlMember(Alias = updateFrequencyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
         public string UpdateFrequency { get; set; }
 
-        [YamlMember(Alias = batchableElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
         public string Batchable { get; set; }
 
-        [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
         public List<MergePolicyData> MergePolicies { get; set; }
 
-        [YamlMember(Alias = failureNotificationTagsElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
         public string FailureNotificationTags { get; set; }
     }
 }

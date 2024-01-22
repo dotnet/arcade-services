@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static SubscriptionActorService.PullRequestActorImplementation;
 
 namespace SubscriptionActorService;
@@ -173,7 +172,7 @@ public class PullRequestDescriptionBuilder
         //example: given [23]:sometext as input, it will attempt to capture "23"
         Regex regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
 
-        return regex.Matches(_description.ToString()).Select(m => Int32.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
+        return regex.Matches(_description.ToString()).Select(m => int.Parse(m.ToString())).DefaultIfEmpty(0).Max() + 1;
     }
 
     public static string GetChangesURI(string repoURI, string fromSha, string toSha)
@@ -199,7 +198,7 @@ public class PullRequestDescriptionBuilder
         return _description.ToString();
     }
 
-    private StringBuilder GetDescriptionStringBuilder(string description)
+    private static StringBuilder GetDescriptionStringBuilder(string description)
     {
         if(string.IsNullOrEmpty(description))
         {

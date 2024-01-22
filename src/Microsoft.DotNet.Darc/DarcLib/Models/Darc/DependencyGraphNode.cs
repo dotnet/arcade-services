@@ -4,7 +4,6 @@
 using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Microsoft.DotNet.DarcLib;
 

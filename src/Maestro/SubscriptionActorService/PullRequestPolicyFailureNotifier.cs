@@ -71,7 +71,7 @@ public class PullRequestPolicyFailureNotifier : IPullRequestPolicyFailureNotifie
         // If we're here, there are failing checks, but if the only checks that failed were Maestro Merge Policy checks, we'll skip informing until something else fails too.
         var prChecks = await darcRemote.GetPullRequestChecksAsync(pr.Url);
         var failedPrChecks = prChecks.Where(p => !p.IsMaestroMergePolicy && (p.Status == CheckState.Failure || p.Status == CheckState.Error)).AsEnumerable();
-        if (failedPrChecks.Count() == 0)
+        if (!failedPrChecks.Any())
         {
             _logger.LogInformation($"All failing or error state checks are 'Maestro Merge Policy'-type checks, not notifying subscribed users.");
             return;

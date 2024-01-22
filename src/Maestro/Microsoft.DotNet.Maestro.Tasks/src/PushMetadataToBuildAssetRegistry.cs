@@ -35,8 +35,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
-        private bool IsReleaseOnlyPackageVersion { get; set; } = false;
-
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -48,12 +46,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string MergedManifestFileName = "MergedManifest.xml";
         private const string NoCategory = "NONE";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
-        private string GitHubRepository = "";
-        private string GitHubBranch = "";
+        private string _gitHubRepository = "";
+        private string _gitHubBranch = "";
 
         // Set up proxy objects to allow unit test mocking
-        internal IVersionIdentifierProxy versionIdentifier = new VersionIdentifierProxy();
-        internal IGetEnvProxy getEnvProxy = new GetEnvProxy();
+        internal IVersionIdentifierProxy _versionIdentifier = new VersionIdentifierProxy();
+        internal IGetEnvProxy _getEnvProxy = new GetEnvProxy();
 
         public void Cancel()
         {
@@ -106,7 +104,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         manifest = parsedManifests[0];
                     }
 
-                    List<SigningInformation> signingInformation = new List<SigningInformation>();
+                    var signingInformation = new List<SigningInformation>();
                     foreach (var m in parsedManifests)
                     {
                         if (m.SigningInformation != null)
@@ -150,8 +148,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     buildData.Dependencies = deps;
                     LookupForMatchingGitHubRepository(manifest);
-                    buildData.GitHubBranch = GitHubBranch;
-                    buildData.GitHubRepository = GitHubRepository;
+                    buildData.GitHubBranch = _gitHubBranch;
+                    buildData.GitHubRepository = _gitHubRepository;
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(buildData, cancellationToken);
                     BuildId = recordedBuild.Id;
@@ -166,7 +164,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         IEnumerable<DefaultChannel> defaultChannels =
                             await GetBuildDefaultChannelsAsync(client, recordedBuild);
 
-                        HashSet<int> targetChannelIds = new HashSet<int>(defaultChannels.Select(dc => dc.Channel.Id));
+                        var targetChannelIds = new HashSet<int>(defaultChannels.Select(dc => dc.Channel.Id));
 
                         var defaultChannelsStr = "[" + string.Join("][", targetChannelIds) + "]";
                         Log.LogMessage(MessageImportance.High,
@@ -315,23 +313,23 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetVersion(string assetId)
         {
-            return versionIdentifier.GetVersion(assetId);
+            return _versionIdentifier.GetVersion(assetId);
         }
 
-        internal List<Manifest> GetParsedManifests(
+        internal static List<Manifest> GetParsedManifests(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
-            List<Manifest> parsedManifests = new List<Manifest>();
+            var parsedManifests = new List<Manifest>();
 
             foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern,
                          SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
-                using FileStream stream = new FileStream(manifestPath, FileMode.Open);
-                Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
+                var xmlSerializer = new XmlSerializer(typeof(Manifest));
+                using var stream = new FileStream(manifestPath, FileMode.Open);
+                var manifest = (Manifest)xmlSerializer.Deserialize(stream);
                 parsedManifests.Add(manifest);
             }
 
@@ -405,7 +403,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevAccount()
         {
-            var uri = new Uri(getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
+            var uri = new Uri(_getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
             if (uri.Host == "dev.azure.com")
             {
                 return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
@@ -416,47 +414,47 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevProject()
         {
-            return getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
+            return _getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
         }
 
         private string GetAzDevBuildNumber()
         {
-            return getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
+            return _getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
         }
 
         private string GetAzDevRepository()
         {
-            return getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
+            return _getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
         }
 
         private string GetAzDevRepositoryName()
         {
-            return getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
+            return _getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
         }
 
         private string GetAzDevBranch()
         {
-            return getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
+            return _getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
         }
 
         private int GetAzDevBuildId()
         {
-            return int.Parse(getEnvProxy.GetEnv("BUILD_BUILDID"));
+            return int.Parse(_getEnvProxy.GetEnv("BUILD_BUILDID"));
         }
 
         private int GetAzDevBuildDefinitionId()
         {
-            return int.Parse(getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
+            return int.Parse(_getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
         }
 
         private string GetAzDevCommit()
         {
-            return getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
+            return _getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
         }
 
         private string GetAzDevStagingDirectory()
         {
-            return getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
+            return _getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
         }
 
         /// <summary>
@@ -468,7 +466,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location,
+        internal static void AddAsset(List<AssetData> assets, string assetName, string version, string location,
             LocationType locationType, bool nonShipping)
         {
             assets.Add(new AssetData(nonShipping)
@@ -484,11 +482,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
-        internal (List<PackageArtifactModel>,
-            List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
+        internal static (List<PackageArtifactModel>, List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
         {
-            List<PackageArtifactModel> packageArtifacts = new List<PackageArtifactModel>();
-            List<BlobArtifactModel> blobArtifacts = new List<BlobArtifactModel>();
+            var packageArtifacts = new List<PackageArtifactModel>();
+            var blobArtifacts = new List<BlobArtifactModel>();
 
             foreach (var package in manifest.Packages)
             {
@@ -550,7 +547,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             // Error out for any duplicated packages based on the top level properties of the package.
             var distinctPackages = manifest.Packages.DistinctBy(p => p.Id);
-            if (distinctPackages.Count() < manifest.Packages.Count())
+            if (distinctPackages.Count() < manifest.Packages.Count)
             {
                 var dupes = manifest.Packages.GroupBy(x => new { x.Id, x.Version })
                     .Where(g => g.Count() > 1)
@@ -568,7 +565,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             // Error out for any duplicated blob based on the top level properties of the blob.
             var distinctBlobs = manifest.Blobs.DistinctBy(b => b.Id);
-            if (distinctBlobs.Count() < manifest.Blobs.Count())
+            if (distinctBlobs.Count() < manifest.Blobs.Count)
             {
                 var dupes = manifest.Blobs.GroupBy(x => new { x.Id })
                     .Where(g => g.Count() > 1)
@@ -587,7 +584,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return manifest;
         }
 
-        internal SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
+        internal static SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
         {
             SigningInformation mergedInfo = null;
 
@@ -669,15 +666,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 if (response.IsSuccessStatusCode)
                 {
-                    GitHubRepository = $"https://github.com/{repoIdentity}";
-                    GitHubBranch = manifest.AzureDevOpsBranch;
+                    _gitHubRepository = $"https://github.com/{repoIdentity}";
+                    _gitHubBranch = manifest.AzureDevOpsBranch;
                 }
                 else
                 {
                     Log.LogMessage(MessageImportance.High,
                         $" Unable to translate AzDO to GitHub URL. HttpResponse: {response.StatusCode} {response.ReasonPhrase} for repoIdentity: {repoIdentity} and commit: {manifest.Commit}.");
-                    GitHubRepository = null;
-                    GitHubBranch = null;
+                    _gitHubRepository = null;
+                    _gitHubBranch = null;
                 }
             }
         }
@@ -687,7 +684,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <returns></returns>
-        public string GetGithubRepoName(string repoUrl)
+        public static string GetGithubRepoName(string repoUrl)
         {
             // In case the URL comes in ending with a '/', prevent an indexing exception
             repoUrl = repoUrl.TrimEnd('/');
@@ -760,7 +757,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             List<BlobArtifactModel> blobs,
             Manifest manifest)
         {
-            BuildModel buildModel = new BuildModel(
+            var buildModel = new BuildModel(
                 new BuildIdentity
                 {
 

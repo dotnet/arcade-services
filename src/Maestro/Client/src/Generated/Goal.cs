@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -69,10 +67,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{channelName}", Uri.EscapeDataString(Client.Serialize(channelName))).Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))),
+                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{channelName}", Uri.EscapeDataString(MaestroApi.Serialize(channelName))).Replace("{definitionId}", Uri.EscapeDataString(MaestroApi.Serialize(definitionId))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -151,10 +149,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))).Replace("{channelName}", Uri.EscapeDataString(Client.Serialize(channelName))),
+                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{definitionId}", Uri.EscapeDataString(MaestroApi.Serialize(definitionId))).Replace("{channelName}", Uri.EscapeDataString(MaestroApi.Serialize(channelName))),
                 false);
 
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

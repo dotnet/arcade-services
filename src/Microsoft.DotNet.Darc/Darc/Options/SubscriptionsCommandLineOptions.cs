@@ -13,7 +13,7 @@ using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-abstract class SubscriptionsCommandLineOptions : CommandLineOptions
+internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
 {
     [Option("target-repo", HelpText = "Filter by target repo (matches substring unless --exact or --regex is passed).")]
     public string TargetRepository { get; set; }

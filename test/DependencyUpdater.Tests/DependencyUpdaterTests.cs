@@ -4,7 +4,6 @@
 using System;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;

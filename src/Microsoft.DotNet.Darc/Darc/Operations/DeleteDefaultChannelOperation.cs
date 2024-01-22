@@ -14,11 +14,9 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
 {
-    private readonly DeleteDefaultChannelCommandLineOptions _options;
     public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
         : base(options)
     {
-        _options = options;
     }
 
     public override async Task<int> ExecuteAsync()

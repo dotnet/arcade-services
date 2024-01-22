@@ -22,6 +22,8 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
+    <!-- This is needed to bump the package version past what Microsoft.TeamFoundationServer.Client requires. Can probably be removed once a new version of that package is released -->
+    <PackageReference Include="System.Data.SqlClient" />
     <PackageReference Include="System.IO.Hashing" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Net.Http" />

@@ -32,12 +32,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private static readonly string CommentMarker =
         "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
-    private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
+    private static readonly Regex RepositoryUriPattern = new(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
     private static readonly Regex PullRequestUriPattern =
-        new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
+        new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-    private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
+    private readonly Lazy<IGitHubClient> _lazyClient;
     private readonly ILogger _logger;
     private readonly string _personalAccessToken;
     private readonly JsonSerializerSettings _serializerSettings;
@@ -97,7 +97,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         JObject responseContent;
         try
         {
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger,
@@ -106,7 +106,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
             }
 
-            string content = responseContent["content"].ToString();
+            var content = responseContent["content"].ToString();
 
             _logger.LogInformation(
                 $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
@@ -135,14 +135,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
         string body;
 
-        string gitRef = $"refs/heads/{newBranch}";
+        var gitRef = $"refs/heads/{newBranch}";
         var githubRef = new GitHubRef(gitRef, latestSha);
         try
         {
             // If this succeeds, then the branch exists and we should
             // update the branch to latest.
 
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/branches/{newBranch}",
                        _logger,
@@ -150,7 +150,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             githubRef.Force = true;
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        new HttpMethod("PATCH"),
                        $"repos/{owner}/{repo}/git/{gitRef}",
                        _logger,
@@ -163,7 +163,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
             body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Post,
                        $"repos/{owner}/{repo}/git/refs",
                        _logger,
@@ -228,7 +228,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         if (!string.IsNullOrEmpty(keyword))
         {
             query.Append(keyword);
-            query.Append("+");
+            query.Append('+');
         }
 
         query.Append($"repo:{owner}/{repo}+head:{pullRequestBranch}+type:pr+is:{status.ToString().ToLower()}");
@@ -239,7 +239,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
 
         JObject responseContent;
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
                    $"search/issues?q={query}",
                    _logger))
@@ -247,7 +247,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
         }
 
-        JArray items = JArray.Parse(responseContent["items"].ToString());
+        var items = JArray.Parse(responseContent["items"].ToString());
 
         IEnumerable<int> prs = items.Select(r => r["number"].ToObject<int>());
 
@@ -264,7 +264,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         JObject responseContent;
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(HttpMethod.Get,
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(HttpMethod.Get,
                    $"repos/{owner}/{repo}/pulls/{id}", _logger))
         {
             responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
@@ -425,7 +425,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="mergePolicyName">Name of the merge policy</param>
     /// <param name="sha">Sha of the latest commit in the PR</param>
-    private string CheckRunId(MergePolicyEvaluationResult result, string sha)
+    private static string CheckRunId(MergePolicyEvaluationResult result, string sha)
     {
         return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
     }
@@ -472,10 +472,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="result">The evaluation of the merge policy</param>
     /// <param name="sha">Sha of the latest commit</param>
     /// <returns>The new check run</returns>
-    private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
+    private static NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
     {
-        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha);
-        newCheckRun.ExternalId = CheckRunId(result, sha);
+        var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha)
+        {
+            ExternalId = CheckRunId(result, sha)
+        };
         UpdateCheckRun(newCheckRun, result);
         return newCheckRun;
     }
@@ -486,7 +488,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
     /// <param name="eval">The result of that updated check run</param>
     /// <returns>The updated CheckRun</returns>
-    private CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
+    private static CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
     {
         CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
         UpdateCheckRun(updatedCheckRun, eval);
@@ -498,12 +500,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="checkRun">The check run that needs to be deleted</param>
     /// <returns>The deleted check run</returns>
-    private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
+    private static CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
     {
-        CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-        updatedCheckRun.CompletedAt = checkRun.CompletedAt;
-        updatedCheckRun.Status = "completed";
-        updatedCheckRun.Conclusion = "skipped";
+        var updatedCheckRun = new CheckRunUpdate
+        {
+            CompletedAt = checkRun.CompletedAt,
+            Status = "completed",
+            Conclusion = "skipped"
+        };
         return updatedCheckRun;
     }
 
@@ -512,7 +516,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
     /// <param name="result">The result of that new check run</param>
-    private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
+    private static void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
     {
         var output = FormatOutput(result);
         newCheckRun.Output = output;
@@ -544,7 +548,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
     /// <param name="result">The result of that new check run</param>
-    private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
+    private static void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
     {
         var output = FormatOutput(result);
         newUpdateCheckRun.Output = output;
@@ -584,7 +588,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         {
             _logger.LogInformation($"'owner' or 'repository' couldn't be inferred from '{repoUri}'. " +
                                    $"Not getting files from 'eng/common...'");
-            return new List<GitFile>();
+            return [];
         }
 
         TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit, path);
@@ -598,7 +602,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     {
                         return await GetGitTreeItem(path, treeItem, owner, repo);
                     }));
-        return files.ToList();
+        return [.. files];
     }
 
     /// <summary>
@@ -654,8 +658,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         Blob blob = await ExponentialRetry.Default.RetryAsync(
             async () =>
             {
-                int attempts = 0;
-                int maxAttempts = 5;
+                var attempts = 0;
+                var maxAttempts = 5;
                 Blob blob;
 
                 while (true)
@@ -668,7 +672,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     catch (Exception e) when ((e is ForbiddenException || e is AbuseException ) && attempts < maxAttempts)
                     {
                         // AbuseException exposes a retry-after field which lets us know how long we should wait. ForbiddenException does not, so use 60 seconds
-                        int retryAfterSeconds = 60;
+                        var retryAfterSeconds = 60;
                         if (e is AbuseException abuseException && abuseException.RetryAfterSeconds.HasValue)
                         {
                             retryAfterSeconds = abuseException.RetryAfterSeconds.Value;
@@ -685,21 +689,13 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             },
             ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
             ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
-
-        ContentEncoding encoding;
-        switch (blob.Encoding.Value)
+        var encoding = blob.Encoding.Value switch
         {
-            case EncodingType.Base64:
-                encoding = ContentEncoding.Base64;
-                break;
-            case EncodingType.Utf8:
-                encoding = ContentEncoding.Utf8;
-                break;
-            default:
-                throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}");
-
-        }
-        GitFile newFile = new GitFile(
+            EncodingType.Base64 => ContentEncoding.Base64,
+            EncodingType.Utf8 => ContentEncoding.Utf8,
+            _ => throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}"),
+        };
+        var newFile = new GitFile(
             path + "/" + treeItem.Path,
             blob.Content,
             encoding,
@@ -788,7 +784,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (response = await this.ExecuteRemoteGitCommandAsync(
+            using (response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                        _logger))
@@ -859,7 +855,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/commits/{branch}",
                        _logger))
@@ -886,7 +882,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
         var commits = await Client.Repository.PullRequest.Commits(owner, repo, id);
-        var lastCommitSha = commits.Last().Sha;
+        var lastCommitSha = commits[commits.Count - 1].Sha;
 
         return (await GetChecksFromStatusApiAsync(owner, repo, lastCommitSha))
             .Concat(await GetChecksFromChecksApiAsync(owner, repo, lastCommitSha))
@@ -924,25 +920,19 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
     }
 
-    private ReviewState TranslateReviewState(PullRequestReviewState state)
+    private static ReviewState TranslateReviewState(PullRequestReviewState state)
     {
-        switch (state)
+        return state switch
         {
-            case PullRequestReviewState.Approved:
-                return ReviewState.Approved;
-            case PullRequestReviewState.ChangesRequested:
-                return ReviewState.ChangesRequested;
-            case PullRequestReviewState.Commented:
-                return ReviewState.Commented;
+            PullRequestReviewState.Approved => ReviewState.Approved,
+            PullRequestReviewState.ChangesRequested => ReviewState.ChangesRequested,
+            PullRequestReviewState.Commented => ReviewState.Commented,
             // A PR comment could be dismissed by a new push, so this does not count as a rejection.
             // Change to a comment
-            case PullRequestReviewState.Dismissed:
-                return ReviewState.Commented;
-            case PullRequestReviewState.Pending:
-                return ReviewState.Pending;
-            default:
-                throw new NotImplementedException($"Unexpected pull request review state {state}");
-        }
+            PullRequestReviewState.Dismissed => ReviewState.Commented,
+            PullRequestReviewState.Pending => ReviewState.Pending,
+            _ => throw new NotImplementedException($"Unexpected pull request review state {state}"),
+        };
     }
 
     private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
@@ -954,26 +944,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 {
                     var name = s.Context;
                     var url = s.TargetUrl;
-                    CheckState state;
-                    switch (s.State.Value)
+                    var state = s.State.Value switch
                     {
-                        case CommitState.Pending:
-                            state = CheckState.Pending;
-                            break;
-                        case CommitState.Error:
-                            state = CheckState.Error;
-                            break;
-                        case CommitState.Failure:
-                            state = CheckState.Failure;
-                            break;
-                        case CommitState.Success:
-                            state = CheckState.Success;
-                            break;
-                        default:
-                            state = CheckState.None;
-                            break;
-                    }
-
+                        CommitState.Pending => CheckState.Pending,
+                        CommitState.Error => CheckState.Error,
+                        CommitState.Failure => CheckState.Failure,
+                        CommitState.Success => CheckState.Success,
+                        _ => CheckState.None,
+                    };
                     return new Check(state, name, url, isMaestroMergePolicy: false);
                 })
             .ToList();
@@ -988,37 +966,17 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     var name = run.Name;
                     var externalID = run.ExternalId;
                     var url = run.HtmlUrl;
-                    CheckState state;
-                    switch (run.Status.Value)
+                    var state = run.Status.Value switch
                     {
-                        case CheckStatus.Queued:
-                        case CheckStatus.InProgress:
-                            state = CheckState.Pending;
-                            break;
-                        case CheckStatus.Completed:
-                            switch (run.Conclusion?.Value)
-                            {
-                                case CheckConclusion.Success:
-                                    state = CheckState.Success;
-                                    break;
-                                case CheckConclusion.ActionRequired:
-                                case CheckConclusion.Cancelled:
-                                case CheckConclusion.Failure:
-                                case CheckConclusion.Neutral:
-                                case CheckConclusion.TimedOut:
-                                    state = CheckState.Failure;
-                                    break;
-                                default:
-                                    state = CheckState.None;
-                                    break;
-                            }
-
-                            break;
-                        default:
-                            state = CheckState.None;
-                            break;
-                    }
-
+                        CheckStatus.Queued or CheckStatus.InProgress => CheckState.Pending,
+                        CheckStatus.Completed => (run.Conclusion?.Value) switch
+                        {
+                            CheckConclusion.Success => CheckState.Success,
+                            CheckConclusion.ActionRequired or CheckConclusion.Cancelled or CheckConclusion.Failure or CheckConclusion.Neutral or CheckConclusion.TimedOut => CheckState.Failure,
+                            _ => CheckState.None,
+                        },
+                        _ => CheckState.None,
+                    };
                     return new Check(state, name, url, isMaestroMergePolicy: run.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix));
                 })
             .ToList();
@@ -1026,7 +984,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     private Octokit.GitHubClient CreateGitHubClient()
     {
-        return new Octokit.GitHubClient(_product) {Credentials = new Octokit.Credentials(_personalAccessToken)};
+        return new Octokit.GitHubClient(_product) {Credentials = new Credentials(_personalAccessToken)};
     }
 
     private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
@@ -1096,7 +1054,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo) = ParseRepoUri(repoUri);
         List<GitHubContent> contents;
 
-        using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+        using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                    HttpMethod.Get,
                    $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
                    _logger))
@@ -1202,7 +1160,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             JObject content;
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+            using (HttpResponseMessage response = await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}/compare/{baseVersion}...{targetVersion}",
                        _logger))
@@ -1236,7 +1194,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         try
         {
-            using (await this.ExecuteRemoteGitCommandAsync(
+            using (await ExecuteRemoteGitCommandAsync(
                        HttpMethod.Get,
                        $"repos/{owner}/{repo}",
                        _logger,

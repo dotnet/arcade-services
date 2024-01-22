@@ -84,7 +84,7 @@ internal abstract class VmrTestsBase
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
         .BuildServiceProvider();
 
-    protected List<LocalPath> GetExpectedFilesInVmr(
+    protected static List<LocalPath> GetExpectedFilesInVmr(
         LocalPath vmrPath,
         string[] syncedRepos,
         List<LocalPath> reposFiles)
@@ -107,7 +107,7 @@ internal abstract class VmrTestsBase
         return expectedFiles;
     }
 
-    protected void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
+    protected static void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
     {
         var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
         filesInDir.Should().BeEquivalentTo(expectedFiles);
@@ -125,7 +125,7 @@ internal abstract class VmrTestsBase
         fileContent.Should().BeEquivalentTo(expectedLines);
     }
 
-    protected void CompareFileContents(NativePath filePath, string resourceFileName)
+    protected static void CompareFileContents(NativePath filePath, string resourceFileName)
     {
         var resourceContent = File.ReadAllLines(VmrTestsOneTimeSetUp.ResourcesPath / resourceFileName);
         CheckFileContents(filePath, resourceContent);
@@ -152,7 +152,7 @@ internal abstract class VmrTestsBase
 
     protected async Task CallDarcUpdate(string repository, string commit, bool generateCodeowners = false)
     {
-        await CallDarcUpdate(repository, commit, Array.Empty<AdditionalRemote>(), generateCodeowners);
+        await CallDarcUpdate(repository, commit, [], generateCodeowners);
     }
 
     protected async Task CallDarcUpdate(string repository, string commit, AdditionalRemote[] additionalRemotes, bool generateCodeowners = false)
@@ -185,7 +185,7 @@ internal abstract class VmrTestsBase
         return await binaryFileScanner.ScanVmr(baselinesFilePath, _cancellationToken.Token);
     }
 
-    protected void CopyDirectory(string source, LocalPath destination)
+    protected static void CopyDirectory(string source, LocalPath destination)
     {
         if (!Directory.Exists(destination))
         {
@@ -207,7 +207,7 @@ internal abstract class VmrTestsBase
         }
     }
 
-    private ICollection<LocalPath> GetAllFilesInDirectory(DirectoryInfo directory)
+    private static ICollection<LocalPath> GetAllFilesInDirectory(DirectoryInfo directory)
     {
         var files = new List<LocalPath>();
 

@@ -2,10 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -51,14 +48,14 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/buildtime/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                "/api/buildtime/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
-            if (days != default(int))
+            if (days != default)
             {
-                _url.AppendQuery("days", Client.Serialize(days));
+                _url.AppendQuery("days", MaestroApi.Serialize(days));
             }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

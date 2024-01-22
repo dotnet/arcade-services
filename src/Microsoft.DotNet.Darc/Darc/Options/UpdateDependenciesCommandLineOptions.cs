@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-dependencies", HelpText = "Update local dependencies from a channel, build or local list of packages.")]
-class UpdateDependenciesCommandLineOptions : CommandLineOptions
+internal class UpdateDependenciesCommandLineOptions : CommandLineOptions
 {
     [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
     [RedactFromLogging]

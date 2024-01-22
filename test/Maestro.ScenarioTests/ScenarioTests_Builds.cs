@@ -15,18 +15,18 @@ namespace Maestro.ScenarioTests;
 [Category("PostDeployment")]
 internal class ScenarioTests_Builds : MaestroScenarioTestBase
 {
-    private string repoUrl;
-    private readonly string repoName = TestRepository.TestRepo1Name;
+    private string _repoUrl;
+    private readonly string _repoName = TestRepository.TestRepo1Name;
     private const string SourceBuildNumber = "654321";
     private const string SourceCommit = "123456";
     private const string SourceBranch = "master";
 
-    private readonly IImmutableList<AssetData> sourceAssets;
+    private readonly IImmutableList<AssetData> _sourceAssets;
     private TestParameters _parameters;
 
     public ScenarioTests_Builds()
     {
-        sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        _sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
     }
 
     [SetUp]
@@ -50,10 +50,10 @@ internal class ScenarioTests_Builds : MaestroScenarioTestBase
         TestContext.WriteLine("Darc/Maestro build-handling tests");
         string scenarioDirectory = _parameters._dir.Directory;
 
-        repoUrl = GetGitHubRepoUrl(repoName);
+        _repoUrl = GetGitHubRepoUrl(_repoName);
 
         // Create a build for the source repo
-        Build build = await CreateBuildAsync(repoUrl, SourceBranch, SourceCommit, SourceBuildNumber, sourceAssets);
+        Build build = await CreateBuildAsync(_repoUrl, SourceBranch, SourceCommit, SourceBuildNumber, _sourceAssets);
         Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id);
         retrievedBuild.Released.Should().BeFalse("Retrieved build has Released set to true when it should be false");
 

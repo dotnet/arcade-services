@@ -15,7 +15,7 @@ namespace Maestro.ScenarioTests;
 [TestFixture]
 [NonParallelizable]
 [Category("PostDeployment")]
-class ScenarioTests_Clone : MaestroScenarioTestBase
+internal class ScenarioTests_Clone : MaestroScenarioTestBase
 {
     [Test]
     public async Task Darc_CloneRepo()

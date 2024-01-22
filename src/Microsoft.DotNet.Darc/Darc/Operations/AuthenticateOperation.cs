@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AuthenticateOperation : Operation
 {
-    AuthenticateCommandLineOptions _options;
+    private readonly AuthenticateCommandLineOptions _options;
     public AuthenticateOperation(AuthenticateCommandLineOptions options)
         : base(options)
     {
@@ -26,16 +26,16 @@ internal class AuthenticateOperation : Operation
         // If clear was passed, then clear the options (no popup)
         if (_options.Clear)
         {
-            LocalSettings defaultSettings = new LocalSettings();
+            var defaultSettings = new LocalSettings();
             defaultSettings.SaveSettingsFile(Logger);
-            return Task.FromResult<int>(Constants.SuccessCode);
+            return Task.FromResult(Constants.SuccessCode);
         }
         else
         {
-            AuthenticateEditorPopUp initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
+            var initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
-            return Task.FromResult<int>(uxManager.PopUp(initEditorPopUp));
+            var uxManager = new UxManager(_options.GitLocation, Logger);
+            return Task.FromResult(uxManager.PopUp(initEditorPopUp));
         }
     }
 }

@@ -743,7 +743,7 @@ internal class MaestroScenarioTestBase
         return $"https://{_parameters.GitHubUser}:{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
     }
 
-    protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName, string targetBranch)
+    protected async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName)
     {
         using var shareable = Shareable.Create(TemporaryDirectory.Get());
         var directory = shareable.Peek()!.Directory;
@@ -757,7 +757,6 @@ internal class MaestroScenarioTestBase
             await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com");
             await RunGitAsync("config", "user.name", _parameters.GitHubUser);
         }
-
 
         return shareable.TryTake()!;
     }

@@ -8,7 +8,7 @@ using Azure.Core.Pipeline;
 
 namespace Microsoft.DotNet.Maestro.Client
 {
-    partial class MaestroApiOptions
+    public partial class MaestroApiOptions
     {
         partial void InitializeOptions()
         {

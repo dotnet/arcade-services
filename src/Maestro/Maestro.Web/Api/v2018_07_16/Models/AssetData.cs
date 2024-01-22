@@ -25,7 +25,7 @@ public class AssetData
         {
             Name = Name,
             Version = Version,
-            Locations = Locations?.Select(l => l.ToDb()).ToList() ?? new List<Data.Models.AssetLocation>(),
+            Locations = Locations?.Select(l => l.ToDb()).ToList() ?? [],
             NonShipping = NonShipping
         };
     }

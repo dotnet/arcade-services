@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
-class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
+internal class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
 {
     public override Operation GetOperation()
     {

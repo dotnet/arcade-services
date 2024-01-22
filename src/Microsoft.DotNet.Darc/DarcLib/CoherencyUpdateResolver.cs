@@ -359,7 +359,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         if (potentialBuilds.Count == 1)
         {
             coherentAsset = potentialBuilds.Single().Assets.FirstOrDefault(
-                asset => assetComparer.Equals(asset, cpdDependency));
+                asset => AssetComparer.Equals(asset, cpdDependency));
         }
         // Cases where there are multiple builds. This is where it gets interesting.
         // We really want the same asset that the CPD parent has. The nuget.config
@@ -376,13 +376,12 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         else if (potentialBuilds.Count > 1)
         {
             // Gather all matching assets from each of the builds.
-            List<Build> buildsWithMatchingAssets = potentialBuilds
-                .Where(build => build.Assets.Any(asset => assetComparer.Equals(asset, cpdDependency)))
-                .OrderByDescending(build => build.Id)
-                .ToList();
+            List<Build> buildsWithMatchingAssets = [.. potentialBuilds
+                .Where(build => build.Assets.Any(asset => AssetComparer.Equals(asset, cpdDependency)))
+                .OrderByDescending(build => build.Id)];
 
             List<Asset> allMatchingAssets = buildsWithMatchingAssets
-                .Select(build => build.Assets.FirstOrDefault(asset => assetComparer.Equals(asset, cpdDependency)))
+                .Select(build => build.Assets.FirstOrDefault(asset => AssetComparer.Equals(asset, cpdDependency)))
                 .ToList();
 
             // If there is one or zero matching assets, just return what we have.
@@ -422,7 +421,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
                 return buildsWithMatchingAssets
                     .First()
                     .Assets
-                    .FirstOrDefault(asset => assetComparer.Equals(asset, cpdDependency));
+                    .FirstOrDefault(asset => AssetComparer.Equals(asset, cpdDependency));
             }
             else
             {

@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private RepositoryPoliciesData _yamlData;
+    private readonly RepositoryPoliciesData _yamlData;
     public string Repository => _yamlData.Repository;
     public string Branch => _yamlData.Branch;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
@@ -32,8 +32,8 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         {
             Repository = GetCurrentSettingForDisplay(repository, "<required>", false),
             Branch = GetCurrentSettingForDisplay(branch, "<required>", false),
+            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies)
         };
-        _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies);
 
         ISerializer serializer = new SerializerBuilder().Build();
         string yaml = serializer.Serialize(_yamlData);
@@ -42,12 +42,12 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         // Initialize line contents.  Augment the input lines with suggestions and explanation
         Contents = new Collection<Line>(new List<Line>
         {
-            new Line("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
-            new Line("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
-            new Line("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
-            new Line("", true),
-            new Line("Fill out the following form. Suggested values for merge policies are shown below.", true),
-            new Line()
+            new("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
+            new("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
+            new("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
+            new("", true),
+            new("Fill out the following form. Suggested values for merge policies are shown below.", true),
+            new()
         });
         foreach (string line in lines)
         {
@@ -68,7 +68,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         try
         {
             // Join the lines back into a string and deserialize as YAML.
-            string yamlString = contents.Aggregate<Line, string>("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<RepositoryPoliciesData>(yamlString);
         }
@@ -103,19 +103,19 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         return Constants.SuccessCode;
     }
 
-    class RepositoryPoliciesData
+    private class RepositoryPoliciesData
     {
-        public const string repoElement = "Repository URL";
-        public const string branchElement = "Branch";
-        public const string mergePolicyElement = "Merge Policies";
+        public const string RepoElement = "Repository URL";
+        public const string BranchElement = "Branch";
+        public const string MergePolicyElement = "Merge Policies";
 
-        [YamlMember(Alias = branchElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
         public string Branch { get; set; }
 
-        [YamlMember(Alias = repoElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = RepoElement, ApplyNamingConventions = false)]
         public string Repository { get; set; }
 
-        [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
         public List<MergePolicyData> MergePolicies { get; set; }
     }
 }
