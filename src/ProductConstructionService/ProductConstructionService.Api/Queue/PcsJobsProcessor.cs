@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 
-using Azure;
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using ProductConstructionService.Api.Queue.WorkItems;
@@ -17,29 +17,53 @@ public class PcsJobsProcessor(
     : BackgroundService
 {
     private readonly ILogger<PcsJobsProcessor> _logger = logger;
-    private const int jobInvisibilityTimeout = 30;
+    private const int jobInvisibilityTimeoutSeconds = 30;
+    private const int emptyQueueTimeoutSeconds = 60;
 
-    protected async override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected async override Task ExecuteAsync(CancellationToken cancellationToken)
     {
         QueueClient queueClient = queueServiceClient.GetQueueClient(queueName);
-        _logger.LogInformation("Starting to listen to {queueName}", queueName);
-        while (!stoppingToken.IsCancellationRequested && status.ContinueWorking)
+        _logger.LogInformation("Starting to process PCS jobs {queueName}", queueName);
+        while (!cancellationToken.IsCancellationRequested && status.ContinueWorking)
         {
-            var message = queueClient.ReceiveMessage();
-            _logger.LogInformation($"{message.Value.Body.ToString()}");
-            await Task.Delay(5000);
+            var pcsJob = await GetPcsJob(queueClient, cancellationToken);
+
+            if (pcsJob == null)
+            {
+                // Queue is empty, wait a bit
+                _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", queueName, emptyQueueTimeoutSeconds);
+                await Task.Delay(TimeSpan.FromSeconds(emptyQueueTimeoutSeconds));
+                continue;
+            }
+
+            ProcessPcsJob(pcsJob, cancellationToken);
         }
         status.StoppedWorking = true;
-        _logger.LogInformation("Done working!");
+        _logger.LogInformation("Stopped processing PCS jobs");
     }
 
-    /*private async Task<PcsJob?> GetPcsJob(QueueClient queueClient)
+    private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)
     {
-        NullableResponse<QueueMessage> response = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(jobInvisibilityTimeout));
-        if (response.HasValue == null)
+        QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(jobInvisibilityTimeoutSeconds), cancellationToken);
+        if (message.Body == null)
         {
             return null;
         }
 
-    }*/
+        await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+
+        return JsonSerializer.Deserialize<PcsJob>(message.Body) ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(PcsJob)}");
+    }
+
+    private void ProcessPcsJob(PcsJob pcsJob, CancellationToken cancellationToken)
+    {
+        switch (pcsJob)
+        {
+            case TextPcsJob textPcsJob:
+                _logger.LogInformation("Processed text job. Message: {message}", textPcsJob.Text);
+                break;
+            default:
+                throw new NotSupportedException($"Unable to process unknown PCS job type: {pcsJob.GetType().Name}");
+        }
+    }
 }
