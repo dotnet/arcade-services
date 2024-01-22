@@ -296,6 +296,6 @@ resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServ
 }
 
 resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-    name: 'workitem-queue'
+    name: 'pcs-jobs'
     parent: storageAccountQueueService
 }
