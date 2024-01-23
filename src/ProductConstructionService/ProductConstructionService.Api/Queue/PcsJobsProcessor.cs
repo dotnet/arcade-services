@@ -17,6 +17,7 @@ public class PcsJobsProcessor(
     : BackgroundService
 {
     private readonly ILogger<PcsJobsProcessor> _logger = logger;
+
     private const int _jobInvisibilityTimeoutSeconds = 30;
     private const int _emptyQueueTimeoutSeconds = 60;
 
@@ -45,14 +46,14 @@ public class PcsJobsProcessor(
     private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)
     {
         QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(_jobInvisibilityTimeoutSeconds), cancellationToken);
-        if (message.Body == null)
+        if (message == null || message.Body == null)
         {
             return null;
         }
 
         await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
 
-        return JsonSerializer.Deserialize<PcsJob>(message.Body) ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(PcsJob)}");
+        return message.Body.ToObjectFromJson<PcsJob>() ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(PcsJob)}");
     }
 
     private void ProcessPcsJob(PcsJob pcsJob)

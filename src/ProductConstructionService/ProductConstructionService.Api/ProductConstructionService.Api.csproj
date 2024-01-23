@@ -25,8 +25,4 @@
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
     <ProjectReference Include="..\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
 </Project>

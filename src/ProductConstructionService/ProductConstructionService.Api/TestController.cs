@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ public class TestController(
     public async Task<IActionResult> Index()
     {
         var queueInjector = _pcsJobProducerFactory.Create<TextPcsJob>();
-        await queueInjector.ProduceJobAsync(new("some message"));
+        await queueInjector.ProduceJobAsync(new() { Text = "some text"});
         return Ok("Message sent");
     }
 
@@ -31,11 +32,13 @@ public class TestController(
     {
         var q = client.GetQueueClient("pcs-jobs");
         var message = q.ReceiveMessage();
+        var a = JsonSerializer.Deserialize<TextPcsJob>(message.Value.Body);
         status.ContinueWorking = false;
         while(!status.StoppedWorking)
         {
             Thread.Sleep(2000);
         }
+        
         return Ok("Done!");
     }
 }

@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Queue.WorkItems;
 
-public class TextPcsJob(string text) : PcsJob
+public class TextPcsJob : PcsJob
 {
-    public string Text { get; } = text;
+    public string Text { get; set; } = string.Empty;
 }

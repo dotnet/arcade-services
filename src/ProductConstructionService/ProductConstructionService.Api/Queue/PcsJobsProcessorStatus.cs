@@ -7,4 +7,10 @@ public class PcsJobsProcessorStatus
 {
     public bool ContinueWorking { get; set; } = true;
     public bool StoppedWorking { get; set; } = false;
+
+    public void Reset()
+    {
+        ContinueWorking = true;
+        StoppedWorking = false;
+    }
 }

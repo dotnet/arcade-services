@@ -1,11 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Api.Queue.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
