@@ -27,12 +27,11 @@ public class PcsJobsProcessor(
         await Task.Run(async () => {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (status.StoppedWorking)
+                await status.Semaphore.WaitAsync(cancellationToken);
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    await Task.Delay(_options.OffTimeCheck);
-                    continue;
+                    await ProcessJobs(cancellationToken);
                 }
-                await ProcessJobs(cancellationToken);
             }
         });
     }
@@ -62,7 +61,6 @@ public class PcsJobsProcessor(
                 _logger.LogError(ex, "Exception while processing pcs job");
             }
         }
-        status.StoppedWorking = true;
         _logger.LogInformation("Stopped processing PCS jobs");
     }
 

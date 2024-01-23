@@ -5,12 +5,21 @@ namespace ProductConstructionService.Api.Queue;
 
 public class PcsJobsProcessorStatus
 {
-    public bool ContinueWorking { get; set; } = true;
-    public bool StoppedWorking { get; set; } = false;
+    public PcsJobsProcessorStatus()
+    {
+        ContinueWorking = true;
+        Semaphore = new(1);
+    }
 
     public void Reset()
     {
         ContinueWorking = true;
-        StoppedWorking = false;
+        if (Semaphore.CurrentCount == 0)
+        {
+            Semaphore.Release();
+        }
     }
+
+    public bool ContinueWorking { get; set; }
+    public SemaphoreSlim Semaphore { get; }
 }
