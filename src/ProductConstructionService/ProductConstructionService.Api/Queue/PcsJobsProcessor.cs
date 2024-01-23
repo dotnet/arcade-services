@@ -62,7 +62,7 @@ public class PcsJobsProcessor(
                 _logger.LogError(ex, "Exception while processing pcs job");
             }
         }
-        _status.StoppedWorking = false;
+        _status.StoppedWorking = true;
         _logger.LogInformation("Stopped processing PCS jobs");
     }
 
