@@ -62,7 +62,7 @@ DO
     $newRevisionRunningState = az containerapp revision show --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName --query "properties.runningState"
     Write-Host "New revision running state: $newRevisionRunningState"
     $sleep = $true
-} While ($newRevisionRunningState -match "Activating")
+} While ($newRevisionRunningState -notmatch "Running" -or $newRevisionRunningState -notmatch "Failed")
 
 if ($newRevisionRunningState -match "Running") {
     Write-Host "Assigning label $inactiveLabel to the new revision"
