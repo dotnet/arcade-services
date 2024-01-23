@@ -16,7 +16,7 @@ public class PcsJobsProcessorController
     private readonly PcsJobsProcessorStatus _pcsJobsProcessorStatus = pcsJobsProcessorStatus;
     private readonly IHostApplicationLifetime _hostApplicationLifetime = hostApplicationLifetime;
 
-    private const int _stoppedCheckDelaySeconds = 5;
+    private const int StoppedCheckDelaySeconds = 5;
 
     [HttpPost("stop")]
     public async Task<IActionResult> StopPcsJobsProcessor()
@@ -28,7 +28,7 @@ public class PcsJobsProcessorController
 
         while (!_pcsJobsProcessorStatus.StoppedWorking)
         {
-            await Task.Delay(TimeSpan.FromSeconds(_stoppedCheckDelaySeconds));
+            await Task.Delay(TimeSpan.FromSeconds(StoppedCheckDelaySeconds));
         }
 
         return Ok();

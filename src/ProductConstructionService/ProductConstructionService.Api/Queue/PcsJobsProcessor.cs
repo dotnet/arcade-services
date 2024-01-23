@@ -19,28 +19,29 @@ public class PcsJobsProcessor(
 {
     private readonly ILogger<PcsJobsProcessor> _logger = logger;
     private readonly PcsJobProcessorOptions _options = options;
+    private readonly PcsJobsProcessorStatus _status = status;
 
-    private const int _jobInvisibilityTimeoutSeconds = 30;
+    private const int JobInvisibilityTimeoutSeconds = 30;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await Task.Run(async () => {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await status.Semaphore.WaitAsync(cancellationToken);
+                await _status.Semaphore.WaitAsync(cancellationToken);
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     await ProcessJobs(cancellationToken);
                 }
             }
-        });
+        }, cancellationToken);
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)
     {
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.QueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.QueueName);
-        while (!cancellationToken.IsCancellationRequested && status.ContinueWorking)
+        while (!cancellationToken.IsCancellationRequested && _status.ContinueWorking)
         {
             try
             {
@@ -61,12 +62,13 @@ public class PcsJobsProcessor(
                 _logger.LogError(ex, "Exception while processing pcs job");
             }
         }
+        _status.StoppedWorking = false;
         _logger.LogInformation("Stopped processing PCS jobs");
     }
 
     private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)
     {
-        QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(_jobInvisibilityTimeoutSeconds), cancellationToken);
+        QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(JobInvisibilityTimeoutSeconds), cancellationToken);
         if (message == null || message.Body == null)
         {
             return null;

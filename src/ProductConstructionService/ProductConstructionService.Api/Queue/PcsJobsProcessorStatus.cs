@@ -8,12 +8,14 @@ public class PcsJobsProcessorStatus
     public PcsJobsProcessorStatus()
     {
         ContinueWorking = true;
+        StoppedWorking = false;
         Semaphore = new(1);
     }
 
     public void Reset()
     {
         ContinueWorking = true;
+        StoppedWorking = false;
         if (Semaphore.CurrentCount == 0)
         {
             Semaphore.Release();
@@ -21,5 +23,6 @@ public class PcsJobsProcessorStatus
     }
 
     public bool ContinueWorking { get; set; }
+    public bool StoppedWorking { get; set; }
     public SemaphoreSlim Semaphore { get; }
 }
