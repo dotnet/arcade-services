@@ -16,6 +16,6 @@ public class PcsJobProducer<T>(QueueServiceClient queueServiceClient, string que
     public async Task<SendReceipt> ProduceJobAsync(T payload)
     {
         var client = _queueServiceClient.GetQueueClient(_queueName);
-        return await client.SendMessageAsync(JsonSerializer.Serialize<PcsJob>(payload));
+        return await client.SendMessageAsync(JsonSerializer.Serialize(payload));
     }
 }

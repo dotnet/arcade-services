@@ -7,7 +7,6 @@ using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Queue.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
