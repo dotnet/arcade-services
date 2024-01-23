@@ -3,6 +3,7 @@
 
 
 using System.Text.Json;
+using System.Threading;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using ProductConstructionService.Api.Queue.WorkItems;
@@ -11,33 +12,55 @@ namespace ProductConstructionService.Api.Queue;
 
 public class PcsJobsProcessor(
     ILogger<PcsJobsProcessor> logger,
-    string queueName,
+    PcsJobProcessorOptions options,
     PcsJobsProcessorStatus status,
     QueueServiceClient queueServiceClient)
     : BackgroundService
 {
     private readonly ILogger<PcsJobsProcessor> _logger = logger;
+    private readonly PcsJobProcessorOptions _options = options;
 
     private const int _jobInvisibilityTimeoutSeconds = 30;
-    private const int _emptyQueueTimeoutSeconds = 60;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        QueueClient queueClient = queueServiceClient.GetQueueClient(queueName);
-        _logger.LogInformation("Starting to process PCS jobs {queueName}", queueName);
+        await Task.Run(async () => {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (status.StoppedWorking)
+                {
+                    await Task.Delay(_options.OffTimeCheck);
+                    continue;
+                }
+                await ProcessJobs(cancellationToken);
+            }
+        });
+    }
+
+    private async Task ProcessJobs(CancellationToken cancellationToken)
+    {
+        QueueClient queueClient = queueServiceClient.GetQueueClient(_options.QueueName);
+        _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.QueueName);
         while (!cancellationToken.IsCancellationRequested && status.ContinueWorking)
         {
-            var pcsJob = await GetPcsJob(queueClient, cancellationToken);
-
-            if (pcsJob == null)
+            try
             {
-                // Queue is empty, wait a bit
-                _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", queueName, _emptyQueueTimeoutSeconds);
-                await Task.Delay(TimeSpan.FromSeconds(_emptyQueueTimeoutSeconds), cancellationToken);
-                continue;
-            }
+                var pcsJob = await GetPcsJob(queueClient, cancellationToken);
 
-            ProcessPcsJob(pcsJob);
+                if (pcsJob == null)
+                {
+                    // Queue is empty, wait a bit
+                    _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.QueueName, _options.EmptyQueueWaitTime);
+                    await Task.Delay(_options.EmptyQueueWaitTime, cancellationToken);
+                    continue;
+                }
+
+                ProcessPcsJob(pcsJob);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception while processing pcs job");
+            }
         }
         status.StoppedWorking = true;
         _logger.LogInformation("Stopped processing PCS jobs");

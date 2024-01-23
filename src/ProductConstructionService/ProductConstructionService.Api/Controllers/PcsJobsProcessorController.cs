@@ -10,12 +10,10 @@ namespace ProductConstructionService.Api.Controllers;
 public class PcsJobsProcessorController
     (ILogger<PcsJobsProcessorController> logger,
     PcsJobsProcessorStatus pcsJobsProcessorStatus,
-    PcsJobsProcessor pcsJobsProcessor,
     IHostApplicationLifetime hostApplicationLifetime) : Controller
 {
     private readonly ILogger<PcsJobsProcessorController> _logger = logger;
     private readonly PcsJobsProcessorStatus _pcsJobsProcessorStatus = pcsJobsProcessorStatus;
-    private readonly PcsJobsProcessor _pcsJobsProcessor = pcsJobsProcessor;
     private readonly IHostApplicationLifetime _hostApplicationLifetime = hostApplicationLifetime;
 
     private const int _stoppedCheckDelaySeconds = 5;
@@ -41,7 +39,6 @@ public class PcsJobsProcessorController
     {
         _logger.LogInformation("Starting {pcsJobsProcessor}", nameof(PcsJobsProcessor));
         _pcsJobsProcessorStatus.Reset();
-        _pcsJobsProcessor.StartAsync(_hostApplicationLifetime.ApplicationStarted);
 
         return Ok();
     }
