@@ -5,13 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Serialization;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
-using NUnit.Framework;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Tests;
@@ -26,12 +21,12 @@ namespace Microsoft.DotNet.Darc.Tests;
 /// </summary>
 internal class DependencyFlowTestDriver
 {
-    private string _testName;
+    private readonly string _testName;
     private const string TestFilesInput = "DependencyFlowGraph";
-    private const string inputRootDir = "inputs";
+    private const string InputRootDir = "inputs";
     private const string InputJsonFile = "input.json";
-    public string OutputJsonFile { get => "output.json";}
-    private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, TestFilesInput, _testName); }
+    public static string OutputJsonFile { get => "output.json";}
+    private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, TestFilesInput, _testName); }
          
     public DependencyFlowTestDriver(string testName)
     {
@@ -45,14 +40,14 @@ internal class DependencyFlowTestDriver
 
         DependencyFlowGraph flowGraph = JsonConvert.DeserializeObject<DependencyFlowGraph>(File.ReadAllText(inputGraphPath));
 
-        List<DependencyFlowEdge> newEdgeList = new List<DependencyFlowEdge>();
+        List<DependencyFlowEdge> newEdgeList = [];
 
         foreach (var edge in flowGraph.Edges)
         {
             DependencyFlowNode to = flowGraph.Nodes.First(n => n.Id == edge.To.Id);
             DependencyFlowNode from = flowGraph.Nodes.First(n => n.Id == edge.From.Id);
 
-            DependencyFlowEdge newEdge = new DependencyFlowEdge(from, to, edge.Subscription);
+            var newEdge = new DependencyFlowEdge(from, to, edge.Subscription);
 
             to.IncomingEdges.Add(newEdge);
             from.OutgoingEdges.Add(newEdge);
@@ -79,7 +74,7 @@ internal class DependencyFlowTestDriver
         return flowGraph;
     }
 
-    public void AssertFlowNodeListIsEqual(IEnumerable<DependencyFlowNode> nodes, IEnumerable<DependencyFlowNode> expectedNodes)
+    public static void AssertFlowNodeListIsEqual(IEnumerable<DependencyFlowNode> nodes, IEnumerable<DependencyFlowNode> expectedNodes)
     {
         // Check that we have all of the expected nodes
         foreach (var expectedNode in expectedNodes)
@@ -100,7 +95,7 @@ internal class DependencyFlowTestDriver
         }
     }
 
-    public void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
+    public static void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
     {
         expectedNode.Repository.Should().Be(node.Repository);
         expectedNode.Branch.Should().Be(node.Branch);
@@ -111,7 +106,7 @@ internal class DependencyFlowTestDriver
         expectedNode.OnLongestBuildPath.Should().Be(node.OnLongestBuildPath);
     }
 
-    public void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
+    public static void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
     {
         // Check that we have all the expected edges
         foreach (var expectedEdge in expectedEdges)
@@ -132,7 +127,7 @@ internal class DependencyFlowTestDriver
         }
     }
 
-    public void AssertFlowEdgeIsEqual(DependencyFlowEdge edge, DependencyFlowEdge expectedEdge)
+    public static void AssertFlowEdgeIsEqual(DependencyFlowEdge edge, DependencyFlowEdge expectedEdge)
     {
         AssertFlowNodeIsEqual(edge.To, expectedEdge.To);
         AssertFlowNodeIsEqual(edge.From, expectedEdge.From);
@@ -143,14 +138,14 @@ internal class DependencyFlowTestDriver
     public static void GetGraphAndCompare(string testInputsName, 
         Func<DependencyFlowTestDriver, DependencyFlowGraph> testFunc)
     {
-        DependencyFlowTestDriver dependencyFlowTestDriver = new DependencyFlowTestDriver(testInputsName);
+        var dependencyFlowTestDriver = new DependencyFlowTestDriver(testInputsName);
 
         DependencyFlowGraph flowGraph = testFunc(dependencyFlowTestDriver);
             
         DependencyFlowGraph expectedGraph = JsonConvert.DeserializeObject<DependencyFlowGraph>(
-            File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, dependencyFlowTestDriver.OutputJsonFile)));
+            File.ReadAllText(Path.Combine(dependencyFlowTestDriver.RootInputsPath, OutputJsonFile)));
 
-        dependencyFlowTestDriver.AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
-        dependencyFlowTestDriver.AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);
+        AssertFlowNodeListIsEqual(flowGraph.Nodes, expectedGraph.Nodes);
+        AssertFlowEdgeListIsEqual(flowGraph.Edges, expectedGraph.Edges);
     }
 }

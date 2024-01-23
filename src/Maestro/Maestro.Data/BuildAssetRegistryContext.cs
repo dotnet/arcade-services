@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
@@ -324,9 +323,10 @@ FROM traverse;",
             new SqlParameter("id", buildId));
 
         List<BuildDependency> things = await edges.ToListAsync();
-        var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
-
-        buildIds.Add(buildId); // Make sure we always include the requested build, even if it has no edges.
+        var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }))
+        {
+            buildId // Make sure we always include the requested build, even if it has no edges.
+        };
 
         IQueryable<Build> builds = from build in Builds
             where buildIds.Contains(build.Id)
@@ -335,7 +335,7 @@ FROM traverse;",
         Dictionary<int, Build> dict = await builds.ToDictionaryAsync(b => b.Id,
             b =>
             {
-                b.DependentBuildIds = new List<BuildDependency>();
+                b.DependentBuildIds = [];
                 return b;
             });
 

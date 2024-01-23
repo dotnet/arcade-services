@@ -108,36 +108,33 @@ namespace SubscriptionActorService
 
         private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
-            switch (actorId.Kind)
+            return actorId.Kind switch
             {
-                case ActorIdKind.Guid:
-                    return new NonBatchedPullRequestActorImplementation(actorId,
-                        reminderManager,
-                        stateManager,
-                        _mergePolicyEvaluator,
-                        _coherencyUpdateResolver,
-                        _context,
-                        _darcFactory,
-                        _barClient,
-                        _loggerFactory,
-                        _actionRunner,
-                        _subscriptionActorFactory,
-                        _pullRequestPolicyFailureNotifier);
-                case ActorIdKind.String:
-                    return new BatchedPullRequestActorImplementation(actorId,
-                        reminderManager,
-                        stateManager,
-                        _mergePolicyEvaluator,
-                        _coherencyUpdateResolver,
-                        _context,
-                        _darcFactory,
-                        _barClient,
-                        _loggerFactory,
-                        _actionRunner,
-                        _subscriptionActorFactory);
-                default:
-                    throw new NotSupportedException("Only actorIds of type Guid and String are supported");
-            }
+                ActorIdKind.Guid => new NonBatchedPullRequestActorImplementation(actorId,
+                                        reminderManager,
+                                        stateManager,
+                                        _mergePolicyEvaluator,
+                                        _coherencyUpdateResolver,
+                                        _context,
+                                        _darcFactory,
+                                        _barClient,
+                                        _loggerFactory,
+                                        _actionRunner,
+                                        _subscriptionActorFactory,
+                                        _pullRequestPolicyFailureNotifier),
+                ActorIdKind.String => new BatchedPullRequestActorImplementation(actorId,
+                                        reminderManager,
+                                        stateManager,
+                                        _mergePolicyEvaluator,
+                                        _coherencyUpdateResolver,
+                                        _context,
+                                        _darcFactory,
+                                        _barClient,
+                                        _loggerFactory,
+                                        _actionRunner,
+                                        _subscriptionActorFactory),
+                _ => throw new NotSupportedException("Only actorIds of type Guid and String are supported"),
+            };
         }
 
         public PullRequestActorImplementation Implementation { get; private set; }
@@ -267,7 +264,7 @@ namespace SubscriptionActorService
 
         private class ReferenceLinksMap
         {
-            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = new Dictionary<(string from, string to), int>();
+            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = [];
         }
 
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
@@ -567,7 +564,7 @@ namespace SubscriptionActorService
         /// <param name="darc">Darc remote</param>
         /// <param name="evaluations">List of merge policies</param>
         /// <returns>Result of the policy check.</returns>
-        private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+        private static Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
@@ -659,7 +656,7 @@ namespace SubscriptionActorService
                         });
                     await _reminders.TryRegisterReminderAsync(
                         PullRequestUpdate,
-                        Array.Empty<byte>(),
+                        [],
                         TimeSpan.FromMinutes(5),
                         TimeSpan.FromMinutes(5));
                     return ActionResult.Create<object>(
@@ -669,11 +666,11 @@ namespace SubscriptionActorService
 
                 if (pr != null)
                 {
-                    await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> { updateParameter });
+                    await UpdatePullRequestAsync(pr, [updateParameter]);
                     return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
                 }
 
-                string prUrl = await CreatePullRequestAsync(new List<UpdateAssetsParameters> { updateParameter });
+                string prUrl = await CreatePullRequestAsync([updateParameter]);
                 if (prUrl == null)
                 {
                     return ActionResult.Create<object>(null, "Updates require no changes, no pull request created.");
@@ -757,7 +754,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate repoDependencyUpdate =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count() < 1)
+            if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
             {
                 return null;
             }
@@ -1011,7 +1008,7 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate targetRepositoryUpdates =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count() < 1)
+            if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
                 return;
             }
@@ -1087,7 +1084,7 @@ namespace SubscriptionActorService
         /// <param name="existingUpdates">pr object to update</param>
         /// <param name="incomingUpdates">list of new incoming updates</param>
         /// <returns>Merged list of existing updates along with the new</returns>
-        private List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
+        private static List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
             List<DependencyUpdateSummary> existingUpdates,
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> incomingUpdates)
         {
@@ -1124,7 +1121,7 @@ namespace SubscriptionActorService
         {
             public bool CoherencyCheckSuccessful { get; set; } = true;
             public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
-            public List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = new();
+            public List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = [];
         }
 
         /// <summary>

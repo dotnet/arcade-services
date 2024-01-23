@@ -13,12 +13,13 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NuGet.Packaging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class UpdateDependenciesOperation : Operation
+internal class UpdateDependenciesOperation : Operation
 {
     private readonly UpdateDependenciesCommandLineOptions _options;
     public UpdateDependenciesOperation(UpdateDependenciesCommandLineOptions options)
@@ -47,8 +48,8 @@ class UpdateDependenciesOperation : Operation
                 localSettings.GitHubToken :
                 _options.GitHubPat;
 
-            IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
             var coherencyUpdateResolver = new CoherencyUpdateResolver(barClient, Logger);
 
             var local = new Local(_options.GetRemoteConfiguration(), Logger);
@@ -292,7 +293,7 @@ class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private async Task<int> CoherencyUpdatesAsync(
+    private static async Task<int> CoherencyUpdatesAsync(
         ICoherencyUpdateResolver updateResolver,
         IRemoteFactory remoteFactory,
         List<DependencyDetail> currentDependencies,
@@ -329,7 +330,7 @@ class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
-    private void PrettyPrintCoherencyErrors(DarcCoherencyException e)
+    private static void PrettyPrintCoherencyErrors(DarcCoherencyException e)
     {
         Console.WriteLine("Coherency updates failed for the following dependencies:");
         foreach (var error in e.Errors)
@@ -345,7 +346,7 @@ class UpdateDependenciesOperation : Operation
 
     private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
-        Dictionary<string, string> dependencyVersionMap = new Dictionary<string, string>();
+        Dictionary<string, string> dependencyVersionMap = [];
 
         // Not using Linq to make sure there are no duplicates
         foreach (DependencyDetail dependency in dependencies)
@@ -356,7 +357,7 @@ class UpdateDependenciesOperation : Operation
             }
         }
 
-        List<DependencyDetail> updatedDependencies = new List<DependencyDetail>();
+        List<DependencyDetail> updatedDependencies = [];
 
         if (!Directory.Exists(pathToFolder))
         {

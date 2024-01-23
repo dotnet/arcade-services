@@ -1,17 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -33,7 +33,7 @@ internal class GetChannelsOperation : Operation
     {
         try
         {
-            IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+            IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
             var allChannels = await barClient.GetChannelsAsync();
             switch (_options.OutputFormat)
@@ -62,7 +62,7 @@ internal class GetChannelsOperation : Operation
         }
     }
 
-    private void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+    private static void WriteJsonChannelList(IEnumerable<Channel> allChannels)
     {
         var channelJson = new
         {
@@ -84,7 +84,7 @@ internal class GetChannelsOperation : Operation
             _ => base.IsOutputFormatSupported(outputFormat),
         };
 
-    private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+    private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
     {
         // Write out a simple list of each channel's name
         foreach (var channel in allChannels.OrderBy(c => c.Name))

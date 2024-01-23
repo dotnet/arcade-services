@@ -25,16 +25,16 @@ namespace Microsoft.DotNet.Darc.Tests;
 /// </summary>
 internal class DependencyTestDriver
 {
-    private string _testName;
+    private readonly string _testName;
     private VersionDetailsParser _versionDetailsParser;
-    private const string inputRootDir = "inputs";
-    private const string inputDir = "input";
-    private const string outputDir = "output";
+    private const string InputRootDir = "inputs";
+    private const string InputDir = "input";
+    private const string OutputDir = "output";
 
     public string TemporaryRepositoryPath { get; private set; }
-    public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
-    public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
-    public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
+    public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, _testName, InputDir); }
+    public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, InputRootDir, _testName, OutputDir); }
+    public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, OutputDir); }
     public LocalLibGit2Client GitClient { get; private set; }
     public DependencyFileManager DependencyFileManager { get; private set; }
 
@@ -69,9 +69,9 @@ internal class DependencyTestDriver
         _versionDetailsParser = new VersionDetailsParser();
         DependencyFileManager = new DependencyFileManager(GitClient, _versionDetailsParser, NullLogger.Instance);
 
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "init" });
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.email", DarcLib.Constants.DarcBotEmail });
-        await processManager.ExecuteGit(TemporaryRepositoryPath, new[] { "config", "user.name", DarcLib.Constants.DarcBotName });
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["init"]);
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.email", DarcLib.Constants.DarcBotEmail]);
+        await processManager.ExecuteGit(TemporaryRepositoryPath, ["config", "user.name", DarcLib.Constants.DarcBotName]);
         await GitClient.StageAsync(TemporaryRepositoryPath, new[] { "*" });
         await GitClient.CommitAsync(TemporaryRepositoryPath, "Initial commit", allowEmpty: false, author: ((string, string)?)null);
     }
@@ -121,7 +121,7 @@ internal class DependencyTestDriver
 
     public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)
     {
-        DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+        var dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
         {
             IncludeToolset = includeToolset,
             LookupBuilds = false,
@@ -144,7 +144,7 @@ internal class DependencyTestDriver
         bool compareOutput,
         Func<DependencyTestDriver, Task> testFunc)
     {
-        DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
+        var dependencyTestDriver = new DependencyTestDriver(testInputsName);
         try
         {
             await dependencyTestDriver.Setup();
@@ -176,7 +176,7 @@ internal class DependencyTestDriver
         Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
         string expectedGraphFile)
     {
-        DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
+        var dependencyTestDriver = new DependencyTestDriver(testInputsName);
 
         try
         {
@@ -184,19 +184,19 @@ internal class DependencyTestDriver
             DependencyGraph dependencyGraph = await testFunc(dependencyTestDriver);
 
             // Load in the expected graph and validate against the dependencyGraph
-            XmlDocument graphDocument = new XmlDocument();
+            var graphDocument = new XmlDocument();
             graphDocument.Load(Path.Combine(dependencyTestDriver.RootInputsPath, expectedGraphFile));
 
             // Compare the root node
-            dependencyTestDriver.AssertDependencyGraphNodeIsEqual(dependencyGraph.Root, graphDocument.SelectSingleNode("//RootNode/DependencyGraphNode"));
+            AssertDependencyGraphNodeIsEqual(dependencyGraph.Root, graphDocument.SelectSingleNode("//RootNode/DependencyGraphNode"));
 
             // Compare all the nodes
             XmlNodeList allNodes = graphDocument.SelectNodes("//AllNodes/DependencyGraphNode");
-            dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.Nodes, allNodes);
+            AssetGraphNodeListIsEqual(dependencyGraph.Nodes, allNodes);
 
             // Compare incoherencies
             XmlNodeList incoherentNodes = graphDocument.SelectNodes("//IncoherentNodes/DependencyGraphNode");
-            dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.IncoherentNodes, incoherentNodes);
+            AssetGraphNodeListIsEqual(dependencyGraph.IncoherentNodes, incoherentNodes);
 
             // Compare unique dependencies
             XmlNodeList dependencyNodes = graphDocument.SelectNodes("//UniqueDependencies/Dependency");
@@ -221,7 +221,7 @@ internal class DependencyTestDriver
         }
     }
 
-    private void AssetGraphNodeListIsEqual(IEnumerable<DependencyGraphNode> nodes, XmlNodeList nodeList)
+    private static void AssetGraphNodeListIsEqual(IEnumerable<DependencyGraphNode> nodes, XmlNodeList nodeList)
     {
         foreach (XmlNode node in nodeList)
         {
@@ -236,7 +236,7 @@ internal class DependencyTestDriver
         }
     }
 
-    private void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
+    private static void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
     {
         // Check root commit info
         xmlNode.SelectSingleNode("RepoUri").InnerText.Should().Be(graphNode.Repository);
@@ -269,7 +269,7 @@ internal class DependencyTestDriver
         AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Parents/Parent"), graphNode.Parents);
     }
 
-    private void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
+    private static void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
     {
         foreach (XmlNode node in xmlNodes)
         {
@@ -293,8 +293,8 @@ internal class DependencyTestDriver
     {
         string expectedOutputFilePath = Path.Combine(TemporaryRepositoryOutputsPath, expectedOutputPath);
         string actualOutputFilePath = Path.Combine(TemporaryRepositoryPath, actualOutputPath);
-        using (StreamReader expectedOutputsReader = new StreamReader(expectedOutputFilePath))
-        using (StreamReader actualOutputsReader = new StreamReader(actualOutputFilePath))
+        using (var expectedOutputsReader = new StreamReader(expectedOutputFilePath))
+        using (var actualOutputsReader = new StreamReader(actualOutputFilePath))
         {
             string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
             string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
@@ -326,14 +326,14 @@ internal class DependencyTestDriver
     /// </summary>
     /// <param name="source">Source directory to copy</param>
     /// <param name="destination">Destination directory to copy</param>
-    private void CopyDirectoryAndRenameTestAssets(string source, string destination)
+    private static void CopyDirectoryAndRenameTestAssets(string source, string destination)
     {
         if (!Directory.Exists(destination))
         {
             Directory.CreateDirectory(destination);
         }
 
-        DirectoryInfo sourceDir = new DirectoryInfo(source);
+        var sourceDir = new DirectoryInfo(source);
 
         FileInfo[] files = sourceDir.GetFiles();
         foreach (FileInfo file in files)

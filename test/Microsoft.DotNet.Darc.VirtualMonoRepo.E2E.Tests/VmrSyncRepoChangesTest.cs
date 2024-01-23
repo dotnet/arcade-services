@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 internal class VmrSyncRepoChangesTest :  VmrTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
-    private string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
+    private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
     private NativePath _productRepoPath = null!;
     private NativePath _productRepoFilePath = null!;
     private NativePath _dependencyRepoFilePath = null!;
@@ -49,7 +49,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -80,7 +80,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -121,7 +121,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -159,7 +159,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         List<LocalPath> expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 
@@ -267,8 +267,8 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var sourceMappings = new SourceMappingFile()
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.DependencyRepoName,
@@ -279,16 +279,16 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            }
+            ]
         };
 
-        sourceMappings.Defaults.Exclude = new[] 
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "externals/external-repo/**/*.exe", 
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }
@@ -305,7 +305,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName, Constants.DependencyRepoName },
+            [Constants.ProductRepoName, Constants.DependencyRepoName],
             expectedFilesFromRepos
         );
 

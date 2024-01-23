@@ -30,7 +30,7 @@ public class DependencyRegistrationTests
                     options.EnableServiceProviderCaching(false);
                 });
             },
-            out string message).Should().BeTrue(message);
+            out var message).Should().BeTrue(message);
     }
 
 }

@@ -77,14 +77,12 @@ public static class MergePoliciesPopUpHelpers
                     Properties = d.Properties != null ?
                         (d.Properties.ToDictionary(p => p.Key, p =>
                         {
-                            switch (p.Value.Type)
+                            return p.Value.Type switch
                             {
-                                case JTokenType.Array:
-                                    return (object)p.Value.ToObject<List<object>>();
-                                default:
-                                    throw new NotImplementedException($"Unexpected property value type {p.Value.Type}");
-                            }
-                        })) : new Dictionary<string, object>()
+                                JTokenType.Array => (object)p.Value.ToObject<List<object>>(),
+                                _ => throw new NotImplementedException($"Unexpected property value type {p.Value.Type}"),
+                            };
+                        })) : []
                 })
             .ToList();
     }

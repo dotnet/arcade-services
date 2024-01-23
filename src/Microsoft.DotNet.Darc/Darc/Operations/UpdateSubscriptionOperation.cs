@@ -1,22 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class UpdateSubscriptionOperation : Operation
+internal class UpdateSubscriptionOperation : Operation
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
 
@@ -31,7 +32,7 @@ class UpdateSubscriptionOperation : Operation
     /// </summary>
     public override async Task<int> ExecuteAsync()
     {
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
@@ -80,11 +81,11 @@ class UpdateSubscriptionOperation : Operation
             {
                 failureNotificationTags = _options.FailureNotificationTags;
             }
-            mergePolicies = subscription.Policy.MergePolicies.ToList();
+            mergePolicies = [.. subscription.Policy.MergePolicies];
         }
         else
         {
-            UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+            var updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
                 "update-subscription/update-subscription-todo",
                 Logger,
                 subscription,
@@ -94,7 +95,7 @@ class UpdateSubscriptionOperation : Operation
                 Constants.AvailableMergePolicyYamlHelp,
                 subscription.PullRequestFailureNotificationTags ?? string.Empty);
 
-            UxManager uxManager = new UxManager(_options.GitLocation, Logger);
+            var uxManager = new UxManager(_options.GitLocation, Logger);
 
             int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
 

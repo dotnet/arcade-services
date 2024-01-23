@@ -27,11 +27,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             // Assets deep copy
             if (buildData.Assets != null)
             {
-                List<AssetData> assetList = new List<AssetData>();
+                var assetList = new List<AssetData>();
 
                 foreach (AssetData asset in buildData.Assets)
                 {
-                    List<AssetLocationData> locationsList = new List<AssetLocationData>();
+                    var locationsList = new List<AssetLocationData>();
                     foreach (AssetLocationData location in asset.Locations)
                     {
                         locationsList.Add(new AssetLocationData(location.Type)
@@ -44,31 +44,31 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     {
                         Name = asset.Name,
                         Version = asset.Version,
-                        Locations = locationsList.ToImmutableList<AssetLocationData>()
+                        Locations = locationsList.ToImmutableList()
                     });
                 }
 
-                Assets = assetList.ToImmutableList<AssetData>();
+                Assets = assetList.ToImmutableList();
             }
 
             //Dependencies deep copy
             if (buildData.Dependencies != null)
             {
-                List<BuildRef> dependenciesList = new List<BuildRef>();
+                var dependenciesList = new List<BuildRef>();
 
                 foreach (BuildRef dep in buildData.Dependencies)
                 {
                     dependenciesList.Add(new BuildRef(dep.BuildId, dep.IsProduct, dep.TimeToInclusionInMinutes));
                 }
 
-                Dependencies = dependenciesList.ToImmutableList<BuildRef>();
+                Dependencies = dependenciesList.ToImmutableList();
             }
 
 
             //Incoherencies deep copy
             if (buildData.Incoherencies != null)
             {
-                List<BuildIncoherence> incoherenciesList = new List<BuildIncoherence>();
+                var incoherenciesList = new List<BuildIncoherence>();
 
                 foreach (BuildIncoherence incoherence in buildData.Incoherencies)
                 {
@@ -81,7 +81,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                     });
                 }
 
-                Incoherencies = incoherenciesList.ToImmutableList<BuildIncoherence>();
+                Incoherencies = incoherenciesList.ToImmutableList();
             }
         }
     }

@@ -16,8 +16,8 @@ public class DependencyFlowNode
         Id = id;
         OutputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         InputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        OutgoingEdges = new List<DependencyFlowEdge>();
-        IncomingEdges = new List<DependencyFlowEdge>();
+        OutgoingEdges = [];
+        IncomingEdges = [];
         WorstCasePathTime = 0;
         BestCasePathTime = 0;
         OnLongestBuildPath = false;

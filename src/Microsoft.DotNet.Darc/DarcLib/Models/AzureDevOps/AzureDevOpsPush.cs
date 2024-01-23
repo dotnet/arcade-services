@@ -9,8 +9,8 @@ public class AzureDevOpsPush
 {
     public AzureDevOpsPush(AzureDevOpsRefUpdate refUpdate, AzureDevOpsCommit vstsCommit)
     {
-        RefUpdates = new List<AzureDevOpsRefUpdate> {refUpdate};
-        Commits = new List<AzureDevOpsCommit> {vstsCommit};
+        RefUpdates = [refUpdate];
+        Commits = [vstsCommit];
     }
 
     public List<AzureDevOpsRefUpdate> RefUpdates { get; set; }

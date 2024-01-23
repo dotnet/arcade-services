@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         public async Task<Models.Subscription> TriggerSubscriptionAsync(Guid id, CancellationToken cancellationToken = default)
         {
-            return await TriggerSubscriptionAsync(default(int), id, cancellationToken);
+            return await TriggerSubscriptionAsync(default, id, cancellationToken);
         }
     }
 

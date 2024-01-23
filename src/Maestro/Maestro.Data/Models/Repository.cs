@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 

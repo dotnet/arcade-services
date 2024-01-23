@@ -18,7 +18,7 @@ public class AssetComparer : IEqualityComparer<Asset>
                x.Version == y.Version;
     }
 
-    public bool Equals(Asset x, DependencyDetail y)
+    public static bool Equals(Asset x, DependencyDetail y)
     {
         return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase) &&
                x.Version == y.Version;

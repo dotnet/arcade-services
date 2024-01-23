@@ -18,9 +18,9 @@ public static class SharedKustoQueries
         int? officialBuildDefinitionId)
     {
         var parameters = new List<KustoParameter> {
-            new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
-            new KustoParameter("_SourceBranch", branch, KustoDataType.String),
-            new KustoParameter("_Days", $"{days}d", KustoDataType.TimeSpan)
+            new("_Repository", repository.Split('/').Last(), KustoDataType.String),
+            new("_SourceBranch", branch, KustoDataType.String),
+            new("_Days", $"{days}d", KustoDataType.TimeSpan)
         };
 
         string prProject = "public";
@@ -93,17 +93,17 @@ public static class SharedKustoQueries
         {
             return (-1, default(TimeSpan));
         }
-        Dictionary<int, TimeSpan> buildTimeResults = new Dictionary<int, TimeSpan>();
+        Dictionary<int, TimeSpan> buildTimeResults = [];
 
         while (reader.Read())
         {
-            int definitionId = Int32.Parse(reader.GetString(0));
+            int definitionId = int.Parse(reader.GetString(0));
             TimeSpan duration = (TimeSpan) reader.GetValue(1);
             buildTimeResults[definitionId] = duration;
         }
 
         // There were no results
-        if (buildTimeResults.Count() == 0)
+        if (buildTimeResults.Count == 0)
         {
             return (-1, default(TimeSpan));
         }

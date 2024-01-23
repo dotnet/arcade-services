@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class HttpRequestManager
 {
-    private HttpClient _client;
+    private readonly HttpClient _client;
     private readonly ILogger _logger;
     private readonly bool _logFailure;
     private readonly string _body;
@@ -50,12 +50,12 @@ public class HttpRequestManager
         // Add a bit of randomness to the retry delay.
         var rng = new Random();
 
-        HttpStatusCode[] stopRetriesHttpStatusCodes = new HttpStatusCode[] {
+        HttpStatusCode[] stopRetriesHttpStatusCodes = [
             HttpStatusCode.NotFound,
             HttpStatusCode.UnprocessableEntity,
             HttpStatusCode.BadRequest,
             HttpStatusCode.Unauthorized,
-            HttpStatusCode.Forbidden };
+            HttpStatusCode.Forbidden ];
 
         while (true)
         {
@@ -101,10 +101,7 @@ public class HttpRequestManager
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
-                if (response != null)
-                {
-                    response.Dispose();
-                }
+                response?.Dispose();
 
                 // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
                 if (ex is HttpRequestException && ex.Message.Contains(((int) HttpStatusCode.Unauthorized).ToString()))

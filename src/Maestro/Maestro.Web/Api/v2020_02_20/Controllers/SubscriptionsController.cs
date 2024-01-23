@@ -119,7 +119,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     }
 
     [ApiRemoved]
-    public override sealed Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
+    public sealed override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
     {
         throw new NotImplementedException();
     }

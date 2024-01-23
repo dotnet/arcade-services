@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Data.Models;
 
 namespace Maestro.Web.Api.v2018_07_16.Models;
 
@@ -28,7 +27,7 @@ public class BuildData
 
     public Data.Models.Build ToDb()
     {
-        var isGitHubInfo = Repository.IndexOf("github", StringComparison.OrdinalIgnoreCase) >= 0;
+        var isGitHubInfo = Repository.Contains("github", StringComparison.OrdinalIgnoreCase);
 
         return new Data.Models.Build
         {

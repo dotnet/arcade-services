@@ -63,7 +63,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
 
         TestContext.WriteLine("Cloning target repo to prepare the target branch");
 
-        TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
+        TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName) : await CloneRepositoryAsync(targetRepoName);
 
         using (ChangeDirectory(reposFolder.Directory))
         {
@@ -364,7 +364,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
         await AddBuildToChannelAsync(build.Id, testChannelName);
 
         TestContext.WriteLine("Cloning target repo to prepare the target branch");
-        TemporaryDirectory reposFolder = await CloneAzDoRepositoryAsync(targetRepoName, targetBranch);
+        TemporaryDirectory reposFolder = await CloneAzDoRepositoryAsync(targetRepoName);
 
         using (ChangeDirectory(reposFolder.Directory))
         {
@@ -428,7 +428,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
         await AddBuildToChannelAsync(build.Id, testChannelName);
 
         TestContext.WriteLine("Cloning target repo to prepare the target branch");
-        TemporaryDirectory reposFolder = await CloneAzDoRepositoryAsync(targetRepoName, targetBranch);
+        TemporaryDirectory reposFolder = await CloneAzDoRepositoryAsync(targetRepoName);
 
         using (ChangeDirectory(reposFolder.Directory))
         {

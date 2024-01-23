@@ -7,12 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -35,7 +35,7 @@ internal class GetDependencyGraphOperation : Operation
         {
             IEnumerable<DependencyDetail> rootDependencies = null;
             DependencyGraph graph;
-            var remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
             if (!_options.Local)
             {
@@ -115,7 +115,7 @@ internal class GetDependencyGraphOperation : Operation
                 // Build graph
                 graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    RemoteFactory.GetBarClient(_options, Logger),
+                    Provider.GetRequiredService<IBarApiClient>(),
                     rootDependencies,
                     _options.RepoUri ?? await _gitClient.GetRootDirAsync(),
                     _options.Version ?? await _gitClient.GetGitCommitAsync(),
@@ -140,7 +140,7 @@ internal class GetDependencyGraphOperation : Operation
 
                 Console.WriteLine($"Building repository dependency graph from local information...");
 
-                DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+                var graphBuildOptions = new DependencyGraphBuildOptions()
                 {
                     IncludeToolset = _options.IncludeToolset,
                     LookupBuilds = false,
@@ -209,12 +209,12 @@ internal class GetDependencyGraphOperation : Operation
     ///         Builds:
     ///         - 20190228.4 (2/28/2019 12:57 PM)
     /// </example>
-    private async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
+    private static async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
     {
         await writer.WriteLineAsync($"{indent}- Repo:     {node.Repository}");
         await writer.WriteLineAsync($"{indent}  Commit:   {node.Commit}");
 
-        StringBuilder deltaString = new StringBuilder($"{indent}  Delta:    ");
+        var deltaString = new StringBuilder($"{indent}  Delta:    ");
         GitDiff diffFrom = node.DiffFrom;
 
         // Log the delta. Depending on user options, deltas from latest build,
@@ -261,7 +261,7 @@ internal class GetDependencyGraphOperation : Operation
                 await writer.WriteLineAsync($"{indent}  Builds:");
                 foreach (var build in node.ContributingBuilds)
                 {
-                    await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.ToLocalTime().ToString("g")})");
+                    await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.ToLocalTime():g})");
                 }
             }
             else
@@ -335,7 +335,7 @@ internal class GetDependencyGraphOperation : Operation
                 nodeBuilder.Append(@"\n");
 
                 // Append short commit sha
-                nodeBuilder.Append(node.Commit.Substring(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
+                nodeBuilder.Append(node.Commit.AsSpan(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
 
                 // Append a build string (with newline) if available
                 if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
@@ -413,16 +413,16 @@ internal class GetDependencyGraphOperation : Operation
         await writer.WriteLineAsync("Incoherent Repositories:");
         foreach (DependencyGraphNode incoherentRoot in graph.IncoherentNodes)
         {
-            await LogIncoherentPath(writer, incoherentRoot, null, "  ");
+            await LogIncoherentPath(writer, incoherentRoot, "  ");
         }
     }
 
-    private async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
+    private static async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, string indent)
     {
         await LogBasicNodeDetails(writer, currentNode, indent);
         foreach (DependencyGraphNode parentNode in currentNode.Parents)
         {
-            await LogIncoherentPath(writer, parentNode, currentNode, indent + "  ");
+            await LogIncoherentPath(writer, parentNode, indent + "  ");
         }
     }
 

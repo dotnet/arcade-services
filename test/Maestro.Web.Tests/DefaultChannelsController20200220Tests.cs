@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions.Common;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
@@ -170,8 +169,8 @@ public partial class DefaultChannelsController20200220Tests
             defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
         }
 
-        string[] branchesThatMatch = new string[] { "FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2" };
-        string[] branchesThatDontMatch = new string[] { "I-DONT-MATCH", "REAL-BRANCH-REGEX" };
+        string[] branchesThatMatch = ["FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2"];
+        string[] branchesThatDontMatch = ["I-DONT-MATCH", "REAL-BRANCH-REGEX"];
 
         foreach (string branchName in branchesThatMatch)
         {

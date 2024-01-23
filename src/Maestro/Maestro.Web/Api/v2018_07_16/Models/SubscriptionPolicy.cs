@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Data.Models;
 
 namespace Maestro.Web.Api.v2018_07_16.Models;
 
@@ -61,7 +60,7 @@ public class SubscriptionPolicy : IValidatableObject
         return new Data.Models.SubscriptionPolicy
         {
             Batchable = Batchable,
-            MergePolicies = MergePolicies?.Select(p => p.ToDb()).ToList() ?? new List<MergePolicyDefinition>(),
+            MergePolicies = MergePolicies?.Select(p => p.ToDb()).ToList() ?? [],
             UpdateFrequency = (Data.Models.UpdateFrequency) (int) UpdateFrequency
         };
     }

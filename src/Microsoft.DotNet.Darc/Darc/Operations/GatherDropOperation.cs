@@ -1,17 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,6 +12,18 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -41,10 +42,10 @@ internal class GatherDropOperation : Operation
         _options = options;
     }
 
-    const string PackagesSubPath = "packages";
-    const string AssetsSubPath = "assets";
-    const string NonShippingSubPath = "nonshipping";
-    const string ShippingSubPath = "shipping";
+    private const string PackagesSubPath = "packages";
+    private const string AssetsSubPath = "assets";
+    private const string NonShippingSubPath = "nonshipping";
+    private const string ShippingSubPath = "shipping";
 
     // Regular expression used to check that an AssetLocation matches the format of
     // an Azure DevOps Feed. Such feeds look like:
@@ -53,11 +54,11 @@ internal class GatherDropOperation : Operation
     public const string AzDoNuGetFeedPattern =
         @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
 
-    private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds = new List<(string, string)>()
-    {
+    private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds =
+    [
         ("https://github.com/dotnet/corefx", "7ee84596d92e178bce54c986df31ccc52479e772"),
         ("https://github.com/aspnet/xdt", "c01a538851a8ab1a1fbeb2e6243f391fff7587b4")
-    };
+    ];
 
     public override async Task<int> ExecuteAsync()
     {
@@ -209,7 +210,7 @@ internal class GatherDropOperation : Operation
             return null;
         }
 
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
 
         string repoUri = _options.RepoUri;
 
@@ -275,7 +276,7 @@ internal class GatherDropOperation : Operation
         throw new DarcException("Options for root builds were not validated properly. Please contact @dnceng");
     }
 
-    class BuildComparer : IEqualityComparer<Build>
+    private class BuildComparer : IEqualityComparer<Build>
     {
         public bool Equals(Build x, Build y)
         {
@@ -688,7 +689,7 @@ internal class GatherDropOperation : Operation
             builds.Add(rootBuild);
         }
 
-        var remoteFactory = new RemoteFactory(_options);
+        var remoteFactory = Provider.GetRequiredService<IRemoteFactory>();
 
         // Flatten for convenience and remove dependencies of types that we don't want if need be.
         if (!_options.IncludeToolset)
@@ -711,7 +712,7 @@ internal class GatherDropOperation : Operation
             var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                RemoteFactory.GetBarClient(_options, Logger),
+                Provider.GetRequiredService<IBarApiClient>(),
                 rootBuildRepository,
                 rootBuild.Commit,
                 buildOptions,
@@ -803,7 +804,7 @@ internal class GatherDropOperation : Operation
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
     private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
     {
-        IBarApiClient barClient = RemoteFactory.GetBarClient(_options, Logger);
+        IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
         Directory.CreateDirectory(unifiedOutputDirectory);
@@ -1580,7 +1581,7 @@ internal class GatherDropOperation : Operation
         // Check all existing locations for the target file. If one exists, copy to the others.
         if (_options.SkipExisting)
         {
-            var existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
+            var existingFile = targetFilePaths.FirstOrDefault(File.Exists);
             if (!string.IsNullOrEmpty(existingFile))
             {
                 foreach (var targetFile in targetFilePaths)
