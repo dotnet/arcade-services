@@ -10,14 +10,9 @@ using ProductConstructionService.Api.Queue.WorkItems;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class TestController(
-    BuildAssetRegistryContext dbContext,
-    PcsJobProducerFactory pcsJobProducerFactory,
-    QueueServiceClient client,
-    PcsJobsProcessorStatus status) : Controller
+public class TestController(PcsJobProducerFactory pcsJobProducerFactory) : Controller
 {
     private readonly PcsJobProducerFactory _pcsJobProducerFactory = pcsJobProducerFactory;
-    private readonly BuildAssetRegistryContext _dbContext = dbContext;
 
     [HttpGet("1")]
     public async Task<IActionResult> Index()
@@ -25,20 +20,5 @@ public class TestController(
         var queueInjector = _pcsJobProducerFactory.Create<TextPcsJob>();
         await queueInjector.ProduceJobAsync(new() { Text = "some text"});
         return Ok("Message sent");
-    }
-
-    [HttpGet("2")]
-    public IActionResult Something()
-    {
-        var q = client.GetQueueClient("pcs-jobs");
-        var message = q.ReceiveMessage();
-        var a = JsonSerializer.Deserialize<TextPcsJob>(message.Value.Body);
-        status.ContinueWorking = false;
-        while(!status.StoppedWorking)
-        {
-            Thread.Sleep(2000);
-        }
-        
-        return Ok("Done!");
     }
 }
