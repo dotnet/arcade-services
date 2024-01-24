@@ -18,7 +18,7 @@ public class PcsJobsProcessorController
 
     private const int StoppedCheckDelaySeconds = 5;
 
-    [HttpPost("stop")]
+    [HttpPut("stop")]
     public async Task<IActionResult> StopPcsJobsProcessor()
     {
         _logger.LogInformation("Stopping {pcsJobsProcessor}", nameof(PcsJobsProcessor));
