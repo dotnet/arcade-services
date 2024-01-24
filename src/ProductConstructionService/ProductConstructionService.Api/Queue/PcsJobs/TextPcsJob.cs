@@ -5,5 +5,5 @@ namespace ProductConstructionService.Api.Queue.WorkItems;
 
 public class TextPcsJob : PcsJob
 {
-    public string Text { get; set; } = string.Empty;
+    public required string Text { get; init; }
 }
