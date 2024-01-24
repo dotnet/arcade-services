@@ -6,20 +6,20 @@ using System.Text.Json;
 using System.Threading;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
-using ProductConstructionService.Api.Queue.WorkItems;
+using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class PcsJobsProcessor(
-    ILogger<PcsJobsProcessor> logger,
-    PcsJobProcessorOptions options,
-    PcsJobsProcessorStatus status,
+public class JobsProcessor(
+    ILogger<JobsProcessor> logger,
+    JobProcessorOptions options,
+    JobsProcessorStatus status,
     QueueServiceClient queueServiceClient)
     : BackgroundService
 {
-    private readonly ILogger<PcsJobsProcessor> _logger = logger;
-    private readonly PcsJobProcessorOptions _options = options;
-    private readonly PcsJobsProcessorStatus _status = status;
+    private readonly ILogger<JobsProcessor> _logger = logger;
+    private readonly JobProcessorOptions _options = options;
+    private readonly JobsProcessorStatus _status = status;
 
     private const int JobInvisibilityTimeoutSeconds = 30;
 
@@ -43,13 +43,13 @@ public class PcsJobsProcessor(
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.QueueName);
         try
         {
-            while (!cancellationToken.IsCancellationRequested && _status.State == PcsJobsProcessorState.Working)
+            while (!cancellationToken.IsCancellationRequested && _status.State == JobsProcessorState.Working)
             {
                 try
                 {
-                    var pcsJob = await GetPcsJob(queueClient, cancellationToken);
+                    var job = await GetJob(queueClient, cancellationToken);
 
-                    if (pcsJob == null)
+                    if (job == null)
                     {
                         // Queue is empty, wait a bit
                         _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.QueueName, _options.EmptyQueueWaitTime);
@@ -57,7 +57,7 @@ public class PcsJobsProcessor(
                         continue;
                     }
 
-                    ProcessPcsJob(pcsJob);
+                    ProcessJob(job);
                 }
                 catch (Exception ex)
                 {
@@ -68,12 +68,12 @@ public class PcsJobsProcessor(
         }
         finally
         {
-            _status.State = PcsJobsProcessorState.StoppedWorking;
+            _status.State = JobsProcessorState.StoppedWorking;
             _logger.LogInformation("Stopped processing PCS jobs");
         }
     }
 
-    private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)
+    private async Task<Job?> GetJob(QueueClient queueClient, CancellationToken cancellationToken)
     {
         QueueMessage message = await queueClient.ReceiveMessageAsync(visibilityTimeout: TimeSpan.FromSeconds(JobInvisibilityTimeoutSeconds), cancellationToken);
         if (message == null || message.Body == null)
@@ -83,18 +83,18 @@ public class PcsJobsProcessor(
 
         await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
 
-        return message.Body.ToObjectFromJson<PcsJob>() ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(PcsJob)}");
+        return message.Body.ToObjectFromJson<Job>() ?? throw new Exception($"Failed to deserialize {message.Body} into a {nameof(Job)}");
     }
 
-    private void ProcessPcsJob(PcsJob pcsJob)
+    private void ProcessJob(Job job)
     {
-        switch (pcsJob)
+        switch (job)
         {
-            case TextPcsJob textPcsJob:
-                _logger.LogInformation("Processed text job. Message: {message}", textPcsJob.Text);
+            case TextJob textJob:
+                _logger.LogInformation("Processed text job. Message: {message}", textJob.Text);
                 break;
             default:
-                throw new NotSupportedException($"Unable to process unknown PCS job type: {pcsJob.GetType().Name}");
+                throw new NotSupportedException($"Unable to process unknown PCS job type: {job.GetType().Name}");
         }
     }
 }

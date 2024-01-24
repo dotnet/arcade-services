@@ -2,15 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Storage.Queues;
-using ProductConstructionService.Api.Queue.WorkItems;
+using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class PcsJobProducerFactory(QueueServiceClient queueServiceClient, string queueName)
+public class JobProducerFactory(QueueServiceClient queueServiceClient, string queueName)
 {
     private readonly QueueServiceClient _queueServiceClient = queueServiceClient;
     private readonly string _queueName = queueName;
 
-    public PcsJobProducer<T> Create<T>() where T : PcsJob 
+    public JobProducer<T> Create<T>() where T : Job 
         => new(_queueServiceClient, _queueName);
 }

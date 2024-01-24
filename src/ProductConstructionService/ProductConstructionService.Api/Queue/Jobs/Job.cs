@@ -3,10 +3,10 @@
 
 using System.Text.Json.Serialization;
 
-namespace ProductConstructionService.Api.Queue.WorkItems;
+namespace ProductConstructionService.Api.Queue.Jobs;
 
-[JsonDerivedType(typeof(TextPcsJob), typeDiscriminator: nameof(TextPcsJob))]
-public abstract class PcsJob
+[JsonDerivedType(typeof(TextJob), typeDiscriminator: nameof(TextJob))]
+public abstract class Job
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 }

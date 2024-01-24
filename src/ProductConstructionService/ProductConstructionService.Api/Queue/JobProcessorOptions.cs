@@ -3,9 +3,9 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public class PcsJobProcessorOptions
+public class JobProcessorOptions
 {
-    public PcsJobProcessorOptions(string queueName, int emptyQueueWaitTimeSeconds)
+    public JobProcessorOptions(string queueName, int emptyQueueWaitTimeSeconds)
     {
         QueueName = queueName;
         EmptyQueueWaitTime = TimeSpan.FromSeconds(emptyQueueWaitTimeSeconds);
