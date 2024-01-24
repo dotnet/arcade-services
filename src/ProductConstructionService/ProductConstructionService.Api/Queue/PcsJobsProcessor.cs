@@ -41,29 +41,36 @@ public class PcsJobsProcessor(
     {
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.QueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.QueueName);
-        while (!cancellationToken.IsCancellationRequested && _status.ContinueWorking)
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested && _status.State == PcsJobsProcessorState.ContinueWorking)
             {
-                var pcsJob = await GetPcsJob(queueClient, cancellationToken);
-
-                if (pcsJob == null)
+                try
                 {
-                    // Queue is empty, wait a bit
-                    _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.QueueName, _options.EmptyQueueWaitTime);
-                    await Task.Delay(_options.EmptyQueueWaitTime, cancellationToken);
-                    continue;
-                }
+                    var pcsJob = await GetPcsJob(queueClient, cancellationToken);
 
-                ProcessPcsJob(pcsJob);
+                    if (pcsJob == null)
+                    {
+                        // Queue is empty, wait a bit
+                        _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.QueueName, _options.EmptyQueueWaitTime);
+                        await Task.Delay(_options.EmptyQueueWaitTime, cancellationToken);
+                        continue;
+                    }
+
+                    ProcessPcsJob(pcsJob);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Exception while processing pcs job");
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception while processing pcs job");
-            }
+
         }
-        _status.StoppedWorking = true;
-        _logger.LogInformation("Stopped processing PCS jobs");
+        finally
+        {
+            _status.State = PcsJobsProcessorState.StoppedWorking;
+            _logger.LogInformation("Stopped processing PCS jobs");
+        }
     }
 
     private async Task<PcsJob?> GetPcsJob(QueueClient queueClient, CancellationToken cancellationToken)

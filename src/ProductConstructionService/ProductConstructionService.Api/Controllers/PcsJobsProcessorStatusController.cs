@@ -2,34 +2,28 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Extensions;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Controllers;
 
-[Route("pcsJobsProcessor")]
-public class PcsJobsProcessorController
-    (ILogger<PcsJobsProcessorController> logger,
+[Route("status")]
+public class PcsJobsProcessorStatusController(
+    ILogger<PcsJobsProcessorStatusController> logger,
     PcsJobsProcessorStatus pcsJobsProcessorStatus,
     IHostApplicationLifetime hostApplicationLifetime) : Controller
 {
-    private readonly ILogger<PcsJobsProcessorController> _logger = logger;
+    private readonly ILogger<PcsJobsProcessorStatusController> _logger = logger;
     private readonly PcsJobsProcessorStatus _pcsJobsProcessorStatus = pcsJobsProcessorStatus;
     private readonly IHostApplicationLifetime _hostApplicationLifetime = hostApplicationLifetime;
 
     private const int StoppedCheckDelaySeconds = 5;
 
     [HttpPut("stop")]
-    public async Task<IActionResult> StopPcsJobsProcessor()
+    public IActionResult StopPcsJobsProcessor()
     {
-        _logger.LogInformation("Stopping {pcsJobsProcessor}", nameof(PcsJobsProcessor));
-        _pcsJobsProcessorStatus.ContinueWorking = false;
-
-        _logger.LogInformation("Waiting for {pcsJobsProcessor} to finish processing current job", nameof(PcsJobsProcessor));
-
-        while (!_pcsJobsProcessorStatus.StoppedWorking)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(StoppedCheckDelaySeconds));
-        }
+        _logger.LogInformation("Stopping {pcsJobsProcessor}. The currently running PcsJob will finish", nameof(PcsJobsProcessor));
+        _pcsJobsProcessorStatus.State = PcsJobsProcessorState.FinishJobAndStop;
 
         return Ok();
     }
@@ -41,5 +35,11 @@ public class PcsJobsProcessorController
         _pcsJobsProcessorStatus.Reset();
 
         return Ok();
+    }
+
+    [HttpGet]
+    public IActionResult GetPcsJobsProcessorStatus()
+    {
+        return Ok(_pcsJobsProcessorStatus.State.GetDisplayName());
     }
 }

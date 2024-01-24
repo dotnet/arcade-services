@@ -19,11 +19,9 @@ public static class QueueConfiguration
             throw new ArgumentException($"{PcsJobQueueConfigurationKey} missing from the configuration");
         var emptyQueueWaitSeconds = builder.Configuration[PcsJobProcessorEmptyQueueWaitConfigurationKey] ??
             throw new ArgumentException($"{PcsJobProcessorEmptyQueueWaitConfigurationKey} missing from the configuration");
-        var offTimeCheckSeconds = builder.Configuration[PcsJobProcessorOffTimeCheckConfigurationKey] ??
-            throw new ArgumentException($"{PcsJobProcessorOffTimeCheckConfigurationKey} missing from the configuration");
 
         builder.Services.AddSingleton<PcsJobsProcessorStatus>();
-        builder.Services.AddSingleton(new PcsJobProcessorOptions(queueName, int.Parse(emptyQueueWaitSeconds), int.Parse(offTimeCheckSeconds)));
+        builder.Services.AddSingleton(new PcsJobProcessorOptions(queueName, int.Parse(emptyQueueWaitSeconds)));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<PcsJobProducerFactory>(sp, queueName));
         builder.Services.AddHostedService<PcsJobsProcessor>();

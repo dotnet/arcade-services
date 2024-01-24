@@ -3,26 +3,30 @@
 
 namespace ProductConstructionService.Api.Queue;
 
+public enum PcsJobsProcessorState
+{
+    ContinueWorking,
+    StoppedWorking,
+    FinishJobAndStop
+}
+
 public class PcsJobsProcessorStatus
 {
     public PcsJobsProcessorStatus()
     {
-        ContinueWorking = true;
-        StoppedWorking = false;
+        State = PcsJobsProcessorState.ContinueWorking;
         Semaphore = new(1);
     }
 
     public void Reset()
     {
-        ContinueWorking = true;
-        StoppedWorking = false;
+        State = PcsJobsProcessorState.ContinueWorking;
         if (Semaphore.CurrentCount == 0)
         {
             Semaphore.Release();
         }
     }
 
-    public bool ContinueWorking { get; set; }
-    public bool StoppedWorking { get; set; }
+    public PcsJobsProcessorState State { get; set; }
     public SemaphoreSlim Semaphore { get; }
 }

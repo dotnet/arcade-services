@@ -5,7 +5,7 @@ namespace ProductConstructionService.Api.Queue;
 
 public class PcsJobProcessorOptions
 {
-    public PcsJobProcessorOptions(string queueName, int emptyQueueWaitTimeSeconds, int offTimeCheckSeconds)
+    public PcsJobProcessorOptions(string queueName, int emptyQueueWaitTimeSeconds)
     {
         QueueName = queueName;
         EmptyQueueWaitTime = TimeSpan.FromSeconds(emptyQueueWaitTimeSeconds);
@@ -14,5 +14,4 @@ public class PcsJobProcessorOptions
 
     public TimeSpan EmptyQueueWaitTime { get; }
     public string QueueName { get; }
-    public TimeSpan OffTimeCheck { get; }
 }
