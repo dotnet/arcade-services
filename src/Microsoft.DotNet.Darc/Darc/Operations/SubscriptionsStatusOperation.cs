@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-class SubscriptionsStatusOperation : Operation
+internal class SubscriptionsStatusOperation : Operation
 {
     private readonly SubscriptionsStatusCommandLineOptions _options;
 
@@ -116,7 +116,7 @@ class SubscriptionsStatusOperation : Operation
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
 
-                SubscriptionUpdate subscriptionToUpdate = new SubscriptionUpdate
+                var subscriptionToUpdate = new SubscriptionUpdate
                 {
                     ChannelName = subscription.Channel.Name,
                     SourceRepository = subscription.SourceRepository,

@@ -102,7 +102,7 @@ public class RepositoryController : Controller
         }
 
         List<Data.Models.MergePolicyDefinition> policies =
-            repoBranch.PolicyObject?.MergePolicies ?? new List<Data.Models.MergePolicyDefinition>();
+            repoBranch.PolicyObject?.MergePolicies ?? [];
         return Ok(policies.Select(p => new MergePolicy(p)));
     }
 
@@ -136,7 +136,7 @@ public class RepositoryController : Controller
 
         Data.Models.RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
         Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Data.Models.RepositoryBranch.Policy();
-        policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? new List<Data.Models.MergePolicyDefinition>();
+        policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? [];
         repoBranch.PolicyObject = policy;
         await Context.SaveChangesAsync();
         return Ok();
@@ -244,7 +244,7 @@ public class RepositoryController : Controller
 
         public PullRequestActionWorkItem(IActorProxyFactory<IPullRequestActor> factory)
         {
-            this._factory = factory;
+            _factory = factory;
         }
 
         public Task ProcessAsync(JToken argumentToken)

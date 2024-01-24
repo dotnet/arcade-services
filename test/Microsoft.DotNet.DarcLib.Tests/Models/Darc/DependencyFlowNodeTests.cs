@@ -18,7 +18,7 @@ public class DependencyFlowNodeTests
         var node = new DependencyFlowNode("test", "test", Guid.NewGuid().ToString())
         {
             OfficialBuildTime = 100.0,
-            OutgoingEdges = new List<DependencyFlowEdge>()
+            OutgoingEdges = []
         };
 
         node.CalculateLongestPathTime();
@@ -62,7 +62,7 @@ public class DependencyFlowNodeTests
         node.BestCasePathTime.Should().Be(node.OfficialBuildTime + edge1.To.BestCasePathTime);
     }
 
-    private DependencyFlowEdge AddEdge(
+    private static DependencyFlowEdge AddEdge(
         DependencyFlowNode fromNode,
         double worstCasePathTime,
         double bestCasePathTime,
@@ -76,8 +76,9 @@ public class DependencyFlowNodeTests
             WorstCasePathTime = worstCasePathTime,
         };
 
-        var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test", string.Empty);
-        subscription.LastAppliedBuild = new Build(
+        var subscription = new Subscription(Guid.NewGuid(), true, "source", "target", "test", string.Empty)
+        {
+            LastAppliedBuild = new Build(
             id: 1,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,
@@ -88,9 +89,10 @@ public class DependencyFlowNodeTests
             assets: ImmutableList<Asset>.Empty,
             dependencies: new List<BuildRef>
             {
-                new BuildRef(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
+                new(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
             }.ToImmutableList(),
-            incoherencies: ImmutableList<BuildIncoherence>.Empty);
+            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+        };
 
         var edge = new DependencyFlowEdge(fromNode, toNode, subscription)
         {

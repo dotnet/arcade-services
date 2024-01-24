@@ -55,7 +55,7 @@ public partial class Startup : StartupBase
     // https://github.com/dotnet/core-eng/issues/6819
     // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
     private static readonly HashSet<string> ReposWithoutAssetLocationAllowList =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
+        new(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
 
     static Startup()
     {
@@ -125,8 +125,8 @@ public partial class Startup : StartupBase
         Configuration = configuration;
     }
 
-    public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(hours: 0, minutes: 30, seconds: 0);
-    public static readonly TimeSpan DataProtectionKeyLifetime = new TimeSpan(days: 240, hours: 0, minutes: 0, seconds: 0);
+    public static readonly TimeSpan LoginCookieLifetime = new(hours: 0, minutes: 30, seconds: 0);
+    public static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
     public IHostEnvironment HostingEnvironment { get; }
     public IConfiguration Configuration { get; }
@@ -266,8 +266,7 @@ public partial class Startup : StartupBase
                     bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
                     doc.Servers = new List<OpenApiServer>
                     {
-                        new OpenApiServer
-                        {
+                        new() {
                             Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
                         },
                     };

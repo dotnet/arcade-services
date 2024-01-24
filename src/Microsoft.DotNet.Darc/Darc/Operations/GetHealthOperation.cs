@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.HealthMetrics;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.Services.Common;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 ///     Represents a tuple of a metric and the associated formatted output that
 ///     darc should display after running the metric
 /// </summary>
-class HealthMetricWithOutput
+internal class HealthMetricWithOutput
 {
     public HealthMetricWithOutput(HealthMetric metric, string formattedOutput)
     {
@@ -159,7 +159,7 @@ internal class GetHealthOperation : Operation
     /// <param name="subscriptions">All subscriptions.</param>
     /// <param name="defaultChannels">All default channel associations.</param>
     /// <returns>Set of repo+branch combinations that should be evaluated.</returns>
-    private HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
+    private static HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
         HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
     {
         // Compute the combinations that make sense.
@@ -337,20 +337,21 @@ internal class GetHealthOperation : Operation
     /// <returns>Repositories to evaluate</returns>
     private HashSet<string> ComputeRepositoriesToEvaluate(IEnumerable<DefaultChannel> defaultChannels, IEnumerable<Subscription> subscriptions)
     {
-        // Compute which repositories to target
-        HashSet<string> reposToTarget = defaultChannels
+        var defaultChannelRepositories = defaultChannels
             .Where(df => string.IsNullOrEmpty(_options.Repo) || df.Repository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(df => df.Repository)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Select(df => df.Repository);
 
-        subscriptions
+        var targetRepositories = subscriptions
             .Where(s => string.IsNullOrEmpty(_options.Repo) || s.TargetRepository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(s => reposToTarget.Add(s.TargetRepository));
+            .Select(s => s.TargetRepository);
 
-        subscriptions
+        var sourceRepositories = subscriptions
             .Where(s => string.IsNullOrEmpty(_options.Repo) || s.SourceRepository.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
-            .Select(s => reposToTarget.Add(s.SourceRepository));
+            .Select(s => s.SourceRepository);
 
-        return reposToTarget;
+        return defaultChannelRepositories
+            .Concat(sourceRepositories)
+            .Concat(sourceRepositories)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

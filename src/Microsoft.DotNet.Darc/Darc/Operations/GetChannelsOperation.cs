@@ -62,7 +62,7 @@ internal class GetChannelsOperation : Operation
         }
     }
 
-    private void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+    private static void WriteJsonChannelList(IEnumerable<Channel> allChannels)
     {
         var channelJson = new
         {
@@ -84,7 +84,7 @@ internal class GetChannelsOperation : Operation
             _ => base.IsOutputFormatSupported(outputFormat),
         };
 
-    private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+    private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
     {
         // Write out a simple list of each channel's name
         foreach (var channel in allChannels.OrderBy(c => c.Name))

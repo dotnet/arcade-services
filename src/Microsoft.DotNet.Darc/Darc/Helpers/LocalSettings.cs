@@ -75,7 +75,7 @@ internal class LocalSettings
     public static DarcSettings GetDarcSettings(ICommandLineOptions options, ILogger logger, string repoUri = null)
     {
         LocalSettings localSettings = null;
-        var darcSettings = new DarcSettings
+        DarcSettings darcSettings = new DarcSettings
         {
             GitType = GitRepoType.None
         };

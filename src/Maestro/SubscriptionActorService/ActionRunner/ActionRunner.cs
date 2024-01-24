@@ -43,18 +43,18 @@ public class ActionRunner : IActionRunner
 
         object[] args = actionMethod.DeserializeArguments(arguments);
         return (Task<string>) InvokeActionNoResultMethod.MakeGenericMethod(actionMethod.ResultType)
-            .Invoke(this, new object[] {tracker, actionMethod, args});
+            .Invoke(this, [tracker, actionMethod, args]);
     }
 
     public async Task<T> ExecuteAction<T>(Expression<Func<Task<ActionResult<T>>>> actionExpression)
     {
-        if (!(actionExpression.Body is MethodCallExpression mce))
+        if (actionExpression.Body is not MethodCallExpression mce)
         {
             throw new ArgumentException("Expression must be a call expression.", nameof(actionExpression));
         }
 
         MethodInfo methodInfo = mce.Method;
-        var target = (IActionTracker) GetValue(mce.Object);
+        var target = (IActionTracker)GetValue(mce.Object);
         ActionMethod method = ActionMethods.Get(target.GetType())[methodInfo.Name];
         object[] arguments = GetArguments(mce.Arguments).ToArray();
         ActionResult<T> result = await InvokeAction<T>(target, method, arguments);
@@ -66,7 +66,7 @@ public class ActionRunner : IActionRunner
         return result.Result;
     }
 
-    private bool IsDisplayableException(Exception ex)
+    private static bool IsDisplayableException(Exception ex)
     {
         return ex is DarcException || ex is SubscriptionException;
     }
@@ -87,7 +87,7 @@ public class ActionRunner : IActionRunner
     {
         object[]
             argumentsForFormat =
-                arguments.ToArray(); // copy the array because formatted log values modifies the array.
+                [.. arguments]; // copy the array because formatted log values modifies the array.
         string actionMessage = FormattableStringFormatter.Format(method.MessageFormat, argumentsForFormat);
 
         using (_operations.BeginOperation(method.MessageFormat, argumentsForFormat))
@@ -123,7 +123,7 @@ public class ActionRunner : IActionRunner
         return default;
     }
 
-    private IEnumerable<object> GetArguments(IEnumerable<Expression> arguments)
+    private static IEnumerable<object> GetArguments(IEnumerable<Expression> arguments)
     {
         foreach (Expression argument in arguments)
         {
@@ -131,7 +131,7 @@ public class ActionRunner : IActionRunner
         }
     }
 
-    private object GetValue(Expression argument)
+    private static object GetValue(Expression argument)
     {
         switch (argument.NodeType)
         {

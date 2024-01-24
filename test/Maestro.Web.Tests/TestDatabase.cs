@@ -43,7 +43,7 @@ public class TestDatabase : IDisposable
 {
     private const string TestDatabasePrefix = "TFD_";
     private string _databaseName;
-    private readonly SemaphoreSlim _createLock = new SemaphoreSlim(1);
+    private readonly SemaphoreSlim _createLock = new(1);
 
     protected TestDatabase()
     {
@@ -102,7 +102,7 @@ public class TestDatabase : IDisposable
         }
     }
 
-    private async Task DropAllTestDatabases(SqlConnection connection)
+    private static async Task DropAllTestDatabases(SqlConnection connection)
     {
         var previousTestDbs = new List<string>();
         await using (SqlCommand command = connection.CreateCommand())
@@ -126,7 +126,7 @@ public class TestDatabase : IDisposable
 
     private string ConnectionString => GetConnectionString(_databaseName);
 
-    private string GetConnectionString(string databaseName)
+    private static string GetConnectionString(string databaseName)
     {
         return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true";
     }

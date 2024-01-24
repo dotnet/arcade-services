@@ -19,7 +19,19 @@ secrets:
     parameters:
       Name: dotnet-bot
 
-  # Required in the dotnet-dotnet-synchronization pipeline
+  # Required in the dotnet-dotnet-synchronization pipeline for pulling code from AzDO repos
+  dn-bot-all-orgs-code-r:
+    type: azure-devops-access-token
+    parameters:
+      domainAccountName: dn-bot
+      domainAccountSecret:
+          location: helixkv
+          name: dn-bot-account-redmond
+      name: dn-bot-all-orgs-code-r
+      organizations: devdiv dnceng
+      scopes: code
+
+  # Required in the dotnet-dotnet-synchronization pipeline for pushing code to the internal VMR
   dn-bot-dnceng-build-rw-code-rw:
     type: azure-devops-access-token
     parameters:

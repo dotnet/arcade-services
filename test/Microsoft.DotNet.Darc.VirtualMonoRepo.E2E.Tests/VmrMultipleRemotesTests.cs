@@ -52,11 +52,10 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] 
-            { 
+            [ 
                 Constants.InstallerRepoName,
                 Constants.DependencyRepoName, 
-            },
+            ],
             expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -103,7 +102,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
             dependencyFilePath,
         };
 
-        var expectedFiles = GetExpectedFilesInVmr(VmrPath, new[] { Constants.DependencyRepoName }, expectedFilesFromRepos);
+        var expectedFiles = GetExpectedFilesInVmr(VmrPath, [Constants.DependencyRepoName], expectedFilesFromRepos);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
 
@@ -146,8 +145,8 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.InstallerRepoName,
@@ -158,7 +157,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
                     Name = Constants.DependencyRepoName,
                     DefaultRemote = FirstDependencyPath
                 }
-            },
+            ],
             PatchesPath = "src/installer/patches/"
         };
 

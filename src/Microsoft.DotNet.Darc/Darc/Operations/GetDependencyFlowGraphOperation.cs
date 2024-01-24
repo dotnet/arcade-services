@@ -75,20 +75,13 @@ internal class GetDependencyFlowGraphOperation : Operation
     private static string GetEdgeStyle(DependencyFlowEdge edge)
     {
         string color = edge.OnLongestBuildPath ? "color=\"red:invis:red\"" : "";
-        switch (edge.Subscription.Policy.UpdateFrequency)
+        return edge.Subscription.Policy.UpdateFrequency switch
         {
-            case UpdateFrequency.EveryBuild:
-                // Solid
-                return $"{color} style=bold";
-            case UpdateFrequency.EveryDay:
-            case UpdateFrequency.TwiceDaily:
-            case UpdateFrequency.EveryWeek:
-                return $"{color} style=dashed";
-            case UpdateFrequency.None:
-                return $"{color} style=dotted";
-            default:
-                throw new NotImplementedException("Unknown update frequency");
-        }
+            UpdateFrequency.EveryBuild => $"{color} style=bold",// Solid
+            UpdateFrequency.EveryDay or UpdateFrequency.TwiceDaily or UpdateFrequency.EveryWeek => $"{color} style=dashed",
+            UpdateFrequency.None => $"{color} style=dotted",
+            _ => throw new NotImplementedException("Unknown update frequency"),
+        };
     }
 
     /// <summary>

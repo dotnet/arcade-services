@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
+using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +15,10 @@ builder.Configuration.AddAzureKeyVault(
 
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration["BuildAssetRegistryConnectionString"] ?? string.Empty);
+    options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
 });
+
+builder.AddWorkitemQueues();
 
 builder.AddServiceDefaults();
 
@@ -37,5 +41,13 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// When running locally, create the workitem queue, if it doesn't already exist
+if (app.Environment.IsDevelopment())
+{
+    var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.PcsJobQueueConfigurationKey]);
+    await queueClient.CreateIfNotExistsAsync();
+}
 
 app.Run();

@@ -162,7 +162,7 @@ public class BuildsController : Controller
             return NotFound();
         }
 
-        return Ok(new Models.Build(build));
+        return Ok(new Build(build));
     }
 
     /// <summary>
@@ -230,6 +230,6 @@ public class BuildsController : Controller
                 action = "GetBuild",
                 id = buildModel.Id
             },
-            new Models.Build(buildModel));
+            new Build(buildModel));
     }
 }

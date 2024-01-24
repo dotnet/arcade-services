@@ -45,7 +45,7 @@ public class ThirdPartyNoticesGenerator : IThirdPartyNoticesGenerator
     {
         _logger.LogInformation("Updating {tpnName}...", VmrInfo.ThirdPartyNoticesFileName);
 
-        string header = string.Empty;
+        var header = string.Empty;
         if (_fileSystem.FileExists(templatePath))
         {
             header = await _fileSystem.ReadAllTextAsync(templatePath);

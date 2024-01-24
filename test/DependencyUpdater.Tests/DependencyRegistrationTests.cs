@@ -29,6 +29,6 @@ public class DependencyRegistrationTests
 
                 s.AddScoped<DependencyUpdater>();
             },
-            out string message).Should().BeTrue(message);
+            out var message).Should().BeTrue(message);
     }
 }

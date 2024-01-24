@@ -66,9 +66,9 @@ public class GitFile
 
     private static string GetIndentedXmlBody(XmlDocument xmlDocument)
     {
-        MemoryStream mStream = new MemoryStream();
-        XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
-        XmlDocument document = new XmlDocument();
+        var mStream = new MemoryStream();
+        var writer = new XmlTextWriter(mStream, Encoding.Unicode);
+        var document = new XmlDocument();
 
         try
         {
@@ -79,7 +79,7 @@ public class GitFile
             mStream.Flush();
             mStream.Position = 0;
 
-            StreamReader sReader = new StreamReader(mStream);
+            var sReader = new StreamReader(mStream);
 
             return sReader.ReadToEnd();
         }

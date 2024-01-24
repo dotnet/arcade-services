@@ -4,8 +4,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Web.Api.v2019_01_16.Models;
-using Microsoft.AspNetCore.ApiVersioning;
 using Newtonsoft.Json;
 
 namespace Maestro.Web.Api.v2019_01_16.Models;

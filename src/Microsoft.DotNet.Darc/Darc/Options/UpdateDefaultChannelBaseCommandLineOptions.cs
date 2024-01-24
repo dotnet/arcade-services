@@ -5,7 +5,7 @@ using CommandLine;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-abstract class UpdateDefaultChannelBaseCommandLineOptions : CommandLineOptions
+internal abstract class UpdateDefaultChannelBaseCommandLineOptions : CommandLineOptions
 {
     [Option("id", Default = -1, HelpText = "Existing default channel id")]
     public int Id { get; set; }

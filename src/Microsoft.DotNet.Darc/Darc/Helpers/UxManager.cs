@@ -38,8 +38,7 @@ public class UxManager
     /// <returns>Success or error code</returns>
     public int ReadFromStdIn(EditorPopUp popUp)
     {
-        int result = Constants.ErrorCode;
-
+        int result;
         try
         {
             // File to write from stdin to, which will be processed by the popup closing handler
@@ -104,7 +103,7 @@ public class UxManager
 
             while (tries-- > 0 && result != Constants.SuccessCode)
             {
-                using (Process process = new Process())
+                using (var process = new Process())
                 {
                     _popUpClosed = false;
                     process.EnableRaisingEvents = true;
@@ -204,7 +203,7 @@ public class UxManager
 
     private async Task<string> GetEditorPathAsync()
     {
-        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "config", "--get", "core.editor" });
+        var result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["config", "--get", "core.editor"]);
         string editor = result.StandardOutput;
 
         // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
@@ -213,12 +212,12 @@ public class UxManager
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "where", "notepad" });
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["where", "notepad"]);
                 editor = result.StandardOutput;
             }
             else
             {
-                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, new[] { "which", "vi" });
+                result = await _processManager.ExecuteGit(Environment.CurrentDirectory, ["which", "vi"]);
                 editor = result.StandardOutput;
             }
         }

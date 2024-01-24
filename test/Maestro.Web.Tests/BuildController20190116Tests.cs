@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -143,11 +142,11 @@ public partial class BuildController20190116Tests
                     AzureDevOpsBuildNumber = buildNumber + ".3",
                     AzureDevOpsRepository = "C-REPO",
                     AzureDevOpsBranch = branch,
-                    Dependencies = new List<BuildRef>
-                    {
+                    Dependencies =
+                    [
                         new BuildRef(aBuild.Id, isProduct: true),
                         new BuildRef(bBuild.Id, isProduct: true),
-                    },
+                    ],
                 });
                 result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;

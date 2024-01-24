@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -35,7 +34,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
-            new[] { Constants.ProductRepoName },
+            [Constants.ProductRepoName],
             expectedFilesFromRepos
         );
 
@@ -72,31 +71,31 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         var sourceMappings = new SourceMappingFile()
         {
-            Mappings = new List<SourceMappingSetting>
-            {
+            Mappings =
+            [
                 new SourceMappingSetting
                 {
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            },
-            AdditionalMappings = new List<AdditionalMappingSetting>
-            {
+            ],
+            AdditionalMappings =
+            [
                 new AdditionalMappingSetting
                 {
                     Source = new UnixPath(VmrInfo.SourcesDir) / Constants.ProductRepoName / "content",
                     Destination = ""
                 }
-            }
+            ]
         };
 
-        sourceMappings.Defaults.Exclude = new[]
-        {
+        sourceMappings.Defaults.Exclude =
+        [
             "externals/external-repo/**/*.exe",
             "excluded/*",
             "**/*.dll",
             "**/*.Dll",
-        };
+        ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
     }

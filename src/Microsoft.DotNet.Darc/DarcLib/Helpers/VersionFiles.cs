@@ -84,7 +84,7 @@ public static class VersionFiles
 
         if (releaseParts.Length == 3)
         {
-            if (int.TryParse(releaseParts[1], out int datePart) && int.TryParse(releaseParts[2], out int buildPart))
+            if (int.TryParse(releaseParts[1], out var datePart) && int.TryParse(releaseParts[2], out var buildPart))
             {
                 if (datePart > 1 && datePart < 8 && buildPart > 1000 && buildPart < 10000)
                 {
@@ -98,7 +98,7 @@ public static class VersionFiles
         if (releaseParts.Length == 4)
         {
             // New preview version style, e.g. 5.0.0-preview.7.20365.12
-            if (int.TryParse(releaseParts[2], out int datePart) && int.TryParse(releaseParts[3], out int buildPart))
+            if (int.TryParse(releaseParts[2], out var datePart) && int.TryParse(releaseParts[3], out var buildPart))
             {
                 return (VersionToDate(datePart, buildPart), $"{releaseParts[0]}.{releaseParts[1]}");
             }

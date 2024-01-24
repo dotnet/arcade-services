@@ -292,11 +292,10 @@ public class DependencyGraph
                 // a build, then no diff from latest.
                 if (newestBuildWithChannel != null)
                 {
-                    int channelId = newestBuildWithChannel.Channels.First().Id;
+                    int channelId = newestBuildWithChannel.Channels[0].Id;
                     // Just choose the first channel. This algorithm is mostly just heuristic.
                     var latestCommitKey = $"{node.Repository}@{channelId}";
-                    string latestCommit = null;
-                    if (!latestCommitCache.TryGetValue(latestCommitKey, out latestCommit))
+                    if (!latestCommitCache.TryGetValue(latestCommitKey, out var latestCommit))
                     {
                         // Look up latest build in the channel
                         var latestBuild = await barClient.GetLatestBuildAsync(node.Repository, channelId);
@@ -697,7 +696,7 @@ public class DependencyGraph
             {
                 if (dependency.Commit == node.Commit &&
                     dependency.RepoUri == node.Repository &&
-                    potentialContributingBuild.Assets.Any(a => assetEqualityComparer.Equals(a, dependency)))
+                    potentialContributingBuild.Assets.Any(a => AssetComparer.Equals(a, dependency)))
                 {
                     return true;
                 }
@@ -776,8 +775,7 @@ public class DependencyGraph
         }
         else
         {
-            string folder = null;
-
+            string folder;
             if (!string.IsNullOrEmpty(reposFolder))
             {
                 folder = reposFolder;
@@ -906,7 +904,7 @@ public class DependencyGraph
     private static async Task<string> GitShowAsync(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
     {
         var processManager = new ProcessManager(logger, gitLocation);
-        var result = await processManager.ExecuteGit(repoFolderPath, new[] { "show", $"{commit}:{fileName}" });
+        var result = await processManager.ExecuteGit(repoFolderPath, ["show", $"{commit}:{fileName}"]);
 
         if (!result.Succeeded || string.IsNullOrEmpty(result.StandardOutput))
         {

@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,12 +21,12 @@ namespace SubscriptionActorService.Tests;
 [TestFixture, NonParallelizable]
 public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
 {
-    private Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors;
+    private Dictionary<ActorId, Mock<IPullRequestActor>> _pullRequestActors;
 
     [SetUp]
     public void SubscriptionActorTests_SetUp()
     {
-        PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        _pullRequestActors = [];
     }
 
     protected override void RegisterServices(IServiceCollection services)
@@ -36,7 +35,7 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
         proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
             .Returns((ActorId actorId) =>
             {
-                Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
+                Mock<IPullRequestActor> mock = _pullRequestActors.GetOrAddValue(
                     actorId,
                     CreateMock<IPullRequestActor>);
                 return mock.Object;
@@ -60,7 +59,7 @@ public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     private void ThenUpdateAssetsAsyncShouldHaveBeenCalled(ActorId forActor, Build withBuild)
     {
         var updatedAssets = new List<List<Asset>>();
-        PullRequestActors.Should()
+        _pullRequestActors.Should()
             .ContainKey(forActor)
             .WhoseValue.Verify(
                 a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
