@@ -5,22 +5,22 @@ namespace ProductConstructionService.Api.Queue;
 
 public enum PcsJobsProcessorState
 {
-    ContinueWorking,
+    Working,
     StoppedWorking,
-    FinishJobAndStop
+    FinishingJobAndStopping
 }
 
 public class PcsJobsProcessorStatus
 {
     public PcsJobsProcessorStatus()
     {
-        State = PcsJobsProcessorState.ContinueWorking;
+        State = PcsJobsProcessorState.Working;
         Semaphore = new(1);
     }
 
     public void Reset()
     {
-        State = PcsJobsProcessorState.ContinueWorking;
+        State = PcsJobsProcessorState.Working;
         if (Semaphore.CurrentCount == 0)
         {
             Semaphore.Release();

@@ -43,7 +43,7 @@ public class PcsJobsProcessor(
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.QueueName);
         try
         {
-            while (!cancellationToken.IsCancellationRequested && _status.State == PcsJobsProcessorState.ContinueWorking)
+            while (!cancellationToken.IsCancellationRequested && _status.State == PcsJobsProcessorState.Working)
             {
                 try
                 {
