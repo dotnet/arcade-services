@@ -34,7 +34,7 @@ public class PcsJobsProcessorController
         return Ok();
     }
 
-    [HttpPost("start")]
+    [HttpPut("start")]
     public IActionResult StartPcsJobsProcessor()
     {
         _logger.LogInformation("Starting {pcsJobsProcessor}", nameof(PcsJobsProcessor));
