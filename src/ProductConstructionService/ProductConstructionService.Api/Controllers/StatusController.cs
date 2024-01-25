@@ -23,7 +23,7 @@ public class StatusController(
     public IActionResult StopPcsJobsProcessor()
     {
         _logger.LogInformation("Stopping {pcsJobsProcessor}. The currently running PcsJob will finish", nameof(JobsProcessor));
-        _pcsJobsProcessorStatus.State = JobsProcessorState.FinishingJobAndStopping;
+        _pcsJobsProcessorStatus.FinishJobAndStop();
 
         return Ok();
     }

@@ -15,10 +15,10 @@ public class JobsProcessorStatus
     public JobsProcessorStatus()
     {
         State = JobsProcessorState.Working;
-        _semaphore = new(1);
+        _semaphore = new(0);
     }
 
-    public JobsProcessorState State { get; set; }
+    public JobsProcessorState State { get; private set; }
     private readonly SemaphoreSlim _semaphore;
 
     public void Reset()
@@ -30,8 +30,18 @@ public class JobsProcessorStatus
         }
     }
 
-    public async Task WaitAsync(CancellationToken cancellationToken)
+    public async Task WaitIfStoppingAsync(CancellationToken cancellationToken)
     {
-        await _semaphore.WaitAsync(cancellationToken);
+        if (State == JobsProcessorState.FinishingJobAndStopping)
+        {
+            State = JobsProcessorState.StoppedWorking;
+            await _semaphore.WaitAsync(cancellationToken);
+        }
     }
+
+    public void FinishJobAndStop()
+    {
+        State = JobsProcessorState.FinishingJobAndStopping;
+    }
+
 }
