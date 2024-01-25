@@ -5,13 +5,8 @@ namespace ProductConstructionService.Api.Queue;
 
 public class JobProcessorOptions
 {
-    public JobProcessorOptions(string queueName, int emptyQueueWaitTimeSeconds)
-    {
-        QueueName = queueName;
-        EmptyQueueWaitTime = TimeSpan.FromSeconds(emptyQueueWaitTimeSeconds);
-
-    }
-
-    public TimeSpan EmptyQueueWaitTime { get; }
-    public string QueueName { get; }
+    public required TimeSpan EmptyQueueWaitTime { get; init; }
+    public required string JobQueueName { get; init; }
+    public required int MaxJobRetries { get; init; }
+    public required TimeSpan QueueMessageInvisibilityTime { get; init; }
 }

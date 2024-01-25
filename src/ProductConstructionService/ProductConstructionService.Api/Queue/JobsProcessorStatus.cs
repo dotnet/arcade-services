@@ -15,18 +15,23 @@ public class JobsProcessorStatus
     public JobsProcessorStatus()
     {
         State = JobsProcessorState.Working;
-        Semaphore = new(1);
+        _semaphore = new(1);
     }
+
+    public JobsProcessorState State { get; set; }
+    private readonly SemaphoreSlim _semaphore;
 
     public void Reset()
     {
         State = JobsProcessorState.Working;
-        if (Semaphore.CurrentCount == 0)
+        if (_semaphore.CurrentCount == 0)
         {
-            Semaphore.Release();
+            _semaphore.Release();
         }
     }
 
-    public JobsProcessorState State { get; set; }
-    public SemaphoreSlim Semaphore { get; }
+    public async Task WaitAsync(CancellationToken cancellationToken)
+    {
+        await _semaphore.WaitAsync(cancellationToken);
+    }
 }
