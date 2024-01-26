@@ -23,7 +23,7 @@ public class StatusController(JobsProcessorStatus pcsJobsProcessorStatus) : Cont
     [HttpPut("start")]
     public IActionResult StartPcsJobsProcessor()
     {
-        _pcsJobsProcessorStatus.Reset();
+        _pcsJobsProcessorStatus.Start();
 
         return GetPcsJobsProcessorStatus();
     }

@@ -14,7 +14,7 @@ public static class QueueConfiguration
         var queueName = builder.Configuration[JobQueueConfigurationKey] ??
             throw new ArgumentException($"{JobQueueConfigurationKey} missing from the configuration");
 
-        builder.Services.AddSingleton<JobsProcessorStatus>();
+        builder.Services.AddSingleton(new JobsProcessorStatus(new ManualResetEventSlim(true)));
         builder.Services.Configure<JobProcessorOptions>(
             builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>

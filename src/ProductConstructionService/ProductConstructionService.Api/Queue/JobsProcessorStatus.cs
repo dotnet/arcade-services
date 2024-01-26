@@ -12,28 +12,28 @@ public enum JobsProcessorState
 
 public class JobsProcessorStatus
 {
-    public JobsProcessorStatus()
+    public JobsProcessorStatus(ManualResetEventSlim manualResetEvent)
     {
         State = JobsProcessorState.Working;
-        _manualResetEvent = new(true);
+        _manualResetEvent = manualResetEvent;
     }
 
     public JobsProcessorState State { get; private set; }
     private readonly ManualResetEventSlim _manualResetEvent;
 
-    public void Reset()
+    public void Start()
     {
         State = JobsProcessorState.Working;
         _manualResetEvent.Set();
     }
 
-    public void WaitIfStoppingAsync(CancellationToken cancellationToken)
+    public void WaitIfStopping(CancellationToken cancellationToken)
     {
         if (!_manualResetEvent.IsSet)
         {
             State = JobsProcessorState.StoppedWorking;
         }
-        _manualResetEvent.Wait();
+        _manualResetEvent.Wait(cancellationToken);
     }
 
     public void FinishJobAndStop()
