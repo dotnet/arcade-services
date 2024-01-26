@@ -36,7 +36,7 @@ public class JobsProcessor(
 
                 QueueMessage message = await queueClient.ReceiveMessageAsync(_options.Value.QueueMessageInvisibilityTime, cancellationToken);
 
-                if (message == null || message.Body == null)
+                if (message?.Body == null)
                 {
                     // Queue is empty, wait a bit
                     _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, _options.Value.EmptyQueueWaitTime);
