@@ -39,7 +39,7 @@ public class JobsProcessor(
                 if (message?.Body == null)
                 {
                     // Queue is empty, wait a bit
-                    _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, _options.Value.EmptyQueueWaitTime);
+                    _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, (int)_options.Value.EmptyQueueWaitTime.TotalSeconds);
                     await Task.Delay(_options.Value.EmptyQueueWaitTime, cancellationToken);
                     continue;
                 }
