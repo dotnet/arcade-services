@@ -5,7 +5,7 @@ namespace ProductConstructionService.Api.Queue;
 
 public static class QueueConfiguration
 {
-    public const string JobQueueConfigurationKey = "JobProcessorOptions:JobQueueName";
+    public const string JobQueueConfigurationKey = $"{JobProcessorOptions.ConfigurationKey}:JobQueueName";
 
     public static void AddWorkitemQueues(this WebApplicationBuilder builder)
     {
@@ -16,7 +16,7 @@ public static class QueueConfiguration
 
         builder.Services.AddSingleton<JobsProcessorStatus>();
         builder.Services.Configure<JobProcessorOptions>(
-            builder.Configuration.GetSection("JobProcessorOptions"));
+            builder.Configuration.GetSection(JobQueueConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
         builder.Services.AddHostedService<JobsProcessor>();
