@@ -32,7 +32,7 @@ public class JobsProcessor(
         {
             try
             {
-                await _status.WaitIfStoppingAsync(cancellationToken);
+                _status.WaitIfStoppingAsync(cancellationToken);
 
                 QueueMessage message = await queueClient.ReceiveMessageAsync(_options.Value.QueueMessageInvisibilityTime, cancellationToken);
 
