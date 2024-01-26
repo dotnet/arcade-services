@@ -54,8 +54,8 @@ public class JobsProcessor(
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "An exception {exception} occurred while processing job with id {jobId}, retrying {number of times} more times",
-                        ex, job.Id, _options.Value.MaxJobRetries - message.DequeueCount);
+                    _logger.LogError(ex, "Processing job {jobId} attempt {attempt}/{maxAttempts} failed",
+                        ex, job.Id, message.DequeueCount, _options.Value.MaxJobRetries);
                     // Let the job retry a few times. If it fails a few times, delete it from the queue, it's a bad job
                     if (message.DequeueCount == _options.Value.MaxJobRetries)
                     {
