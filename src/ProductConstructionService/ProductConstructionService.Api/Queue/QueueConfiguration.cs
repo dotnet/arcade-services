@@ -16,7 +16,7 @@ public static class QueueConfiguration
 
         builder.Services.AddSingleton<JobsProcessorStatus>();
         builder.Services.Configure<JobProcessorOptions>(
-            builder.Configuration.GetSection(JobQueueConfigurationKey));
+            builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
         builder.Services.AddHostedService<JobsProcessor>();

@@ -19,9 +19,9 @@ public class JobsProcessor(
     private readonly IOptions<JobProcessorOptions> _options = options;
     private readonly JobsProcessorStatus _status = status;
 
-    protected override Task ExecuteAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        return Task.Run(() => ProcessJobs(cancellationToken));
+        await ProcessJobs(cancellationToken);
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)
