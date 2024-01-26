@@ -8,21 +8,13 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(
-    ILogger<StatusController> logger,
-    JobsProcessorStatus pcsJobsProcessorStatus,
-    IHostApplicationLifetime hostApplicationLifetime) : Controller
+public class StatusController(JobsProcessorStatus pcsJobsProcessorStatus) : Controller
 {
-    private readonly ILogger<StatusController> _logger = logger;
     private readonly JobsProcessorStatus _pcsJobsProcessorStatus = pcsJobsProcessorStatus;
-    private readonly IHostApplicationLifetime _hostApplicationLifetime = hostApplicationLifetime;
-
-    private const int StoppedCheckDelaySeconds = 5;
 
     [HttpPut("stop")]
     public IActionResult StopPcsJobsProcessor()
     {
-        _logger.LogInformation("Stopping {pcsJobsProcessor}. The currently running PcsJob will finish", nameof(JobsProcessor));
         _pcsJobsProcessorStatus.FinishJobAndStop();
 
         return GetPcsJobsProcessorStatus();
@@ -31,7 +23,6 @@ public class StatusController(
     [HttpPut("start")]
     public IActionResult StartPcsJobsProcessor()
     {
-        _logger.LogInformation("Starting {pcsJobsProcessor}", nameof(JobsProcessor));
         _pcsJobsProcessorStatus.Reset();
 
         return GetPcsJobsProcessorStatus();
