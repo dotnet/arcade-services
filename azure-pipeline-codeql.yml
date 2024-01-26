@@ -76,6 +76,12 @@ jobs:
       git diff
     displayName: Remove Service Fabric RunAsPolicy from MaestroApplication
 
+  - powershell: |
+      . .\eng\common\tools.ps1
+      InitializeDotNetCli -install:$true
+      .\.dotnet\dotnet workload install aspire
+    displayName: Install .NET and Aspire Workload
+
   - task: CodeQL3000Init@0
     displayName: CodeQL Initialize
 
