@@ -8,5 +8,5 @@ namespace ProductConstructionService.Api.Queue.Jobs;
 [JsonDerivedType(typeof(TextJob), typeDiscriminator: nameof(TextJob))]
 public abstract class Job
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public required Guid Id { get; init; }
 }
