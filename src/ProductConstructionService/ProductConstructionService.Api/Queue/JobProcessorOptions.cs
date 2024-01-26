@@ -5,7 +5,7 @@ namespace ProductConstructionService.Api.Queue;
 
 public class JobProcessorOptions
 {
-    public required TimeSpan EmptyQueueWaitTime { get; init; }
+    public required TimeSpan QueuePollTimeout { get; init; }
     public required string JobQueueName { get; init; }
     public required int MaxJobRetries { get; init; }
     public required TimeSpan QueueMessageInvisibilityTime { get; init; }

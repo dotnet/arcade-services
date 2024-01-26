@@ -25,7 +25,7 @@ public class StatusController(
         _logger.LogInformation("Stopping {pcsJobsProcessor}. The currently running PcsJob will finish", nameof(JobsProcessor));
         _pcsJobsProcessorStatus.FinishJobAndStop();
 
-        return Ok();
+        return GetPcsJobsProcessorStatus();
     }
 
     [HttpPut("start")]
@@ -34,7 +34,7 @@ public class StatusController(
         _logger.LogInformation("Starting {pcsJobsProcessor}", nameof(JobsProcessor));
         _pcsJobsProcessorStatus.Reset();
 
-        return Ok();
+        return GetPcsJobsProcessorStatus();
     }
 
     [HttpGet]

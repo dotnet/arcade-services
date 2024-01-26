@@ -21,7 +21,7 @@ public class JobsProcessor(
 
     protected override Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        return Task.Run(() => ProcessJobs(cancellationToken), cancellationToken);
+        return Task.Run(() => ProcessJobs(cancellationToken));
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)
@@ -39,8 +39,8 @@ public class JobsProcessor(
                 if (message?.Body == null)
                 {
                     // Queue is empty, wait a bit
-                    _logger.LogInformation("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, (int)_options.Value.EmptyQueueWaitTime.TotalSeconds);
-                    await Task.Delay(_options.Value.EmptyQueueWaitTime, cancellationToken);
+                    _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
+                    await Task.Delay(_options.Value.QueuePollTimeout, cancellationToken);
                     continue;
                 }
 
@@ -55,17 +55,19 @@ public class JobsProcessor(
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Processing job {jobId} attempt {attempt}/{maxAttempts} failed",
-                        ex, job.Id, message.DequeueCount, _options.Value.MaxJobRetries);
+                        job.Id, message.DequeueCount, _options.Value.MaxJobRetries);
                     // Let the job retry a few times. If it fails a few times, delete it from the queue, it's a bad job
                     if (message.DequeueCount == _options.Value.MaxJobRetries)
                     {
+                        _logger.LogError("Job {jobId} has failed {maxAttempts} times. Discarding the message {message} from the queue"
+                            , job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
                         await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "An unexpected exception {exception} occurred", ex);
+                _logger.LogError(ex, "An unexpected exception occurred during Pcs job processing");
             }
         }   
     }
