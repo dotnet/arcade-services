@@ -11,7 +11,7 @@ public class TestController(JobProducerFactory pcsJobProducerFactory) : Controll
 {
     private readonly JobProducerFactory _jobProducerFactory = pcsJobProducerFactory;
 
-    [HttpGet("1")]
+    [HttpPost("1")]
     public async Task<IActionResult> Index()
     {
         var jobProducer = _jobProducerFactory.Create<TextJob>();
