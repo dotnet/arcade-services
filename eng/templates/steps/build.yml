@@ -1,0 +1,50 @@
+parameters:
+- name: configuration
+  type: string
+
+- name: buildArgs
+  type: string
+  default: ''
+
+steps:
+- task: NodeTool@0
+  displayName: Install node.js
+  inputs:
+    versionSpec: 12.x
+
+- task: NuGetToolInstaller@0
+  displayName: Install NuGet
+  inputs:
+    versionSpec: 6.1.x
+
+- task: NuGetCommand@2
+  displayName: Restore Packages
+  inputs:
+    command: restore
+    solution: "**/*.sln"
+    feedstoUse: config
+
+- powershell: eng\set-version-parameters.ps1
+  displayName: Calculate Release Versions
+
+- powershell: |
+    [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
+    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
+    $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
+    $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
+    git diff
+  displayName: Remove RunAsPolicy From MaestroApplication
+
+- powershell: |
+    . .\eng\common\tools.ps1
+    InitializeDotNetCli -install:$true
+    .\.dotnet\dotnet workload install aspire
+  displayName: Install .NET and Aspire Workload
+
+- script: eng\common\cibuild.cmd
+    -configuration ${{ parameters.configuration }}
+    -prepareMachine
+    ${{ parameters.buildArgs }}
+    /p:Test=false
+    /P:Sign=false
+  name: Build

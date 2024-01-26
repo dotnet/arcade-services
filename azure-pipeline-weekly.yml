@@ -11,5 +11,49 @@ schedules:
     - main
   always: true
 
+parameters:
+# Optionally do not publish to TSA. Useful for e.g. verifying fixes before PR
+- name: TSAEnabled
+  displayName: Publish results to TSA
+  type: boolean
+  default: true
+
+variables:
+  # Force CodeQL enabled so it may be run on any branch
+- name: Codeql.Enabled
+  value: true
+  # Do not let CodeQL 3000 Extension gate scan frequency
+- name: Codeql.Cadence
+  value: 0
+  # CodeQL needs this plumbed along as a variable to enable TSA
+- name: Codeql.TSAEnabled
+  value: ${{ parameters.TSAEnabled }}
+  # CG is run as a part of the CI pipeline, and doesn't need to be run here
+- name: skipComponentGovernanceDetection
+  value: true
+
 stages:
+- stage: CodeQL
+  displayName: CodeQL scan
+  dependsOn: []
+  jobs:
+  - job: CodeQL
+    displayName: CodeQL Scan
+    timeoutInMinutes: 90
+
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2019
+
+    steps:
+    - task: CodeQL3000Init@0
+      displayName: CodeQL Initialize
+
+    - template: /eng/templates/steps/build.yml
+      parameters:
+        configuration: Release
+
+    - task: CodeQL3000Finalize@0
+      displayName: CodeQL Finalize
+
 - template: /eng/templates/stages/secret-validation.yml
