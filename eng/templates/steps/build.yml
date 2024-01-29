@@ -45,7 +45,7 @@ steps:
       `"microsoft.net.sdk.aspire`": `"$aspireVersion/8.0.100`"
     }
     "@
-    $fileContent | Out-File -FilePath \aspire.json
+    $fileContent | Out-File -FilePath .\aspire.json
     cat .\aspire.json
   displayName: Create Aspire Rollback File
 
