@@ -137,94 +137,94 @@ stages:
             configuration: $(_BuildConfig)
             buildArgs: $(_InternalBuildArgs)
 
-#         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
-#           - task: ComponentGovernanceComponentDetection@0
-#             displayName: Component Governance Detection
-#             inputs:
-#               # `.packages` directory is used by some tools running during build.
-#               # By default ComponentDetection scans this directory and sometimes reports
-#               # vulnerabilities for packages that are not part of the published product.
-#               # We can ignore this directory because actual vulnerabilities
-#               # that we are interested in will be found by the tool
-#               # when scanning .csproj and package.json files.
-#               ignoreDirectories: .packages
+          - task: ComponentGovernanceComponentDetection@0
+            displayName: Component Governance Detection
+            inputs:
+              # `.packages` directory is used by some tools running during build.
+              # By default ComponentDetection scans this directory and sometimes reports
+              # vulnerabilities for packages that are not part of the published product.
+              # We can ignore this directory because actual vulnerabilities
+              # that we are interested in will be found by the tool
+              # when scanning .csproj and package.json files.
+              ignoreDirectories: .packages
 
-#         - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-#           - template: /eng/templates/steps/test.yml
+        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/templates/steps/test.yml
 
-#         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
 
-#           ## Prepare service fabric artifact
-#           - task: ServiceFabricUpdateManifests@2
-#             displayName: Update Service Fabric manifests
-#             inputs:
-#               applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
+          ## Prepare service fabric artifact
+          - task: ServiceFabricUpdateManifests@2
+            displayName: Update Service Fabric manifests
+            inputs:
+              applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
 
-#           - powershell: |
-#               robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
-#               robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
-#               robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
-#               exit 0
-#             displayName: Copy Maestro Project Artifacts
+          - powershell: |
+              robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
+              exit 0
+            displayName: Copy Maestro Project Artifacts
 
-#           - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
-#             artifact: MaestroApplication
-#             displayName: Publish MaestroApplication
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
+            artifact: MaestroApplication
+            displayName: Publish MaestroApplication
 
-#           ## Generate SBOM manifest
-#           - template: /eng/templates/steps/generate-sbom.yml
+          ## Generate SBOM manifest
+          - template: /eng/templates/steps/generate-sbom.yml
 
-#           ## Prepare release utilities artifact
-#           - task: CopyFiles@2
-#             displayName: Prepare Release Utilities
-#             inputs:
-#               sourceFolder: $(Build.SourcesDirectory)\eng
-#               contents: '*'
-#               targetFolder: $(Build.ArtifactStagingDirectory)\eng
+          ## Prepare release utilities artifact
+          - task: CopyFiles@2
+            displayName: Prepare Release Utilities
+            inputs:
+              sourceFolder: $(Build.SourcesDirectory)\eng
+              contents: '*'
+              targetFolder: $(Build.ArtifactStagingDirectory)\eng
 
-#           - publish: $(Build.ArtifactStagingDirectory)\eng
-#             artifact: ReleaseUtilities
-#             displayName: Publish Release Utilities Artifact
+          - publish: $(Build.ArtifactStagingDirectory)\eng
+            artifact: ReleaseUtilities
+            displayName: Publish Release Utilities Artifact
 
-#           - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
-#             artifact: Maestro.ScenarioTests
-#             displayName: Publish Maestro Scenario Tests
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\net6.0\publish
+            artifact: Maestro.ScenarioTests
+            displayName: Publish Maestro Scenario Tests
 
-# - ${{ if and(ne(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
-#   - template: /eng/common/templates/post-build/post-build.yml
-#     parameters:
-#       enableSymbolValidation: true
-#       enableSigningValidation: false
-#       artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-#       symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-#       # This is to enable SDL runs part of Post-Build Validation Stage
-#       SDLValidationParameters:
-#         enable: true
-#         params: '-SourceToolsList @("policheck","credscan")
-#         -TsaInstanceURL $(_TsaInstanceURL)
-#         -TsaProjectName $(_TsaProjectName)
-#         -TsaNotificationEmail $(_TsaNotificationEmail)
-#         -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-#         -TsaBugAreaPath $(_TsaBugAreaPath)
-#         -TsaIterationPath $(_TsaIterationPath)
-#         -TsaRepositoryName "Arcade-Services"
-#         -TsaCodebaseName "Arcade-Services"
-#         -TsaPublish $True
-#         -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'IndividualCI', 'BatchedCI'), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production')) }}:
+  - template: /eng/common/templates/post-build/post-build.yml
+    parameters:
+      enableSymbolValidation: true
+      enableSigningValidation: false
+      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+      symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+      # This is to enable SDL runs part of Post-Build Validation Stage
+      SDLValidationParameters:
+        enable: true
+        params: '-SourceToolsList @("policheck","credscan")
+        -TsaInstanceURL $(_TsaInstanceURL)
+        -TsaProjectName $(_TsaProjectName)
+        -TsaNotificationEmail $(_TsaNotificationEmail)
+        -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+        -TsaBugAreaPath $(_TsaBugAreaPath)
+        -TsaIterationPath $(_TsaIterationPath)
+        -TsaRepositoryName "Arcade-Services"
+        -TsaCodebaseName "Arcade-Services"
+        -TsaPublish $True
+        -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
 
-# - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-#   - template: /eng/templates/stages/deploy.yaml
-#     parameters:
-#       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-#         DeploymentEnvironment: Staging
-#         MaestroTestEndpoints: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
-#         PublishProfile: Int
-#         Subscription: NetHelixStaging
-#         VariableGroup: MaestroInt KeyVault
-#       ${{ else }}:
-#         DeploymentEnvironment: Production
-#         MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
-#         PublishProfile: Prod
-#         Subscription: NetHelix
-#         VariableGroup: MaestroProd KeyVault
+- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+  - template: /eng/templates/stages/deploy.yaml
+    parameters:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Staging
+        MaestroTestEndpoints: https://maestro-int.westus2.cloudapp.azure.com,https://maestro.int-dot.net
+        PublishProfile: Int
+        Subscription: NetHelixStaging
+        VariableGroup: MaestroInt KeyVault
+      ${{ else }}:
+        DeploymentEnvironment: Production
+        MaestroTestEndpoints: https://maestro-prod.westus2.cloudapp.azure.com,https://maestro.dot.net
+        PublishProfile: Prod
+        Subscription: NetHelix
+        VariableGroup: MaestroProd KeyVault
