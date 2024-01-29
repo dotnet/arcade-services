@@ -36,9 +36,19 @@ steps:
   displayName: Remove RunAsPolicy From MaestroApplication
 
 - powershell: |
+    $[xml]packagesProps = Get-Content -Path Directory.Packages.props
+    $aspireNode = $packages.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Aspire.Hosting" }
+    $fileContent = @"
+    {
+      `"microsoft.net.sdk.aspire`": `"$aspireNode.Version/8.0.100`"
+    }
+    "@
+    $fileContent | Out-File -FilePath aspire.json
+
+- powershell: |
     . .\eng\common\tools.ps1
     InitializeDotNetCli -install:$true
-    .\.dotnet\dotnet workload install aspire
+    .\.dotnet\dotnet workload install aspire --from-rollback-file .\aspire.json
   displayName: Install .NET and Aspire Workload
 
 - script: eng\common\cibuild.cmd
