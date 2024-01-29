@@ -48,16 +48,15 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
-        {
+        List<NativePath> expectedFilesFromRepos =
+        [
             ProductRepoFilePathInVmr,
             submoduleFileInVmr,
-            submodulePathInVmr / VersionFiles.VersionDetailsXml,
-            submodulePathInVmr / VersionFiles.VersionProps,
+            .. GetExpectedVersionFiles(submodulePathInVmr),
             InstallerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,
-        };
+        ];
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,

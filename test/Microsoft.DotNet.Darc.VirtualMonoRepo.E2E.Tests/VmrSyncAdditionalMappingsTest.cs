@@ -25,7 +25,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName),
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / _fileRelativePath,

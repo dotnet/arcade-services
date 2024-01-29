@@ -38,7 +38,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             installerFilePath,
             firstRepoFilePath,

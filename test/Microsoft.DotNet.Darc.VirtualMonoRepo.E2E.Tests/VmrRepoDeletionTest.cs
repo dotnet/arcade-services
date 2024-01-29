@@ -40,7 +40,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath, sourceMappingsPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath, sourceMappingsPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / _sourceMappingsRelativePath,

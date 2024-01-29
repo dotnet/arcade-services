@@ -41,7 +41,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoFilePath,
             _dependencyRepoFilePath
@@ -72,7 +72,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoFilePath,
             _dependencyRepoFilePath
@@ -112,7 +112,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
 
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoFilePath,
             _dependencyRepoFilePath,
@@ -149,7 +149,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
         await GitOperations.CommitAll(ProductRepoPath, "Add submodule");
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath, generateCodeowners: true);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoFilePath,
             _dependencyRepoFilePath,
@@ -157,11 +157,10 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / VmrInfo.CodeownersPath,
         };
 
-        List<LocalPath> expectedFiles = GetExpectedFilesInVmr(
+        List<NativePath> expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName, Constants.DependencyRepoName],
-            expectedFilesFromRepos
-        );
+            expectedFilesFromRepos);
 
         expectedFiles.Add(VmrPath / VmrInfo.CodeownersPath);
 
@@ -297,7 +296,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
     {
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoFilePath,
             _dependencyRepoFilePath

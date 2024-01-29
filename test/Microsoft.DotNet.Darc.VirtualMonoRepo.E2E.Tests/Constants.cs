@@ -33,6 +33,31 @@ public class Constants
         </Project>
         """;
 
+    public const string GlobalJsonTemplate = """
+        {
+          "tools": {
+            "dotnet": "9.0.100-alpha.1.23615.4"
+          },
+          "msbuild-sdks": {
+            "Microsoft.DotNet.Arcade.Sdk": "9.0.0-beta.24069.2",
+            "Microsoft.DotNet.Helix.Sdk": "9.0.0-beta.24069.2"
+          }
+        }
+        """;
+
+    public const string NuGetConfigTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="dotnet-eng" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json" />
+            <add key="dotnet-tools" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json" />
+            <add key="dotnet-public" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json" />
+          </packageSources>
+          <disabledPackageSources />
+        </configuration>
+        """;
+
     public const string ProductRepoName = "product-repo1";
     public const string DependencyRepoName = "dependency";
     public const string SecondRepoName = "product-repo2";

@@ -36,7 +36,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         var sourceMappingsPath = InstallerRepoPath / _sourceMappingsRelativePath;
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath, sourceMappingsPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / _sourceMappingsRelativePath,
@@ -82,7 +82,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
         var sourceMappingsPath = InstallerRepoPath / _sourceMappingsRelativePath;
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath, sourceMappingsPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / _sourceMappingsRelativePath,

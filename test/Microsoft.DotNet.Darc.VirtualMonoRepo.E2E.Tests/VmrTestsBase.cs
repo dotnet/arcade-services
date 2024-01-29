@@ -86,22 +86,21 @@ internal abstract class VmrTestsBase
         .AddSingleton<IRemoteFactory>(_ => null!) // TODO
         .BuildServiceProvider();
 
-    protected static List<LocalPath> GetExpectedFilesInVmr(
-        LocalPath vmrPath,
+    protected static List<NativePath> GetExpectedFilesInVmr(
+        NativePath vmrPath,
         string[] reposWithVersionFiles,
-        List<LocalPath> reposFiles)
+        List<NativePath> reposFiles)
     {
-        var expectedFiles = new List<LocalPath>
-        {
+        List<NativePath> expectedFiles =
+        [
             vmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName,
             vmrPath / VmrInfo.DefaultRelativeSourceManifestPath,
             vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath,
-        };
+        ];
 
         foreach (var repo in reposWithVersionFiles)
         {
-            expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionDetailsXml);
-            expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionProps);
+            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
             expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
@@ -110,7 +109,18 @@ internal abstract class VmrTestsBase
         return expectedFiles;
     }
 
-    protected static void CheckDirectoryContents(string directory, IList<LocalPath> expectedFiles)
+    protected static string[] GetExpectedVersionFiles() =>
+    [
+        VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionProps,
+        VersionFiles.GlobalJson,
+        VersionFiles.NugetConfig,
+    ];
+
+    protected static IEnumerable<NativePath> GetExpectedVersionFiles(NativePath repoPath)
+        => GetExpectedVersionFiles().Select(file => repoPath / file);
+
+    protected static void CheckDirectoryContents(string directory, IList<NativePath> expectedFiles)
     {
         var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
         filesInDir.Should().BeEquivalentTo(expectedFiles);
@@ -263,6 +273,10 @@ internal abstract class VmrTestsBase
 
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
+
+            File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+
+            File.WriteAllText(repoPath / VersionFiles.NugetConfig, Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");
         }

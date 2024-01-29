@@ -300,7 +300,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
     {
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             _productRepoVmrFilePath
         };
