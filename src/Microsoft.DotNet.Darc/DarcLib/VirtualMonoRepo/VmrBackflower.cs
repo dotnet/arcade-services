@@ -345,7 +345,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             sourceOrigin = new SourceDependency(
                 build.GitHubRepository ?? build.AzureDevOpsRepository,
-                build.Commit);
+                currentVmrSha);
 
             IEnumerable<AssetData> assetData = build.Assets.Select(
                 a => new AssetData(a.NonShipping)
@@ -364,7 +364,9 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
         else
         {
-            sourceOrigin = versionDetails.Source;
+            sourceOrigin = versionDetails.Source != null
+                ? versionDetails.Source with { Sha = currentVmrSha }
+                : new SourceDependency(Constants.DefaultVmrUri, currentVmrSha); // First ever backflow for the repo
             updates = [];
         }
 
