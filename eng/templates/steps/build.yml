@@ -36,6 +36,7 @@ steps:
   displayName: Remove RunAsPolicy From MaestroApplication
 
 - powershell: |
+    cat .\Directory.Packages.props
     [xml]$packagesProps = Get-Content -Path .\Directory.Packages.props
     $aspireNode = $packages.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Aspire.Hosting" }
     $aspireVersion = $aspireNode.Version
