@@ -40,7 +40,7 @@ steps:
     $aspireNode = $packages.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Aspire.Hosting" }
     $fileContent = @"
     {
-      `"microsoft.net.sdk.aspire`": `"$aspireNode.Version/8.0.100`"
+      `"microsoft.net.sdk.aspire`": `"$($aspireNode.Version)/8.0.100`"
     }
     "@
     $fileContent | Out-File -FilePath aspire.json
