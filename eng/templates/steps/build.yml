@@ -38,21 +38,18 @@ steps:
 - powershell: |
     [xml]$packagesProps = Get-Content -Path .\Directory.Packages.props
     $aspireNode = $packagesProps.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq 'Aspire.Hosting' }
-    $aspireVersion = $aspireNode.Version
-    Write-Host "Aspire Version: $aspireVersion"
     $fileContent = @"
     {
-      `"microsoft.net.sdk.aspire`": `"$aspireVersion/8.0.100`"
+      `"microsoft.net.sdk.aspire`": `"$($aspireNode.Version)/8.0.100`"
     }
     "@
-    $fileContent | Out-File -FilePath .\aspire.json
-    cat .\aspire.json
+    $fileContent | Out-File -FilePath $(Agent.TempDirectory)\aspire.json
   displayName: Create Aspire Rollback File
 
 - powershell: |
     . .\eng\common\tools.ps1
     InitializeDotNetCli -install:$true
-    .\.dotnet\dotnet workload install aspire --from-rollback-file .\aspire.json
+    .\.dotnet\dotnet workload install aspire --from-rollback-file $(Agent.TempDirectory)\aspire.json
   displayName: Install .NET and Aspire Workload
 
 - script: eng\common\cibuild.cmd
