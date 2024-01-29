@@ -44,6 +44,7 @@ steps:
     }
     "@
     $fileContent | Out-File -FilePath .\aspire.json
+    cat .\aspire.json
   displayName: Create Aspire Rollback File
 
 - powershell: |
