@@ -36,14 +36,14 @@ steps:
   displayName: Remove RunAsPolicy From MaestroApplication
 
 - powershell: |
-    $[xml]packagesProps = Get-Content -Path Directory.Packages.props
+    [xml]$packagesProps = Get-Content -Path .\Directory.Packages.props
     $aspireNode = $packages.Project.ItemGroup.PackageVersion | Where-Object { $_.Include -eq "Aspire.Hosting" }
     $fileContent = @"
     {
       `"microsoft.net.sdk.aspire`": `"$($aspireNode.Version)/8.0.100`"
     }
     "@
-    $fileContent | Out-File -FilePath aspire.json
+    $fileContent | Out-File -FilePath .\aspire.json
   displayName: Create Aspire Rollback File
 
 - powershell: |
