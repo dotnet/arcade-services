@@ -81,9 +81,8 @@ stages:
         timeoutInMinutes: 90
         pool:
           ${{ if eq(variables['System.TeamProject'], 'internal')}}:
-            # name: NetCore1ESPool-Internal
-            # demands: ImageOverride -equals 1es-windows-2019
-            vmImage: windows-latest
+            name: NetCore1ESPool-Internal
+            demands: ImageOverride -equals 1es-windows-2019
           ${{ if eq(variables['System.TeamProject'], 'public')}}:
             name: NetCore-Public
             demands: ImageOverride -equals 1es-windows-2019-open
