@@ -99,8 +99,8 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.InstallerRepoName);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.ProductRepoName);
 
         _sourceMappings = new SourceMappingFile
         {

@@ -5,24 +5,33 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class Constants
 {
-    public const string VersionDetailsTemplate = 
-@"<?xml version=""1.0"" encoding=""utf-8""?>
-<Dependencies>
-    <ProductDependencies>
-        {0}
-    </ProductDependencies>
-    <ToolsetDependencies>
-    </ToolsetDependencies>
-</Dependencies>";
+    public const string VersionDetailsTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Dependencies>
+            <ProductDependencies>
+                {0}
+            </ProductDependencies>
+            <ToolsetDependencies>
+            </ToolsetDependencies>
+        </Dependencies>
+        """;
 
-    public static readonly string EmptyVersionDetails = string.Format(VersionDetailsTemplate, string.Empty);
-    
-    public const string DependencyTemplate = 
-@"<Dependency Name=""{0}"" Version=""8.0.0"">
-    <Uri>{1}</Uri>
-    <Sha>{2}</Sha>
-    <SourceBuild RepoName=""{0}"" ManagedOnly=""true"" />
-</Dependency>";
+    public const string DependencyTemplate = """
+        <Dependency Name="{0}" Version="8.0.0">
+            <Uri>{1}</Uri>
+            <Sha>{2}</Sha>
+            <SourceBuild RepoName="{0}" ManagedOnly="true" />
+        </Dependency>
+        """;
+
+    public const string VersionPropsTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project>
+          <PropertyGroup>
+            {0}
+          </PropertyGroup>
+        </Project>
+        """;
 
     public const string ProductRepoName = "product-repo1";
     public const string DependencyRepoName = "dependency";

@@ -55,7 +55,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.ProductRepoName);
         
         Directory.CreateDirectory(ProductRepoPath / "content");
         File.WriteAllText(

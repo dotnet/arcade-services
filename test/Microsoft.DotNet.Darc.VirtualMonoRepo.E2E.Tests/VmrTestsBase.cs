@@ -82,11 +82,13 @@ internal abstract class VmrTestsBase
     private IServiceProvider CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
+        .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null))
+        .AddSingleton<IRemoteFactory>(_ => null!) // TODO
         .BuildServiceProvider();
 
     protected static List<LocalPath> GetExpectedFilesInVmr(
         LocalPath vmrPath,
-        string[] syncedRepos,
+        string[] reposWithVersionFiles,
         List<LocalPath> reposFiles)
     {
         var expectedFiles = new List<LocalPath>
@@ -96,9 +98,10 @@ internal abstract class VmrTestsBase
             vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath,
         };
 
-        foreach (var repo in syncedRepos)
+        foreach (var repo in reposWithVersionFiles)
         {
             expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionDetailsXml);
+            expectedFiles.Add(vmrPath / VmrInfo.SourcesDir / repo / VersionFiles.VersionProps);
             expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
@@ -161,16 +164,16 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(repository, commit, null, true, additionalRemotes, null, null, generateCodeowners, true, _cancellationToken.Token);
     }
 
-    protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath)
+    protected async Task<string?> CallDarcBackflow(string mappingName, NativePath repoPath, string? shaToFlow = null, int? buildToFlow = null)
     {
         var codeflower = _serviceProvider.Value.GetRequiredService<IVmrBackFlower>();
-        return await codeflower.FlowBackAsync(mappingName, repoPath, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowBackAsync(mappingName, repoPath, shaToFlow, buildToFlow, cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<string?> CallDarcForwardflow(string mappingName, NativePath repoPath)
+    protected async Task<string?> CallDarcForwardflow(string mappingName, NativePath repoPath, string? shaToFlow = null, int? buildToFlow = null)
     {
         var codeflower = _serviceProvider.Value.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(mappingName, repoPath, cancellationToken: _cancellationToken.Token);
+        return await codeflower.FlowForwardAsync(mappingName, repoPath, shaToFlow, buildToFlow, cancellationToken: _cancellationToken.Token);
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
@@ -226,7 +229,7 @@ internal abstract class VmrTestsBase
         return files;
     }
 
-    protected async Task<string> CopyRepoAndCreateVersionDetails(
+    protected async Task<string> CopyRepoAndCreateVersionFiles(
         NativePath currentTestDir,
         string repoName,
         IDictionary<string, List<string>>? dependencies = null)
@@ -234,25 +237,34 @@ internal abstract class VmrTestsBase
         var repoPath = currentTestDir / repoName;
         
         var dependenciesString = new StringBuilder();
+        var propsString = new StringBuilder();
         if (dependencies != null && dependencies.ContainsKey(repoName))
         {
             var repoDependencies = dependencies[repoName];
             foreach (var dependencyName in repoDependencies)
             {
-                string sha = await CopyRepoAndCreateVersionDetails(currentTestDir, dependencyName, dependencies);
+                string sha = await CopyRepoAndCreateVersionFiles(currentTestDir, dependencyName, dependencies);
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
-                        new[] { dependencyName, currentTestDir/ dependencyName, sha }));
+                        new[] { dependencyName, currentTestDir / dependencyName, sha }));
+
+                var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
+                propsString.AppendLine($"<{propsName}>{sha}</{propsName}>");
             }
         }
 
         if (!Directory.Exists(repoPath))
         {
             CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
+
             var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
-            await GitOperations.CommitAll(repoPath, "update version details");
+
+            var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
+            File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
+
+            await GitOperations.CommitAll(repoPath, "Update version files");
         }
 
         return await GitOperations.GetRepoLastCommit(repoPath);

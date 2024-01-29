@@ -253,7 +253,7 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
             { Constants.ProductRepoName,  new List<string> {Constants.DependencyRepoName} }
         };
 
-        await CopyRepoAndCreateVersionDetails(
+        await CopyRepoAndCreateVersionFiles(
             CurrentTestDirectory,
             Constants.ProductRepoName,
             dependenciesMap);

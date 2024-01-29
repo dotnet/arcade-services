@@ -137,7 +137,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             { Constants.SecondRepoName, [Constants.DependencyRepoName] },
         };
 
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
     }
 
     protected override async Task CopyVmrForCurrentTest()

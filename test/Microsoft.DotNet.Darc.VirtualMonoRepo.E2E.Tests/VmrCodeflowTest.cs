@@ -263,7 +263,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
         CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);
 
-        await CopyRepoAndCreateVersionDetails(
+        await CopyRepoAndCreateVersionFiles(
             CurrentTestDirectory,
             Constants.ProductRepoName,
             dependenciesMap);

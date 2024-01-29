@@ -32,8 +32,8 @@ internal class VmrPatchesTestsBase : VmrTestsBase
         InstallerFilePathInVmr = vmrSourcesDir / Constants.InstallerRepoName / Constants.GetRepoFileName(Constants.InstallerRepoName);
         ProductRepoFilePathInVmr = vmrSourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName);
         
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.InstallerRepoName);
         File.Copy(
             VmrTestsOneTimeSetUp.ResourcesPath / PatchFileName, 
             InstallerRepoPath / Constants.PatchesFolderName / Constants.ProductRepoName / PatchFileName);

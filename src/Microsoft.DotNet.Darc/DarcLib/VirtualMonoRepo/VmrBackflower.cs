@@ -20,7 +20,7 @@ public interface IVmrBackFlower
 {
     Task<string?> FlowBackAsync(
         string mapping,
-        NativePath targetRepoPath,
+        NativePath targetRepo,
         string? shaToFlow,
         int? buildToFlow,
         bool discardPatches = false,
