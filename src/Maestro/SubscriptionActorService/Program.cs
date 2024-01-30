@@ -13,6 +13,8 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace SubscriptionActorService;
@@ -35,6 +37,7 @@ public static class Program
 
     public static void Configure(IServiceCollection services)
     {
+        services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<SubscriptionActor>>());
         services.AddSingleton<IActionRunner, ActionRunner>();
         services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.AddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
