@@ -29,7 +29,7 @@ secrets:
           name: dn-bot-account-redmond
       name: dn-bot-all-orgs-code-r
       organizations: devdiv dnceng
-      scopes: code_read
+      scopes: code
 
   # Required in the dotnet-dotnet-synchronization pipeline for pushing code to the internal VMR
   dn-bot-dnceng-build-rw-code-rw:
