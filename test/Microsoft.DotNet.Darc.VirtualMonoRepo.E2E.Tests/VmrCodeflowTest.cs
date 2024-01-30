@@ -1,13 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
@@ -15,10 +21,19 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 [TestFixture]
 internal class VmrCodeflowTest :  VmrTestsBase
 {
+    private const string FakePackageName = "Fake.Package";
+    private const string FakePackageVersion = "1.0.0";
+
     private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
+    private readonly Mock<IBasicBarClient> _barClient = new();
+
     private NativePath _productRepoVmrPath = null!;
     private NativePath _productRepoVmrFilePath = null!;
     private NativePath _productRepoFilePath = null!;
+
+    protected override IServiceCollection CreateServiceProvider()
+        => base.CreateServiceProvider()
+            .AddSingleton(_barClient.Object);
 
     [SetUp]
     public void SetUp()
@@ -26,6 +41,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         _productRepoVmrPath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName;
         _productRepoVmrFilePath = _productRepoVmrPath / _productRepoFileName;
         _productRepoFilePath = ProductRepoPath / _productRepoFileName;
+        _barClient.Reset();
     }
 
     [Test]
@@ -57,9 +73,46 @@ internal class VmrCodeflowTest :  VmrTestsBase
             mergeTheirs: true,
             expectedFileInConflict: _productRepoFileName);
 
-        // We used the changes from the VMR - let's verify flowing there is a no-op
+        // We used the changes from the VMR - let's verify flowing to the VMR
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().NotBeNull();
+        await GitOperations.MergePrBranch(VmrPath, branch!);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+
+        // Now lets backflow but use a build instead of a PR
+        await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, "Change that will have a build");
+        await GitOperations.CommitAll(VmrPath, "Changing a VMR file");
+        var build = new Build(
+            id: 4050,
+            dateProduced: DateTimeOffset.Now,
+            staleness: 0,
+            released: false,
+            stable: true,
+            commit: await GitOperations.GetRepoLastCommit(VmrPath),
+            channels: ImmutableList<Channel>.Empty,
+            assets: new[] { new Asset(123, 4050, true, FakePackageName, "1.2.0", null) }.ToImmutableList(),
+            dependencies: ImmutableList<BuildRef>.Empty,
+            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+        {
+            GitHubBranch = "dev",
+            GitHubRepository = "https://github.com/dotnet/fake-vmr",
+        };
+
+        _barClient
+            .Setup(x => x.GetBuildAsync(build.Id))
+            .ReturnsAsync(build);
+
+        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, buildToFlow: build.Id);
+        branch.Should().NotBeNull();
+        await GitOperations.MergePrBranch(ProductRepoPath, branch!);
+        CheckFileContents(_productRepoFilePath, "Change that will have a build");
+
+        // Verify that Version.Details.xml got updated with the new package "built" in the VMR
+        List<DependencyDetail> dependencies = await GetLocal(ProductRepoPath).GetDependenciesAsync(FakePackageName);
+        dependencies.Should().HaveCount(1);
+        dependencies[0].RepoUri.Should().Be(build.GitHubRepository);
+        dependencies[0].Commit.Should().Be(build.Commit);
+        dependencies[0].Version.Should().Be(build.Assets[0].Version);
     }
 
     [Test]
@@ -238,7 +291,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
     private async Task<string?> ChangeRepoFileAndFlowIt(string newContent)
     {
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
-        await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'", true);
+        await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
         var branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         CheckFileContents(_productRepoVmrFilePath, newContent);
@@ -250,7 +303,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
     private async Task<string?> ChangeVmrFileAndFlowIt(string newContent)
     {
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
-        await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'", true);
+        await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
         var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
         CheckFileContents(_productRepoFilePath, newContent);
@@ -298,6 +351,18 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
     private async Task EnsureTestRepoIsInitialized()
     {
+        // We populate Version.Details.xml with a fake package which we will flow back and forth
+        await GetLocal(ProductRepoPath).AddDependencyAsync(new DependencyDetail
+        {
+            Name = FakePackageName,
+            Version = FakePackageVersion,
+            RepoUri = DarcLib.Constants.DefaultVmrUri,
+            Commit = "abcdef",
+            Type = DependencyType.Product,
+            Pinned = false,
+        });
+        await GitOperations.CommitAll(ProductRepoPath, "Adding a fake dependency");
+
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFilesFromRepos = new List<NativePath>

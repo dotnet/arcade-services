@@ -31,7 +31,6 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
-    protected VmrInfo Info { get; private set; } = null!;
     
     private Lazy<IServiceProvider> _serviceProvider = null!;
     private readonly CancellationTokenSource _cancellationToken = new();
@@ -55,8 +54,7 @@ internal abstract class VmrTestsBase
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
         
-        _serviceProvider = new(CreateServiceProvider);
-        Info = (VmrInfo)_serviceProvider.Value.GetRequiredService<IVmrInfo>();
+        _serviceProvider = new Lazy<IServiceProvider>(() => CreateServiceProvider().BuildServiceProvider());
     }
 
     [TearDown]
@@ -79,12 +77,11 @@ internal abstract class VmrTestsBase
 
     protected abstract Task CopyVmrForCurrentTest();
 
-    private IServiceProvider CreateServiceProvider() => new ServiceCollection()
+    protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
         .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null))
-        .AddSingleton<IRemoteFactory>(_ => null!) // TODO
-        .BuildServiceProvider();
+        .AddSingleton<IRemoteFactory>(_ => null!); // TODO
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -298,4 +295,7 @@ internal abstract class VmrTestsBase
         
         await GitOperations.CommitAll(VmrPath, "Add source mappings");
     }
+
+    // Needed for some local git operations
+    protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(_serviceProvider.Value, repoPath.ToString());
 }
