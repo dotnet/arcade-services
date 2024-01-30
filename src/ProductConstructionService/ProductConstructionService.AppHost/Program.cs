@@ -7,7 +7,7 @@ var queues = builder.AddAzureStorage("storage")
     .UseEmulator()
     .AddQueues("queues");
 
-builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionService.api")
-    .WithReference(queues);
+// builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionService.api")
+//    .WithReference(queues);
 
 builder.Build().Run();
