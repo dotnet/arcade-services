@@ -16,12 +16,12 @@ public class JobsProcessorStatusTests
         // When it starts, the processor is not working
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
-        TaskCompletionSource tcs1 = new();
+        TaskCompletionSource jobCompletion1 = new();
         Thread t = new(() =>
         {
             using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
             {
-                tcs1.SetResult();
+                jobCompletion1.SetResult();
             }
         });
         t.Start();
@@ -33,32 +33,29 @@ public class JobsProcessorStatusTests
         scopeManager.Start();
 
         // Wait for the worker to enter the job
-        await tcs1.Task;
+        await jobCompletion1.Task;
 
         scopeManager.State.Should().Be(JobsProcessorState.Working);
 
         // The JobProcessor is working now, it shouldn't block on anything
-        await Task.Factory.StartNew(() =>
-        {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None)) { }
-        });
+        using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None)) { }
 
         scopeManager.State.Should().Be(JobsProcessorState.Working);
 
         // Simulate someone calling stop in the middle of a job
-        tcs1 = new();
-        TaskCompletionSource tsc2 = new();
+        jobCompletion1 = new();
+        TaskCompletionSource jobCompletion2 = new();
 
         var workerTask = Task.Run(async () =>
         {
             using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
             {
-                tcs1.SetResult();
-                await tsc2.Task;
+                jobCompletion1.SetResult();
+                await jobCompletion2.Task;
             }
         });
         // Wait for the workerTask to start the job
-        await tcs1.Task;
+        await jobCompletion1.Task;
 
         scopeManager.FinishJobAndStop();
 
@@ -66,7 +63,7 @@ public class JobsProcessorStatusTests
         scopeManager.State.Should().Be(JobsProcessorState.Stopping);
 
         // Let the job finish
-        tsc2.SetResult();
+        jobCompletion2.SetResult();
 
         await workerTask;
 
@@ -87,14 +84,14 @@ public class JobsProcessorStatusTests
         // We were already stopped, so we should continue to be so
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
-        TaskCompletionSource tcs = new();
+        TaskCompletionSource jobCompletion = new();
 
         // Start a new job that should get blocked
         Thread t = new(() =>
         {
             using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
             {
-                tcs.SetResult();
+                jobCompletion.SetResult();
             }
         });
         t.Start();
@@ -104,7 +101,7 @@ public class JobsProcessorStatusTests
 
         scopeManager.Start();
         // Wait for the worker to unblock and start the job
-        await tcs.Task;
+        await jobCompletion.Task;
 
         scopeManager.State.Should().Be(JobsProcessorState.Working);
     }
@@ -123,26 +120,28 @@ public class JobsProcessorStatusTests
 
         scopeManager.State.Should().Be(JobsProcessorState.Working);
 
-        TaskCompletionSource tcs1 = new();
-        TaskCompletionSource tcs2 = new();
+        TaskCompletionSource jobCompletion1 = new();
+        TaskCompletionSource jobCompletion2 = new();
 
         var workerTask = Task.Run(async () =>
         {
             using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
             {
-                tcs1.SetResult();
-                await tcs2.Task;
+                jobCompletion1.SetResult();
+                await jobCompletion2.Task;
             }
         });
 
-        await tcs1.Task;
+        scopeManager.Start();
+
+        await jobCompletion1.Task;
 
         // Now stop in the middle of a job
         scopeManager.FinishJobAndStop();
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopping);
 
-        tcs2.SetResult();
+        jobCompletion2.SetResult();
 
         // Wait for the job to finish
         await workerTask;
@@ -160,5 +159,17 @@ public class JobsProcessorStatusTests
 
         // Unblock the worker thread
         scopeManager.Start();
+    }
+
+    [Test]
+    public void JobsProcessorCancel()
+    {
+        JobsProcessorScopeManager scopeManager = new();
+        CancellationTokenSource tokenSource = new(0);
+        var throwingAction = () => scopeManager.BeginJobScopeWhenReady(tokenSource.Token);
+
+        scopeManager.Start();
+
+        throwingAction.Should().Throw<OperationCanceledException>();
     }
 }

@@ -113,7 +113,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProductConstructionService.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ProductConstructionService", "ProductConstructionService", "{243A4561-BF35-405A-AF12-AC57BB27796D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.Api.Tests", "ProductConstructionService.Api.Tests\ProductConstructionService.Api.Tests.csproj", "{BB8CC065-79D6-48CE-AD96-32EDDDC4D404}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.Api.Tests", "test\ProductConstructionService.Api.Tests\ProductConstructionService.Api.Tests.csproj", "{BB8CC065-79D6-48CE-AD96-32EDDDC4D404}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

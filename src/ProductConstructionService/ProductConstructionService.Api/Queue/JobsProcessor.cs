@@ -26,6 +26,9 @@ public class JobsProcessor(
 
     private async Task ProcessJobsAsync(CancellationToken cancellationToken)
     {
+        // The API won't be initialized until the BackgroundService goes async. Since the scopeManagers blocks aren't async, we have to do it here
+        await Task.Delay(1000);
+
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
@@ -35,6 +38,11 @@ public class JobsProcessor(
                 try
                 {
                     await ReadAndProcessJobAsync(queueClient, cancellationToken);
+                }
+                // If the cancellation token gets cancelled, we just want to exit
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -60,6 +68,7 @@ public class JobsProcessor(
 
         try
         {
+            _logger.LogInformation("Starting attempt {attemptNumber} for job {jobId}, type {jobType}", message.DequeueCount, job.Id, job.GetType());
             ProcessJob(job);
 
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);

@@ -9,20 +9,14 @@ public enum JobsProcessorState
     Working,
     // The JobsProcessor isn't doing anything
     Stopped,
-    // The JobsProcessor will finish it's current job and stop
+    // The JobsProcessor will finish its current job and stop
     Stopping
 }
 
 public class JobsProcessorScopeManager
 {
-    public JobsProcessorScopeManager()
-    {
-        State = JobsProcessorState.Stopped;
-        _autoResetEvent = new(false);
-    }
-
-    public JobsProcessorState State { get; private set; }
-    private readonly AutoResetEvent _autoResetEvent;
+    public JobsProcessorState State { get; private set; } = JobsProcessorState.Stopped;
+    private readonly AutoResetEvent _autoResetEvent = new(false);
 
     public void Start()
     {
@@ -33,8 +27,6 @@ public class JobsProcessorScopeManager
     /// <summary>
     /// Creates a new scope for the currently executing Job, when the the JobsProcessor is in the `Working` state.
     /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
     public IDisposable BeginJobScopeWhenReady(CancellationToken cancellationToken)
     {
         _autoResetEvent.WaitOne();

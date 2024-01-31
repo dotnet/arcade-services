@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\ProductConstructionService\ProductConstructionService.Api\ProductConstructionService.Api.csproj" />
+    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Api\ProductConstructionService.Api.csproj" />
   </ItemGroup>
 
 </Project>
