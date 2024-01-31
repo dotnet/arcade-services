@@ -8,10 +8,10 @@ param location string = 'westus2'
 param containerRegistryName string = 'productconstructionint'
 
 @description('CPU cores allocated to a single container instance, e.g., 0.5')
-param containerCpuCoreCount string = '0.25'
+param containerCpuCoreCount string = '0.5'
 
 @description('Memory allocated to a single container instance, e.g., 1Gi')
-param containerMemory string = '0.5Gi'
+param containerMemory string = '1Gi'
 
 @description('aspnetcore environment')
 @allowed([
@@ -192,39 +192,52 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             }
         ]
       }
-      template: {
-          scale: {
-              minReplicas: 1
-              maxReplicas: 1
-          }
-          serviceBinds: []
-          containers: [ 
-            {
-                image: containerImageName
-                name: 'api'
-                env: env
-                resources: {
-                    cpu: json(containerCpuCoreCount)
-                    memory: containerMemory
-                }
-                probes: [
-                    {
-                        httpGet: {
-                            path: '/health'
-                            port: 8080
-                            scheme: 'HTTP'
-                        }
-                        initialDelaySeconds: 5
-                        periodSeconds: 10
-                        successThreshold: 1
-                        failureThreshold: 3
-                        type: 'Startup'
+        template: {
+            scale: {
+                minReplicas: 1
+                maxReplicas: 1
+            }
+            serviceBinds: []
+            containers: [ 
+                {
+                    image: containerImageName
+                    name: 'api'
+                    env: env
+                    resources: {
+                        cpu: json(containerCpuCoreCount)
+                        memory: containerMemory
+                        ephemeralStorage: '50Gi'
                     }
-                ]
-            } 
-        ]
-      }
-  }
+                    volumeMounts: [
+                        {
+                            volumeName: 'data'
+                            mountPath: '/mnt/datadir'
+                        }
+                    ]
+                    probes: [
+                        {
+                            httpGet: {
+                                path: '/health'
+                                port: 8080
+                                scheme: 'HTTP'
+                            }
+                            initialDelaySeconds: 5
+                            periodSeconds: 10
+                            successThreshold: 1
+                            failureThreshold: 3
+                            type: 'Startup'
+                        }
+                    ]
+                } 
+            ]
+            volumes: [
+                {
+                    name: 'data'
+                    storageType: 'EmptyDir'
+                }
+            ]
+        }
+    }
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
