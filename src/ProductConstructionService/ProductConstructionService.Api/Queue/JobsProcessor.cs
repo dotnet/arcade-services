@@ -21,11 +21,6 @@ public class JobsProcessor(
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await ProcessJobsAsync(cancellationToken);
-    }
-
-    private async Task ProcessJobsAsync(CancellationToken cancellationToken)
-    {
         // The API won't be initialized until the BackgroundService goes async. Since the scopeManagers blocks aren't async, we have to do it here
         await Task.Delay(1000);
 
@@ -49,7 +44,7 @@ public class JobsProcessor(
                     _logger.LogError(ex, "An unexpected exception occurred during Pcs job processing");
                 }
             }
-        }   
+        }
     }
 
     private async Task ReadAndProcessJobAsync(QueueClient queueClient, CancellationToken cancellationToken)
