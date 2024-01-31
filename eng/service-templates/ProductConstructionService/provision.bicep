@@ -210,7 +210,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                     }
                     volumeMounts: [
                         {
-                            volumeName: 'data'
+                            volumeName: 'lgndisk-100g'
                             mountPath: '/mnt/datadir'
                         }
                     ]
@@ -232,7 +232,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             ]
             volumes: [
                 {
-                    name: 'data'
+                    name: 'lgndisk-100g'
                     storageType: 'EmptyDir'
                 }
             ]
