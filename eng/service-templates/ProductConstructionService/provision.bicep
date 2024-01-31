@@ -75,6 +75,12 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
             sharedKey: logAnalytics.listKeys().primarySharedKey
         }
     }
+    workloadProfiles: [
+        {
+            name: 'Consumption'
+            workloadProfileType: 'Consumption'
+        }
+    ]
   }
 }
 
@@ -206,10 +212,11 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                     resources: {
                         cpu: json(containerCpuCoreCount)
                         memory: containerMemory
+                        ephemeralStorage: '50Gi'
                     }
                     volumeMounts: [
                         {
-                            volumeName: 'lgndisk-50g'
+                            volumeName: 'data'
                             mountPath: '/mnt/datadir'
                         }
                     ]
@@ -231,7 +238,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             ]
             volumes: [
                 {
-                    name: 'lgndisk-50g'
+                    name: 'data'
                     storageType: 'EmptyDir'
                 }
             ]
