@@ -11,65 +11,71 @@ namespace ProductConstructionService.Api.Queue;
 public class JobsProcessor(
     ILogger<JobsProcessor> logger,
     IOptions<JobProcessorOptions> options,
-    JobsProcessorStatus status,
+    JobsProcessorScopeManager scopeManager,
     QueueServiceClient queueServiceClient)
     : BackgroundService
 {
     private readonly ILogger<JobsProcessor> _logger = logger;
     private readonly IOptions<JobProcessorOptions> _options = options;
-    private readonly JobsProcessorStatus _status = status;
+    private readonly JobsProcessorScopeManager _scopeManager = scopeManager;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        await ProcessJobs(cancellationToken);
+        await ProcessJobsAsync(cancellationToken);
     }
 
-    private async Task ProcessJobs(CancellationToken cancellationToken)
+    private async Task ProcessJobsAsync(CancellationToken cancellationToken)
     {
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
+            using (_scopeManager.BeginJobScopeWhenReady(cancellationToken))
             {
-                _status.WaitIfStopping(cancellationToken);
-
-                QueueMessage message = await queueClient.ReceiveMessageAsync(_options.Value.QueueMessageInvisibilityTime, cancellationToken);
-
-                if (message?.Body == null)
-                {
-                    // Queue is empty, wait a bit
-                    _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
-                    await Task.Delay(_options.Value.QueuePollTimeout, cancellationToken);
-                    continue;
-                }
-
-                var job = message.Body.ToObjectFromJson<Job>();
-
                 try
                 {
-                    ProcessJob(job);
-
-                    await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+                    await ReadAndProcessJobAsync(queueClient, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Processing job {jobId} attempt {attempt}/{maxAttempts} failed",
-                        job.Id, message.DequeueCount, _options.Value.MaxJobRetries);
-                    // Let the job retry a few times. If it fails a few times, delete it from the queue, it's a bad job
-                    if (message.DequeueCount == _options.Value.MaxJobRetries)
-                    {
-                        _logger.LogError("Job {jobId} has failed {maxAttempts} times. Discarding the message {message} from the queue"
-                            , job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
-                        await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
-                    }
+                    _logger.LogError(ex, "An unexpected exception occurred during Pcs job processing");
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An unexpected exception occurred during Pcs job processing");
-            }
         }   
+    }
+
+    private async Task ReadAndProcessJobAsync(QueueClient queueClient, CancellationToken cancellationToken)
+    {
+        QueueMessage message = await queueClient.ReceiveMessageAsync(_options.Value.QueueMessageInvisibilityTime, cancellationToken);
+
+        if (message?.Body == null)
+        {
+            // Queue is empty, wait a bit
+            _logger.LogDebug("Queue {queueName} is empty. Sleeping for {sleepingTime} seconds", _options.Value.JobQueueName, (int)_options.Value.QueuePollTimeout.TotalSeconds);
+            await Task.Delay(_options.Value.QueuePollTimeout, cancellationToken);
+            return;
+        }
+
+        var job = message.Body.ToObjectFromJson<Job>();
+
+        try
+        {
+            ProcessJob(job);
+
+            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Processing job {jobId} attempt {attempt}/{maxAttempts} failed",
+                job.Id, message.DequeueCount, _options.Value.MaxJobRetries);
+            // Let the job retry a few times. If it fails a few times, delete it from the queue, it's a bad job
+            if (message.DequeueCount == _options.Value.MaxJobRetries)
+            {
+                _logger.LogError("Job {jobId} has failed {maxAttempts} times. Discarding the message {message} from the queue"
+                    , job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
+                await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
+            }
+        }
     }
 
     private void ProcessJob(Job job)

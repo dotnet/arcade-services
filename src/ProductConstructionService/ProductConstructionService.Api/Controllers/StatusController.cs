@@ -8,14 +8,14 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobsProcessorStatus pcsJobsProcessorStatus) : Controller
+public class StatusController(JobsProcessorScopeManager jobsProcessorScopeManager) : Controller
 {
-    private readonly JobsProcessorStatus _pcsJobsProcessorStatus = pcsJobsProcessorStatus;
+    private readonly JobsProcessorScopeManager _jobsProcessorScopeManager = jobsProcessorScopeManager;
 
     [HttpPut("stop")]
     public IActionResult StopPcsJobsProcessor()
     {
-        _pcsJobsProcessorStatus.FinishJobAndStop();
+        _jobsProcessorScopeManager.FinishJobAndStop();
 
         return GetPcsJobsProcessorStatus();
     }
@@ -23,7 +23,7 @@ public class StatusController(JobsProcessorStatus pcsJobsProcessorStatus) : Cont
     [HttpPut("start")]
     public IActionResult StartPcsJobsProcessor()
     {
-        _pcsJobsProcessorStatus.Start();
+        _jobsProcessorScopeManager.Start();
 
         return GetPcsJobsProcessorStatus();
     }
@@ -31,6 +31,6 @@ public class StatusController(JobsProcessorStatus pcsJobsProcessorStatus) : Cont
     [HttpGet]
     public IActionResult GetPcsJobsProcessorStatus()
     {
-        return Ok(_pcsJobsProcessorStatus.State.GetDisplayName());
+        return Ok(_jobsProcessorScopeManager.State.GetDisplayName());
     }
 }
