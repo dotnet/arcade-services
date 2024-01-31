@@ -37,10 +37,6 @@ public class Constants
         {
           "tools": {
             "dotnet": "9.0.100-alpha.1.23615.4"
-          },
-          "msbuild-sdks": {
-            "Microsoft.DotNet.Arcade.Sdk": "9.0.0-beta.24069.2",
-            "Microsoft.DotNet.Helix.Sdk": "9.0.0-beta.24069.2"
           }
         }
         """;

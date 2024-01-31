@@ -22,7 +22,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
     protected override async Task CopyReposForCurrentTest()
     {
         await base.CopyReposForCurrentTest();
-        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.SecondRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.SecondRepoName);
     }
 
     [Test]

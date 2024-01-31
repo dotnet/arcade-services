@@ -80,13 +80,13 @@ internal abstract class VmrTestsBase
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddVmrManagers("git", VmrPath, TmpPath, null, null)
-        .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null))
-        .AddSingleton<IRemoteFactory>(_ => null!); // TODO
+        .AddSingleton<IBasicBarClient>(new BarApiClient(buildAssetRegistryPat: null));
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
         string[] reposWithVersionFiles,
-        List<NativePath> reposFiles)
+        List<NativePath> reposFiles,
+        bool hasVersionFiles = false)
     {
         List<NativePath> expectedFiles =
         [
@@ -102,6 +102,11 @@ internal abstract class VmrTestsBase
         }
 
         expectedFiles.AddRange(reposFiles);
+
+        if (hasVersionFiles)
+        {
+            expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath));
+        }
 
         return expectedFiles;
     }
@@ -237,11 +242,10 @@ internal abstract class VmrTestsBase
     }
 
     protected async Task<string> CopyRepoAndCreateVersionFiles(
-        NativePath currentTestDir,
         string repoName,
-        IDictionary<string, List<string>>? dependencies = null)
+        Dictionary<string, List<string>>? dependencies = null)
     {
-        var repoPath = currentTestDir / repoName;
+        var repoPath = CurrentTestDirectory / repoName;
         
         var dependenciesString = new StringBuilder();
         var propsString = new StringBuilder();
@@ -250,11 +254,11 @@ internal abstract class VmrTestsBase
             var repoDependencies = dependencies[repoName];
             foreach (var dependencyName in repoDependencies)
             {
-                string sha = await CopyRepoAndCreateVersionFiles(currentTestDir, dependencyName, dependencies);
+                string sha = await CopyRepoAndCreateVersionFiles(dependencyName, dependencies);
                 dependenciesString.AppendLine(
                     string.Format(
                         Constants.DependencyTemplate,
-                        new[] { dependencyName, currentTestDir / dependencyName, sha }));
+                        new[] { dependencyName, CurrentTestDirectory / dependencyName, sha }));
 
                 var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
                 propsString.AppendLine($"<{propsName}>{sha}</{propsName}>");
@@ -266,6 +270,7 @@ internal abstract class VmrTestsBase
             CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
 
             var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
+            Directory.CreateDirectory(repoPath / "eng");
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
 
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
@@ -298,4 +303,5 @@ internal abstract class VmrTestsBase
 
     // Needed for some local git operations
     protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(_serviceProvider.Value, repoPath.ToString());
+    protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(_serviceProvider.Value);
 }

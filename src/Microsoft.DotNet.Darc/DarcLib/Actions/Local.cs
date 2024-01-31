@@ -74,8 +74,7 @@ public class Local : ILocal
 
         if (arcadeItem != null)
         {
-            arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-            targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            targetDotNetVersion = await _fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
         var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);

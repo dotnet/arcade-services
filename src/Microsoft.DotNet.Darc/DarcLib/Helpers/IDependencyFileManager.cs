@@ -28,6 +28,13 @@ public interface IDependencyFileManager
 
     Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch);
 
+    /// <summary>
+    /// Get the tools.dotnet section of the global.json from a target repo URI
+    /// </summary>
+    /// <param name="repoUri">repo to get the version from</param>
+    /// <param name="commit">commit sha to query</param>
+    Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit);
+
     Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch);
 
     Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch);

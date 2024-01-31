@@ -49,7 +49,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IBasicBarClient _barClient;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
@@ -67,7 +66,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IBasicBarClient basicBarClient,
         ILocalLibGit2Client libGit2Client,
         ICoherencyUpdateResolver coherencyUpdateResolver,
-        IRemoteFactory remoteFactory,
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
@@ -85,7 +83,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _barClient = basicBarClient;
         _libGit2Client = libGit2Client;
         _coherencyUpdateResolver = coherencyUpdateResolver;
-        _remoteFactory = remoteFactory;
         _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -373,13 +370,10 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = versionDetails.Dependencies.GetArcadeUpdate();
         SemanticVersion? targetDotNetVersion = null;
-        IRemote? arcadeRemote = null;
 
         if (arcadeItem != null)
         {
-            arcadeRemote = await _remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-            // TODO: Also read this locally
-            targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(

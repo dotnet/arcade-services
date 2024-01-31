@@ -77,7 +77,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
     [Test]
     public async Task NewRepoAddedDuringSyncTest()
     {
-        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
 
         var sourceMappingsPath = InstallerRepoPath / _sourceMappingsRelativePath;
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath, sourceMappingsPath);
@@ -135,7 +135,7 @@ internal class LoadSourceMappingsFromInstallerTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.InstallerRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName);
 
         _sourceMappings = new SourceMappingFile
         {

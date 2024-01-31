@@ -123,6 +123,27 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
+
+    /// <summary>
+    /// Get the tools.dotnet section of the global.json from a target repo URI
+    /// </summary>
+    /// <param name="repoUri">repo to get the version from</param>
+    /// <param name="commit">commit sha to query</param>
+    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit)
+    {
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit);
+        JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
+
+        _logger.LogInformation("Reading dotnet version from global.json succeeded!");
+
+        if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
+        {
+            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
+        }
+
+        return dotnetVersion;
+    }
+
     public async Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch)
     {
         return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);

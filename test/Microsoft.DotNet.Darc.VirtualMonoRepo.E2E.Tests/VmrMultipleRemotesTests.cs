@@ -132,7 +132,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
             { Constants.InstallerRepoName, new List<string> { Constants.DependencyRepoName } },
         };
 
-        await CopyRepoAndCreateVersionFiles(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName, dependenciesMap);
 
         // Prepare dependencies at paths 1 and 2
         Directory.Move(DependencyRepoPath, FirstDependencyPath);

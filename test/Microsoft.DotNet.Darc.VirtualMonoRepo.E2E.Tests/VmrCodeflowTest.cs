@@ -14,6 +14,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
@@ -82,6 +83,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         // Now lets backflow but use a build instead of a PR
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, "Change that will have a build");
         await GitOperations.CommitAll(VmrPath, "Changing a VMR file");
+        const string newVersion = "1.2.0";
         var build = new Build(
             id: 4050,
             dateProduced: DateTimeOffset.Now,
@@ -90,7 +92,11 @@ internal class VmrCodeflowTest :  VmrTestsBase
             stable: true,
             commit: await GitOperations.GetRepoLastCommit(VmrPath),
             channels: ImmutableList<Channel>.Empty,
-            assets: new[] { new Asset(123, 4050, true, FakePackageName, "1.2.0", null) }.ToImmutableList(),
+            assets: new[]
+            {
+                new Asset(123, 4050, true, FakePackageName, newVersion, null),
+                new Asset(124, 4050, true, DependencyFileManager.ArcadeSdkPackageName, newVersion, null),
+            }.ToImmutableList(),
             dependencies: ImmutableList<BuildRef>.Empty,
             incoherencies: ImmutableList<BuildIncoherence>.Empty)
         {
@@ -108,11 +114,26 @@ internal class VmrCodeflowTest :  VmrTestsBase
         CheckFileContents(_productRepoFilePath, "Change that will have a build");
 
         // Verify that Version.Details.xml got updated with the new package "built" in the VMR
-        List<DependencyDetail> dependencies = await GetLocal(ProductRepoPath).GetDependenciesAsync(FakePackageName);
-        dependencies.Should().HaveCount(1);
-        dependencies[0].RepoUri.Should().Be(build.GitHubRepository);
-        dependencies[0].Commit.Should().Be(build.Commit);
-        dependencies[0].Version.Should().Be(build.Assets[0].Version);
+        Local local = GetLocal(ProductRepoPath);
+        List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
+
+        dependencies.Should().Contain(dep =>
+            dep.Name == FakePackageName
+            && dep.RepoUri == build.GitHubRepository
+            && dep.Commit == build.Commit
+            && dep.Version == newVersion);
+
+        dependencies.Should().Contain(dep =>
+            dep.Name == DependencyFileManager.ArcadeSdkPackageName
+            && dep.RepoUri == build.GitHubRepository
+            && dep.Commit == build.Commit
+            && dep.Version == newVersion);
+
+        // Verify that global.json got updated
+        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, "main");
+        JToken? arcadeVersion = globalJson.SelectToken("msbuild-sdks.['Microsoft.DotNet.Arcade.Sdk']", true);
+        arcadeVersion?.ToString().Should().Be(newVersion);
     }
 
     [Test]
@@ -312,19 +333,14 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        Dictionary<string, List<string>> dependenciesMap = [];
-
         CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);
 
-        await CopyRepoAndCreateVersionFiles(
-            CurrentTestDirectory,
-            Constants.ProductRepoName,
-            dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
+        await CopyRepoAndCreateVersionFiles("vmr");
 
         var sourceMappings = new SourceMappingFile()
         {
@@ -351,30 +367,54 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
     private async Task EnsureTestRepoIsInitialized()
     {
+        var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
+
         // We populate Version.Details.xml with a fake package which we will flow back and forth
         await GetLocal(ProductRepoPath).AddDependencyAsync(new DependencyDetail
         {
             Name = FakePackageName,
             Version = FakePackageVersion,
-            RepoUri = DarcLib.Constants.DefaultVmrUri,
-            Commit = "abcdef",
+            RepoUri = VmrPath,
+            Commit = vmrSha,
             Type = DependencyType.Product,
             Pinned = false,
         });
+
         await GitOperations.CommitAll(ProductRepoPath, "Adding a fake dependency");
 
-        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        var expectedFilesFromRepos = new List<NativePath>
+        // We also add Arcade SDK so that we can verify eng/common updates
+        await GetLocal(ProductRepoPath).AddDependencyAsync(new DependencyDetail
         {
-            _productRepoVmrFilePath
-        };
+            Name = DependencyFileManager.ArcadeSdkPackageName,
+            Version = FakePackageVersion,
+            RepoUri = VmrPath,
+            Commit = vmrSha,
+            Type = DependencyType.Product,
+            Pinned = false,
+        });
+
+        await GitOperations.CommitAll(ProductRepoPath, "Adding Arcade dependency");
+
+        // We also add Arcade SDK to VMR so that we can verify eng/common updates
+        await GetLocal(VmrPath).AddDependencyAsync(new DependencyDetail
+        {
+            Name = DependencyFileManager.ArcadeSdkPackageName,
+            Version = "1.0.0",
+            RepoUri = VmrPath,
+            Commit = vmrSha,
+            Type = DependencyType.Product,
+            Pinned = false,
+        });
+
+        await GitOperations.CommitAll(VmrPath, "Adding Arcade to the VMR");
+
+        await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            expectedFilesFromRepos
-        );
+            [_productRepoVmrFilePath],
+            hasVersionFiles: true);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
@@ -389,8 +429,8 @@ internal class VmrCodeflowTest :  VmrTestsBase
         expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            [_productRepoVmrFilePath]
-        );
+            [_productRepoVmrFilePath],
+            hasVersionFiles: true);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");

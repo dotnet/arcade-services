@@ -249,13 +249,10 @@ internal class VmrSyncRepoChangesTest :  VmrTestsBase
     {
         var dependenciesMap = new Dictionary<string, List<string>>
         {
-            { Constants.ProductRepoName,  new List<string> {Constants.DependencyRepoName} }
+            { Constants.ProductRepoName, [Constants.DependencyRepoName] }
         };
 
-        await CopyRepoAndCreateVersionFiles(
-            CurrentTestDirectory,
-            Constants.ProductRepoName,
-            dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName, dependenciesMap);
 
         CopyDirectory(VmrTestsOneTimeSetUp.CommonExternalRepoPath, SecondRepoPath);
     }
