@@ -36,7 +36,7 @@ public class Constants
     public const string GlobalJsonTemplate = """
         {
           "tools": {
-            "dotnet": "9.0.100-alpha.1.23615.4"
+            "dotnet": "9.0.100"
           }
         }
         """;

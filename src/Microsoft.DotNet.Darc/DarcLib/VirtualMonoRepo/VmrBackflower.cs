@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -325,8 +326,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
     {
-        // TODO: Maybe this should be hidden inside the dependency file manager
-        // However, we need more functionality so that it gets loaded from the local clone
         string versionDetailsXml = await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
             ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {repo.Path}");
         VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
@@ -335,6 +334,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         SourceDependency? sourceOrigin;
         List<DependencyUpdate> updates;
 
+        // Generate the <Source /> element and get updates
         if (buildToFlow.HasValue)
         {
             Build build = await _barClient.GetBuildAsync(buildToFlow.Value)
@@ -368,7 +368,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail? arcadeItem = versionDetails.Dependencies.GetArcadeUpdate();
+        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
         SemanticVersion? targetDotNetVersion = null;
 
         if (arcadeItem != null)
@@ -384,13 +384,24 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             versionDetails.Dependencies,
             targetDotNetVersion);
 
+        // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
+        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), repo.Path, null, null);
+
+        // Update eng/common files
         if (arcadeItem != null)
         {
-            // TODO: Perform eng/common update
+            var commonDir = repo.Path / Constants.CommonScriptFilesPath;
+            if (_fileSystem.DirectoryExists(commonDir))
+            {
+                _fileSystem.DeleteDirectory(commonDir, true);
+            }
+
+            _fileSystem.CopyDirectory(
+                _vmrInfo.VmrPath / Constants.CommonScriptFilesPath,
+                repo.Path / Constants.CommonScriptFilesPath,
+                true);
         }
 
-        // TODO: Stop using LibGit2SharpClient for this
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), repo.Path, null, null);
         await repo.StageAsync(["."], cancellationToken);
         await repo.CommitAsync($"Update dependency files to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }

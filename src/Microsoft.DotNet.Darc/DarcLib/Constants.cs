@@ -25,4 +25,6 @@ public class Constants
     public const string DefaultVmrUri = "https://github.com/dotnet/dotnet/";
 
     public static readonly LibGit2Sharp.Identity DotnetBotIdentity = new(DarcBotName, DarcBotEmail);
+
+    public const string CommonScriptFilesPath = "eng/common";
 }

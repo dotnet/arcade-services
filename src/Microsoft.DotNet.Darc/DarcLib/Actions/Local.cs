@@ -87,7 +87,7 @@ public class Local : ILocal
                 List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                 filesToUpdate.AddRange(engCommonFiles);
 
-                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync("eng/common");
+                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync(Constants.CommonScriptFilesPath);
 
                 foreach (GitFile file in localEngCommonFiles)
                 {

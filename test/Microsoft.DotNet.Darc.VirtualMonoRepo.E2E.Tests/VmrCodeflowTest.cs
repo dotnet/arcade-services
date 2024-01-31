@@ -79,10 +79,32 @@ internal class VmrCodeflowTest :  VmrTestsBase
         branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(VmrPath, branch!);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+    }
 
-        // Now lets backflow but use a build instead of a PR
+    [Test]
+    public async Task BackflowBuildsTest()
+    {
+        // Add some eng/common content into the repo
+        Directory.CreateDirectory(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1", "Some common script file");
+        await GitOperations.CommitAll(ProductRepoPath, "Add eng/common file into the repo");
+
+        await EnsureTestRepoIsInitialized();
+
+        // Update a file in the VMR
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, "Change that will have a build");
-        await GitOperations.CommitAll(VmrPath, "Changing a VMR file");
+
+        // Update global.json in the VMR
+        var updatedGlobalJson = await File.ReadAllTextAsync(VmrPath / VersionFiles.GlobalJson);
+        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
+
+        // Update an eng/common file in the VMR
+        Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+
+        await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and a file");
+
+        // Pretend we have a build of the VMR
         const string newVersion = "1.2.0";
         var build = new Build(
             id: 4050,
@@ -100,17 +122,26 @@ internal class VmrCodeflowTest :  VmrTestsBase
             dependencies: ImmutableList<BuildRef>.Empty,
             incoherencies: ImmutableList<BuildIncoherence>.Empty)
         {
-            GitHubBranch = "dev",
-            GitHubRepository = "https://github.com/dotnet/fake-vmr",
+            GitHubBranch = "main",
+            GitHubRepository = VmrPath,
         };
 
         _barClient
             .Setup(x => x.GetBuildAsync(build.Id))
             .ReturnsAsync(build);
 
-        branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, buildToFlow: build.Id);
+        var branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, buildToFlow: build.Id);
         branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(ProductRepoPath, branch!);
+
+        List<NativePath> expectedFiles = [
+            .. GetExpectedVersionFiles(ProductRepoPath),
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
+            _productRepoFilePath,
+        ];
+
+        CheckDirectoryContents(ProductRepoPath, expectedFiles);
+
         CheckFileContents(_productRepoFilePath, "Change that will have a build");
 
         // Verify that Version.Details.xml got updated with the new package "built" in the VMR
@@ -132,8 +163,11 @@ internal class VmrCodeflowTest :  VmrTestsBase
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
         JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, "main");
-        JToken? arcadeVersion = globalJson.SelectToken("msbuild-sdks.['Microsoft.DotNet.Arcade.Sdk']", true);
+        JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be(newVersion);
+
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, "main");
+        dotnetVersion.ToString().Should().Be("9.0.200");
     }
 
     [Test]
@@ -413,7 +447,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            [_productRepoVmrFilePath],
+            [_productRepoVmrFilePath, _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1"],
             hasVersionFiles: true);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
@@ -425,12 +459,6 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
         // Perform last VMR-lite-like forward flow
         await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        expectedFiles = GetExpectedFilesInVmr(
-            VmrPath,
-            [Constants.ProductRepoName],
-            [_productRepoVmrFilePath],
-            hasVersionFiles: true);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CheckFileContents(_productRepoVmrFilePath, "Test changes in repo file");

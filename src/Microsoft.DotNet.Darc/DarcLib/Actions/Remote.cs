@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -170,14 +171,13 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
 
-        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
+        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch)];
         var locationResolver = new AssetLocationResolver(barClient, _logger);
         await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
-        DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
-            i => string.Equals(i.Name, DependencyFileManager.ArcadeSdkPackageName, StringComparison.OrdinalIgnoreCase));
+        DependencyDetail arcadeItem = itemsToUpdate.GetArcadeUpdate();
             
         SemanticVersion targetDotNetVersion = null;
         bool mayNeedArcadeUpdate = (arcadeItem != null && repoUri != arcadeItem.RepoUri);
@@ -358,7 +358,7 @@ public sealed class Remote : IRemote
         CheckForValidGitClient();
         _logger.LogInformation("Generating commits for script files");
 
-        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, "eng/common");
+        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.CommonScriptFilesPath);
 
         _logger.LogInformation("Generating commits for script files succeeded!");
 
