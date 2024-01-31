@@ -151,17 +151,9 @@ public class DependencyFileManager : IDependencyFileManager
 
     public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
     {
-        if (!string.IsNullOrEmpty(branch))
-        {
-            _logger.LogInformation(
-                $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}' " +
-                $"and branch '{branch}'...");
-        }
-        else
-        {
-            _logger.LogInformation(
-                $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'...");
-        }
+        _logger.LogInformation(
+            $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'" +
+            (!string.IsNullOrEmpty(branch) ? $" and branch '{branch}'" : string.Empty) + "...");
 
         XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 

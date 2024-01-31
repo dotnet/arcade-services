@@ -39,8 +39,38 @@ public class LocalGitClient : ILocalGitClient
     }
 
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
-        => await GetFileFromGitAsync(repoPath, relativeFilePath, branch)
-            ?? throw new DependencyFileNotFoundException($"Could not find {relativeFilePath} in {repoPath}");
+    {
+        // Load non-working-tree version
+        if (!string.IsNullOrEmpty(branch))
+        {
+            return await GetFileFromGitAsync(repoPath, relativeFilePath, branch)
+                ?? throw new DependencyFileNotFoundException($"Could not find {relativeFilePath} in {repoPath}");
+        }
+
+        string fullPath = new NativePath(repoPath) / relativeFilePath;
+        if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
+        {
+            var parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+            if (parentTwoDirectoriesUp != null && Directory.Exists(parentTwoDirectoriesUp))
+            {
+                throw new DependencyFileNotFoundException($"Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
+            }
+            else
+            {
+                throw new DependencyFileNotFoundException($"Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
+            }
+        }
+
+        if (!File.Exists(fullPath))
+        {
+            throw new DependencyFileNotFoundException($"Could not find {fullPath}");
+        }
+
+        using (var streamReader = new StreamReader(fullPath))
+        {
+            return await streamReader.ReadToEndAsync();
+        }
+    }
 
     public async Task CheckoutAsync(string repoPath, string refToCheckout)
     {
@@ -341,7 +371,7 @@ public class LocalGitClient : ILocalGitClient
         var args = new List<string>
         {
             "show",
-            $"{revision}:{relativeFilePath}"
+            $"{revision}:{relativeFilePath.TrimStart('/')}"
         };
 
         if (outputPath != null)

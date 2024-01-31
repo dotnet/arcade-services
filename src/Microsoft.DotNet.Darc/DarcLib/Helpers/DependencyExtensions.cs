@@ -14,5 +14,5 @@ public static class DependencyExtensions
         => updates.FirstOrDefault(i => string.Equals(i.Name, DependencyFileManager.ArcadeSdkPackageName, StringComparison.OrdinalIgnoreCase));
 
     public static DependencyDetail? GetArcadeUpdate(this IEnumerable<DependencyUpdate> updates)
-        => updates.FirstOrDefault(i => string.Equals(i.To.Name, DependencyFileManager.ArcadeSdkPackageName, StringComparison.OrdinalIgnoreCase))?.To;
+        => updates.Select(u => u.To).GetArcadeUpdate();
 }

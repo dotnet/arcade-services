@@ -31,6 +31,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
     private NativePath _productRepoVmrPath = null!;
     private NativePath _productRepoVmrFilePath = null!;
     private NativePath _productRepoFilePath = null!;
+    private NativePath _productRepoScriptFilePath = null!;
 
     protected override IServiceCollection CreateServiceProvider()
         => base.CreateServiceProvider()
@@ -41,6 +42,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
     {
         _productRepoVmrPath = VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName;
         _productRepoVmrFilePath = _productRepoVmrPath / _productRepoFileName;
+        _productRepoScriptFilePath = ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1";
         _productRepoFilePath = ProductRepoPath / _productRepoFileName;
         _barClient.Reset();
     }
@@ -84,11 +86,6 @@ internal class VmrCodeflowTest :  VmrTestsBase
     [Test]
     public async Task BackflowBuildsTest()
     {
-        // Add some eng/common content into the repo
-        Directory.CreateDirectory(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath);
-        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1", "Some common script file");
-        await GitOperations.CommitAll(ProductRepoPath, "Add eng/common file into the repo");
-
         await EnsureTestRepoIsInitialized();
 
         // Update a file in the VMR
@@ -402,6 +399,11 @@ internal class VmrCodeflowTest :  VmrTestsBase
     private async Task EnsureTestRepoIsInitialized()
     {
         var vmrSha = await GitOperations.GetRepoLastCommit(VmrPath);
+
+        // Add some eng/common content into the repo
+        Directory.CreateDirectory(Path.GetDirectoryName(_productRepoScriptFilePath)!);
+        await File.WriteAllTextAsync(_productRepoScriptFilePath, "Some common script file");
+        await GitOperations.CommitAll(ProductRepoPath, "Add eng/common file into the repo");
 
         // We populate Version.Details.xml with a fake package which we will flow back and forth
         await GetLocal(ProductRepoPath).AddDependencyAsync(new DependencyDetail
