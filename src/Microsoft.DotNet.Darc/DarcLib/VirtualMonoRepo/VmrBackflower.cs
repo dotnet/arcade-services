@@ -133,7 +133,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return null;
         }
 
-        await UpdateVersionDetailsXml(targetRepo, shaToFlow, buildToFlow, cancellationToken);
+        await UpdateDependenciesAndToolset(targetRepo, shaToFlow, buildToFlow, cancellationToken);
         return branchName;
     }
 
@@ -324,7 +324,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return branchName;
     }
 
-    private async Task UpdateVersionDetailsXml(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
+    private async Task UpdateDependenciesAndToolset(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
     {
         string versionDetailsXml = await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
             ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {repo.Path}");
