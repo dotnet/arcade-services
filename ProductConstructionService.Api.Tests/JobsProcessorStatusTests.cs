@@ -11,7 +11,6 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(1000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        AutoResetEvent autoResetEvent = new(true);
         JobsProcessorScopeManager scopeManager = new();
 
         // When it starts, the processor is not working
