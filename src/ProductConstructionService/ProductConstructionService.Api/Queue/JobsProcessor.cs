@@ -28,8 +28,12 @@ public class JobsProcessor(
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            using (_scopeManager.BeginJobScopeWhenReady(cancellationToken))
+            using (_scopeManager.BeginJobScopeWhenReady())
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
                 try
                 {
                     await ReadAndProcessJobAsync(queueClient, cancellationToken);

@@ -33,10 +33,9 @@ public class JobsProcessorScopeManager
     /// <summary>
     /// Creates a new scope for the currently executing Job, when the the JobsProcessor is in the `Working` state.
     /// </summary>
-    public IDisposable BeginJobScopeWhenReady(CancellationToken cancellationToken)
+    public IDisposable BeginJobScopeWhenReady()
     {
         _autoResetEvent.WaitOne();
-        cancellationToken.ThrowIfCancellationRequested();
         return new JobScope(this);
     }
 

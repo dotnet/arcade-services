@@ -19,7 +19,7 @@ public class JobsProcessorStatusTests
         TaskCompletionSource jobCompletion1 = new();
         Thread t = new(() =>
         {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
+            using (scopeManager.BeginJobScopeWhenReady())
             {
                 jobCompletion1.SetResult();
             }
@@ -38,7 +38,7 @@ public class JobsProcessorStatusTests
         scopeManager.State.Should().Be(JobsProcessorState.Working);
 
         // The JobProcessor is working now, it shouldn't block on anything
-        using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None)) { }
+        using (scopeManager.BeginJobScopeWhenReady()) { }
 
         scopeManager.State.Should().Be(JobsProcessorState.Working);
 
@@ -48,7 +48,7 @@ public class JobsProcessorStatusTests
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
+            using (scopeManager.BeginJobScopeWhenReady())
             {
                 jobCompletion1.SetResult();
                 await jobCompletion2.Task;
@@ -89,7 +89,7 @@ public class JobsProcessorStatusTests
         // Start a new job that should get blocked
         Thread t = new(() =>
         {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
+            using (scopeManager.BeginJobScopeWhenReady())
             {
                 jobCompletion.SetResult();
             }
@@ -125,7 +125,7 @@ public class JobsProcessorStatusTests
 
         var workerTask = Task.Run(async () =>
         {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None))
+            using (scopeManager.BeginJobScopeWhenReady())
             {
                 jobCompletion1.SetResult();
                 await jobCompletion2.Task;
@@ -151,7 +151,7 @@ public class JobsProcessorStatusTests
         // Verify that the new job will actually be blocked
         Thread t = new(() =>
         {
-            using (scopeManager.BeginJobScopeWhenReady(CancellationToken.None)) { }
+            using (scopeManager.BeginJobScopeWhenReady()) { }
         });
         t.Start();
 
@@ -159,17 +159,5 @@ public class JobsProcessorStatusTests
 
         // Unblock the worker thread
         scopeManager.Start();
-    }
-
-    [Test]
-    public void JobsProcessorCancel()
-    {
-        JobsProcessorScopeManager scopeManager = new(false);
-        CancellationTokenSource tokenSource = new(0);
-        var throwingAction = () => scopeManager.BeginJobScopeWhenReady(tokenSource.Token);
-
-        scopeManager.Start();
-
-        throwingAction.Should().Throw<OperationCanceledException>();
     }
 }
