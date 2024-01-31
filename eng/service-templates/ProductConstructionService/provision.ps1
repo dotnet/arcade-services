@@ -1,6 +1,6 @@
-param[
+param(
     [Parameter(Mandatory=$true)][string]$subscriptionName
-]
+)
 
 az account set --subscription $subscriptionName
 

@@ -206,11 +206,10 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                     resources: {
                         cpu: json(containerCpuCoreCount)
                         memory: containerMemory
-                        ephemeralStorage: '50Gi'
                     }
                     volumeMounts: [
                         {
-                            volumeName: 'lgndisk-100g'
+                            volumeName: 'lgndisk-50g'
                             mountPath: '/mnt/datadir'
                         }
                     ]
@@ -232,7 +231,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
             ]
             volumes: [
                 {
-                    name: 'lgndisk-100g'
+                    name: 'lgndisk-50g'
                     storageType: 'EmptyDir'
                 }
             ]
