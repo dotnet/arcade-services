@@ -14,7 +14,15 @@ public static class QueueConfiguration
         var queueName = builder.Configuration[JobQueueConfigurationKey] ??
             throw new ArgumentException($"{JobQueueConfigurationKey} missing from the configuration");
 
-        builder.Services.AddSingleton<JobsProcessorScopeManager>();
+        // When running the service locally, the JobsProcessor should start in the Working state
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddSingleton(new JobsProcessorScopeManager(true));
+        }
+        else
+        {
+            builder.Services.AddSingleton(new JobsProcessorScopeManager(false));
+        }
         builder.Services.Configure<JobProcessorOptions>(
             builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>

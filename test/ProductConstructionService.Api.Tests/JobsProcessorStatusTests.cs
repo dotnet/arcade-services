@@ -11,7 +11,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        JobsProcessorScopeManager scopeManager = new();
+        JobsProcessorScopeManager scopeManager = new(false);
 
         // When it starts, the processor is not working
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
@@ -74,7 +74,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
-        JobsProcessorScopeManager scopeManager = new();
+        JobsProcessorScopeManager scopeManager = new(false);
 
         // The jobs processor should start in a stopped state
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
@@ -109,7 +109,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
-        JobsProcessorScopeManager scopeManager = new();
+        JobsProcessorScopeManager scopeManager = new(false);
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
@@ -164,7 +164,7 @@ public class JobsProcessorStatusTests
     [Test]
     public void JobsProcessorCancel()
     {
-        JobsProcessorScopeManager scopeManager = new();
+        JobsProcessorScopeManager scopeManager = new(false);
         CancellationTokenSource tokenSource = new(0);
         var throwingAction = () => scopeManager.BeginJobScopeWhenReady(tokenSource.Token);
 

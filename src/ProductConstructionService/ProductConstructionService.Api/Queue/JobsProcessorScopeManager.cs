@@ -15,8 +15,14 @@ public enum JobsProcessorState
 
 public class JobsProcessorScopeManager
 {
-    public JobsProcessorState State { get; private set; } = JobsProcessorState.Stopped;
-    private readonly AutoResetEvent _autoResetEvent = new(false);
+    public JobsProcessorScopeManager(bool workOnStartup)
+    {
+        _autoResetEvent = new AutoResetEvent(workOnStartup);
+        State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;
+    }
+
+    public JobsProcessorState State { get; private set; }
+    private readonly AutoResetEvent _autoResetEvent;
 
     public void Start()
     {
