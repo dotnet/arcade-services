@@ -13,6 +13,8 @@ Run the `provision.ps1` script by giving it the name of the subscription you wan
 
 This will create all of the necessary Azure resources.
 
+Once the resources are created, go to the newly created User Assigned Managed Identity. Copy the Client ID, and paste it in the correct appconfig.json, under `ManagedIdentityClientId``
+
 The last part is setting up the pipeline:
  - Make sure all of the resources referenced in the yaml have the correct names
  - Make sure the variable group referenced in the yaml points to the new Key Vault
