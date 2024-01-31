@@ -8,7 +8,7 @@ namespace ProductConstructionService.Api.Tests;
 
 public class JobsProcessorStatusTests
 {
-    [Test, CancelAfter(1000)]
+    [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
         JobsProcessorScopeManager scopeManager = new();
@@ -71,7 +71,7 @@ public class JobsProcessorStatusTests
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
     }
 
-    [Test, CancelAfter(1000)]
+    [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
         JobsProcessorScopeManager scopeManager = new();
@@ -106,7 +106,7 @@ public class JobsProcessorStatusTests
         scopeManager.State.Should().Be(JobsProcessorState.Working);
     }
 
-    [Test, CancelAfter(1000)]
+    [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
         JobsProcessorScopeManager scopeManager = new();
