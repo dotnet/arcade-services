@@ -73,5 +73,5 @@ stages:
             scriptType: pscore
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
-            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName)
+            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -pcsUrl $(pcsUrl)
           displayName: Product Construction Service Deploy
