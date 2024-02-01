@@ -9,16 +9,19 @@ using ProductConstructionService.Api.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var managedIdentityClientId = builder.Configuration["ManagedIdentityClientId"] ?? string.Empty;
+DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId });
+
 builder.Configuration.AddAzureKeyVault(
     new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
-    new DefaultAzureCredential());
+    credential);
 
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 {
     options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
 });
 
-builder.AddWorkitemQueues();
+builder.AddWorkitemQueues(credential);
 
 builder.AddServiceDefaults();
 
