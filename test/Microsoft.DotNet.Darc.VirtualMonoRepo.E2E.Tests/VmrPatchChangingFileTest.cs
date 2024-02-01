@@ -33,7 +33,7 @@ internal class VmrPatchChangingFileTest : VmrPatchesTestsBase
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             ProductRepoFilePathInVmr,
             InstallerFilePathInVmr,

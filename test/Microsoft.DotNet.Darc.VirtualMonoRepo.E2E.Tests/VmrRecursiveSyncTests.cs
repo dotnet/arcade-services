@@ -38,7 +38,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             installerFilePath,
             firstRepoFilePath,
@@ -137,7 +137,7 @@ internal class VmrRecursiveSyncTests : VmrTestsBase
             { Constants.SecondRepoName, [Constants.DependencyRepoName] },
         };
 
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName, dependenciesMap);
     }
 
     protected override async Task CopyVmrForCurrentTest()

@@ -219,20 +219,20 @@ public class VmrPatchHandlerTests
             .Returns(new (string, string?)[]
             {
                 (SRC / _testRepoMapping.Name / "SourceBuild/tarball/content", null),
-                (SRC / _testRepoMapping.Name / "eng/common", "eng/common"),
+                (SRC / _testRepoMapping.Name / Constants.CommonScriptFilesPath, Constants.CommonScriptFilesPath),
             });
 
         _fileSystem
             .Setup(x => x.DirectoryExists(_clone.Path / "SourceBuild/tarball/content"))
             .Returns(true);
         _fileSystem
-            .Setup(x => x.DirectoryExists(_clone.Path / "eng/common"))
+            .Setup(x => x.DirectoryExists(_clone.Path / Constants.CommonScriptFilesPath))
             .Returns(true);
         _fileSystem
             .Setup(x => x.GetFileName(SRC / _testRepoMapping.Name / "SourceBuild/tarball/content"))
             .Returns("content");
         _fileSystem
-            .Setup(x => x.GetFileName(SRC / _testRepoMapping.Name / "eng/common"))
+            .Setup(x => x.GetFileName(SRC / _testRepoMapping.Name / Constants.CommonScriptFilesPath))
             .Returns("common");
 
         // Act
@@ -296,7 +296,7 @@ public class VmrPatchHandlerTests
             .Verify(x => x.Execute("git",
                 expectedArgs,
                 It.IsAny<TimeSpan?>(),
-                _clone.Path / "eng/common",
+                _clone.Path / Constants.CommonScriptFilesPath,
                 It.IsAny<Dictionary<string, string>>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -306,7 +306,7 @@ public class VmrPatchHandlerTests
         patches.Should().Equal(
             new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
             new VmrIngestionPatch(expectedPatchName2, (string?)null),
-            new VmrIngestionPatch(expectedPatchName3, "eng/common"));
+            new VmrIngestionPatch(expectedPatchName3, Constants.CommonScriptFilesPath));
     }
 
     [Test]

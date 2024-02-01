@@ -22,7 +22,7 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
     protected override async Task CopyReposForCurrentTest()
     {
         await base.CopyReposForCurrentTest();
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.SecondRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.SecondRepoName);
     }
 
     [Test]
@@ -48,15 +48,15 @@ internal class VmrPatchAddingSubmoduleFileTest : VmrPatchesTestsBase
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
-        {
+        List<NativePath> expectedFilesFromRepos =
+        [
             ProductRepoFilePathInVmr,
             submoduleFileInVmr,
-            submodulePathInVmr / VersionFiles.VersionDetailsXml,
+            .. GetExpectedVersionFiles(submodulePathInVmr),
             InstallerFilePathInVmr,
             patchPathInVmr,
             patchedSubmoduleFileInVmr,
-        };
+        ];
 
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,

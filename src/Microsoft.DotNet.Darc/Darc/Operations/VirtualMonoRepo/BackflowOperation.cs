@@ -1,9 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -14,44 +11,22 @@ using Microsoft.Extensions.DependencyInjection;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class BackflowOperation : VmrOperationBase
+internal class BackflowOperation(BackflowCommandLineOptions options)
+    : CodeFlowOperation(options)
 {
-    private readonly BackflowCommandLineOptions _options;
+    private readonly BackflowCommandLineOptions _options = options;
 
-    public BackflowOperation(BackflowCommandLineOptions options)
-        : base(options)
-    {
-        _options = options;
-    }
-
-    protected override async Task ExecuteInternalAsync(
-        string repoName,
-        string? targetDirectory,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+    protected override async Task<string?> FlowAsync(
+        string mappingName,
+        NativePath targetDirectory,
+        string? shaToFlow,
         CancellationToken cancellationToken)
-    {
-        targetDirectory ??= Path.Combine(
-            _options.RepositoryDirectory ?? throw new ArgumentException($"No target directory specified for repository {repoName}"),
-            repoName);
-
-        if (!Directory.Exists(targetDirectory))
-        {
-            throw new FileNotFoundException($"Could not find directory {targetDirectory}");
-        }
-
-        if (_options.RepositoryDirectory is not null)
-        {
-            var vmrInfo = Provider.GetRequiredService<IVmrInfo>();
-            vmrInfo.TmpPath = new NativePath(_options.RepositoryDirectory);
-        }
-
-        var backflower = Provider.GetRequiredService<IVmrBackFlower>();
-
-        await backflower.FlowBackAsync(
-            repoName,
-            new NativePath(targetDirectory),
-            shaToFlow: null, // TODO: Instead of flowing HEAD, we should support any SHA from commandline
-            _options.DiscardPatches,
-            cancellationToken: cancellationToken);
-    }
+        => await Provider.GetRequiredService<IVmrBackFlower>()
+            .FlowBackAsync(
+                mappingName,
+                new NativePath(targetDirectory),
+                shaToFlow,
+                _options.Build,
+                _options.DiscardPatches,
+                cancellationToken);
 }

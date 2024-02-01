@@ -40,6 +40,13 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string branch)
     {
+        // Load non-working-tree version
+        if (!string.IsNullOrEmpty(branch))
+        {
+            return await GetFileFromGitAsync(repoPath, relativeFilePath, branch)
+                ?? throw new DependencyFileNotFoundException($"Could not find {relativeFilePath} in {repoPath}");
+        }
+
         string fullPath = new NativePath(repoPath) / relativeFilePath;
         if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
         {
@@ -364,7 +371,7 @@ public class LocalGitClient : ILocalGitClient
         var args = new List<string>
         {
             "show",
-            $"{revision}:{relativeFilePath}"
+            $"{revision}:{relativeFilePath.TrimStart('/')}"
         };
 
         if (outputPath != null)

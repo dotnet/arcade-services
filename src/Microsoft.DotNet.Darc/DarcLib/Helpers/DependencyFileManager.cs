@@ -20,9 +20,11 @@ namespace Microsoft.DotNet.DarcLib;
 
 public class DependencyFileManager : IDependencyFileManager
 {
+    public const string ArcadeSdkPackageName = "Microsoft.DotNet.Arcade.Sdk";
+
     private static readonly ImmutableDictionary<string, KnownDependencyType> _knownAssetNames = new Dictionary<string, KnownDependencyType>()
     {
-        { "Microsoft.DotNet.Arcade.Sdk", KnownDependencyType.GlobalJson },
+        { ArcadeSdkPackageName, KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.Helix.Sdk", KnownDependencyType.GlobalJson },
         { "Microsoft.DotNet.SharedFramework.Sdk", KnownDependencyType.GlobalJson },
@@ -33,7 +35,7 @@ public class DependencyFileManager : IDependencyFileManager
 
     private static readonly ImmutableDictionary<string, string> _sdkMapping = new Dictionary<string, string>()
     {
-        { "Microsoft.DotNet.Arcade.Sdk", "msbuild-sdks" },
+        { ArcadeSdkPackageName, "msbuild-sdks" },
         { "Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.Helix.Sdk", "msbuild-sdks" },
         { "Microsoft.DotNet.SharedFramework.Sdk", "msbuild-sdks" },
@@ -121,6 +123,27 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
+
+    /// <summary>
+    /// Get the tools.dotnet section of the global.json from a target repo URI
+    /// </summary>
+    /// <param name="repoUri">repo to get the version from</param>
+    /// <param name="commit">commit sha to query</param>
+    public async Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit)
+    {
+        JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit);
+        JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
+
+        _logger.LogInformation("Reading dotnet version from global.json succeeded!");
+
+        if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
+        {
+            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
+        }
+
+        return dotnetVersion;
+    }
+
     public async Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch)
     {
         return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);
@@ -128,17 +151,9 @@ public class DependencyFileManager : IDependencyFileManager
 
     public async Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
     {
-        if (!string.IsNullOrEmpty(branch))
-        {
-            _logger.LogInformation(
-                $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}' " +
-                $"and branch '{branch}'...");
-        }
-        else
-        {
-            _logger.LogInformation(
-                $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'...");
-        }
+        _logger.LogInformation(
+            $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'" +
+            (!string.IsNullOrEmpty(branch) ? $" and branch '{branch}'" : string.Empty) + "...");
 
         XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 

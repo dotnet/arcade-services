@@ -11,6 +11,7 @@ internal abstract class VmrSyncCommandLineOptions : VmrCommandLineOptions, IBase
     [Option("additional-remotes", Required = false, HelpText =
         "List of additional remote URIs to add to mappings in the format [mapping name]:[remote URI]. " +
         "Example: installer:https://github.com/myfork/installer sdk:/local/path/to/sdk")]
+    [RedactFromLogging]
     public IEnumerable<string> AdditionalRemotes { get; set; }
     
     [Value(0, Required = true, HelpText =
