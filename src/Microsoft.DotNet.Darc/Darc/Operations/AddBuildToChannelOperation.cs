@@ -266,12 +266,6 @@ internal class AddBuildToChannelOperation : Operation
             { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
         };
 
-        if ((build.GitHubBranch?.Contains("release/", StringComparison.InvariantCultureIgnoreCase)) == true ||
-            (build.AzureDevOpsBranch?.Contains("release/", StringComparison.InvariantCultureIgnoreCase) == true))
-        {
-            promotionPipelineVariables.Add("UseServicingBuildPool", true.ToString());
-        }
-
         if (_options.DoSDLValidation)
         {
             promotionPipelineVariables.Add("EnableSDLValidation", _options.DoSDLValidation.ToString());
