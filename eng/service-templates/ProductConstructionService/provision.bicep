@@ -7,11 +7,11 @@ param location string = 'westus2'
 @description('Name of the Azure Container Registry resource into which container images will be published')
 param containerRegistryName string = 'productconstructionint'
 
-@description('CPU cores allocated to a single container instance, e.g., 0.5')
-param containerCpuCoreCount string = '0.5'
+@description('CPU cores allocated to a single container instance')
+param containerCpuCoreCount string = '1.0'
 
-@description('Memory allocated to a single container instance, e.g., 1Gi')
-param containerMemory string = '1Gi'
+@description('Memory allocated to a single container instance')
+param containerMemory string = '2Gi'
 
 @description('aspnetcore environment')
 @allowed([
@@ -177,8 +177,8 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     name: productConstructionServiceName
     location: location
     identity: {
-            type: 'UserAssigned'
-            userAssignedIdentities: { '${identity.id}' : {}}
+        type: 'UserAssigned'
+        userAssignedIdentities: { '${identity.id}' : {}}
     }
     properties: {
         managedEnvironmentId: containerAppsEnvironment.id
@@ -197,7 +197,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                 identity: identity.id
             }
         ]
-      }
+        }
         template: {
             scale: {
                 minReplicas: 1
