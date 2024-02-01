@@ -1,32 +1,21 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Azure.Storage.Queues;
-using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Queue.WorkItems;
+using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class TestController(BuildAssetRegistryContext dbContext, PcsJobProducerFactory pcsJobProducerFactory, QueueServiceClient client) : Controller
+public class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
 {
-    private readonly PcsJobProducerFactory _pcsJobProducerFactory = pcsJobProducerFactory;
-    private readonly BuildAssetRegistryContext _dbContext = dbContext;
+    private readonly JobProducerFactory _jobProducerFactory = pcsJobProducerFactory;
 
-    [HttpGet("1")]
+    [HttpPost("1")]
     public async Task<IActionResult> Index()
     {
-        var queueInjector = _pcsJobProducerFactory.Create<TextPcsJob>();
-        await queueInjector.ProduceJobAsync(new("some message"));
+        var jobProducer = _jobProducerFactory.Create<TextJob>();
+        await jobProducer.ProduceJobAsync(new() { Text = "some text", Id = Guid.NewGuid() });
         return Ok("Message sent");
-    }
-
-    [HttpGet("2")]
-    public IActionResult Something()
-    {
-        var q = client.GetQueueClient("pcs-jobs");
-        var message = q.ReceiveMessage();
-        return Ok(message.Value.Body.ToString());
     }
 }

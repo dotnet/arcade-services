@@ -5,16 +5,28 @@ namespace ProductConstructionService.Api.Queue;
 
 public static class QueueConfiguration
 {
-    public const string PcsJobQueueConfigurationKey = "PcsJobQueueName";
+    public const string JobQueueConfigurationKey = $"{JobProcessorOptions.ConfigurationKey}:JobQueueName";
 
     public static void AddWorkitemQueues(this WebApplicationBuilder builder)
     {
         builder.AddAzureQueueService("queues");
 
-        var queueName = builder.Configuration[PcsJobQueueConfigurationKey] ??
-            throw new ArgumentException($"{PcsJobQueueConfigurationKey} missing from the configuration");
+        var queueName = builder.Configuration[JobQueueConfigurationKey] ??
+            throw new ArgumentException($"{JobQueueConfigurationKey} missing from the configuration");
 
+        // When running the service locally, the JobsProcessor should start in the Working state
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddSingleton(new JobsProcessorScopeManager(true));
+        }
+        else
+        {
+            builder.Services.AddSingleton(new JobsProcessorScopeManager(false));
+        }
+        builder.Services.Configure<JobProcessorOptions>(
+            builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
-            ActivatorUtilities.CreateInstance<PcsJobProducerFactory>(sp, queueName));
+            ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
+        builder.Services.AddHostedService<JobsProcessor>();
     }
 }
