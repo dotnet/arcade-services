@@ -183,20 +183,20 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
     properties: {
         managedEnvironmentId: containerAppsEnvironment.id
         configuration: {
-        activeRevisionsMode: 'Multiple'
-        maxInactiveRevisions: 5
-        ingress: {
-            external: true
-            targetPort: 8080
-            transport: 'http'
-        }
-        dapr: { enabled: false }
-        registries: [
-            {
-                server: '${containerRegistryName}.azurecr.io'
-                identity: identity.id
+            activeRevisionsMode: 'Multiple'
+            maxInactiveRevisions: 5
+            ingress: {
+                external: true
+                targetPort: 8080
+                transport: 'http'
             }
-        ]
+            dapr: { enabled: false }
+            registries: [
+                {
+                    server: '${containerRegistryName}.azurecr.io'
+                    identity: identity.id
+                }
+            ]
         }
         template: {
             scale: {
