@@ -278,6 +278,15 @@ resource containerRegistryPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2022
     }
 }
 
+// Automatically add the containerapp url to the keyVault. This isn't really a secret, but we do need it for the deployments and this makes it so we don't have to manually update it
+resource contianerAppFqdn 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+    parent: keyVault
+    name: 'pcsUrl'
+    properties: {
+        value: containerapp.properties.configuration.ingress.fqdn
+    }
+}
+
 // If we're creating the staging environment, also create a dev key vault
 resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvironment == 'Staging') {
     name: devKeyVaultName
