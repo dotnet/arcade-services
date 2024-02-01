@@ -46,17 +46,19 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-Invoke-WebRequest -Uri "$pcsUrl/status/stop" -Method Put
+$pcsStopUrl = $pcsUrl + "status/stop"
+Invoke-WebRequest -Uri $pcsStopUrl -Method Put
 
 # wait for the service to finish processing the current job
 $sleep = $false
+$pcsStatusUrl = $pcsUrl + "status"
 DO
 {
     if ($sleep -eq $true) 
     {
         Start-Sleep -Seconds 30
     }
-    $pcsStateResponse = Invoke-WebRequest -Uri "$pcsUrl/state" -Method Get
+    $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
     Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
     $sleep = $true
 } While ($pcsStateResponse.Content -notmatch "Stopped")
@@ -103,5 +105,6 @@ try
 finally {
     # Start the service. This either starts the new revision or the old one if the new one failed to start
     Write-Host "Starting the product construction service"
-    Invoke-WebRequest -Uri "$pcsUrl/status/start" -Method Put
+    $pcsStartUrl = $pcsUrl + "status/start"
+    Invoke-WebRequest -Uri $pcsStartUrl -Method Put
 }
