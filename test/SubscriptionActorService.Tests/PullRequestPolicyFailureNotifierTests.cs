@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -246,24 +247,30 @@ public class PullRequestPolicyFailureNotifierTests
         new ClientModels.Subscription(
             new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
             true,
+            false,
             $"https://github.com/{FakeOrgName}/source-repo1",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;"),
+            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
+            ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
             true,
+            false,
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            "@notifiedUser3;@notifiedUser4"),
+            "@notifiedUser3;@notifiedUser4",
+            ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
             true,
+            false,
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            string.Empty)
+            string.Empty,
+            ImmutableList<string>.Empty)
     ];
 
     #endregion

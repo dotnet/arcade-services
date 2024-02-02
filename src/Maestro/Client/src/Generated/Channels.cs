@@ -260,7 +260,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (withBuildsInDays != default)
             {
-                _url.AppendQuery("withBuildsInDays", MaestroApi.Serialize(withBuildsInDays));
+                _url.AppendQuery("withBuildsInDays", Client.Serialize(withBuildsInDays));
             }
             _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 

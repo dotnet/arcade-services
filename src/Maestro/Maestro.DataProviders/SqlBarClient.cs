@@ -46,12 +46,12 @@ public class SqlBarClient : IBasicBarClient
         return new Subscription(
             sub.Id,
             sub.Enabled,
-            //sub.SourceEnabled,
+            sub.SourceEnabled,
             sub.SourceRepository,
             sub.TargetRepository,
             sub.TargetBranch,
-            sub.PullRequestFailureNotificationTags/*,
-            sub.ExcludedAssets.Select(s => s.Filter)*/);
+            sub.PullRequestFailureNotificationTags,
+            sub.ExcludedAssets.Select(s => s.Filter).ToImmutableList());
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
@@ -277,10 +277,12 @@ public class SqlBarClient : IBasicBarClient
         return new Subscription(
             other.Id,
             other.Enabled,
+            other.SourceEnabled,
             other.SourceRepository,
             other.TargetRepository,
             other.TargetBranch,
-            other.PullRequestFailureNotificationTags)
+            other.PullRequestFailureNotificationTags,
+            other.ExcludedAssets.Select(a => a.Filter).ToImmutableList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
