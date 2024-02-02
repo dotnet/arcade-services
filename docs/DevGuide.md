@@ -68,17 +68,17 @@ When debugging the tests, you can check this via the Immediate window, e.g. by r
 
 In case you need to change the database model (e.g. add a column to a table), follow the usual [EF Core code-first migration steps](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli#evolving-your-model).
 In practice this means the following:
-- Make the change to the model classes in the `Maestro.Data` project
-- Install the [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
+1. Make the change to the model classes in the `Maestro.Data` project
+1. Install the [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
   ```ps1
   dotnet tool install --global dotnet-ef
   ```
-- Go to the `src\Maestro\Maestro.Data` project directory and build the project
+1. Go to the `src\Maestro\Maestro.Data` project directory and build the project
   ```ps1
   cd src\Maestro\Maestro.Data
   dotnet build
   ```
-- Run the following command to create a new migration
+1. Run the following command to create a new migration
   ```ps1
   dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> migrations add <migration name>
   ```
@@ -95,6 +95,21 @@ Build succeeded.
 Applying migration '20240201144006_<migration name>'.
 Done.
 ```
+
+If your change of the model changes the public API of the service, update also the `Maestro.Client`.
+
+## Changing the API / Updating `Maestro.Client`
+
+`Maestro.Client` is an auto-generated client library for the Maestro API. It is generated using Swagger Codegen which parses the `swagger.json` file.
+The `swagger.json` file is accessible at `/api/swagger.json` when the Maestro application is running.
+If you changed the API (e.g. changed an endpoint, model coming from the API, etc.), you need to regenerate the `Maestro.Client` library.
+
+If you need to update the client library, follow these steps:
+
+1. Change the model/endpoint/..
+1. Change `src\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj` and point the `SwaggerDocumentUri` to `http://127.0.0.1:8088/api/swagger.json`.
+1. Start the Maestro application locally, verify you can access the swagger.json file. You can now stop debugging, the local SF cluster will keep running.
+1. Run `src\Maestro\Client\src\generate-client.cmd` which will regenerate the C# classes.
 
 ## Troubleshooting
 
