@@ -28,6 +28,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         Task<IImmutableList<string>> ListRepositoriesAsync(
             int id,
+            int? withBuildsInDays = default,
             CancellationToken cancellationToken = default
         );
 
@@ -243,6 +244,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public async Task<IImmutableList<string>> ListRepositoriesAsync(
             int id,
+            int? withBuildsInDays = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -256,6 +258,10 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/channels/{id}/repositories".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
                 false);
 
+            if (withBuildsInDays != default)
+            {
+                _url.AppendQuery("withBuildsInDays", MaestroApi.Serialize(withBuildsInDays));
+            }
             _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
 
 

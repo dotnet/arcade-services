@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
@@ -32,11 +33,17 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("enabled")]
         public bool? Enabled { get; set; }
 
+        [JsonProperty("sourceEnabled")]
+        public bool? SourceEnabled { get; set; }
+
         [JsonProperty("policy")]
         public SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; set; }
+
+        [JsonProperty("excludedAssets")]
+        public IImmutableList<string> ExcludedAssets { get; set; }
 
         [JsonIgnore]
         public bool IsValid
