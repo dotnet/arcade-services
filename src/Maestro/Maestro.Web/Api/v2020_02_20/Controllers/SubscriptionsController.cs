@@ -40,17 +40,28 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         _gitHubClientFactory = gitHubClientFactory;
     }
 
+    [ApiRemoved]
+    public sealed override IActionResult ListSubscriptions(
+        string sourceRepository = null,
+        string targetRepository = null,
+        int? channelId = null,
+        bool? enabled = null)
+    {
+        throw new NotImplementedException();
+    }
+
     /// <summary>
     ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
     /// </summary>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
     [ValidateModelState]
-    public override IActionResult ListSubscriptions(
+    public IActionResult ListSubscriptions(
         string sourceRepository = null,
         string targetRepository = null,
         int? channelId = null,
-        bool? enabled = null)
+        bool? enabled = null,
+        bool? sourceEnabled = null)
     {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
@@ -75,6 +86,11 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         if (enabled.HasValue)
         {
             query = query.Where(sub => sub.Enabled == enabled.Value);
+        }
+
+        if (sourceEnabled.HasValue)
+        {
+            query = query.Where(sub => sub.SourceEnabled == sourceEnabled.Value);
         }
 
         List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
