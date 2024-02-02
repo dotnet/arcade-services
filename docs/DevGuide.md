@@ -10,7 +10,7 @@
     - Download and install the SSL cert used for local development from key vault
     - Configure the SQL Server LocalDB instance for use from the local Service Fabric cluster
 1. Make sure you have installed Entity Framework Core CLI by running `dotnet tool install --global dotnet-ef`
-1. From the Maestro.Data project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
+1. From the `src\Maestro\Maestro.Data` project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
 1. Join the @maestro-auth-test org in GitHub (you will need to ask someone to manually add you to the org).
 1. In SQL Server Object Explorer in Visual Studio, find the local SQLExpress database for the build asset registry and populate the Repositories table with the following rows:
@@ -34,7 +34,7 @@ After successfully running `bootstrap.ps1` running the `MaestroApplication` proj
 
 Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable automatic build to channel assignment. AAC works basically as a KeyVault, however it doesn't need to necessarily store secrets. We use Azure Managed Service Identity (AMSI) to authenticate to AAC. 
 
-##### Useful resources about AAC: 
+##### Useful resources about AAC:
 
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/overview
 - https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
@@ -64,6 +64,37 @@ Since Visual Studio's Debug Environment variable settings do not apply to debugg
 
 When debugging the tests, you can check this via the Immediate window, e.g. by running `System.Environment.GetEnvironmentVariable("GITHUB_TOKEN")`
 
+## Changing the database model
+
+In case you need to change the database model (e.g. add a column to a table), follow the usual [EF Core code-first migration steps](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/?tabs=dotnet-core-cli#evolving-your-model).
+In practice this means the following:
+- Make the change to the model classes in the `Maestro.Data` project
+- Install the [EF Core CLI](https://docs.microsoft.com/en-us/ef/core/cli/dotnet)
+  ```ps1
+  dotnet tool install --global dotnet-ef
+  ```
+- Go to the `src\Maestro\Maestro.Data` project directory and build the project
+  ```ps1
+  cd src\Maestro\Maestro.Data
+  dotnet build
+  ```
+- Run the following command to create a new migration
+  ```ps1
+  dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> migrations add <migration name>
+  ```
+
+The steps above will produce a new migration file which will later be processed by the CI pipeline on the real database.  
+Test this migration locally by running:
+```ps1
+dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data")> database update
+```
+You should see something like:
+```
+Build started...
+Build succeeded.
+Applying migration '20240201144006_<migration name>'.
+Done.
+```
 
 ## Troubleshooting
 
