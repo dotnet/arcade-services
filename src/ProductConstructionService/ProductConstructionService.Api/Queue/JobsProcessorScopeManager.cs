@@ -1,6 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using ProductConstructionService.Api.Queue.JobRunners;
+using ProductConstructionService.Api.Queue.Jobs;
+
 namespace ProductConstructionService.Api.Queue;
 
 public enum JobsProcessorState
@@ -33,13 +36,13 @@ public class JobsProcessorScopeManager
     /// <summary>
     /// Creates a new scope for the currently executing Job, when the the JobsProcessor is in the `Working` state.
     /// </summary>
-    public IDisposable BeginJobScopeWhenReady()
+    public JobScope BeginJobScopeWhenReady()
     {
         _autoResetEvent.WaitOne();
         return new JobScope(this);
     }
 
-    private void JobFinished()
+    public void JobFinished()
     {
         switch (State)
         {
@@ -60,8 +63,5 @@ public class JobsProcessorScopeManager
         }
     }
 
-    private class JobScope(JobsProcessorScopeManager status) : IDisposable
-    {
-        public void Dispose() => status.JobFinished();
-    }
+    
 }

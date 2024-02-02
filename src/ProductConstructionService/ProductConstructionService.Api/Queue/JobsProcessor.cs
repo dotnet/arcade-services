@@ -28,7 +28,7 @@ public class JobsProcessor(
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
         {
-            using (_scopeManager.BeginJobScopeWhenReady())
+            using (JobScope jobScope = _scopeManager.BeginJobScopeWhenReady())
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -36,7 +36,7 @@ public class JobsProcessor(
                 }
                 try
                 {
-                    await ReadAndProcessJobAsync(queueClient, cancellationToken);
+                    await ReadAndProcessJobAsync(queueClient, jobScope, cancellationToken);
                 }
                 // If the cancellation token gets cancelled, we just want to exit
                 catch (OperationCanceledException)
@@ -51,7 +51,7 @@ public class JobsProcessor(
         }
     }
 
-    private async Task ReadAndProcessJobAsync(QueueClient queueClient, CancellationToken cancellationToken)
+    private async Task ReadAndProcessJobAsync(QueueClient queueClient, JobScope jobScope, CancellationToken cancellationToken)
     {
         QueueMessage message = await queueClient.ReceiveMessageAsync(_options.Value.QueueMessageInvisibilityTime, cancellationToken);
 
@@ -67,8 +67,10 @@ public class JobsProcessor(
 
         try
         {
+            
             _logger.LogInformation("Starting attempt {attemptNumber} for job {jobId}, type {jobType}", message.DequeueCount, job.Id, job.GetType());
-            ProcessJob(job);
+            jobScope.InitializeScope(job);
+            await jobScope.RunJob(cancellationToken);
 
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
         }
@@ -83,18 +85,6 @@ public class JobsProcessor(
                     , job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
-        }
-    }
-
-    private void ProcessJob(Job job)
-    {
-        switch (job)
-        {
-            case TextJob textJob:
-                _logger.LogInformation("Processed text job. Message: {message}", textJob.Text);
-                break;
-            default:
-                throw new NotSupportedException($"Unable to process unknown PCS job type: {job.GetType().Name}");
         }
     }
 }
