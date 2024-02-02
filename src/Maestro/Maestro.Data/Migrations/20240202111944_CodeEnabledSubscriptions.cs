@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
                 defaultValue: false);
 
             migrationBuilder.CreateTable(
-                name: "AssetFilter",
+                name: "AssetFilters",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -27,7 +27,7 @@ namespace Maestro.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AssetFilter", x => x.Id);
+                    table.PrimaryKey("PK_AssetFilters", x => x.Id);
                     table.ForeignKey(
                         name: "FK_AssetFilter_Subscriptions_SubscriptionId",
                         column: x => x.SubscriptionId,
@@ -37,14 +37,14 @@ namespace Maestro.Data.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AssetFilter_SubscriptionId",
-                table: "AssetFilter",
+                table: "AssetFilters",
                 column: "SubscriptionId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AssetFilter");
+                name: "AssetFilters");
 
             migrationBuilder.DropColumn(
                 name: "SourceEnabled",

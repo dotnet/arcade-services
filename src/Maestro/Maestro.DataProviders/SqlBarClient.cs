@@ -34,18 +34,24 @@ public class SqlBarClient : IBasicBarClient
 
     public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {
-        var subscriptionObject = await _context.Subscriptions.FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
-        if (subscriptionObject != null)
+        var sub = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
+
+        if (sub == null)
         {
-            return new Subscription(
-                subscriptionObject.Id,
-                subscriptionObject.Enabled,
-                subscriptionObject.SourceRepository,
-                subscriptionObject.TargetRepository,
-                subscriptionObject.TargetBranch,
-                subscriptionObject.PullRequestFailureNotificationTags);
+            return null;
         }
-        return null;
+
+        return new Subscription(
+            sub.Id,
+            sub.Enabled,
+            //sub.SourceEnabled,
+            sub.SourceRepository,
+            sub.TargetRepository,
+            sub.TargetBranch,
+            sub.PullRequestFailureNotificationTags/*,
+            sub.ExcludedAssets.Select(s => s.Filter)*/);
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)

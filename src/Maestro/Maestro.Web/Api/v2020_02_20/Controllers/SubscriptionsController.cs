@@ -42,10 +42,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     /// <summary>
     ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
     /// </summary>
-    /// <param name="sourceRepository"></param>
-    /// <param name="targetRepository"></param>
-    /// <param name="channelId"></param>
-    /// <param name="enabled"></param>
     [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
     [ValidateModelState]
@@ -57,7 +53,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
-            .Include(s => s.LastAppliedBuild);
+            .Include(s => s.LastAppliedBuild)
+            .Include(s => s.ExcludedAssets);
 
         if (!string.IsNullOrEmpty(sourceRepository))
         {
@@ -95,6 +92,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.ExcludedAssets)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
         if (subscription == null)
@@ -134,7 +132,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     [ValidateModelState]
     public async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
     {
-        Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id).Include(sub => sub.Channel)
+        Data.Models.Subscription subscription = await _context.Subscriptions
+            .Where(sub => sub.Id == id)
+            .Include(sub => sub.Channel)
+            .Include(sub => sub.ExcludedAssets)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -216,8 +217,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     ///  Before inserting them into the database, we'll make sure they're either not a user's login or
     ///  that user is publicly a member of the Microsoft organization so we can store their login.
     /// </summary>
-    /// <param name="pullRequestFailureNotificationTags"></param>
-    /// <returns></returns>
     private async Task<bool> AllNotificationTagsValid(string pullRequestFailureNotificationTags)
     {
         string[] allTags = pullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries);

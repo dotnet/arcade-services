@@ -880,7 +880,7 @@ namespace Maestro.Data.Migrations
             modelBuilder.Entity("Maestro.Data.Models.AssetFilter", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Subscription", null)
-                        .WithMany("ExcludedDependencies")
+                        .WithMany("ExcludedAssets")
                         .HasForeignKey("SubscriptionId");
                 });
 
@@ -1114,7 +1114,7 @@ namespace Maestro.Data.Migrations
 
             modelBuilder.Entity("Maestro.Data.Models.Subscription", b =>
                 {
-                    b.Navigation("ExcludedDependencies");
+                    b.Navigation("ExcludedAssets");
                 });
 #pragma warning restore 612, 618
         }

@@ -77,7 +77,7 @@ public class Subscription
     /// <summary>
     /// Dependencies to ignore when synchronizing code of source-enabled subscriptions.
     /// </summary>
-    public List<AssetFilter> ExcludedDependencies { get; set; }
+    public List<AssetFilter> ExcludedAssets { get; set; }
 
     [NotMapped]
     public SubscriptionPolicy PolicyObject
