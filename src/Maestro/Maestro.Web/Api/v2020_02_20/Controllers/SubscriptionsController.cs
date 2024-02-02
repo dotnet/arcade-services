@@ -1,6 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -8,12 +15,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 
@@ -187,6 +188,20 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         if (update.Enabled.HasValue)
         {
             subscription.Enabled = update.Enabled.Value;
+            doUpdate = true;
+        }
+
+        if (update.SourceEnabled.HasValue)
+        {
+            subscription.SourceEnabled = update.SourceEnabled.Value;
+            doUpdate = true;
+        }
+
+        update.ExcludedAssets = [.. (update.ExcludedAssets?.OrderBy(a => a).ToList() ?? [])];
+        var currentSubscriptions = subscription.ExcludedAssets.Select(a => a.Filter).OrderBy(a => a);
+        if (!currentSubscriptions.SequenceEqual(update.ExcludedAssets))
+        {
+            subscription.ExcludedAssets = update.ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset }).ToList();
             doUpdate = true;
         }
 
