@@ -38,6 +38,8 @@ public class JobScope(
 
         var stopwatch = Stopwatch.StartNew();
 
+        var r = new Random();
+        await Task.Delay(r.Next(2000, 4000));
         await jobRunner.RunAsync(_job, cancellationToken);
         
         stopwatch.Stop();
