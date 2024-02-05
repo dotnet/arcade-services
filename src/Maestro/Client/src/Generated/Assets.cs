@@ -99,7 +99,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/assets/bulk-add-locations",
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -225,11 +225,11 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(name))
             {
-                _url.AppendQuery("name", MaestroApi.Serialize(name));
+                _url.AppendQuery("name", Client.Serialize(name));
             }
             if (!string.IsNullOrEmpty(version))
             {
-                _url.AppendQuery("version", MaestroApi.Serialize(version));
+                _url.AppendQuery("version", Client.Serialize(version));
             }
             if (buildId != default)
             {
@@ -251,7 +251,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -320,7 +320,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/assets/darc-version",
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -387,10 +387,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
+                "/api/assets/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -469,18 +469,18 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{assetId}/locations".Replace("{assetId}", Uri.EscapeDataString(MaestroApi.Serialize(assetId))),
+                "/api/assets/{assetId}/locations".Replace("{assetId}", Uri.EscapeDataString(Client.Serialize(assetId))),
                 false);
 
             if (!string.IsNullOrEmpty(location))
             {
-                _url.AppendQuery("location", MaestroApi.Serialize(location));
+                _url.AppendQuery("location", Client.Serialize(location));
             }
             if (assetLocationType != default)
             {
                 _url.AppendQuery("assetLocationType", Client.Serialize(assetLocationType));
             }
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -548,10 +548,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/assets/{assetId}/locations/{assetLocationId}".Replace("{assetId}", Uri.EscapeDataString(MaestroApi.Serialize(assetId))).Replace("{assetLocationId}", Uri.EscapeDataString(MaestroApi.Serialize(assetLocationId))),
+                "/api/assets/{assetId}/locations/{assetLocationId}".Replace("{assetId}", Uri.EscapeDataString(Client.Serialize(assetId))).Replace("{assetLocationId}", Uri.EscapeDataString(Client.Serialize(assetLocationId))),
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

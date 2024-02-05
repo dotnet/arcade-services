@@ -16,6 +16,11 @@
     },
     "lastAppliedBuild": null,
     "enabled": true,
-    "pullRequestFailureNotificationTags": ""
+    "sourceEnabled": false,
+    "pullRequestFailureNotificationTags": "",
+    "excludedAssets": [
+      "Foo.Bar",
+      "Bar.Xyz"
+    ]
   }
 ]
