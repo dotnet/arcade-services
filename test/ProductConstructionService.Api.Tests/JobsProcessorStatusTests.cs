@@ -2,17 +2,24 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Moq;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Tests;
 
 public class JobsProcessorStatusTests
 {
+    private readonly Mock<IServiceProvider> _serviceProviderMock;
+
+    public JobsProcessorStatusTests()
+    {
+        _serviceProviderMock = new Mock<IServiceProvider>();
+    }
+
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
-
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProviderMock.Object);
         // When it starts, the processor is not working
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
@@ -74,7 +81,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProviderMock.Object);
 
         // The jobs processor should start in a stopped state
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
@@ -109,7 +116,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProviderMock.Object);
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 

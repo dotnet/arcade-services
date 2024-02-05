@@ -4,13 +4,12 @@
 using ProductConstructionService.Api.Queue.JobRunners;
 using ProductConstructionService.Api.Queue.Jobs;
 using System.Diagnostics;
-using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.Api.Metrics;
 
 namespace ProductConstructionService.Api.Queue;
 
 public class JobScope(
-    JobsProcessorScopeManager status,
+    Action finalizer,
     IServiceScope serviceScope) : IDisposable
 {
     private readonly IServiceScope _serviceScope = serviceScope;
@@ -18,8 +17,8 @@ public class JobScope(
 
     public void Dispose()
     {
+        finalizer.Invoke();
         _serviceScope.Dispose();
-        status.JobFinished();
     }
 
     public void InitializeScope(Job job)
@@ -38,15 +37,11 @@ public class JobScope(
 
         var stopwatch = Stopwatch.StartNew();
 
-        var r = new Random();
-        await Task.Delay(r.Next(2000, 4000));
         await jobRunner.RunAsync(_job, cancellationToken);
         
         stopwatch.Stop();
 
-        var durationMetricRecorder = _serviceScope.ServiceProvider.GetRequiredService<DurationMetricRecorder>();
-        durationMetricRecorder.Record(GetJobDurationHistogramName(_job), stopwatch.ElapsedMilliseconds);
+        var durationMetricRecorder = _serviceScope.ServiceProvider.GetRequiredService<MetricRecorder>();
+        durationMetricRecorder.RecordJobDuration(_job.GetType().Name, stopwatch.ElapsedMilliseconds);
     }
-
-    private static string GetJobDurationHistogramName(Job job) => $"{job.GetType().Name}-{MetricConsts.JobDurationMillisecondsHistogram}";
 }

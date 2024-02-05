@@ -6,5 +6,5 @@ public static class MetricConsts
 {
     public const string JobMeterName = "ProductConstructionService.Api";
 
-    public const string JobDurationMillisecondsHistogram = "duration-milliseconds";
+    public const string JobDurationMillisecondsHistogram = "duration";
 }

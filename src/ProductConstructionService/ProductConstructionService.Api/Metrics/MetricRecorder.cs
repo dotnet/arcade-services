@@ -6,14 +6,16 @@ using ProductConstructionService.ServiceDefaults;
 
 namespace ProductConstructionService.Api.Metrics;
 
-public class DurationMetricRecorder(IMeterFactory meterFactory)
+public class MetricRecorder(IMeterFactory meterFactory)
 {
     private readonly Meter _meter = meterFactory.Create(MetricConsts.JobMeterName);
 
-    public void Record(string name, long value)
+    public void RecordJobDuration(string jobName, long duration)
     {
-        var histogram = _meter.CreateHistogram<long>(name);
+        var histogram = _meter.CreateHistogram<long>(GetJobDurationHistogramName(jobName));
 
-        histogram.Record(value);
+        histogram.Record(duration);
     }
+
+    private static string GetJobDurationHistogramName(string jobName) => $"job.{jobName}.duration";
 }

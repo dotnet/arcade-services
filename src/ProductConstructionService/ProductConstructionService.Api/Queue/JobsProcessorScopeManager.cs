@@ -41,10 +41,11 @@ public class JobsProcessorScopeManager
     public JobScope BeginJobScopeWhenReady()
     {
         _autoResetEvent.WaitOne();
-        return new JobScope(this, _serviceProvider.CreateScope());
+        var scope = _serviceProvider.CreateScope();
+        return ActivatorUtilities.CreateInstance<JobScope>(scope.ServiceProvider, scope, new Action(JobFinished));
     }
 
-    public void JobFinished()
+    private void JobFinished()
     {
         switch (State)
         {
