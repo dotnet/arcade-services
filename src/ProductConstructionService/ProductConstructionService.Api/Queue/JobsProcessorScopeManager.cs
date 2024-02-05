@@ -1,8 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using ProductConstructionService.Api.Queue.JobRunners;
-using ProductConstructionService.Api.Queue.Jobs;
+using System.Diagnostics.Metrics;
 
 namespace ProductConstructionService.Api.Queue;
 
@@ -18,14 +17,18 @@ public enum JobsProcessorState
 
 public class JobsProcessorScopeManager
 {
-    public JobsProcessorScopeManager(bool workOnStartup)
+    public JobsProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider, IMeterFactory meterFactory)
     {
         _autoResetEvent = new AutoResetEvent(workOnStartup);
         State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;
+        _serviceProvider = serviceProvider;
+        _meterFactory = meterFactory;
     }
 
     public JobsProcessorState State { get; private set; }
     private readonly AutoResetEvent _autoResetEvent;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IMeterFactory _meterFactory;
 
     public void Start()
     {
@@ -39,7 +42,7 @@ public class JobsProcessorScopeManager
     public JobScope BeginJobScopeWhenReady()
     {
         _autoResetEvent.WaitOne();
-        return new JobScope(this);
+        return new JobScope(this, _serviceProvider.CreateScope(), _meterFactory);
     }
 
     public void JobFinished()

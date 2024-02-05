@@ -65,11 +65,12 @@ public class JobsProcessor(
 
         var job = message.Body.ToObjectFromJson<Job>();
 
+        jobScope.InitializeScope(job);
+
         try
         {
-            
+
             _logger.LogInformation("Starting attempt {attemptNumber} for job {jobId}, type {jobType}", message.DequeueCount, job.Id, job.GetType());
-            jobScope.InitializeScope(job);
             await jobScope.RunJob(cancellationToken);
 
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);

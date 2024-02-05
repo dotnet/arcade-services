@@ -6,13 +6,15 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue.JobRunners;
 
-public class TextJobRunner(JobLogger jobLogger, Job job) : IJobRunner
+public class TextJobRunner(ILogger<TextJobRunner> logger) : IJobRunner
 {
-    private readonly TextJob _job = (TextJob)job;
+    ILogger<TextJobRunner> _logger = logger;
 
-    public Task RunAsync(CancellationToken cancellationToken)
+    public Task RunAsync(Job job, CancellationToken cancellationToken)
     {
-        jobLogger.LogInformation("Processed text job. Message: {message}", _job.Text);
+        var textJob = (TextJob)job;
+        _logger.LogInformation("Processed text job. Message: {message}", textJob.Text);
         return Task.CompletedTask;
     }
+
 }
