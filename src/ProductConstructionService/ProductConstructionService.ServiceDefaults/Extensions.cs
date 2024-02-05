@@ -15,6 +15,8 @@ namespace Microsoft.Extensions.Hosting;
 
 public static class Extensions
 {
+    const string JobMetric = "ProductConstructionService.Api.Queue";
+
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
         builder.ConfigureOpenTelemetry();
@@ -117,5 +119,6 @@ public static class Extensions
         meterProviderBuilder.AddMeter(
             "Microsoft.AspNetCore.Hosting",
             "Microsoft.AspNetCore.Server.Kestrel",
-            "System.Net.Http");
+            "System.Net.Http",
+            JobMetric);
 }
