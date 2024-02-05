@@ -42,6 +42,6 @@ public class SubscriptionData
         Enabled = Enabled ?? true,
         SourceEnabled = SourceEnabled ?? false,
         PullRequestFailureNotificationTags = PullRequestFailureNotificationTags,
-        ExcludedAssets = [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
+        ExcludedAssets = ExcludedAssets == null ? [] : [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
     };
 }
