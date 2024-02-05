@@ -104,13 +104,21 @@ internal class AddSubscriptionOperation : Operation
             return Constants.ErrorCode;
         }
 
+        if (_options.ExcludedAssets.Any() && _options.SourceEnabled.HasValue && !_options.SourceEnabled.HasValue)
+        {
+            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            return Constants.ErrorCode;
+        }
+
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
         string targetRepository = _options.TargetRepository;
         string targetBranch = GitHelpers.NormalizeBranchName(_options.TargetBranch);
         string updateFrequency = _options.UpdateFrequency;
         bool batchable = _options.Batchable;
+        bool? sourceEnabled = _options.SourceEnabled;
         string failureNotificationTags = _options.PullRequestFailureNotificationTags;
+        List<string> excludedAssets = [.._options.ExcludedAssets];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
@@ -155,7 +163,9 @@ internal class AddSubscriptionOperation : Operation
                 (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
                 Constants.AvailableMergePolicyYamlHelp, 
-                failureNotificationTags);
+                failureNotificationTags,
+                sourceEnabled,
+                excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
             int exitCode = _options.ReadStandardIn ? uxManager.ReadFromStdIn(addSubscriptionPopup) : uxManager.PopUp(addSubscriptionPopup);
@@ -171,6 +181,7 @@ internal class AddSubscriptionOperation : Operation
             mergePolicies = addSubscriptionPopup.MergePolicies;
             batchable = addSubscriptionPopup.Batchable;
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
+            excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
         try
@@ -210,14 +221,17 @@ internal class AddSubscriptionOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            var newSubscription = await barClient.CreateSubscriptionAsync(channel,
+            var newSubscription = await barClient.CreateSubscriptionAsync(
+                channel,
                 sourceRepository,
                 targetRepository,
                 targetBranch,
                 updateFrequency,
                 batchable,
                 mergePolicies, 
-                failureNotificationTags);
+                failureNotificationTags,
+                sourceEnabled ?? false,
+                excludedAssets);
 
             Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
 

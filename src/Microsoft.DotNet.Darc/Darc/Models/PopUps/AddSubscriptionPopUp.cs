@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
@@ -24,6 +24,8 @@ public class AddSubscriptionPopUp : EditorPopUp
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
     public bool Batchable => bool.Parse(_yamlData.Batchable);
     public string FailureNotificationTags => _yamlData.FailureNotificationTags;
+    public bool SourceEnabled => bool.Parse(_yamlData.SourceEnabled);
+    public IReadOnlyCollection<string> ExcludedAssets => _yamlData.ExcludedAssets;
 
     public AddSubscriptionPopUp(string path,
         ILogger logger,
@@ -38,7 +40,9 @@ public class AddSubscriptionPopUp : EditorPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
         IEnumerable<string> availableMergePolicyHelp,
-        string failureNotificationTags)
+        string failureNotificationTags,
+        bool? sourceEnabled,
+        List<string> excludedAssets)
         : base(path)
     {
         _logger = logger;
@@ -51,7 +55,9 @@ public class AddSubscriptionPopUp : EditorPopUp
             UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
             Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
             MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
-            FailureNotificationTags = failureNotificationTags
+            FailureNotificationTags = failureNotificationTags,
+            SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+            ExcludedAssets = excludedAssets,
         };
 
         ISerializer serializer = new SerializerBuilder().Build();
@@ -68,6 +74,10 @@ public class AddSubscriptionPopUp : EditorPopUp
             new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
             new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
             new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
+            new("", true),
+            new("ExcludedAssets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
+            new("Asterisks can be used to filter whole namespaces, e.g. - 'Microsoft.DotNet.Arcade.*'", true),
+            new("", true),
             new("For additional information about subscriptions, please see", true),
             new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
             new("", true),
@@ -106,7 +116,7 @@ public class AddSubscriptionPopUp : EditorPopUp
             // Join the lines back into a string and deserialize as YAML.
             // TODO: Alter the popup/ux manager to pass along the raw file to avoid this unnecessary
             // operation once authenticate ends up as YAML.
-            string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate("", (current, line) => $"{current}{Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
         }
@@ -166,6 +176,15 @@ public class AddSubscriptionPopUp : EditorPopUp
             return Constants.ErrorCode;
         }
 
+        _yamlData.SourceEnabled = outputYamlData.SourceEnabled;
+        if (outputYamlData.ExcludedAssets.Any() && !SourceEnabled)
+        {
+            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            return Constants.ErrorCode;
+        }
+
+        _yamlData.ExcludedAssets = outputYamlData.ExcludedAssets;
+
         return Constants.SuccessCode;
     }
 
@@ -183,6 +202,8 @@ public class AddSubscriptionPopUp : EditorPopUp
         public const string MergePolicyElement = "Merge Policies";
         public const string BatchableElement = "Batchable";
         public const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
+        public const string SourceEnabledElement = "SourceEnabled";
+        public const string ExcludedAssetsElement = "ExcludedAssets";
 
         [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
         public string Channel { get; set; }
@@ -207,5 +228,11 @@ public class AddSubscriptionPopUp : EditorPopUp
 
         [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
         public string FailureNotificationTags { get; set; }
+
+        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
+        public string SourceEnabled { get; set; }
+
+        [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
+        public List<string> ExcludedAssets { get; set; }
     }
 }

@@ -233,9 +233,21 @@ public class BarApiClient : IBarApiClient
     ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
     ///     of metadata
     /// </param>
+    /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>
+    /// <param name="sourceEnabled">Whether this is a VMR code flow (special VMR subscription)</param>
+    /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
     /// <returns>Newly created subscription, if successful</returns>
-    public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo,
-        string targetBranch, string updateFrequency, bool batchable, List<MergePolicy> mergePolicies, string failureNotificationTags)
+    public Task<Subscription> CreateSubscriptionAsync(
+        string channelName,
+        string sourceRepo,
+        string targetRepo,
+        string targetBranch,
+        string updateFrequency,
+        bool batchable,
+        List<MergePolicy> mergePolicies,
+        string failureNotificationTags,
+        bool sourceEnabled,
+        List<string> excludedAssets)
     {
         var subscriptionData = new SubscriptionData(
             channelName: channelName,
@@ -244,14 +256,19 @@ public class BarApiClient : IBarApiClient
             targetBranch: targetBranch,
             policy: new SubscriptionPolicy(
                 batchable,
-                (UpdateFrequency) Enum.Parse(
+                (UpdateFrequency)Enum.Parse(
                     typeof(UpdateFrequency),
                     updateFrequency,
                     ignoreCase: true))
             {
                 MergePolicies = mergePolicies.ToImmutableList(),
-            }, 
-            failureNotificationTags);
+            },
+            failureNotificationTags)
+        {
+            SourceEnabled = sourceEnabled,
+            ExcludedAssets = excludedAssets.ToImmutableList(),
+        };
+
         return _barClient.Subscriptions.CreateAsync(subscriptionData);
     }
 

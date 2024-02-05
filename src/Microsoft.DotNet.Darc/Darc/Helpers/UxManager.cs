@@ -56,7 +56,7 @@ public class UxManager
             }
 
             // Now run the closed event and process the contents
-            IList<Line> contents = popUp.OnClose(path);
+            IList<Line> contents = EditorPopUp.OnClose(path);
             result = popUp.ProcessContents(contents);
             Directory.Delete(dirPath, true);
             if (result != Constants.SuccessCode)
@@ -109,7 +109,7 @@ public class UxManager
                     process.EnableRaisingEvents = true;
                     process.Exited += (sender, e) =>
                     {
-                        IList<Line> contents = popUp.OnClose(path);
+                        IList<Line> contents = EditorPopUp.OnClose(path);
 
                         result = popUp.ProcessContents(contents);
 

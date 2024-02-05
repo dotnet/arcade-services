@@ -63,6 +63,12 @@ internal class AddSubscriptionCommandLineOptions : CommandLineOptions
     [Option("validate-coherency", HelpText="PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
 
+    [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
+    public bool? SourceEnabled { get; set; }
+
+    [Option("excluded-assets", Separator = ';', HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.", Default = "")]
+    public IEnumerable<string> ExcludedAssets { get; set; }
+
     public override Operation GetOperation()
     {
         return new AddSubscriptionOperation(this);
