@@ -15,18 +15,17 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 public class AddSubscriptionPopUp : SubscriptionPopUp
 {
     private readonly ILogger _logger;
-    private readonly SubscriptionData _yamlData;
 
-    public string Channel => _yamlData.Channel;
-    public string SourceRepository => _yamlData.SourceRepository;
-    public string TargetRepository => _yamlData.TargetRepository;
-    public string TargetBranch => _yamlData.TargetBranch;
-    public string UpdateFrequency => _yamlData.UpdateFrequency;
-    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
-    public bool Batchable => bool.Parse(_yamlData.Batchable);
-    public string FailureNotificationTags => _yamlData.FailureNotificationTags;
-    public bool SourceEnabled => bool.Parse(_yamlData.SourceEnabled);
-    public IReadOnlyCollection<string> ExcludedAssets => _yamlData.ExcludedAssets;
+    public string Channel => _data.Channel;
+    public string SourceRepository => _data.SourceRepository;
+    public string TargetRepository => _data.TargetRepository;
+    public string TargetBranch => _data.TargetBranch;
+    public string UpdateFrequency => _data.UpdateFrequency;
+    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
+    public bool Batchable => bool.Parse(_data.Batchable);
+    public string FailureNotificationTags => _data.FailureNotificationTags;
+    public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
+    public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
 
     public AddSubscriptionPopUp(
         string path,
@@ -45,25 +44,25 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         List<string> excludedAssets)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp)
+        : base(new SubscriptionData
+            {
+                Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
+                SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
+                TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
+                TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
+                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
+                Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
+                MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+                ExcludedAssets = excludedAssets,
+            },
+            path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger)
     {
         _logger = logger;
-        _yamlData = new SubscriptionData
-        {
-            Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
-            SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
-            TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
-            TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
-            UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
-            Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
-            MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
-            FailureNotificationTags = failureNotificationTags,
-            SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
-            ExcludedAssets = excludedAssets,
-        };
 
         ISerializer serializer = new SerializerBuilder().Build();
-        string yaml = serializer.Serialize(_yamlData);
+        string yaml = serializer.Serialize(_data);
         string[] lines = yaml.Split(Environment.NewLine);
 
         // Initialize line contents.  Augment the input lines with suggestions and explanation
@@ -114,65 +113,22 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
             return Constants.ErrorCode;
         }
 
-        // Validate the merge policies
-        if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
-        {
-            return Constants.ErrorCode;
-        }
+        var result = ParseAndValidateData(outputYamlData);
 
-        _yamlData.MergePolicies = outputYamlData.MergePolicies;
-
-        // Parse and check the input fields
-        _yamlData.Channel = ParseSetting(outputYamlData.Channel, _yamlData.Channel, false);
-        if (string.IsNullOrEmpty(_yamlData.Channel))
-        {
-            _logger.LogError("Channel must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        _yamlData.SourceRepository = ParseSetting(outputYamlData.SourceRepository, _yamlData.SourceRepository, false);
-        if (string.IsNullOrEmpty(_yamlData.SourceRepository))
-        {
-            _logger.LogError("Source repository URL must be non-empty");
-            return Constants.ErrorCode;
-        }
-
-        _yamlData.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _yamlData.TargetRepository, false);
-        if (string.IsNullOrEmpty(_yamlData.TargetRepository))
+        _data.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _data.TargetRepository, false);
+        if (string.IsNullOrEmpty(_data.TargetRepository))
         {
             _logger.LogError("Target repository URL must be non-empty");
             return Constants.ErrorCode;
         }
 
-        _yamlData.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _yamlData.TargetBranch, false);
-        if (string.IsNullOrEmpty(_yamlData.TargetBranch))
+        _data.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _data.TargetBranch, false);
+        if (string.IsNullOrEmpty(_data.TargetBranch))
         {
             _logger.LogError("Target branch must be non-empty");
             return Constants.ErrorCode;
         }
 
-        _yamlData.Batchable = outputYamlData.Batchable;
-
-        _yamlData.FailureNotificationTags = outputYamlData.FailureNotificationTags;
-
-        _yamlData.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _yamlData.UpdateFrequency, false);
-        if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) ||
-            !Constants.AvailableFrequencies.Contains(_yamlData.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
-        {
-            _logger.LogError($"Frequency should be provided and should be one of the following: " +
-                             $"'{string.Join("', '",Constants.AvailableFrequencies)}'");
-            return Constants.ErrorCode;
-        }
-
-        _yamlData.SourceEnabled = outputYamlData.SourceEnabled;
-        if (outputYamlData.ExcludedAssets.Any() && !SourceEnabled)
-        {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
-
-        _yamlData.ExcludedAssets = outputYamlData.ExcludedAssets;
-
-        return Constants.SuccessCode;
+        return result;
     }
 }

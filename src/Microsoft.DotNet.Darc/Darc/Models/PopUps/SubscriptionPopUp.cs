@@ -1,7 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
@@ -22,20 +25,86 @@ public abstract class SubscriptionPopUp : EditorPopUp
     protected const string SourceEnabledElement = "SourceEnabled";
     protected const string ExcludedAssetsElement = "ExcludedAssets";
 
+    protected readonly SubscriptionData _data;
     private readonly IEnumerable<string> _suggestedChannels;
     private readonly IEnumerable<string> _suggestedRepositories;
     private readonly IEnumerable<string> _availableMergePolicyHelp;
+    private readonly ILogger _logger;
 
     protected SubscriptionPopUp(
+        SubscriptionData data,
         string path,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
-        IEnumerable<string> availableMergePolicyHelp)
+        IEnumerable<string> availableMergePolicyHelp,
+        ILogger logger)
         : base(path)
     {
+        _data = data;
         _suggestedChannels = suggestedChannels;
         _suggestedRepositories = suggestedRepositories;
         _availableMergePolicyHelp = availableMergePolicyHelp;
+        _logger = logger;
+    }
+
+    protected int ParseAndValidateData(SubscriptionData outputYamlData)
+    {
+        if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
+        {
+            return Constants.ErrorCode;
+        }
+
+        _data.MergePolicies = outputYamlData.MergePolicies;
+
+        _data.Channel = ParseSetting(outputYamlData.Channel, _data.Channel, false);
+        if (string.IsNullOrEmpty(_data.Channel))
+        {
+            _logger.LogError("Channel must be non-empty");
+            return Constants.ErrorCode;
+        }
+
+        _data.SourceRepository = ParseSetting(outputYamlData.SourceRepository, _data.SourceRepository, false);
+        if (string.IsNullOrEmpty(_data.SourceRepository))
+        {
+            _logger.LogError("Source repository URL must be non-empty");
+            return Constants.ErrorCode;
+        }
+
+        _data.Batchable = ParseSetting(outputYamlData.Batchable, _data.Batchable, false);
+
+        if (!bool.TryParse(outputYamlData.Batchable, out bool _))
+        {
+            _logger.LogError("Batchable is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
+        _data.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _data.UpdateFrequency, false);
+        if (string.IsNullOrEmpty(_data.UpdateFrequency) ||
+            !Constants.AvailableFrequencies.Contains(_data.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
+        {
+            _logger.LogError($"Frequency should be provided and should be one of the following: " +
+                             $"'{string.Join("', '", Constants.AvailableFrequencies)}'");
+            return Constants.ErrorCode;
+        }
+
+        _data.SourceEnabled = outputYamlData.SourceEnabled;
+
+        if (!bool.TryParse(outputYamlData.SourceEnabled, out bool sourceEnabled))
+        {
+            _logger.LogError("SourceEnabled is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
+        if (outputYamlData.ExcludedAssets.Any() && !sourceEnabled)
+        {
+            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            return Constants.ErrorCode;
+        }
+
+        _data.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _data.FailureNotificationTags, false);
+        _data.ExcludedAssets = outputYamlData.ExcludedAssets;
+
+        return Constants.SuccessCode;
     }
 
     /// <summary>
