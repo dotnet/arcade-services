@@ -52,7 +52,6 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         string defaultBranchName = "main";
         string aValidDependencyFlowNotificationList = "@someMicrosoftUser;@some-github-team";
 
-
         // Create two subscriptions
         var subscription1 = new SubscriptionData()
         {
@@ -80,6 +79,8 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription1.SourceRepository.Should().Be(defaultGitHubSourceRepo);
             createdSubscription1.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             createdSubscription1.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
+            createdSubscription1.SourceEnabled.Should().BeFalse();
+            createdSubscription1.ExcludedAssets.Should().BeEmpty();
         }
 
         var subscription2 = new SubscriptionData()
@@ -89,7 +90,9 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             SourceRepository = defaultAzdoSourceRepo,
             TargetRepository = defaultAzdoTargetRepo,
             Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.None },
-            TargetBranch = defaultBranchName
+            TargetBranch = defaultBranchName,
+            SourceEnabled = true,
+            ExcludedAssets = [DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"],
         };
 
         Subscription createdSubscription2;
@@ -107,6 +110,8 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2.SourceRepository.Should().Be(defaultAzdoSourceRepo);
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
             createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
+            createdSubscription2.SourceEnabled.Should().BeTrue();
+            createdSubscription2.ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
 
         // List all (both) subscriptions, spot check that we got both
@@ -120,13 +125,15 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             listedSubs[0].Enabled.Should().Be(true);
             listedSubs[0].TargetRepository.Should().Be(defaultGitHubTargetRepo);
             listedSubs[0].PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
+            listedSubs[0].ExcludedAssets.Should().BeEmpty();
             listedSubs[1].Enabled.Should().Be(false);
             listedSubs[1].TargetRepository.Should().Be(defaultAzdoTargetRepo);
             listedSubs[1].PullRequestFailureNotificationTags.Should().BeNull();
+            listedSubs[1].ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
         // Use ListSubscriptions() params at least superficially to go down those codepaths
         {
-            IActionResult result = _data.SubscriptionsController.ListSubscriptions(defaultAzdoSourceRepo, defaultAzdoTargetRepo, createdSubscription2.Channel.Id, false);
+            IActionResult result = _data.SubscriptionsController.ListSubscriptions(defaultAzdoSourceRepo, defaultAzdoTargetRepo, createdSubscription2.Channel.Id, enabled: false, sourceEnabled: true);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult) result;
             objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
@@ -135,6 +142,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             listedSubs[0].Enabled.Should().Be(false);
             listedSubs[0].TargetRepository.Should().Be(defaultAzdoTargetRepo);
             listedSubs[0].PullRequestFailureNotificationTags.Should().BeNull(); // This is sub2
+            listedSubs[0].ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
         // Directly get one of the subscriptions
         {
@@ -146,6 +154,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             theSubscription.Enabled.Should().Be(true);
             theSubscription.TargetRepository.Should().Be(defaultGitHubTargetRepo);
             theSubscription.PullRequestFailureNotificationTags.Should().Be(aValidDependencyFlowNotificationList);
+            theSubscription.ExcludedAssets.Should().BeEmpty();
         }
     }
 
