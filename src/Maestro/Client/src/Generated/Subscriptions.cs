@@ -18,8 +18,8 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial interface ISubscriptions
     {
         Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
@@ -91,8 +91,8 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
         public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
+            bool? enabled = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
