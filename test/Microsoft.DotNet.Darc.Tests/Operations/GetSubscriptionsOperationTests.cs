@@ -130,7 +130,7 @@ public class GetSubscriptionsOperationTests
     [Test]
     public async Task GetSubscriptionsOperationTests_ExecuteAsync_returns_json()
     {
-        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", string.Empty, ImmutableList<string>.Empty)
+        Subscription subscription = new(Guid.Empty, true, false, "source", "target", "test", string.Empty, ImmutableList.Create("Foo.Bar", "Bar.Xyz"))
         {
             Channel = new(id: 1, name: "name", classification: "classification"),
             Policy = new(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
