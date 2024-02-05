@@ -23,7 +23,7 @@ public class Subscription
         SourceEnabled = other.SourceEnabled;
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
-        ExcludedAssets = [..other.ExcludedAssets.Select(s => s.Filter)];
+        ExcludedAssets = other.ExcludedAssets != null ? [..other.ExcludedAssets.Select(s => s.Filter)] : [];
     }
 
     public Guid Id { get; }
