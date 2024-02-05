@@ -5,6 +5,7 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Metrics;
 using ProductConstructionService.Api.Queue;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 });
 
 builder.AddWorkitemQueues(credential);
+builder.AddMetricsRecorders();
 
 builder.AddServiceDefaults();
 

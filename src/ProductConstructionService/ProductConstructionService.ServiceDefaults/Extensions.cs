@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using ProductConstructionService.ServiceDefaults;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -64,11 +65,7 @@ public static class Extensions
                        .AddHttpClientInstrumentation();
             });
 
-        // We're not writing to Application Insights when running the service locally
-        if (!builder.Environment.IsDevelopment())
-        { 
-            builder.AddOpenTelemetryExporters();
-        }
+        builder.AddOpenTelemetryExporters();
 
         return builder;
     }
@@ -86,8 +83,12 @@ public static class Extensions
 
         // This method call will read the APPLICATIONINSIGHTS_CONNECTION_STRING environmental variable, and
         // setup the Application Insights logging
-        builder.Services.AddOpenTelemetry()
-           .UseAzureMonitor();
+        // We don't need this locally
+        if (!builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddOpenTelemetry()
+               .UseAzureMonitor();
+        }
 
         return builder;
     }
@@ -120,5 +121,5 @@ public static class Extensions
             "Microsoft.AspNetCore.Hosting",
             "Microsoft.AspNetCore.Server.Kestrel",
             "System.Net.Http",
-            JobMetric);
+            MetricConsts.JobMeterName);
 }
