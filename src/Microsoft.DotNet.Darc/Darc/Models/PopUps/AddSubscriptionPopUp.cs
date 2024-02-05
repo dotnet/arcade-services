@@ -12,10 +12,11 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-public class AddSubscriptionPopUp : EditorPopUp
+public class AddSubscriptionPopUp : SubscriptionPopUp
 {
     private readonly ILogger _logger;
     private readonly SubscriptionData _yamlData;
+
     public string Channel => _yamlData.Channel;
     public string SourceRepository => _yamlData.SourceRepository;
     public string TargetRepository => _yamlData.TargetRepository;
@@ -27,7 +28,8 @@ public class AddSubscriptionPopUp : EditorPopUp
     public bool SourceEnabled => bool.Parse(_yamlData.SourceEnabled);
     public IReadOnlyCollection<string> ExcludedAssets => _yamlData.ExcludedAssets;
 
-    public AddSubscriptionPopUp(string path,
+    public AddSubscriptionPopUp(
+        string path,
         ILogger logger,
         string channel,
         string sourceRepository,
@@ -43,7 +45,7 @@ public class AddSubscriptionPopUp : EditorPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         List<string> excludedAssets)
-        : base(path)
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp)
     {
         _logger = logger;
         _yamlData = new SubscriptionData
@@ -84,27 +86,13 @@ public class AddSubscriptionPopUp : EditorPopUp
             new("Fill out the following form.  Suggested values for fields are shown below.", true),
             new()
         });
+
         foreach (string line in lines)
         {
             Contents.Add(new Line(line));
         }
-        // Add helper comments
-        Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}' or '{SubscriptionData.TargetRepoElement}':", true));
-        foreach (string suggestedRepo in suggestedRepositories) {
-            Contents.Add(new Line($"  {suggestedRepo}", true));
-        }
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Suggested Channels", true));
-        foreach (string suggestedChannel in suggestedChannels)
-        {
-            Contents.Add(new Line($"  {suggestedChannel}", true));
-        }
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Available Merge Policies", true));
-        foreach (string mergeHelp in availableMergePolicyHelp)
-        {
-            Contents.Add(new Line($"  {mergeHelp}", true));
-        }
+
+        PrintSuggestions();
     }
 
     public override int ProcessContents(IList<Line> contents)
@@ -186,53 +174,5 @@ public class AddSubscriptionPopUp : EditorPopUp
         _yamlData.ExcludedAssets = outputYamlData.ExcludedAssets;
 
         return Constants.SuccessCode;
-    }
-
-    /// <summary>
-    /// Helper class for YAML encoding/decoding purposes.
-    /// This is used so that we can have friendly alias names for elements.
-    /// </summary>
-    private class SubscriptionData
-    {
-        public const string ChannelElement = "Channel";
-        public const string SourceRepoElement = "Source Repository URL";
-        public const string TargetRepoElement = "Target Repository URL";
-        public const string TargetBranchElement = "Target Branch";
-        public const string UpdateFrequencyElement = "Update Frequency";
-        public const string MergePolicyElement = "Merge Policies";
-        public const string BatchableElement = "Batchable";
-        public const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-        public const string SourceEnabledElement = "SourceEnabled";
-        public const string ExcludedAssetsElement = "ExcludedAssets";
-
-        [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
-        public string Channel { get; set; }
-
-        [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
-        public string SourceRepository { get; set; }
-
-        [YamlMember(Alias = TargetRepoElement, ApplyNamingConventions = false)]
-        public string TargetRepository { get; set; }
-
-        [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
-        public string TargetBranch { get; set; }
-
-        [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
-        public string UpdateFrequency { get; set; }
-
-        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-        public string Batchable { get; set; }
-
-        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-        public List<MergePolicyData> MergePolicies { get; set; }
-
-        [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
-        public string FailureNotificationTags { get; set; }
-
-        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-        public string SourceEnabled { get; set; }
-
-        [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-        public List<string> ExcludedAssets { get; set; }
     }
 }
