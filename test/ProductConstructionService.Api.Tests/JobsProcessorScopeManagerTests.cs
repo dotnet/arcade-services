@@ -9,11 +9,11 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Tests;
 
-public class JobsProcessorStatusTests
+public class JobsProcessorScopeManagerTests
 {
     private readonly IServiceProvider _serviceProvider;
 
-    public JobsProcessorStatusTests()
+    public JobsProcessorScopeManagerTests()
     {
         ServiceCollection services = new();
 

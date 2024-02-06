@@ -9,6 +9,6 @@ var queues = builder.AddAzureStorage("storage")
 
 // TODO https://github.com/dotnet/arcade-services/issues/3242
 // builder.AddProject<Projects.ProductConstructionService_Api>("productConstructionService.api")
-//      .WithReference(queues);
+//    .WithReference(queues);
 
 builder.Build().Run();

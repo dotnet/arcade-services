@@ -3,7 +3,6 @@
 
 using ProductConstructionService.Api.Queue.JobRunners;
 using ProductConstructionService.Api.Queue.Jobs;
-using System.Diagnostics;
 using ProductConstructionService.Api.Metrics;
 
 namespace ProductConstructionService.Api.Queue;
@@ -28,21 +27,19 @@ public class JobScope(
         _job = job;
     }
 
-    public async Task RunJob(CancellationToken cancellationToken)
+    public async Task RunJobAsync(CancellationToken cancellationToken)
     {
         if (_job is null)
         {
             throw new Exception("JobScope not initialized! Call InitializeScope before calling RunJob");
         }
 
-        var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.GetType().Name);
+        var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.Type);
 
-        var stopwatch = Stopwatch.StartNew();
-
-        await jobRunner.RunAsync(_job, cancellationToken);
-        
-        stopwatch.Stop();
-
-        _metricRecorder.RecordJobDuration(_job, stopwatch.ElapsedMilliseconds);
+        using (IMetricRecorderScope metricScope  = _metricRecorder.RecordJob(_job))
+        {
+            await jobRunner.RunAsync(_job, cancellationToken);
+            metricScope.SetSuccess();
+        }
     }
 }

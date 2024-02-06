@@ -1,0 +1,74 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using ProductConstructionService.Api.Metrics;
+using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Api.Queue.JobRunners;
+using ProductConstructionService.Api.Queue.Jobs;
+
+namespace ProductConstructionService.Api.Tests;
+public class JobScopeTests
+{
+    [Test]
+    public async Task JobScopeRecordsMetricsTest()
+    {
+        IServiceCollection services = new ServiceCollection();
+
+        Mock<IMetricRecorderScope> metricRecorderScopeMock = new();
+        Mock<IMetricRecorder> metricRecorderMock = new();
+
+        metricRecorderMock.Setup(m => m.RecordJob(It.IsAny<Job>())).Returns(metricRecorderScopeMock.Object);
+
+        services.AddSingleton(metricRecorderMock.Object);
+        services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobRunner>().Object);
+
+        IServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        JobsProcessorScopeManager scopeManager = new(true, serviceProvider);
+
+        using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
+        {
+            jobScope.InitializeScope(new TextJob { Id = Guid.NewGuid(), Text = string.Empty });
+
+            await jobScope.RunJobAsync(CancellationToken.None);
+        }
+
+        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Once);
+    }
+
+    [Test]
+    public void JobScopeRecordsMetricsWhenThrowingTest()
+    {
+        IServiceCollection services = new ServiceCollection();
+
+        Mock<IMetricRecorderScope> metricRecorderScopeMock = new();
+        Mock<IMetricRecorder> metricRecorderMock = new();
+
+        metricRecorderMock.Setup(m => m.RecordJob(It.IsAny<Job>())).Returns(metricRecorderScopeMock.Object);
+
+        services.AddSingleton(metricRecorderMock.Object);
+
+        Mock<IJobRunner> jobRunnerMock = new();
+        jobRunnerMock.Setup(j => j.RunAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>())).Throws<Exception>();
+        services.AddKeyedSingleton(nameof(TextJob), jobRunnerMock.Object);
+
+        IServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        JobsProcessorScopeManager scopeManager = new(true, serviceProvider);
+
+        using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
+        {
+            jobScope.InitializeScope(new TextJob { Id = Guid.NewGuid(), Text = string.Empty });
+
+            Action action = () => jobScope.RunJobAsync(CancellationToken.None).GetAwaiter().GetResult();
+            action.Should().Throw<Exception>();
+        }
+
+        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
+    }
+}

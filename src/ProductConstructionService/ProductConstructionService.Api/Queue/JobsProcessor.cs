@@ -69,9 +69,8 @@ public class JobsProcessor(
 
         try
         {
-
-            _logger.LogInformation("Starting attempt {attemptNumber} for job {jobId}, type {jobType}", message.DequeueCount, job.Id, job.GetType());
-            await jobScope.RunJob(cancellationToken);
+            _logger.LogInformation("Starting attempt {attemptNumber} for job {jobId}, type {jobType}", message.DequeueCount, job.Id, job.Type);
+            await jobScope.RunJobAsync(cancellationToken);
 
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
         }
