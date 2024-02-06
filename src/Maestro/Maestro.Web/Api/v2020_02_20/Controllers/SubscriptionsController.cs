@@ -1,6 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -8,12 +15,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers;
 
@@ -39,25 +40,33 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         _gitHubClientFactory = gitHubClientFactory;
     }
 
-    /// <summary>
-    ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
-    /// </summary>
-    /// <param name="sourceRepository"></param>
-    /// <param name="targetRepository"></param>
-    /// <param name="channelId"></param>
-    /// <param name="enabled"></param>
-    [HttpGet]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
-    [ValidateModelState]
-    public override IActionResult ListSubscriptions(
+    [ApiRemoved]
+    public sealed override IActionResult ListSubscriptions(
         string sourceRepository = null,
         string targetRepository = null,
         int? channelId = null,
         bool? enabled = null)
     {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
+    /// </summary>
+    [HttpGet]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
+    [ValidateModelState]
+    public IActionResult ListSubscriptions(
+        string sourceRepository = null,
+        string targetRepository = null,
+        int? channelId = null,
+        bool? enabled = null,
+        bool? sourceEnabled = null)
+    {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
-            .Include(s => s.LastAppliedBuild);
+            .Include(s => s.LastAppliedBuild)
+            .Include(s => s.ExcludedAssets);
 
         if (!string.IsNullOrEmpty(sourceRepository))
         {
@@ -79,6 +88,11 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             query = query.Where(sub => sub.Enabled == enabled.Value);
         }
 
+        if (sourceEnabled.HasValue)
+        {
+            query = query.Where(sub => sub.SourceEnabled == sourceEnabled.Value);
+        }
+
         List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
         return Ok(results);
     }
@@ -95,6 +109,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.ExcludedAssets)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
         if (subscription == null)
@@ -134,7 +149,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     [ValidateModelState]
     public async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
     {
-        Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id).Include(sub => sub.Channel)
+        Data.Models.Subscription subscription = await _context.Subscriptions
+            .Where(sub => sub.Id == id)
+            .Include(sub => sub.Channel)
+            .Include(sub => sub.ExcludedAssets)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -189,6 +207,20 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
+        if (update.SourceEnabled.HasValue)
+        {
+            subscription.SourceEnabled = update.SourceEnabled.Value;
+            doUpdate = true;
+        }
+
+        update.ExcludedAssets = [.. (update.ExcludedAssets?.OrderBy(a => a).ToList() ?? [])];
+        var currentSubscriptions = subscription.ExcludedAssets.Select(a => a.Filter).OrderBy(a => a);
+        if (!currentSubscriptions.SequenceEqual(update.ExcludedAssets))
+        {
+            subscription.ExcludedAssets = update.ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset }).ToList();
+            doUpdate = true;
+        }
+
         if (doUpdate)
         {
             Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscription);
@@ -216,8 +248,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     ///  Before inserting them into the database, we'll make sure they're either not a user's login or
     ///  that user is publicly a member of the Microsoft organization so we can store their login.
     /// </summary>
-    /// <param name="pullRequestFailureNotificationTags"></param>
-    /// <returns></returns>
     private async Task<bool> AllNotificationTagsValid(string pullRequestFailureNotificationTags)
     {
         string[] allTags = pullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries);
