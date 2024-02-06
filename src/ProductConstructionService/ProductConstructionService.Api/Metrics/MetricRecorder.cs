@@ -7,7 +7,7 @@ using ProductConstructionService.ServiceDefaults;
 
 namespace ProductConstructionService.Api.Metrics;
 
-public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> logger)
+public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> logger) : IMetricRecorder
 {
     private readonly ILogger<MetricRecorder> _logger = logger;
     private readonly Meter _meter = meterFactory.Create(MetricConsts.JobMeterName);
