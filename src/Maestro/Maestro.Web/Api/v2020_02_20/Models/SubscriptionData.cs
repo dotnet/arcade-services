@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace Maestro.Web.Api.v2020_02_20.Models;
 
@@ -22,21 +24,24 @@ public class SubscriptionData
 
     public bool? Enabled { get; set; }
 
+    public bool? SourceEnabled { get; set; }
+
     [Required]
     public v2018_07_16.Models.SubscriptionPolicy Policy { get; set; }
 
     public string PullRequestFailureNotificationTags { get; set; }
 
-    public Data.Models.Subscription ToDb()
+    public IReadOnlyCollection<string> ExcludedAssets { get; set; }
+
+    public Data.Models.Subscription ToDb() => new()
     {
-        return new Data.Models.Subscription
-        {
-            SourceRepository = SourceRepository,
-            TargetRepository = TargetRepository,
-            TargetBranch = TargetBranch,
-            PolicyObject = Policy.ToDb(),
-            Enabled = Enabled ?? true,
-            PullRequestFailureNotificationTags = PullRequestFailureNotificationTags
-        };
-    }
+        SourceRepository = SourceRepository,
+        TargetRepository = TargetRepository,
+        TargetBranch = TargetBranch,
+        PolicyObject = Policy.ToDb(),
+        Enabled = Enabled ?? true,
+        SourceEnabled = SourceEnabled ?? false,
+        PullRequestFailureNotificationTags = PullRequestFailureNotificationTags,
+        ExcludedAssets = ExcludedAssets == null ? [] : [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
+    };
 }

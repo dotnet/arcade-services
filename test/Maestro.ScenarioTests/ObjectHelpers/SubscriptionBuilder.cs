@@ -20,7 +20,7 @@ public class SubscriptionBuilder
         UpdateFrequency updateFrequency, bool batchable, List<string> mergePolicyNames = null, List<string> ignoreChecks = null,
         string failureNotificationTags = null)
     {
-        var expectedSubscription = new Subscription(Guid.Parse(subscriptionId), true, repo1Uri, repo2Uri, targetBranch, failureNotificationTags)
+        var expectedSubscription = new Subscription(Guid.Parse(subscriptionId), true, false, repo1Uri, repo2Uri, targetBranch, failureNotificationTags, ImmutableList<string>.Empty)
         {
             Channel = new Channel(42, channelName, "test"),
             Policy = new SubscriptionPolicy(batchable, updateFrequency)

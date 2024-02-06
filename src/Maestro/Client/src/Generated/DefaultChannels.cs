@@ -80,11 +80,11 @@ namespace Microsoft.DotNet.Maestro.Client
 
             if (!string.IsNullOrEmpty(repository))
             {
-                _url.AppendQuery("repository", MaestroApi.Serialize(repository));
+                _url.AppendQuery("repository", Client.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _url.AppendQuery("branch", MaestroApi.Serialize(branch));
+                _url.AppendQuery("branch", Client.Serialize(branch));
             }
             if (channelId != default)
             {
@@ -94,7 +94,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -174,7 +174,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/default-channels",
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -239,10 +239,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
+                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -315,10 +315,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
+                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
@@ -385,10 +385,10 @@ namespace Microsoft.DotNet.Maestro.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(MaestroApi.Serialize(id))),
+                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            _url.AppendQuery("api-version", MaestroApi.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())

@@ -4,6 +4,7 @@ using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    partial class BuildAssetRegistryContextModelSnapshot : ModelSnapshot
+    [Migration("20240202111944_CodeEnabledSubscriptions")]
+    partial class CodeEnabledSubscriptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -253,24 +255,6 @@ namespace Maestro.Data.Migrations
                     b.ToTable("Builds");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
-                {
-                    b.Property<int>("BuildId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ChannelId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("DateTimeAdded")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("BuildId", "ChannelId");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("BuildChannels");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.BuildDependency", b =>
                 {
                     b.Property<int>("BuildId")
@@ -290,6 +274,24 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("DependentBuildId");
 
                     b.ToTable("BuildDependencies");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
+                {
+                    b.Property<int>("BuildId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("DateTimeAdded")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("BuildId", "ChannelId");
+
+                    b.HasIndex("ChannelId");
+
+                    b.ToTable("BuildChannels");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
@@ -320,30 +322,6 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("BuildId");
 
                     b.ToTable("BuildIncoherencies");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("Classification")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Channels");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.DefaultChannel", b =>
@@ -440,6 +418,30 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("ChannelId");
 
                     b.ToTable("GoalTime");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Channels");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
@@ -891,25 +893,6 @@ namespace Maestro.Data.Migrations
                         .HasForeignKey("AssetId");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Build", "Build")
-                        .WithMany("BuildChannels")
-                        .HasForeignKey("BuildId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
-                        .WithMany("BuildChannels")
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Build");
-
-                    b.Navigation("Channel");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.BuildDependency", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Build", "Build")
@@ -927,6 +910,25 @@ namespace Maestro.Data.Migrations
                     b.Navigation("Build");
 
                     b.Navigation("DependentBuild");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Build", "Build")
+                        .WithMany("BuildChannels")
+                        .HasForeignKey("BuildId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
+                        .WithMany("BuildChannels")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Build");
+
+                    b.Navigation("Channel");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
