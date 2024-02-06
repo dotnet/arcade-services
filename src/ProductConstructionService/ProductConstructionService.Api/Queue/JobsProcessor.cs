@@ -75,6 +75,11 @@ public class JobsProcessor(
 
             await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
         }
+        // If the cancellation token gets cancelled, don't retry, just exit without deleting the message, we'll handle it later
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Processing job {jobId} attempt {attempt}/{maxAttempts} failed",
