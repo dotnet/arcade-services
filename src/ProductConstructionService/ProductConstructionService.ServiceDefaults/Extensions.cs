@@ -16,8 +16,6 @@ namespace Microsoft.Extensions.Hosting;
 
 public static class Extensions
 {
-    const string JobMetric = "ProductConstructionService.Api.Queue";
-
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
         builder.ConfigureOpenTelemetry();
