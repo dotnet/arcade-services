@@ -10,9 +10,11 @@ namespace ProductConstructionService.Api.Queue;
 
 public class JobScope(
     Action finalizer,
-    IServiceScope serviceScope) : IDisposable
+    IServiceScope serviceScope,
+    MetricRecorder metricRecorder) : IDisposable
 {
     private readonly IServiceScope _serviceScope = serviceScope;
+    private readonly MetricRecorder _metricRecorder = metricRecorder;
     private Job? _job = null;
 
     public void Dispose()
@@ -41,7 +43,6 @@ public class JobScope(
         
         stopwatch.Stop();
 
-        var durationMetricRecorder = _serviceScope.ServiceProvider.GetRequiredService<MetricRecorder>();
-        durationMetricRecorder.RecordJobDuration(_job.GetType().Name, stopwatch.ElapsedMilliseconds);
+        _metricRecorder.RecordJobDuration(_job.GetType().Name, stopwatch.ElapsedMilliseconds);
     }
 }

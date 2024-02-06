@@ -7,6 +7,6 @@ public static class MetricsConfiguration
 {
     public static void AddMetricsRecorders(this WebApplicationBuilder builder)
     {
-        builder.Services.AddTransient<MetricRecorder>();
+        builder.Services.AddSingleton<MetricRecorder>();
     }
 }
