@@ -70,7 +70,7 @@ public class JobScopeTests
             action.Should().Throw<Exception>();
         }
 
-        telemetryRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        telemetryRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
         telemetryScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 }
