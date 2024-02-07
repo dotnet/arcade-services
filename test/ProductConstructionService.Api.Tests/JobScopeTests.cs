@@ -17,10 +17,11 @@ public class JobScopeTests
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<IMetricRecorderScope> metricRecorderScopeMock = new();
+        Mock<IMetricScope> metricRecorderScopeMock = new();
         Mock<IMetricRecorder> metricRecorderMock = new();
+        TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
-        metricRecorderMock.Setup(m => m.RecordJob(It.IsAny<Job>())).Returns(metricRecorderScopeMock.Object);
+        metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
         services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobRunner>().Object);
@@ -31,7 +32,7 @@ public class JobScopeTests
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {
-            jobScope.InitializeScope(new TextJob { Id = Guid.NewGuid(), Text = string.Empty });
+            jobScope.InitializeScope(textJob);
 
             await jobScope.RunJobAsync(CancellationToken.None);
         }
@@ -45,10 +46,11 @@ public class JobScopeTests
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<IMetricRecorderScope> metricRecorderScopeMock = new();
+        Mock<IMetricScope> metricRecorderScopeMock = new();
         Mock<IMetricRecorder> metricRecorderMock = new();
+        TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
-        metricRecorderMock.Setup(m => m.RecordJob(It.IsAny<Job>())).Returns(metricRecorderScopeMock.Object);
+        metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
 
@@ -62,7 +64,7 @@ public class JobScopeTests
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {
-            jobScope.InitializeScope(new TextJob { Id = Guid.NewGuid(), Text = string.Empty });
+            jobScope.InitializeScope(textJob);
 
             Action action = () => jobScope.RunJobAsync(CancellationToken.None).GetAwaiter().GetResult();
             action.Should().Throw<Exception>();

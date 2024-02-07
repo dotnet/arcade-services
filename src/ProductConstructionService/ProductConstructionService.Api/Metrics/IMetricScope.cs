@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Metrics;
 
-public interface IMetricRecorderScope : IDisposable
+public interface IMetricScope : IDisposable
 {
     void SetSuccess();
 }

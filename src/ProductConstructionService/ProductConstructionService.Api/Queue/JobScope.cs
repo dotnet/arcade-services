@@ -36,7 +36,7 @@ public class JobScope(
 
         var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.Type);
 
-        using (IMetricRecorderScope metricScope  = _metricRecorder.RecordJob(_job))
+        using (IMetricScope metricScope  = _metricRecorder.RecordJob(_job))
         {
             await jobRunner.RunAsync(_job, cancellationToken);
             metricScope.SetSuccess();

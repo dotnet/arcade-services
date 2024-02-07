@@ -7,5 +7,5 @@ namespace ProductConstructionService.Api.Metrics;
 
 public interface IMetricRecorder
 {
-    public IMetricRecorderScope RecordJob(Job job);
+    public IMetricScope RecordJob(Job job);
 }

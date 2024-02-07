@@ -14,7 +14,7 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
     private readonly Meter _meter = meterFactory.Create(MetricConsts.JobMeterName);
     private readonly Dictionary<string, JobMetricRecorderInstruments> _jobMetricRecorderInstruments = new();
 
-    public IMetricRecorderScope RecordJob(Job job)
+    public IMetricScope RecordJob(Job job)
     {
         var instrumentName = $"job.{job.Type}";
 
@@ -31,32 +31,28 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
             _jobMetricRecorderInstruments.Add(instrumentName, instruments);
         }
 
-        return new MetricRecorderScope(job, instruments, _logger);
+        return new MetricScope($"{job.Type} {job.Id}", instruments, _logger);
     }
 
-    private class MetricRecorderScope(Job job, JobMetricRecorderInstruments instruments, ILogger logger) : IMetricRecorderScope
+    private class MetricScope(string metricName, JobMetricRecorderInstruments instruments, ILogger logger) : IMetricScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
-        private bool _jobSuccessful = false;
+        private bool _successful = false;
+        private readonly string _metricName = metricName;
 
         public void SetSuccess()
         {
-            _jobSuccessful = true;
+            _successful = true;
         }
 
         public void Dispose()
         {
             _stopwatch.Stop();
-            instruments.Histogram.Record(_stopwatch.ElapsedMilliseconds);
-            logger.LogInformation("{jobType} {jobId} took {duration} to complete", job.Type, job.Id, TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds));
-            if (_jobSuccessful)
-            {
-                instruments.SuccessCounter.Add(1);
-            }
-            else
-            {
-                instruments.FailureCounter.Add(1);
-            }
+            instruments.Record(_stopwatch.ElapsedMilliseconds, _successful);
+            logger.LogInformation("{metricName} took {duration} to complete {status}",
+                _metricName,
+                TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),
+                _successful ? "successfully" : "unsuccessfully");
         }
     }
 }

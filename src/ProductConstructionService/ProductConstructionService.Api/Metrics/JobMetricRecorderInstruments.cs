@@ -5,16 +5,23 @@ using System.Diagnostics.Metrics;
 
 namespace ProductConstructionService.Api.Metrics;
 
-public class JobMetricRecorderInstruments
+public class JobMetricRecorderInstruments(Histogram<long> histogram, Counter<int> successCounter, Counter<int> failureCounter)
 {
-    public JobMetricRecorderInstruments(Histogram<long> histogram, Counter<int> successCounter, Counter<int> failureCounter)
-    {
-        Histogram = histogram;
-        SuccessCounter = successCounter;
-        FailureCounter = failureCounter;
-    }
+    private Histogram<long> _histogram { get; } = histogram;
+    private Counter<int> _successCounter { get; } = successCounter;
+    private Counter<int> _failureCounter { get; } = failureCounter;
 
-    public Histogram<long> Histogram { get; }
-    public Counter<int> SuccessCounter { get; }
-    public Counter<int> FailureCounter { get; }
+    public void Record(long duration, bool success)
+    {
+        _histogram.Record(duration);
+        if (success)
+        {
+            _successCounter.Add(1);
+        }
+        else
+        {
+            _failureCounter.Add(1);
+        }
+    }   
 }
+
