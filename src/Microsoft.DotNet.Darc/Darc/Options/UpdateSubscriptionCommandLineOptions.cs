@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -35,6 +36,12 @@ internal class UpdateSubscriptionCommandLineOptions : CommandLineOptions
 
     [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags to notify for dependency flow failures from this subscription")]
     public string FailureNotificationTags { get; set; }
+
+    [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
+    public bool? SourceEnabled { get; set; }
+
+    [Option("excluded-assets", Separator = ';', HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.", Default = "")]
+    public IEnumerable<string> ExcludedAssets { get; set; }
 
     public override Operation GetOperation()
     {

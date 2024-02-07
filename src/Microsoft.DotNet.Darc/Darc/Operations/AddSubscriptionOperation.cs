@@ -33,7 +33,6 @@ internal class AddSubscriptionOperation : Operation
     /// <summary>
     /// Implements the 'add-subscription' operation
     /// </summary>
-    /// <param name="options"></param>
     public override async Task<int> ExecuteAsync()
     {
         IBarApiClient barClient = Provider.GetRequiredService<IBarApiClient>();
@@ -118,7 +117,7 @@ internal class AddSubscriptionOperation : Operation
         bool batchable = _options.Batchable;
         bool? sourceEnabled = _options.SourceEnabled;
         string failureNotificationTags = _options.PullRequestFailureNotificationTags;
-        List<string> excludedAssets = [.._options.ExcludedAssets];
+        IReadOnlyCollection<string> excludedAssets = [.._options.ExcludedAssets];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API
@@ -168,11 +167,15 @@ internal class AddSubscriptionOperation : Operation
                 excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
-            int exitCode = _options.ReadStandardIn ? uxManager.ReadFromStdIn(addSubscriptionPopup) : uxManager.PopUp(addSubscriptionPopup);
+            int exitCode = _options.ReadStandardIn
+                ? uxManager.ReadFromStdIn(addSubscriptionPopup)
+                : uxManager.PopUp(addSubscriptionPopup);
+
             if (exitCode != Constants.SuccessCode)
             {
                 return exitCode;
             }
+
             channel = addSubscriptionPopup.Channel;
             sourceRepository = addSubscriptionPopup.SourceRepository;
             targetRepository = addSubscriptionPopup.TargetRepository;
@@ -181,7 +184,14 @@ internal class AddSubscriptionOperation : Operation
             mergePolicies = addSubscriptionPopup.MergePolicies;
             batchable = addSubscriptionPopup.Batchable;
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
+            sourceEnabled = addSubscriptionPopup.SourceEnabled;
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
+        }
+
+        if (excludedAssets.Any() && sourceEnabled.HasValue && !sourceEnabled.Value)
+        {
+            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            return Constants.ErrorCode;
         }
 
         try

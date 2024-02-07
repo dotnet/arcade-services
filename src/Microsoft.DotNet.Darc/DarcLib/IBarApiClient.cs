@@ -40,7 +40,7 @@ public interface IBarApiClient : IBasicBarClient
         List<MergePolicy> mergePolicies,
         string failureNotificationTags,
         bool sourceEnabled,
-        List<string> excludedAssets);
+        IReadOnlyCollection<string> excludedAssets);
 
     /// <summary>
     ///     Update an existing subscription

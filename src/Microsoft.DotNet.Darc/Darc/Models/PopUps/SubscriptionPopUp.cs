@@ -189,6 +189,6 @@ public abstract class SubscriptionPopUp : EditorPopUp
         public string SourceEnabled { get; set; }
 
         [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-        public List<string> ExcludedAssets { get; set; }
+        public IReadOnlyCollection<string> ExcludedAssets { get; set; }
     }
 }

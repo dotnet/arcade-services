@@ -48,7 +48,8 @@ internal class UpdateSubscriptionOperation : Operation
         bool enabled = subscription.Enabled;
         string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
         List<MergePolicy> mergePolicies;
-
+        bool sourceEnabled = subscription.SourceEnabled;
+        IImmutableList<string> excludedAssets = subscription.ExcludedAssets;
 
         if (UpdatingViaCommandLine())
         {
@@ -82,6 +83,16 @@ internal class UpdateSubscriptionOperation : Operation
                 failureNotificationTags = _options.FailureNotificationTags;
             }
             mergePolicies = [.. subscription.Policy.MergePolicies];
+
+            if (_options.SourceEnabled.HasValue)
+            {
+                sourceEnabled = _options.SourceEnabled.Value;
+            }
+
+            if (_options.ExcludedAssets != null)
+            {
+                excludedAssets = _options.ExcludedAssets.ToImmutableList();
+            }
         }
         else
         {
@@ -93,7 +104,9 @@ internal class UpdateSubscriptionOperation : Operation
                 (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
                 Constants.AvailableFrequencies,
                 Constants.AvailableMergePolicyYamlHelp,
-                subscription.PullRequestFailureNotificationTags ?? string.Empty);
+                subscription.PullRequestFailureNotificationTags ?? string.Empty,
+                sourceEnabled,
+                excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
 
@@ -111,17 +124,29 @@ internal class UpdateSubscriptionOperation : Operation
             enabled = updateSubscriptionPopUp.Enabled;
             failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
             mergePolicies = updateSubscriptionPopUp.MergePolicies;
+            sourceEnabled = updateSubscriptionPopUp.SourceEnabled;
+            excludedAssets = updateSubscriptionPopUp.ExcludedAssets.ToImmutableList();
         }
+
+        if (excludedAssets.Any() && !sourceEnabled)
+        {
+            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            return Constants.ErrorCode;
+        }
+
         try
         {
-            SubscriptionUpdate subscriptionToUpdate = new SubscriptionUpdate
+            var subscriptionToUpdate = new SubscriptionUpdate
             {
                 ChannelName = channel ?? subscription.Channel.Name,
                 SourceRepository = sourceRepository ?? subscription.SourceRepository,
                 Enabled = enabled,
                 Policy = subscription.Policy,
-                PullRequestFailureNotificationTags = failureNotificationTags
+                PullRequestFailureNotificationTags = failureNotificationTags,
+                SourceEnabled = sourceEnabled,
+                ExcludedAssets = excludedAssets,
             };
+
             subscriptionToUpdate.Policy.Batchable = batchable;
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
@@ -176,15 +201,15 @@ internal class UpdateSubscriptionOperation : Operation
         }
     }
 
+    // If any specific values come from the command line, we'll skip the popup.
+    // This enables bulk update for users who have many subscriptions, as the text-editor approach can be slow for them.
     private bool UpdatingViaCommandLine()
-    {
-        // If any specific values come from the command line, we'll skip the popup.
-        // This enables bulk update for users who have many subscriptions, as the text-editor approach can be slow for them.
-        return _options.Channel != null ||
-               _options.SourceRepoUrl != null ||
-               _options.Batchable != null ||
-               _options.UpdateFrequency != null ||
-               _options.Enabled != null || 
-               _options.FailureNotificationTags != null;
-    }
+        => _options.Channel != null
+           || _options.SourceRepoUrl != null
+           || _options.Batchable != null
+           || _options.UpdateFrequency != null
+           || _options.Enabled != null
+           || _options.FailureNotificationTags != null
+           || _options.SourceEnabled != null
+           || _options.ExcludedAssets != null;
 }

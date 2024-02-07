@@ -247,7 +247,7 @@ public class BarApiClient : IBarApiClient
         List<MergePolicy> mergePolicies,
         string failureNotificationTags,
         bool sourceEnabled,
-        List<string> excludedAssets)
+        IReadOnlyCollection<string> excludedAssets)
     {
         var subscriptionData = new SubscriptionData(
             channelName: channelName,
