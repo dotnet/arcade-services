@@ -31,7 +31,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
-        IReadOnlyCollection<string> excludedAssets)
+        List<string> excludedAssets)
         : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
             new SubscriptionData
             {
@@ -65,7 +65,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
             new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
             new("", true),
             new("ExcludedAssets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
-            new("Asterisks can be used to filter whole namespaces, e.g. - 'Microsoft.DotNet.Arcade.*'", true),
+            new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
             new("", true),
             new("For additional information about subscriptions, please see", true),
             new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),

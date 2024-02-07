@@ -49,7 +49,7 @@ internal class UpdateSubscriptionOperation : Operation
         string failureNotificationTags = subscription.PullRequestFailureNotificationTags;
         List<MergePolicy> mergePolicies;
         bool sourceEnabled = subscription.SourceEnabled;
-        IImmutableList<string> excludedAssets = subscription.ExcludedAssets;
+        List<string> excludedAssets = [..subscription.ExcludedAssets];
 
         if (UpdatingViaCommandLine())
         {
@@ -91,7 +91,7 @@ internal class UpdateSubscriptionOperation : Operation
 
             if (_options.ExcludedAssets != null)
             {
-                excludedAssets = _options.ExcludedAssets.ToImmutableList();
+                excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
             }
         }
         else
@@ -125,7 +125,7 @@ internal class UpdateSubscriptionOperation : Operation
             failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
             mergePolicies = updateSubscriptionPopUp.MergePolicies;
             sourceEnabled = updateSubscriptionPopUp.SourceEnabled;
-            excludedAssets = updateSubscriptionPopUp.ExcludedAssets.ToImmutableList();
+            excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
         if (excludedAssets.Any() && !sourceEnabled)
@@ -144,7 +144,7 @@ internal class UpdateSubscriptionOperation : Operation
                 Policy = subscription.Policy,
                 PullRequestFailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets,
+                ExcludedAssets = excludedAssets.ToImmutableList(),
             };
 
             subscriptionToUpdate.Policy.Batchable = batchable;

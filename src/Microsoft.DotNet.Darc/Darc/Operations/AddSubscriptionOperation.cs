@@ -103,7 +103,7 @@ internal class AddSubscriptionOperation : Operation
             return Constants.ErrorCode;
         }
 
-        if (_options.ExcludedAssets.Any() && _options.SourceEnabled.HasValue && !_options.SourceEnabled.HasValue)
+        if (_options.ExcludedAssets != null && _options.SourceEnabled.HasValue && !_options.SourceEnabled.HasValue)
         {
             Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
             return Constants.ErrorCode;
@@ -117,7 +117,7 @@ internal class AddSubscriptionOperation : Operation
         bool batchable = _options.Batchable;
         bool? sourceEnabled = _options.SourceEnabled;
         string failureNotificationTags = _options.PullRequestFailureNotificationTags;
-        IReadOnlyCollection<string> excludedAssets = [.._options.ExcludedAssets];
+        List<string> excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API

@@ -65,7 +65,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
-        IReadOnlyCollection<string> excludedAssets)
+        List<string> excludedAssets)
         : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
               {
