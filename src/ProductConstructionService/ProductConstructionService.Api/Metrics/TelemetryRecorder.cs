@@ -30,7 +30,7 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
         public void Dispose()
         {
             _stopwatch.Stop();
-            customDimensions.Add("Successful", _successful.ToString());
+            customDimensions.Add("Success", _successful.ToString());
             customDimensions.Add("Duration", _stopwatch.ToString());
             telemetryClient.TrackEvent(telemetryName, customDimensions);
             logger.LogInformation("{telemetryName} took {duration} to complete {status}",
