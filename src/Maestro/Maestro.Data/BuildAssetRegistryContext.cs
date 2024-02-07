@@ -57,6 +57,7 @@ public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, Iden
 
     public DbSet<Asset> Assets { get; set; }
     public DbSet<AssetLocation> AssetLocations { get; set; }
+    public DbSet<AssetFilter> AssetFilters { get; set; }
     public DbSet<Build> Builds { get; set; }
     public DbSet<BuildChannel> BuildChannels { get; set; }
     public DbSet<BuildDependency> BuildDependencies { get; set; }

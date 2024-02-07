@@ -53,7 +53,7 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
     }
 
     protected override async Task CopyVmrForCurrentTest()

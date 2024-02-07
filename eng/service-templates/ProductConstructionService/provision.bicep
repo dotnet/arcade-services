@@ -1,18 +1,17 @@
 @minLength(1)
 @description('Primary location for all resources')
-param location string = 'northcentralus'
-param stageLocation string = 'northcentralusstage'
+param location string = 'westus2'
 
 @minLength(5)
 @maxLength(50)
 @description('Name of the Azure Container Registry resource into which container images will be published')
 param containerRegistryName string = 'productconstructionint'
 
-@description('CPU cores allocated to a single container instance, e.g., 0.5')
-param containerCpuCoreCount string = '0.25'
+@description('CPU cores allocated to a single container instance')
+param containerCpuCoreCount string = '1.0'
 
-@description('Memory allocated to a single container instance, e.g., 1Gi')
-param containerMemory string = '0.5Gi'
+@description('Memory allocated to a single container instance')
+param containerMemory string = '2Gi'
 
 @description('aspnetcore environment')
 @allowed([
@@ -43,6 +42,9 @@ param productConstructionServiceName string = 'product-construction-int'
 @description('Storage account name')
 param storageAccountName string = 'productconstructionint'
 
+@description('Name of the identity used for the container apps')
+param identityName string = 'ProductConstructionServiceInt'
+
 @description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
 var containerImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
@@ -64,7 +66,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-previ
 // the container apps environment
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-preview' = {
   name: containerAppsEnvironmentName
-  location: stageLocation
+  location: location
   properties: {
     appLogsConfiguration: {
         destination: 'log-analytics'
@@ -73,6 +75,12 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-04-01-
             sharedKey: logAnalytics.listKeys().primarySharedKey
         }
     }
+    workloadProfiles: [
+        {
+            name: 'Consumption'
+            workloadProfileType: 'Consumption'
+        }
+    ]
   }
 }
 
@@ -96,28 +104,31 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
   }
 }
 
-// TODO: uncomment when https://github.com/dotnet/arcade-services/issues/3180 is resolved
-// identity for the container apps
-// resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-//   name: identityName
-//   location: location
-// }
 
-// var principalId = identity.properties.principalId
+resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: identityName
+  location: location
+}
 
-// // azure system role for setting up acr pull access
-// var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+var principalId = identity.properties.principalId
 
-// // allow acr pulls to the identity used for the aca's
-// resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
-//   name: guid(subscription().id, resourceGroup().id, acrPullRole)
-//   properties: {
-//       roleDefinitionId: acrPullRole
-//       principalType: 'ServicePrincipal'
-//       principalId: principalId
-//   }
-// }
+// azure system role for setting up acr pull access
+var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+// azure system role for setting secret access
+var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+// azure system role for setting storage queue access
+var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
+
+// allow acr pulls to the identity used for the aca's
+resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: containerRegistry // Use when specifying a scope that is different than the deployment scope
+  name: guid(subscription().id, resourceGroup().id, acrPullRole)
+  properties: {
+      roleDefinitionId: acrPullRole
+      principalType: 'ServicePrincipal'
+      principalId: principalId
+  }
+}
 
 // application insights for service logging
 resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -161,72 +172,78 @@ var env = [
     }
 ]
 
-// apiservice - the app's back-end
-resource apiservice 'Microsoft.App/containerApps@2023-04-01-preview' = {
-  name: productConstructionServiceName
-  location: stageLocation
-  properties: {
-      managedEnvironmentId: containerAppsEnvironment.id
-      configuration: {
-        activeRevisionsMode: 'Multiple'
-        maxInactiveRevisions: 5
-        ingress: {
-            external: true
-            targetPort: 8080
-            transport: 'http'
-        }
-        dapr: { enabled: false }
-        secrets: [
-            {
-                name: 'container-registry-username'
-                value: containerRegistry.listCredentials().username
+// container app hosting the Product Construction Service
+resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
+    name: productConstructionServiceName
+    location: location
+    identity: {
+        type: 'UserAssigned'
+        userAssignedIdentities: { '${identity.id}' : {}}
+    }
+    properties: {
+        managedEnvironmentId: containerAppsEnvironment.id
+        configuration: {
+            activeRevisionsMode: 'Multiple'
+            maxInactiveRevisions: 5
+            ingress: {
+                external: true
+                targetPort: 8080
+                transport: 'http'
             }
-            {
-                name: 'container-registry-password'
-                value: containerRegistry.listCredentials().passwords[0].value
-            }
-        ]
-        registries: [
-            {
-                server: '${containerRegistryName}.azurecr.io'
-                username: containerRegistry.listCredentials().username
-                passwordSecretRef: 'container-registry-password'
-            }
-        ]
-      }
-      template: {
-          scale: {
-              minReplicas: 1
-              maxReplicas: 1
-          }
-          serviceBinds: []
-          containers: [ 
-            {
-                image: containerImageName
-                name: 'api'
-                env: env
-                resources: {
-                    cpu: json(containerCpuCoreCount)
-                    memory: containerMemory
+            dapr: { enabled: false }
+            registries: [
+                {
+                    server: '${containerRegistryName}.azurecr.io'
+                    identity: identity.id
                 }
-                probes: [
-                    {
-                        httpGet: {
-                            path: '/health'
-                            port: 8080
-                            scheme: 'HTTP'
-                        }
-                        initialDelaySeconds: 5
-                        periodSeconds: 10
-                        successThreshold: 1
-                        failureThreshold: 3
-                        type: 'Startup'
+            ]
+        }
+        template: {
+            scale: {
+                minReplicas: 1
+                maxReplicas: 1
+            }
+            serviceBinds: []
+            containers: [ 
+                {
+                    image: containerImageName
+                    name: 'api'
+                    env: env
+                    resources: {
+                        cpu: json(containerCpuCoreCount)
+                        memory: containerMemory
+                        ephemeralStorage: '50Gi'
                     }
-                ]
-            } 
-        ]
-      }
-  }
+                    volumeMounts: [
+                        {
+                            volumeName: 'data'
+                            mountPath: '/mnt/datadir'
+                        }
+                    ]
+                    probes: [
+                        {
+                            httpGet: {
+                                path: '/health'
+                                port: 8080
+                                scheme: 'HTTP'
+                            }
+                            initialDelaySeconds: 5
+                            periodSeconds: 10
+                            successThreshold: 1
+                            failureThreshold: 3
+                            type: 'Startup'
+                        }
+                    ]
+                } 
+            ]
+            volumes: [
+                {
+                    name: 'data'
+                    storageType: 'EmptyDir'
+                }
+            ]
+        }
+    }
 }
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
@@ -278,6 +295,17 @@ resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvi
     }
 }
 
+// allow secret access to the identity used for the aca's
+resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: keyVault // Use when specifying a scope that is different than the deployment scope
+  name: guid(subscription().id, resourceGroup().id, kvSecretUserRole)
+  properties: {
+      roleDefinitionId: kvSecretUserRole
+      principalType: 'ServicePrincipal'
+      principalId: principalId
+  }
+}
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     name: storageAccountName
     location: location
@@ -298,4 +326,15 @@ resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServ
 resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
     name: 'pcs-jobs'
     parent: storageAccountQueueService
+}
+
+// allow storage queue access to the identity used for the aca's
+resource storageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: storageAccount // Use when specifying a scope that is different than the deployment scope
+  name: guid(subscription().id, resourceGroup().id, storageQueueContrubutorRole)
+  properties: {
+      roleDefinitionId: storageQueueContrubutorRole
+      principalType: 'ServicePrincipal'
+      principalId: principalId
+  }
 }

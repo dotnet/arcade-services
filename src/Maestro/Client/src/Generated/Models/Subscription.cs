@@ -2,20 +2,23 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(Guid id, bool enabled, string sourceRepository, string targetRepository, string targetBranch, string pullRequestFailureNotificationTags)
+        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string pullRequestFailureNotificationTags, IImmutableList<string> excludedAssets)
         {
             Id = id;
             Enabled = enabled;
+            SourceEnabled = sourceEnabled;
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
             PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
+            ExcludedAssets = excludedAssets;
         }
 
         [JsonProperty("id")]
@@ -42,7 +45,13 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("enabled")]
         public bool Enabled { get; }
 
+        [JsonProperty("sourceEnabled")]
+        public bool SourceEnabled { get; }
+
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; }
+
+        [JsonProperty("excludedAssets")]
+        public IImmutableList<string> ExcludedAssets { get; }
     }
 }

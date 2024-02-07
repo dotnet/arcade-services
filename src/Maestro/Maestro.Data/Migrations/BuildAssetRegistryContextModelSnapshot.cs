@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.4")
+                .HasAnnotation("ProductVersion", "6.0.26")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
@@ -154,6 +154,27 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("Name", "Version");
 
                     b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.AssetFilter", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("Filter")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("SubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.ToTable("AssetFilter");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.AssetLocation", b =>
@@ -600,6 +621,9 @@ namespace Maestro.Data.Migrations
                     b.Property<string>("PullRequestFailureNotificationTags")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("SourceEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("SourceRepository")
                         .HasColumnType("nvarchar(max)");
 
@@ -853,6 +877,13 @@ namespace Maestro.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.AssetFilter", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Subscription", null)
+                        .WithMany("ExcludedAssets")
+                        .HasForeignKey("SubscriptionId");
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.AssetLocation", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Asset", null)
@@ -1079,6 +1110,11 @@ namespace Maestro.Data.Migrations
             modelBuilder.Entity("Maestro.Data.Models.Repository", b =>
                 {
                     b.Navigation("Branches");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.Subscription", b =>
+                {
+                    b.Navigation("ExcludedAssets");
                 });
 #pragma warning restore 612, 618
         }

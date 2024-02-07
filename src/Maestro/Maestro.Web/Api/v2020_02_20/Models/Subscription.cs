@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Maestro.Web.Api.v2020_02_20.Models;
 
@@ -18,8 +20,10 @@ public class Subscription
         TargetRepository = other.TargetRepository;
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
+        SourceEnabled = other.SourceEnabled;
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
+        ExcludedAssets = other.ExcludedAssets != null ? [..other.ExcludedAssets.Select(s => s.Filter)] : [];
     }
 
     public Guid Id { get; }
@@ -38,5 +42,9 @@ public class Subscription
 
     public bool Enabled { get; }
 
+    public bool SourceEnabled { get; }
+
     public string PullRequestFailureNotificationTags { get; }
+
+    public IReadOnlyCollection<string> ExcludedAssets { get; }
 }

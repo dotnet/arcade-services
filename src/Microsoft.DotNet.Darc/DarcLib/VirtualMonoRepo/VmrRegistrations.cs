@@ -55,6 +55,9 @@ public static class VmrRegistrations
         services.TryAddTransient<VmrCloakedFileScanner>();
         services.TryAddTransient<VmrBinaryFileScanner>();
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
+        services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
+        services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
+
         services.AddHttpClient("GraphQL", httpClient =>
         {
             httpClient.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");

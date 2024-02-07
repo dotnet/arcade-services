@@ -23,13 +23,6 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         _logger = logger;
     }
 
-    public CoherencyUpdateResolver(
-        IBasicBarClient barClient,
-        ILogger<CoherencyUpdateResolver> logger)
-        : this(barClient, (ILogger)logger)
-    {
-    }
-
     public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
         IEnumerable<DependencyDetail> dependencies,
         IRemoteFactory remoteFactory)

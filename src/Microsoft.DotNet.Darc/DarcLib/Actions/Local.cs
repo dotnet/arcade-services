@@ -68,15 +68,13 @@ public class Local : ILocal
         await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail arcadeItem = dependencies.FirstOrDefault(
-            i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+        DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
         IRemote arcadeRemote = null;
 
         if (arcadeItem != null)
         {
-            arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-            targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            targetDotNetVersion = await _fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
         var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
@@ -89,7 +87,7 @@ public class Local : ILocal
                 List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                 filesToUpdate.AddRange(engCommonFiles);
 
-                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync("eng/common");
+                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync(Constants.CommonScriptFilesPath);
 
                 foreach (GitFile file in localEngCommonFiles)
                 {

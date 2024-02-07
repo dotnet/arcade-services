@@ -25,7 +25,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / Constants.GetRepoFileName(Constants.ProductRepoName),
             VmrPath / VmrInfo.SourcesDir / Constants.ProductRepoName / _fileRelativePath,
@@ -55,7 +55,7 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
         
         Directory.CreateDirectory(ProductRepoPath / "content");
         File.WriteAllText(

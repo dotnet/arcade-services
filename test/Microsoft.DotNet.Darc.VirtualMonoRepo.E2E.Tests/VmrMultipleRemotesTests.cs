@@ -44,7 +44,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             installerFilePath,
             dependencyFilePath,
@@ -97,7 +97,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
         await InitializeRepoAtLastCommit(Constants.DependencyRepoName, FirstDependencyPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             dependencyFilePath,
         };
@@ -132,7 +132,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
             { Constants.InstallerRepoName, new List<string> { Constants.DependencyRepoName } },
         };
 
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName, dependenciesMap);
+        await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName, dependenciesMap);
 
         // Prepare dependencies at paths 1 and 2
         Directory.Move(DependencyRepoPath, FirstDependencyPath);

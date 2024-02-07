@@ -14,7 +14,7 @@ internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions, IBaseVmr
     [Value(0, Required = true, HelpText = "Repositories to backflow in the form of NAME:PATH with mapping name and local path to the target repository. " +
         "Path can be ommitted when --repository-dirs is supplied. " +
         "When no repositories passed, all repositories with changes will be synchronized.")]
-    public IEnumerable<string> Repositories { get; set; }
+    public override IEnumerable<string> Repositories { get; set; }
 
     public override Operation GetOperation() => new BackflowOperation(this);
 }

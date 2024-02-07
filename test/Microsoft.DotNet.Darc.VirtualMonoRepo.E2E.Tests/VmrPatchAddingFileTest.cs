@@ -32,7 +32,7 @@ internal class VmrPatchAddingFileTest : VmrPatchesTestsBase
         var newFilePath = vmrSourcesPath / Constants.ProductRepoName / _productRepoNewFile;
         var patchPath = VmrPatchesDir / PatchFileName;
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             ProductRepoFilePathInVmr,
             InstallerFilePathInVmr,

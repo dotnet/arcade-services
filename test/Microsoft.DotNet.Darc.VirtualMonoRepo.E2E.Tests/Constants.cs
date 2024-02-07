@@ -5,24 +5,54 @@ namespace Microsoft.DotNet.Darc.Tests.VirtualMonoRepo;
 
 public class Constants
 {
-    public const string VersionDetailsTemplate = 
-@"<?xml version=""1.0"" encoding=""utf-8""?>
-<Dependencies>
-    <ProductDependencies>
-        {0}
-    </ProductDependencies>
-    <ToolsetDependencies>
-    </ToolsetDependencies>
-</Dependencies>";
+    public const string VersionDetailsTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Dependencies>
+            <ProductDependencies>
+                {0}
+            </ProductDependencies>
+            <ToolsetDependencies>
+            </ToolsetDependencies>
+        </Dependencies>
+        """;
 
-    public static readonly string EmptyVersionDetails = string.Format(VersionDetailsTemplate, string.Empty);
-    
-    public const string DependencyTemplate = 
-@"<Dependency Name=""{0}"" Version=""8.0.0"">
-    <Uri>{1}</Uri>
-    <Sha>{2}</Sha>
-    <SourceBuild RepoName=""{0}"" ManagedOnly=""true"" />
-</Dependency>";
+    public const string DependencyTemplate = """
+        <Dependency Name="{0}" Version="8.0.0">
+            <Uri>{1}</Uri>
+            <Sha>{2}</Sha>
+            <SourceBuild RepoName="{0}" ManagedOnly="true" />
+        </Dependency>
+        """;
+
+    public const string VersionPropsTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project>
+          <PropertyGroup>
+            {0}
+          </PropertyGroup>
+        </Project>
+        """;
+
+    public const string GlobalJsonTemplate = """
+        {
+          "tools": {
+            "dotnet": "9.0.100"
+          }
+        }
+        """;
+
+    public const string NuGetConfigTemplate = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <clear />
+            <add key="dotnet-eng" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json" />
+            <add key="dotnet-tools" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json" />
+            <add key="dotnet-public" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json" />
+          </packageSources>
+          <disabledPackageSources />
+        </configuration>
+        """;
 
     public const string ProductRepoName = "product-repo1";
     public const string DependencyRepoName = "dependency";
