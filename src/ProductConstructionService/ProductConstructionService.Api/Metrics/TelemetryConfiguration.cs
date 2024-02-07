@@ -3,10 +3,12 @@
 
 namespace ProductConstructionService.Api.Metrics;
 
-public static class MetricsConfiguration
+public static class TelemetryConfiguration
 {
-    public static void AddMetricsRecorders(this WebApplicationBuilder builder)
+    public static void AddTelemetry(this WebApplicationBuilder builder)
     {
         builder.Services.AddSingleton<ITelemetryRecorder, TelemetryRecorder>();
+        builder.Services.AddApplicationInsightsTelemetry();
+        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
     }
 }

@@ -10,10 +10,10 @@ namespace ProductConstructionService.Api.Queue;
 public class JobScope(
     Action finalizer,
     IServiceScope serviceScope,
-    ITelemetryRecorder metricRecorder) : IDisposable
+    ITelemetryRecorder telemetryRecorder) : IDisposable
 {
     private readonly IServiceScope _serviceScope = serviceScope;
-    private readonly ITelemetryRecorder _metricRecorder = metricRecorder;
+    private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
     private Job? _job = null;
 
     public void Dispose()
@@ -36,10 +36,10 @@ public class JobScope(
 
         var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.Type);
 
-        using (ITelemetryScope metricScope  = _metricRecorder.RecordJob(_job))
+        using (ITelemetryScope telemetryScope  = _telemetryRecorder.RecordJob(_job))
         {
             await jobRunner.RunAsync(_job, cancellationToken);
-            metricScope.SetSuccess();
+            telemetryScope.SetSuccess();
         }
     }
 }

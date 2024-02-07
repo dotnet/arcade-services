@@ -16,15 +16,13 @@ builder.Configuration.AddAzureKeyVault(
     new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
     credential);
 
-builder.Services.AddApplicationInsightsTelemetry();
-
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 {
     options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
 });
 
 builder.AddWorkitemQueues(credential);
-builder.AddMetricsRecorders();
+builder.AddTelemetry();
 
 builder.AddServiceDefaults();
 

@@ -2,10 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using Microsoft.ApplicationInsights;
 using ProductConstructionService.Api.Queue.Jobs;
-using ProductConstructionService.ServiceDefaults;
 
 namespace ProductConstructionService.Api.Metrics;
 
@@ -16,15 +14,13 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
 
     public ITelemetryScope RecordJob(Job job)
     {
-        return new TelemetryScope($"{job.Type} completed", _logger, _telemetryClient);
+        return new TelemetryScope($"{job.Type} completed", _logger, _telemetryClient, []);
     }
 
-    private class TelemetryScope(string telemetryName, ILogger logger, TelemetryClient telemetryClient) : ITelemetryScope
+    private class TelemetryScope(string telemetryName, ILogger logger, TelemetryClient telemetryClient, Dictionary<string, string> customDimensions) : ITelemetryScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
         private bool _successful = false;
-        private readonly string _telemetryName = telemetryName;
-        private string GetSuccessfulString() => _successful ? "success" : "failure";
 
         public void SetSuccess()
         {
@@ -34,13 +30,11 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
         public void Dispose()
         {
             _stopwatch.Stop();
-            telemetryClient.TrackEvent(_telemetryName, new Dictionary<string, string>()
-            {
-                { "Duration", _stopwatch.ElapsedMilliseconds.ToString() },
-                { "Status", GetSuccessfulString() }
-            });
+            customDimensions.Add("Successful", _successful.ToString());
+            customDimensions.Add("Duration", _stopwatch.ToString());
+            telemetryClient.TrackEvent(telemetryName, customDimensions);
             logger.LogInformation("{telemetryName} took {duration} to complete {status}",
-                _telemetryName,
+                telemetryName,
                 TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),
                 _successful ? "successfully" : "unsuccessfully");
         }
