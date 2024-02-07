@@ -181,7 +181,6 @@ public sealed class Remote : IRemote
             
         SemanticVersion targetDotNetVersion = null;
         bool mayNeedArcadeUpdate = (arcadeItem != null && repoUri != arcadeItem.RepoUri);
-        IRemote arcadeRemote = null;
 
         if (mayNeedArcadeUpdate)
         {
@@ -196,6 +195,7 @@ public sealed class Remote : IRemote
         {
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
+            IRemote arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
             List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
             filesToCommit.AddRange(engCommonFiles);
 
