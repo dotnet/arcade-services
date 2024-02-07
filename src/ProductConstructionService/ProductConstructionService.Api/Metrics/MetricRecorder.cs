@@ -12,7 +12,7 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
 {
     private readonly ILogger<MetricRecorder> _logger = logger;
     private readonly Meter _meter = meterFactory.Create(MetricConsts.JobMeterName);
-    private readonly Dictionary<string, JobMetricRecorderInstruments> _jobMetricRecorderInstruments = new();
+    private readonly Dictionary<string, JobMetricRecorderInstruments> _jobMetricRecorderInstruments = [];
 
     public IMetricScope RecordJob(Job job)
     {
