@@ -5,5 +5,8 @@ namespace ProductConstructionService.Api.Metrics;
 
 public interface ITelemetryScope : IDisposable
 {
+    /// <summary>
+    /// Marks the operation running in the scope as successful, always call this method before disposing the scope
+    /// </summary>
     void SetSuccess();
 }

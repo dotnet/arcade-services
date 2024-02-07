@@ -13,17 +13,17 @@ namespace ProductConstructionService.Api.Tests;
 public class JobScopeTests
 {
     [Test]
-    public async Task JobScopeRecordsTelemetryTest()
+    public async Task JobScopeRecordsMetricsTest()
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<ITelemetryScope> telemetryScopeMock = new();
-        Mock<ITelemetryRecorder> telemetryRecorderMock = new();
+        Mock<ITelemetryScope> telemetryScope = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
-        telemetryRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(telemetryScopeMock.Object);
+        metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(telemetryScope.Object);
 
-        services.AddSingleton(telemetryRecorderMock.Object);
+        services.AddSingleton(metricRecorderMock.Object);
         services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobRunner>().Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -37,25 +37,25 @@ public class JobScopeTests
             await jobScope.RunJobAsync(CancellationToken.None);
         }
 
-        telemetryRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
-        telemetryScopeMock.Verify(m => m.SetSuccess(), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
     }
 
     [Test]
-    public void JobScopeRecordsTelemetryWhenThrowingTest()
+    public void JobScopeRecordsMetricsWhenThrowingTest()
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<ITelemetryScope> telemetryScopeMock = new();
-        Mock<ITelemetryRecorder> telemetryRecorderMock = new();
+        Mock<ITelemetryScope> metricRecorderScopeMock = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
-        telemetryRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(telemetryScopeMock.Object);
+        metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);
 
-        services.AddSingleton(telemetryRecorderMock.Object);
+        services.AddSingleton(metricRecorderMock.Object);
 
         Mock<IJobRunner> jobRunnerMock = new();
-        jobRunnerMock.Setup(j => j.RunAsync(textJob, It.IsAny<CancellationToken>())).Throws<Exception>();
+        jobRunnerMock.Setup(j => j.RunAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>())).Throws<Exception>();
         services.AddKeyedSingleton(nameof(TextJob), jobRunnerMock.Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -66,11 +66,11 @@ public class JobScopeTests
         {
             jobScope.InitializeScope(textJob);
 
-            Action action = () => jobScope.RunJobAsync(CancellationToken.None).GetAwaiter().GetResult();
-            action.Should().Throw<Exception>();
+            Func<Task> func = async () => await jobScope.RunJobAsync(CancellationToken.None);
+            func.Should().ThrowAsync<Exception>();
         }
 
-        telemetryRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
-        telemetryScopeMock.Verify(m => m.SetSuccess(), Times.Never);
+        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 }

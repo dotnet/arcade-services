@@ -14,13 +14,15 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
 
     public ITelemetryScope RecordJob(Job job)
     {
-        return new TelemetryScope($"{job.Type} completed", _logger, _telemetryClient, []);
+        return new TelemetryScope($"job.{job.Type}", _logger, _telemetryClient, []);
     }
 
     private class TelemetryScope(string telemetryName, ILogger logger, TelemetryClient telemetryClient, Dictionary<string, string> customDimensions) : ITelemetryScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
         private bool _successful = false;
+
+        private string GetSuccessString() => _successful ? "successfully" : "unsuccessfully";
 
         public void SetSuccess()
         {
@@ -31,12 +33,12 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
         {
             _stopwatch.Stop();
             customDimensions.Add("Success", _successful.ToString());
-            customDimensions.Add("Duration", _stopwatch.ToString());
+            customDimensions.Add("Duration", _stopwatch.ElapsedMilliseconds.ToString());
             telemetryClient.TrackEvent(telemetryName, customDimensions);
             logger.LogInformation("{telemetryName} took {duration} to complete {status}",
                 telemetryName,
                 TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),
-                _successful ? "successfully" : "unsuccessfully");
+                GetSuccessString());
         }
     }
 }
