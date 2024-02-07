@@ -70,7 +70,7 @@ public class JobScopeTests
             func.Should().ThrowAsync<Exception>();
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 }
