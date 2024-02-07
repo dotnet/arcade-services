@@ -37,7 +37,7 @@ public class JobScopeTests
             await jobScope.RunJobAsync(CancellationToken.None);
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
         telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
     }
 
