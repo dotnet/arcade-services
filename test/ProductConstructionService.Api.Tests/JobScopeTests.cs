@@ -17,8 +17,8 @@ public class JobScopeTests
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<IMetricScope> metricRecorderScopeMock = new();
-        Mock<IMetricRecorder> metricRecorderMock = new();
+        Mock<ITelemetryScope> metricRecorderScopeMock = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
         metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);
@@ -46,8 +46,8 @@ public class JobScopeTests
     {
         IServiceCollection services = new ServiceCollection();
 
-        Mock<IMetricScope> metricRecorderScopeMock = new();
-        Mock<IMetricRecorder> metricRecorderMock = new();
+        Mock<ITelemetryScope> metricRecorderScopeMock = new();
+        Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
 
         metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);

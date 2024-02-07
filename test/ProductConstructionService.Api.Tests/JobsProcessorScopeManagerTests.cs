@@ -17,7 +17,7 @@ public class JobsProcessorScopeManagerTests
     {
         ServiceCollection services = new();
 
-        services.AddSingleton(new Mock<IMetricRecorder>().Object);
+        services.AddSingleton(new Mock<ITelemetryRecorder>().Object);
 
         _serviceProvider = services.BuildServiceProvider();
     }

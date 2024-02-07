@@ -5,7 +5,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Metrics;
 
-public interface IMetricRecorder
+public interface ITelemetryRecorder
 {
-    public IMetricScope RecordJob(Job job);
+    public ITelemetryScope RecordJob(Job job);
 }
