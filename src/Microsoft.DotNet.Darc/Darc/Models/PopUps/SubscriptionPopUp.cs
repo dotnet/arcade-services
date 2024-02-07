@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
@@ -14,16 +15,16 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 /// </summary>
 public abstract class SubscriptionPopUp : EditorPopUp
 {
-    protected const string ChannelElement = "Channel";
-    protected const string SourceRepoElement = "Source Repository URL";
-    protected const string TargetRepoElement = "Target Repository URL";
-    protected const string TargetBranchElement = "Target Branch";
-    protected const string UpdateFrequencyElement = "Update Frequency";
-    protected const string MergePolicyElement = "Merge Policies";
-    protected const string BatchableElement = "Batchable";
-    protected const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    protected const string SourceEnabledElement = "SourceEnabled";
-    protected const string ExcludedAssetsElement = "ExcludedAssets";
+    private const string ChannelElement = "Channel";
+    private const string SourceRepoElement = "Source Repository URL";
+    private const string TargetRepoElement = "Target Repository URL";
+    private const string TargetBranchElement = "Target Branch";
+    private const string UpdateFrequencyElement = "Update Frequency";
+    private const string MergePolicyElement = "Merge Policies";
+    private const string BatchableElement = "Batchable";
+    private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
+    private const string SourceEnabledElement = "SourceEnabled";
+    private const string ExcludedAssetsElement = "ExcludedAssets";
 
     protected readonly SubscriptionData _data;
     private readonly IEnumerable<string> _suggestedChannels;
@@ -31,13 +32,24 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private readonly IEnumerable<string> _availableMergePolicyHelp;
     private readonly ILogger _logger;
 
+    public string Channel => _data.Channel;
+    public string SourceRepository => _data.SourceRepository;
+    public string TargetRepository => _data.TargetRepository;
+    public string TargetBranch => _data.TargetBranch;
+    public string UpdateFrequency => _data.UpdateFrequency;
+    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
+    public bool Batchable => bool.Parse(_data.Batchable);
+    public string FailureNotificationTags => _data.FailureNotificationTags;
+    public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
+    public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
+
     protected SubscriptionPopUp(
-        SubscriptionData data,
         string path,
         IEnumerable<string> suggestedChannels,
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
-        ILogger logger)
+        ILogger logger,
+        SubscriptionData data)
         : base(path)
     {
         _data = data;
@@ -136,7 +148,9 @@ public abstract class SubscriptionPopUp : EditorPopUp
         }
 
         Contents.Add(new Line("", true));
-        Contents.Add(new Line("Examples of excluded assets", true));
+        Contents.Add(new Line("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true));
+        Contents.Add(new Line("They can contain * to ignore whole groups of assets.", true));
+        Contents.Add(new Line("Examples of excluded assets:", true));
         Contents.Add(new Line($"  - Microsoft.DotNet.Arcade.Sdk", true));
         Contents.Add(new Line($"  - Microsoft.Extensions.*", true));
     }
@@ -171,7 +185,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
         [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
         public string FailureNotificationTags { get; set; }
 
-        [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
+        [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
         public string SourceEnabled { get; set; }
 
         [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]

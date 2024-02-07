@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -15,17 +14,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 public class AddSubscriptionPopUp : SubscriptionPopUp
 {
     private readonly ILogger _logger;
-
-    public string Channel => _data.Channel;
-    public string SourceRepository => _data.SourceRepository;
-    public string TargetRepository => _data.TargetRepository;
-    public string TargetBranch => _data.TargetBranch;
-    public string UpdateFrequency => _data.UpdateFrequency;
-    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
-    public bool Batchable => bool.Parse(_data.Batchable);
-    public string FailureNotificationTags => _data.FailureNotificationTags;
-    public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
-    public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
 
     public AddSubscriptionPopUp(
         string path,
@@ -44,7 +32,8 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string failureNotificationTags,
         bool? sourceEnabled,
         List<string> excludedAssets)
-        : base(new SubscriptionData
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
+            new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
                 SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
@@ -56,8 +45,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                 ExcludedAssets = excludedAssets,
-            },
-            path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger)
+            })
     {
         _logger = logger;
 

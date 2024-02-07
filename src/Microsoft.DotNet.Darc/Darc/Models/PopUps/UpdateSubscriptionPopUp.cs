@@ -13,27 +13,12 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 public class UpdateSubscriptionPopUp : SubscriptionPopUp
 {
-    private readonly ILogger _logger;
+    public const string EnabledElement = "Enabled";
 
+    private readonly ILogger _logger;
     private readonly SubscriptionUpdateData _yamlData;
 
-    public string Channel => _yamlData.Channel;
-
-    public string SourceRepository => _yamlData.SourceRepository;
-
-    public bool Batchable => bool.Parse(_yamlData.Batchable);
-
-    public string UpdateFrequency => _yamlData.UpdateFrequency;
-
     public bool Enabled => bool.Parse(_yamlData.Enabled);
-
-    public string FailureNotificationTags => _yamlData.FailureNotificationTags;
-
-    public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
-
-    public bool SourceEnabled => bool.Parse(_yamlData.SourceEnabled);
-
-    public IReadOnlyCollection<string> ExcludedAssets => _yamlData.ExcludedAssets;
 
     private UpdateSubscriptionPopUp(
         string path,
@@ -43,7 +28,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdateData data)
-        : base(data, path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger)
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data)
     {
         _logger = logger;
         _yamlData = data;
@@ -104,7 +89,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
         try
         {
-            string yamlString = contents.Aggregate("", (current, line) => $"{current}{Environment.NewLine}{line.Text}");
+            string yamlString = contents.Aggregate(string.Empty, (current, line) => $"{current}{Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
             outputYamlData = serializer.Deserialize<SubscriptionUpdateData>(yamlString);
         }
@@ -132,8 +117,6 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
     /// </summary>
     private class SubscriptionUpdateData : SubscriptionData
     {
-        public const string EnabledElement = "Enabled";
-
         [YamlMember(ApplyNamingConventions = false)]
         public string Id { get; set; }
 
