@@ -3,16 +3,18 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Microsoft.ApplicationInsights;
 using ProductConstructionService.Api.Queue.Jobs;
 using ProductConstructionService.ServiceDefaults;
 
 namespace ProductConstructionService.Api.Metrics;
 
-public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> logger) : IMetricRecorder
+public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> logger, TelemetryClient telemetryClient) : IMetricRecorder
 {
     private readonly ILogger<MetricRecorder> _logger = logger;
     private readonly Meter _meter = meterFactory.Create(MetricConsts.JobMeterName);
     private readonly Dictionary<string, JobMetricRecorderInstruments> _jobMetricRecorderInstruments = [];
+    private readonly TelemetryClient _telemetryClient = telemetryClient;
 
     public IMetricScope RecordJob(Job job)
     {
@@ -30,11 +32,10 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
                 _meter.CreateCounter<int>(failureCounterName));
             _jobMetricRecorderInstruments.Add(instrumentName, instruments);
         }
-
         return new MetricScope($"{job.Type} {job.Id}", instruments, _logger);
     }
 
-    private class MetricScope(string metricName, JobMetricRecorderInstruments instruments, ILogger logger) : IMetricScope
+    private class MetricScope(string metricName, JobMetricRecorderInstruments instruments, ILogger logger, TelemetryClient telemetryClient) : IMetricScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
         private bool _successful = false;
@@ -49,6 +50,7 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
         {
             _stopwatch.Stop();
             instruments.Record(_stopwatch.ElapsedMilliseconds, _successful);
+            telemetryClient.TrackEvent(_metricName);
             logger.LogInformation("{metricName} took {duration} to complete {status}",
                 _metricName,
                 TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),

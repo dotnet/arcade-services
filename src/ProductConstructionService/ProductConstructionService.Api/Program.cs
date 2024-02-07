@@ -12,10 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 var managedIdentityClientId = builder.Configuration["ManagedIdentityClientId"] ?? string.Empty;
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId });
-
 builder.Configuration.AddAzureKeyVault(
     new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
     credential);
+
+builder.Services.AddApplicationInsightsTelemetry();
 
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 {
