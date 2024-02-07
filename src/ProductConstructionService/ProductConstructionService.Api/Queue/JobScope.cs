@@ -31,7 +31,7 @@ public class JobScope(
     {
         if (_job is null)
         {
-            throw new Exception("JobScope not initialized! Call InitializeScope before calling RunJob");
+            throw new Exception($"{nameof(JobScope)} not initialized! Call InitializeScope before calling {nameof(RunJobAsync)}");
         }
 
         var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.Type);
