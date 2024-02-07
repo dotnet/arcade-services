@@ -55,7 +55,7 @@ public class JobScopeTests
         services.AddSingleton(telemetryRecorderMock.Object);
 
         Mock<IJobRunner> jobRunnerMock = new();
-        jobRunnerMock.Setup(j => j.RunAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>())).Throws<Exception>();
+        jobRunnerMock.Setup(j => j.RunAsync(textJob, It.IsAny<CancellationToken>())).Throws<Exception>();
         services.AddKeyedSingleton(nameof(TextJob), jobRunnerMock.Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
