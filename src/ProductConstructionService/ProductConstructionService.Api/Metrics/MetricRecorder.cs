@@ -32,7 +32,7 @@ public class MetricRecorder(IMeterFactory meterFactory, ILogger<MetricRecorder> 
                 _meter.CreateCounter<int>(failureCounterName));
             _jobMetricRecorderInstruments.Add(instrumentName, instruments);
         }
-        return new MetricScope($"{job.Type} {job.Id}", instruments, _logger);
+        return new MetricScope($"{job.Type} {job.Id}", instruments, _logger, _telemetryClient);
     }
 
     private class MetricScope(string metricName, JobMetricRecorderInstruments instruments, ILogger logger, TelemetryClient telemetryClient) : IMetricScope
