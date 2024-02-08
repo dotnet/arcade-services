@@ -45,7 +45,7 @@ public abstract class VmrScanner : IVmrScanner
 
         _logger.LogInformation("Scanning VMR repositories for {type} files", ScanType);
 
-        foreach (var sourceMapping in _dependencyTracker.Mappings)
+        foreach (var sourceMapping in _dependencyTracker.Mappings.Where(mapping => mapping.Exclude.Count > 0))
         {
             taskList.Add(ScanSubRepository(sourceMapping, baselineFilePath, cancellationToken));
         }
