@@ -14,13 +14,21 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
 
     public ITelemetryScope RecordJob(Job job)
     {
-        return new TelemetryScope($"job.{job.Type}", _logger, _telemetryClient, []);
+        return new TelemetryScope($"JobExecuted", _logger, _telemetryClient, new() { ["JobType"] = job.Type }, []);
     }
 
-    private class TelemetryScope(string telemetryName, ILogger logger, TelemetryClient telemetryClient, Dictionary<string, string> customDimensions) : ITelemetryScope
+    private class TelemetryScope(
+        string telemetryName,
+        ILogger logger,
+        TelemetryClient telemetryClient,
+        Dictionary<string, string> customDimensions,
+        Dictionary<string, double> customMeasurement) : ITelemetryScope
     {
         private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
         private bool _successful = false;
+
+        private const string SuccessDimension = "Success";
+        private const string DurationMeasurement = "Duration";
 
         private string GetSuccessString() => _successful ? "successfully" : "unsuccessfully";
 
@@ -32,9 +40,9 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
         public void Dispose()
         {
             _stopwatch.Stop();
-            customDimensions.Add("Success", _successful.ToString());
-            customDimensions.Add("Duration", _stopwatch.ElapsedMilliseconds.ToString());
-            telemetryClient.TrackEvent(telemetryName, customDimensions);
+            customDimensions.Add(SuccessDimension, _successful.ToString());
+            customMeasurement.Add(DurationMeasurement, _stopwatch.ElapsedMilliseconds);
+            telemetryClient.TrackEvent(telemetryName, customDimensions, customMeasurement);
             logger.LogInformation("{telemetryName} took {duration} to complete {status}",
                 telemetryName,
                 TimeSpan.FromMilliseconds(_stopwatch.ElapsedMilliseconds),

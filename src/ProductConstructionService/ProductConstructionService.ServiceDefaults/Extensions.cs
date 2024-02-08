@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using ProductConstructionService.ServiceDefaults;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -118,6 +117,5 @@ public static class Extensions
         meterProviderBuilder.AddMeter(
             "Microsoft.AspNetCore.Hosting",
             "Microsoft.AspNetCore.Server.Kestrel",
-            "System.Net.Http",
-            MetricConsts.JobMeterName);
+            "System.Net.Http");
 }
