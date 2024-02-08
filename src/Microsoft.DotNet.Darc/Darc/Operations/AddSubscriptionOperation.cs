@@ -103,7 +103,7 @@ internal class AddSubscriptionOperation : Operation
             return Constants.ErrorCode;
         }
 
-        if (_options.ExcludedAssets != null && _options.SourceEnabled.HasValue && !_options.SourceEnabled.HasValue)
+        if (_options.ExcludedAssets != null && !_options.SourceEnabled)
         {
             Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
             return Constants.ErrorCode;
@@ -115,7 +115,7 @@ internal class AddSubscriptionOperation : Operation
         string targetBranch = GitHelpers.NormalizeBranchName(_options.TargetBranch);
         string updateFrequency = _options.UpdateFrequency;
         bool batchable = _options.Batchable;
-        bool? sourceEnabled = _options.SourceEnabled;
+        bool sourceEnabled = _options.SourceEnabled;
         string failureNotificationTags = _options.PullRequestFailureNotificationTags;
         List<string> excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
 
@@ -188,7 +188,7 @@ internal class AddSubscriptionOperation : Operation
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
-        if (excludedAssets.Any() && sourceEnabled.HasValue && !sourceEnabled.Value)
+        if (excludedAssets.Any() && !sourceEnabled)
         {
             Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
             return Constants.ErrorCode;
@@ -240,7 +240,7 @@ internal class AddSubscriptionOperation : Operation
                 batchable,
                 mergePolicies, 
                 failureNotificationTags,
-                sourceEnabled ?? false,
+                sourceEnabled,
                 excludedAssets);
 
             Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
