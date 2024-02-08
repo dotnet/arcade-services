@@ -5,11 +5,13 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace ProductConstructionService.Api.Metrics;
+namespace ProductConstructionService.Api.Telemetry;
 
 public class RemoveDefaultPropertiesTelemetryProcessor : ITelemetryProcessor
 {
     private ITelemetryProcessor Next { get; set; }
+    private const string DeveloperMode = "DeveloperMode";
+    private const string AspNetCoreEnvironment = "AspNetCoreEnvironment";
 
     public RemoveDefaultPropertiesTelemetryProcessor(ITelemetryProcessor next)
     {
@@ -19,8 +21,8 @@ public class RemoveDefaultPropertiesTelemetryProcessor : ITelemetryProcessor
     public void Process(ITelemetry item)
     {
         ISupportProperties supportProperties = (ISupportProperties)item;
-        supportProperties.Properties.Remove("DeveloperMode");
-        supportProperties.Properties.Remove("AspNetCoreEnvironment");
+        supportProperties.Properties.Remove(DeveloperMode);
+        supportProperties.Properties.Remove(AspNetCoreEnvironment);
         Next.Process(item);
     }
 }

@@ -4,7 +4,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using ProductConstructionService.Api.Metrics;
+using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.JobRunners;
 using ProductConstructionService.Api.Queue.Jobs;

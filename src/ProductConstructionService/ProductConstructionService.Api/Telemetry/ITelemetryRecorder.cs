@@ -3,7 +3,7 @@
 
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api.Metrics;
+namespace ProductConstructionService.Api.Telemetry;
 
 public interface ITelemetryRecorder
 {

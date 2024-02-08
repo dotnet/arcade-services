@@ -5,7 +5,7 @@ using System.Diagnostics;
 using Microsoft.ApplicationInsights;
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api.Metrics;
+namespace ProductConstructionService.Api.Telemetry;
 
 public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClient telemetryClient) : ITelemetryRecorder
 {

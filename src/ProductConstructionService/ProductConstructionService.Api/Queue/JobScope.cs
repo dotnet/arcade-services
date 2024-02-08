@@ -3,7 +3,7 @@
 
 using ProductConstructionService.Api.Queue.JobRunners;
 using ProductConstructionService.Api.Queue.Jobs;
-using ProductConstructionService.Api.Metrics;
+using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api.Queue;
 
