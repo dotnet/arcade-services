@@ -15,14 +15,16 @@ public enum JobsProcessorState
 
 public class JobsProcessorScopeManager
 {
-    public JobsProcessorScopeManager(bool workOnStartup)
+    public JobsProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider)
     {
         _autoResetEvent = new AutoResetEvent(workOnStartup);
         State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;
+        _serviceProvider = serviceProvider;
     }
 
     public JobsProcessorState State { get; private set; }
     private readonly AutoResetEvent _autoResetEvent;
+    private readonly IServiceProvider _serviceProvider;
 
     public void Start()
     {
@@ -33,10 +35,11 @@ public class JobsProcessorScopeManager
     /// <summary>
     /// Creates a new scope for the currently executing Job, when the the JobsProcessor is in the `Working` state.
     /// </summary>
-    public IDisposable BeginJobScopeWhenReady()
+    public JobScope BeginJobScopeWhenReady()
     {
         _autoResetEvent.WaitOne();
-        return new JobScope(this);
+        var scope = _serviceProvider.CreateScope();
+        return ActivatorUtilities.CreateInstance<JobScope>(scope.ServiceProvider, scope, new Action(JobFinished));
     }
 
     private void JobFinished()
@@ -60,8 +63,5 @@ public class JobsProcessorScopeManager
         }
     }
 
-    private class JobScope(JobsProcessorScopeManager status) : IDisposable
-    {
-        public void Dispose() => status.JobFinished();
-    }
+    
 }

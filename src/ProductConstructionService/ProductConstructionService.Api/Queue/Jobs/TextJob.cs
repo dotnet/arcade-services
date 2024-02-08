@@ -6,4 +6,5 @@ namespace ProductConstructionService.Api.Queue.Jobs;
 public class TextJob : Job
 {
     public required string Text { get; init; }
+    public override string Type => nameof(TextJob);
 }
