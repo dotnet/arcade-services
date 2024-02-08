@@ -8,7 +8,7 @@ namespace ProductConstructionService.Api.Telemetry;
 public interface ITelemetryRecorder
 {
     /// <summary>
-    /// Records job durationand result in the customEvents table, with the `job.{jobType}` name
+    /// Records job duration and result in the customEvents table, with the `job.{jobType}` name
     /// </summary>
     ITelemetryScope RecordJob(Job job);
 }

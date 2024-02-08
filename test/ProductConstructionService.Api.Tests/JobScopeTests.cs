@@ -37,7 +37,7 @@ public class JobScopeTests
             await jobScope.RunJobAsync(CancellationToken.None);
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
         telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
     }
 
@@ -55,7 +55,7 @@ public class JobScopeTests
         services.AddSingleton(metricRecorderMock.Object);
 
         Mock<IJobRunner> jobRunnerMock = new();
-        jobRunnerMock.Setup(j => j.RunAsync(It.IsAny<Job>(), It.IsAny<CancellationToken>())).Throws<Exception>();
+        jobRunnerMock.Setup(j => j.RunAsync(textJob, It.IsAny<CancellationToken>())).Throws<Exception>();
         services.AddKeyedSingleton(nameof(TextJob), jobRunnerMock.Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -70,7 +70,7 @@ public class JobScopeTests
             func.Should().ThrowAsync<Exception>();
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(It.IsAny<Job>()), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJob(textJob), Times.Once);
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 }
