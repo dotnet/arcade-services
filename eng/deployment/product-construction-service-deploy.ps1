@@ -46,10 +46,17 @@ function StopAndWait([string]$pcsUrl) {
 
 function Compare-Properties($before, $after) {
     foreach ($property in $before.PSObject.Properties) {
-        $beforeValue = $property.Value
-        $afterValue = $after.$($property.Name)
-        if ($beforeValue -ne $afterValue) {
-            Write-Host "$($property.Name) has changed from $beforeValue to $afterValue"
+        $name = $property.Name
+        $beforeValue = $before.$name
+        $afterValue = $after.$name
+
+        if($beforeValue -is [psobject]) {
+            Compare-Properties $beforeValue $afterValue
+        }
+        else {
+            if ($beforeValue -ne $afterValue) {
+                Write-Host "Property $name has changed from $beforeValue to $afterValue"
+            }       
         }
     }
 }
