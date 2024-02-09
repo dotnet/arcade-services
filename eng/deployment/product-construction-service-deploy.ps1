@@ -124,6 +124,6 @@ try
 finally {
     # Start the service. This either starts the new revision or the old one if the new one failed to start
     Write-Host "Starting the product construction service"
-    $pcsStartUrl = $pcsUrl + "status/start"
+    $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
 }
