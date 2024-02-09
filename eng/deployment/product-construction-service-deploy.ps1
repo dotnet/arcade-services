@@ -10,7 +10,7 @@ param(
     [Parameter(Mandatory=$true)][string]$pcsUrl
 )
 
-function StopAndWait() {
+function StopAndWait([string]$pcsUrl) {
     $pcsStopUrl = $pcsUrl + "status/stop"
     $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
 
@@ -76,7 +76,8 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-StopAndWait
+Write-Host $pcsUrl
+StopAndWait $pcsUrl
 
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
