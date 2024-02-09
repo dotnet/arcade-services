@@ -11,7 +11,7 @@ param(
 )
 
 function StopAndWait([string]$pcsUrl) {
-    $pcsStopUrl = $pcsUrl + "status/stop"
+    $pcsStopUrl = $pcsUrl + "/status/stop"
     $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
 
     if ($stopResponse.StatusCode -ne 200) {
@@ -21,7 +21,7 @@ function StopAndWait([string]$pcsUrl) {
 
     # wait for the service to finish processing the current job
     $sleep = $false
-    $pcsStatusUrl = $pcsUrl + "status"
+    $pcsStatusUrl = $pcsUrl + "/status"
     DO
     {
         if ($sleep -eq $true) 
@@ -76,7 +76,6 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-Write-Host $pcsUrl
 StopAndWait $pcsUrl
 
 # deploy the new image
