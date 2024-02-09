@@ -46,6 +46,8 @@ function StopAndWait([string]$pcsUrl) {
 
 az extension add --name containerapp --upgrade
 
+$yamlBefore = az containerapp show --name $containerappName --resource-group $resourceGroupName --output yaml
+
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
 # find the currently active revision
@@ -126,4 +128,8 @@ finally {
     Write-Host "Starting the product construction service"
     $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
+    $yamlAfter = az containerapp show --name $containerappName --resource-group $resourceGroupName --output yaml
+
+    Write-Host "Before: $yamlBefore"
+    Write-Host "After: $yamlAfter"
 }
