@@ -1,6 +1,8 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+RUN apt-get update
+RUN apt-get install git -y
 USER app
 WORKDIR /app
 EXPOSE 8080
@@ -30,6 +32,8 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
+RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
+ && git config --global user.name "dotnet-maestro[bot]"
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
+# ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
