@@ -145,7 +145,7 @@ finally {
     Write-Host "Starting the product construction service"
     $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
-    $after = az containerapp show --name $containerappName --resource-group $resourceGroupName --output yaml
+    $after = az containerapp show --name $containerappName --resource-group $resourceGroupName --output json | ConvertFrom-Json
 
     Compare-Properties $before $after
 }
