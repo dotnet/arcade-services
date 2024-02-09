@@ -11,32 +11,36 @@ param(
 )
 
 function StopAndWait([string]$pcsUrl) {
-    $pcsStopUrl = $pcsUrl + "/status/stop"
-    $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
+    try {
+        $pcsStopUrl = $pcsUrl + "/status/stop"
+        $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
 
-    if ($stopResponse.StatusCode -ne 200) {
-        Write-Host "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
-        return
-    }
-
-    # wait for the service to finish processing the current job
-    $sleep = $false
-    $pcsStatusUrl = $pcsUrl + "/status"
-    DO
-    {
-        if ($sleep -eq $true) 
-        {
-            Start-Sleep -Seconds 30
-        }
-        $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
-        if ($pcsStateResponse.StatusCode -ne 200) {
-            Write-Host "Service isn't responding to the status request. Deploying the new revision without stopping the service."
+        if ($stopResponse.StatusCode -ne 200) {
+            Write-Host "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
             return
         }
-        Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
-        $sleep = $true
-    } While ($pcsStateResponse.Content -notmatch "Stopped")
 
+        # wait for the service to finish processing the current job
+        $sleep = $false
+        $pcsStatusUrl = $pcsUrl + "/status"
+        DO
+        {
+            if ($sleep -eq $true) 
+            {
+                Start-Sleep -Seconds 30
+            }
+            $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
+            if ($pcsStateResponse.StatusCode -ne 200) {
+                Write-Host "Service isn't responding to the status request. Deploying the new revision without stopping the service."
+                return
+            }
+            Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
+            $sleep = $true
+        } While ($pcsStateResponse.Content -notmatch "Stopped")
+    }
+    catch {
+        Write-Host "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
+    }
     return
 }
 
