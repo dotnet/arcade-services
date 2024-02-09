@@ -45,25 +45,17 @@ function StopAndWait([string]$pcsUrl) {
 }
 
 function Compare-Properties($before, $after) {
-    foreach ($property in $before.PSObject.Properties) {
-        $name = $property.Name
-        $beforeValue = $before.$name
-        $afterValue = $after.$name
-
-        if($beforeValue -is [psobject]) {
-            Compare-Properties $beforeValue $afterValue
-        }
-        else {
-            if ($beforeValue -ne $afterValue) {
-                Write-Host "Property $name has changed from $beforeValue to $afterValue"
-            }       
-        }
-    }
+    mkdir temp
+    cd temp
+    Set-Content -Path output.json -Value $before -Encoding UTF8
+    git init
+    Set-Content -Path output.json -Value $after -Encoding UTF8
+    git diff .
 }
 
 az extension add --name containerapp --upgrade
 
-$before = az containerapp show --name $containerappName --resource-group $resourceGroupName --output json | ConvertFrom-Json
+$before = az containerapp show --name $containerappName --resource-group $resourceGroupName --output json
 
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
@@ -145,7 +137,7 @@ finally {
     Write-Host "Starting the product construction service"
     $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
-    $after = az containerapp show --name $containerappName --resource-group $resourceGroupName --output json | ConvertFrom-Json
+    $after = az containerapp show --name $containerappName --resource-group $resourceGroupName --output json
 
     Compare-Properties $before $after
 }
