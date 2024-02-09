@@ -10,6 +10,36 @@ param(
     [Parameter(Mandatory=$true)][string]$pcsUrl
 )
 
+function StopAndWait() {
+    $pcsStopUrl = $pcsUrl + "status/stop"
+    $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
+
+    if ($stopResponse.StatusCode -ne 200) {
+        Write-Host "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
+        return
+    }
+
+    # wait for the service to finish processing the current job
+    $sleep = $false
+    $pcsStatusUrl = $pcsUrl + "status"
+    DO
+    {
+        if ($sleep -eq $true) 
+        {
+            Start-Sleep -Seconds 30
+        }
+        $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
+        if ($pcsStateResponse.StatusCode -ne 200) {
+            Write-Host "Service isn't responding to the status request. Deploying the new revision without stopping the service."
+            return
+        }
+        Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
+        $sleep = $true
+    } While ($pcsStateResponse.Content -notmatch "Stopped")
+
+    return
+}
+
 az extension add --name containerapp --upgrade
 
 Write-Host "Fetching all revisions to determine the active label"
@@ -46,22 +76,7 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-$pcsStopUrl = $pcsUrl + "status/stop"
-Invoke-WebRequest -Uri $pcsStopUrl -Method Put
-
-# wait for the service to finish processing the current job
-$sleep = $false
-$pcsStatusUrl = $pcsUrl + "status"
-DO
-{
-    if ($sleep -eq $true) 
-    {
-        Start-Sleep -Seconds 30
-    }
-    $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
-    Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
-    $sleep = $true
-} While ($pcsStateResponse.Content -notmatch "Stopped")
+StopAndWait
 
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
