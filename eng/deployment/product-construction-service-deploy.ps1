@@ -47,6 +47,8 @@ function StopAndWait([string]$pcsUrl) {
 function Compare-Properties($before, $after) {
     mkdir temp
     cd temp
+    git config --global user.email "temp@example.com"
+    git config --global user.name "temp"
     Set-Content -Path output.json -Value $before -Encoding UTF8
     git init
     git add .\
