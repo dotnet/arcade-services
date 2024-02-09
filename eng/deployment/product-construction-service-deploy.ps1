@@ -49,6 +49,8 @@ function Compare-Properties($before, $after) {
     cd temp
     Set-Content -Path output.json -Value $before -Encoding UTF8
     git init
+    git add .\
+    git commit -m "Before deployment"
     Set-Content -Path output.json -Value $after -Encoding UTF8
     git diff .
 }
