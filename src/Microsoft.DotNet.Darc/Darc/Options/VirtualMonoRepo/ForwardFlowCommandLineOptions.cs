@@ -11,11 +11,10 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("forwardflow", HelpText = "Flows code changes from a target repository to the VMR.")]
 internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions, IBaseVmrCommandLineOptions
 {
-
     [Value(0, Required = false, HelpText = "Repositories to flow the code from in the form of NAME:PATH with mapping name and local path to the target repository. " +
         "Path can be ommitted when --repository-dirs is supplied. " +
         "When no repositories passed, all repositories with changes will be synchronized.")]
-    public IEnumerable<string> Repositories { get; set; }
+    public override IEnumerable<string> Repositories { get; set; }
 
     public override Operation GetOperation() => new ForwardFlowOperation(this);
 }

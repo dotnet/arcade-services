@@ -40,7 +40,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
         await InitializeRepoAtLastCommit(Constants.InstallerRepoName, InstallerRepoPath, sourceMappingsPath);
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath, sourceMappingsPath);
 
-        var expectedFilesFromRepos = new List<LocalPath>
+        var expectedFilesFromRepos = new List<NativePath>
         {
             VmrPath / VmrInfo.SourcesDir / "some-file.txt",
             VmrPath / VmrInfo.SourcesDir / Constants.InstallerRepoName / _sourceMappingsRelativePath,
@@ -90,7 +90,7 @@ internal class VmrRepoDeletionTest : VmrTestsBase
         var versions = AllVersionsPropsFile.DeserializeFromXml(VmrPath / VmrInfo.GitInfoSourcesDir / AllVersionsPropsFile.FileName);
         versions.Versions.Keys.Should().BeEquivalentTo(["installerGitCommitHash"]);
 
-        var sourceManifest = SourceManifest.FromJson(Info.SourceManifestPath);
+        var sourceManifest = SourceManifest.FromJson(VmrPath / VmrInfo.SourcesDir / VmrInfo.SourceManifestFileName);
         sourceManifest.Repositories.Should().HaveCount(1);
         sourceManifest.Repositories.First().Path.Should().Be("installer");
 
@@ -99,8 +99,8 @@ internal class VmrRepoDeletionTest : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.InstallerRepoName);
-        await CopyRepoAndCreateVersionDetails(CurrentTestDirectory, Constants.ProductRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.InstallerRepoName);
+        await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
 
         _sourceMappings = new SourceMappingFile
         {

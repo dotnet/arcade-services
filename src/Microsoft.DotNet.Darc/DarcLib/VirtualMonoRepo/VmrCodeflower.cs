@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
 /// It only makes patches/changes locally, no other effects are done.
 /// </summary>
-internal abstract class VmrCodeflower
+internal abstract class VmrCodeFlower
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
@@ -26,11 +26,11 @@ internal abstract class VmrCodeflower
     private readonly ILocalGitClient _localGitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VmrCodeflower> _logger;
+    private readonly ILogger<VmrCodeFlower> _logger;
 
     protected ILocalGitRepo LocalVmr { get; }
 
-    protected VmrCodeflower(
+    protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
@@ -38,7 +38,7 @@ internal abstract class VmrCodeflower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
-        ILogger<VmrCodeflower> logger)
+        ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;

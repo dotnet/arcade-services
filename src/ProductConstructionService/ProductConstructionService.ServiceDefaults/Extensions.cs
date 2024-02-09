@@ -62,11 +62,7 @@ public static class Extensions
                        .AddHttpClientInstrumentation();
             });
 
-        // We're not writing to Application Insights when running the service locally
-        if (!builder.Environment.IsDevelopment())
-        { 
-            builder.AddOpenTelemetryExporters();
-        }
+        builder.AddOpenTelemetryExporters();
 
         return builder;
     }
@@ -84,8 +80,12 @@ public static class Extensions
 
         // This method call will read the APPLICATIONINSIGHTS_CONNECTION_STRING environmental variable, and
         // setup the Application Insights logging
-        builder.Services.AddOpenTelemetry()
-           .UseAzureMonitor();
+        // We don't need this locally
+        if (!builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddOpenTelemetry()
+               .UseAzureMonitor();
+        }
 
         return builder;
     }

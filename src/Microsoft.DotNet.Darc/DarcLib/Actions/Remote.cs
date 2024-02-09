@@ -8,9 +8,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -171,23 +171,20 @@ public sealed class Remote : IRemote
     {
         CheckForValidGitClient();
 
-        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch)).ToList();
+        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch)];
         var locationResolver = new AssetLocationResolver(barClient, _logger);
         await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
         // and the sdk versions in global.json
-        DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
-            i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+        DependencyDetail arcadeItem = itemsToUpdate.GetArcadeUpdate();
             
         SemanticVersion targetDotNetVersion = null;
         bool mayNeedArcadeUpdate = (arcadeItem != null && repoUri != arcadeItem.RepoUri);
-        IRemote arcadeRemote = null;
 
         if (mayNeedArcadeUpdate)
         {
-            arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-            targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            targetDotNetVersion = await _fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
         GitFileContentContainer fileContainer =
@@ -198,6 +195,7 @@ public sealed class Remote : IRemote
         {
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
+            IRemote arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
             List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
             filesToCommit.AddRange(engCommonFiles);
 
@@ -360,34 +358,10 @@ public sealed class Remote : IRemote
         CheckForValidGitClient();
         _logger.LogInformation("Generating commits for script files");
 
-        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, "eng/common");
+        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, Constants.CommonScriptFilesPath);
 
         _logger.LogInformation("Generating commits for script files succeeded!");
 
         return files;
-    }
-
-    /// <summary>
-    /// Get the tools.dotnet section of the global.json from a target repo URI
-    /// </summary>
-    /// <param name="repoUri">repo to get the version from</param>
-    /// <param name="commit">commit sha to query</param>
-    /// <returns></returns>
-    public async Task<SemanticVersion> GetToolsDotnetVersionAsync(string repoUri, string commit)
-    {
-        CheckForValidGitClient();
-        _logger.LogInformation("Reading dotnet version from global.json");
-
-        JObject globalJson = await _fileManager.ReadGlobalJsonAsync(repoUri, commit);
-        JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
-
-        _logger.LogInformation("Reading dotnet version from global.json succeeded!");
-
-        if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
-        {
-            _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet}");
-        }
-
-        return dotnetVersion;
     }
 }
