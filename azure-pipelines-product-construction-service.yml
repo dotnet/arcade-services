@@ -101,8 +101,7 @@ stages:
 
         - powershell: |
             git --version
-            $diff = git diff before.json after.json
-            Set-Content -Path diff -Value $diff
+            git diff before.json after.json
           displayName: Calculate Git Diff
           workingDirectory: $(diffFolder)
 
