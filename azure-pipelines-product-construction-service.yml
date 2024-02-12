@@ -100,6 +100,8 @@ stages:
             displayName: Get containerapp information after the deployment
 
         - powershell: |
+            cat $(diffFolder)/before.json
+            dir $(diffFolder)
             $diff = git diff --no-index $(diffFolder)/before.json $(diffFolder)/after.json
             Set-Content -Path $(diffFolder)/diff -Value $diff
           displayName: Calculate Git Diff
