@@ -23,8 +23,8 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private const string MergePolicyElement = "Merge Policies";
     private const string BatchableElement = "Batchable";
     private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    private const string SourceEnabledElement = "SourceEnabled";
-    private const string ExcludedAssetsElement = "ExcludedAssets";
+    private const string SourceEnabledElement = "Source Enabled";
+    private const string ExcludedAssetsElement = "Excluded Assets";
 
     protected readonly SubscriptionData _data;
     private readonly IEnumerable<string> _suggestedChannels;
