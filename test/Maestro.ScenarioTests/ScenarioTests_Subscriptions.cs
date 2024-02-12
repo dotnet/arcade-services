@@ -168,6 +168,8 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                     Batchable: False
                     Merge Policies:
                     - Name: Standard
+                    Source Enabled: False
+                    Excluded Assets: []
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
@@ -198,6 +200,8 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                     Batchable: False
                     Merge Policies:
                     - Name: standard
+                    Source Enabled: False
+                    Excluded Assets: []
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
@@ -236,6 +240,8 @@ internal class ScenarioTests_Subscriptions : MaestroScenarioTestBase
                         ignoreChecks:
                         - WIP
                         - MySpecialCheck
+                    Source Enabled: False
+                    Excluded Assets: []
                     """;
 
                 Assert.ThrowsAsync<MaestroTestException>(async () =>
