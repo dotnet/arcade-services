@@ -107,4 +107,5 @@ stages:
           workingDirectory: $(diffFolder)
 
         - publish: $(diffFolder)
+          displayName: Upload configuration diff
           artifact: DeploymentDiff
