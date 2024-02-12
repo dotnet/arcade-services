@@ -77,7 +77,7 @@ stages:
               New-Item -ItemType Directory -Path $(diffFolder)
               $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
               Set-Content -Path $(diffFolder)/before.json -Value $before
-            displayName: Create before-deployment configuration snapshot
+          displayName: Create before-deployment configuration snapshot
 
         - task: AzureCLI@2
           inputs:
@@ -96,7 +96,7 @@ stages:
             inlineScript: |
               $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
               Set-Content -Path $(diffFolder)/after.json -Value $after
-            displayName: Create after-deployment configuration snapshot
+          displayName: Create after-deployment configuration snapshot
 
         # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
         - powershell: |
