@@ -44,22 +44,7 @@ function StopAndWait([string]$pcsUrl) {
     return
 }
 
-function Compare-Properties($before, $after) {
-    mkdir temp
-    cd temp
-    git config --global user.email "temp@example.com"
-    git config --global user.name "temp"
-    Set-Content -Path output.json -Value $before -Encoding UTF8
-    git init
-    git add .
-    git commit -m "Before deployment"
-    Set-Content -Path output.json -Value $after -Encoding UTF8
-    git diff .
-}
-
 az extension add --name containerapp --upgrade
-
-$before = az containerapp show --name $containerappName --resource-group $resourceGroupName --output yaml
 
 Write-Host "Fetching all revisions to determine the active label"
 $containerappTraffic = az containerapp ingress traffic show --name $containerappName --resource-group $resourceGroupName | ConvertFrom-Json
@@ -100,7 +85,6 @@ StopAndWait $pcsUrl
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
 Write-Host "Deploying new image $newImage"
-# We should used a managed identity to authenticate to the container registry once https://github.com/dotnet/arcade-services/issues/3180 is resolved
 az containerapp update --name $containerappName --resource-group $resourceGroupName --image $newImage --revision-suffix $newImageTag | Out-Null
 
 $newRevisionName = "$containerappName--$newImageTag"
@@ -141,7 +125,4 @@ finally {
     Write-Host "Starting the product construction service"
     $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
-    $after = az containerapp show --name $containerappName --resource-group $resourceGroupName --output yaml
-
-    Compare-Properties $before $after
 }
