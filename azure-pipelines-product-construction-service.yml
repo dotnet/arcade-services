@@ -101,9 +101,11 @@ stages:
 
         - powershell: |
             git --version
-            git diff before.json after.json
+            $diff = git diff before.json after.json
+            Set-Content -Path diff -Value $diff
           displayName: Calculate Git Diff
           workingDirectory: $(diffFolder)
+          continueOnError: true
 
         - publish: $(diffFolder)
           artifact: DeploymentDiff
