@@ -103,6 +103,7 @@ stages:
             git --version
             $diff = git diff before.json after.json
             Set-Content -Path diff -Value $diff
+            $LASTEXITCODE = 0
           displayName: Calculate Git Diff
           workingDirectory: $(diffFolder)
           continueOnError: true
