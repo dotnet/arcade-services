@@ -31,6 +31,11 @@ public class VmrCloakedFileScanner : VmrScanner
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (sourceMapping.Exclude.Count == 0)
+        {
+            return [];
+        }
+
         var args = new List<string>
         {
             "diff",

@@ -9,4 +9,5 @@ namespace ProductConstructionService.Api.Queue.Jobs;
 public abstract class Job
 {
     public required Guid Id { get; init; }
+    public abstract string Type { get; }
 }

@@ -2,27 +2,39 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Tests;
 
-public class JobsProcessorStatusTests
+public class JobsProcessorScopeManagerTests
 {
+    private readonly IServiceProvider _serviceProvider;
+
+    public JobsProcessorScopeManagerTests()
+    {
+        ServiceCollection services = new();
+
+        services.AddSingleton(new Mock<ITelemetryRecorder>().Object);
+
+        _serviceProvider = services.BuildServiceProvider();
+    }
+
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
-
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
         // When it starts, the processor is not working
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
         TaskCompletionSource jobCompletion1 = new();
+        TaskCompletionSource jobCompletion2 = new();
         Thread t = new(() =>
         {
-            using (scopeManager.BeginJobScopeWhenReady())
-            {
-                jobCompletion1.SetResult();
-            }
+            using (scopeManager.BeginJobScopeWhenReady()) { }
+            jobCompletion1.SetResult();
         });
         t.Start();
 
@@ -32,10 +44,10 @@ public class JobsProcessorStatusTests
         // Start the service again
         scopeManager.Start();
 
-        // Wait for the worker to enter the job
-        await jobCompletion1.Task;
-
         scopeManager.State.Should().Be(JobsProcessorState.Working);
+
+        // Wait for the worker to finish the job
+        await jobCompletion1.Task;
 
         // The JobProcessor is working now, it shouldn't block on anything
         using (scopeManager.BeginJobScopeWhenReady()) { }
@@ -44,7 +56,7 @@ public class JobsProcessorStatusTests
 
         // Simulate someone calling stop in the middle of a job
         jobCompletion1 = new();
-        TaskCompletionSource jobCompletion2 = new();
+        jobCompletion2 = new();
 
         var workerTask = Task.Run(async () =>
         {
@@ -74,7 +86,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
 
         // The jobs processor should start in a stopped state
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
@@ -109,7 +121,7 @@ public class JobsProcessorStatusTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
-        JobsProcessorScopeManager scopeManager = new(false);
+        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 

@@ -46,6 +46,9 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("enabled", HelpText = "Get only enabled subscriptions.")]
     public bool Enabled { get; set; }
 
+    [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
+    public bool? SourceEnabled { get; set; }
+
     [Option("batchable", HelpText = "Get only batchable subscriptions.")]
     public bool Batchable { get; set; }
 
@@ -71,6 +74,7 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
                SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
                SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
                SubscriptionEnabledParameterMatches(subscription) &&
+               SubscriptionSourceEnabledParameterMatches(subscription) &&
                SubscriptionBatchableParameterMatches(subscription) &&
                SubscriptionIdsParameterMatches(subscription) &&
                SubscriptionFrequenciesParameterMatches(subscription) &&
@@ -82,6 +86,11 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
         return (Enabled && subscription.Enabled) ||
                (Disabled && !subscription.Enabled) ||
                (!Enabled && !Disabled);
+    }
+
+    public bool SubscriptionSourceEnabledParameterMatches(Subscription subscription)
+    {
+        return !SourceEnabled.HasValue || subscription.SourceEnabled == SourceEnabled;
     }
 
     public bool SubscriptionBatchableParameterMatches(Subscription subscription)
@@ -140,18 +149,17 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     /// Determine whether the set of input options has any valid filters.
     /// </summary>
     /// <returns>True if there are valid filters, false otherwise.</returns>
-    public bool HasAnyFilters()
-    {
-        return !string.IsNullOrEmpty(TargetRepository) ||
-               !string.IsNullOrEmpty(TargetBranch) ||
-               !string.IsNullOrEmpty(SourceRepository) ||
-               !string.IsNullOrEmpty(Channel) ||
-               Frequencies.Any() ||
-               !string.IsNullOrEmpty(DefaultChannelTarget) ||
-               Disabled ||
-               Enabled ||
-               Batchable ||
-               NotBatchable ||
-               SubscriptionIds.Any();
-    }
+    public bool HasAnyFilters() =>
+        !string.IsNullOrEmpty(TargetRepository)
+        || !string.IsNullOrEmpty(TargetBranch)
+        || !string.IsNullOrEmpty(SourceRepository)
+        || !string.IsNullOrEmpty(Channel)
+        || Frequencies.Any()
+        || !string.IsNullOrEmpty(DefaultChannelTarget)
+        || Disabled
+        || Enabled
+        || SourceEnabled.HasValue
+        || Batchable
+        || NotBatchable
+        || SubscriptionIds.Any();
 }

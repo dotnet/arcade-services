@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,6 +55,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly ISourceManifest _sourceManifest;
     private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
     private readonly IComponentListGenerator _readmeComponentListGenerator;
+    private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IWorkBranchFactory _workBranchFactory;
 
@@ -85,6 +87,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _fileSystem = fileSystem;
         _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
         _readmeComponentListGenerator = readmeComponentListGenerator;
+        _localGitClient = localGitClient;
         _gitRepoFactory = gitRepoFactory;
         _workBranchFactory = workBranchFactory;
     }
@@ -411,6 +414,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             }
 
             await CommitAsync("[VMR patches] Re-apply VMR patches");
+
+            // TODO: Workaround for cases when we get CRLF problems on Windows
+            // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
+            // https://github.com/dotnet/arcade-services/issues/3277
+            if (vmrPatchesToReapply.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+            }
         }
 
         await CleanUpRemovedRepos(componentTemplatePath, tpnTemplatePath);

@@ -154,46 +154,46 @@ public static class UxHelpers
     public static string GetMergePoliciesDescription(IEnumerable<MergePolicy> mergePolicies, string indent = "")
     {
         var builder = new StringBuilder();
+        builder.Append($"{indent}- Merge Policies:");
 
-        if (mergePolicies.Any())
+        if (!mergePolicies.Any())
         {
-            builder.AppendLine($"{indent}- Merge Policies:");
-            foreach (MergePolicy mergePolicy in mergePolicies)
+            builder.AppendLine(" []");
+            return builder.ToString();
+        }
+
+        builder.AppendLine();
+        foreach (MergePolicy mergePolicy in mergePolicies)
+        {
+            builder.AppendLine($"{indent}  {mergePolicy.Name}");
+            if (mergePolicy.Properties != null)
             {
-                builder.AppendLine($"{indent}  {mergePolicy.Name}");
-                if (mergePolicy.Properties != null)
+                foreach (var mergePolicyProperty in mergePolicy.Properties)
                 {
-                    foreach (var mergePolicyProperty in mergePolicy.Properties)
+                    // The merge policy property is a key value pair.  For formatting, turn it into a string.
+                    // It's often a JToken, so handle appropriately
+                    // 1. If the number of lines in the string is 1, write on same line as key
+                    // 2. If the number of lines in the string is more than one, start on new
+                    //    line and indent.
+                    var valueString = mergePolicyProperty.Value.ToString();
+                    var valueLines = valueString.Split(Environment.NewLine);
+                    var keyString = $"{indent}    {mergePolicyProperty.Key} = ";
+                    builder.Append(keyString);
+                    if (valueLines.Length == 1)
                     {
-                        // The merge policy property is a key value pair.  For formatting, turn it into a string.
-                        // It's often a JToken, so handle appropriately
-                        // 1. If the number of lines in the string is 1, write on same line as key
-                        // 2. If the number of lines in the string is more than one, start on new
-                        //    line and indent.
-                        var valueString = mergePolicyProperty.Value.ToString();
-                        var valueLines = valueString.Split(System.Environment.NewLine);
-                        var keyString = $"{indent}    {mergePolicyProperty.Key} = ";
-                        builder.Append(keyString);
-                        if (valueLines.Length == 1)
+                        builder.AppendLine(valueString);
+                    }
+                    else
+                    {
+                        var indentString = new string(' ', keyString.Length);
+                        builder.AppendLine();
+                        foreach (string line in valueLines)
                         {
-                            builder.AppendLine(valueString);
-                        }
-                        else
-                        {
-                            var indentString = new string(' ', keyString.Length);
-                            builder.AppendLine();
-                            foreach (string line in valueLines)
-                            {
-                                builder.AppendLine($"{indent}{indentString}{line}");
-                            }
+                            builder.AppendLine($"{indent}{indentString}{line}");
                         }
                     }
                 }
             }
-        }
-        else
-        {
-            builder.AppendLine($"{indent}- Merge Policies: []");
         }
 
         return builder.ToString();
@@ -201,6 +201,7 @@ public static class UxHelpers
 
     public static string GetTextSubscriptionDescription(Subscription subscription, IEnumerable<MergePolicy> mergePolicies = null)
     {
+
         var subInfo = new StringBuilder();
         subInfo.AppendLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
         subInfo.AppendLine($"  - Id: {subscription.Id}");
@@ -208,9 +209,21 @@ public static class UxHelpers
         subInfo.AppendLine($"  - Enabled: {subscription.Enabled}");
         subInfo.AppendLine($"  - Batchable: {subscription.Policy.Batchable}");
         subInfo.AppendLine($"  - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}");
+        subInfo.AppendLine($"  - Source-enabled: {subscription.SourceEnabled}");
+
+        string excludedAssets;
+        if (subscription.ExcludedAssets.Any())
+        {
+            excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, ..subscription.ExcludedAssets]);
+        }
+        else
+        {
+            excludedAssets = " []";
+        }
+        subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
 
         IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
-        subInfo.Append(UxHelpers.GetMergePoliciesDescription(policies, "  "));
+        subInfo.Append(GetMergePoliciesDescription(policies, "  "));
 
         // Currently the API only returns the last applied build for requests to specific subscriptions.
         // This will be fixed, but for now, don't print the last applied build otherwise.
