@@ -37,8 +37,8 @@
     <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.24066.2</MicrosoftDotNetWebAuthenticationVersion>
     <ServiceFabricMocksVersion>1.1.0-beta.24066.2</ServiceFabricMocksVersion>
     <CoreHealthMonitorVersion>1.1.0-beta.24066.2</CoreHealthMonitorVersion>
-    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.24074.1</MicrosoftDncEngSecretManagerVersion>
-    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.24074.1</MicrosoftDncEngConfigurationBootstrapVersion>
+    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.24105.2</MicrosoftDncEngSecretManagerVersion>
+    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.24105.2</MicrosoftDncEngConfigurationBootstrapVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
