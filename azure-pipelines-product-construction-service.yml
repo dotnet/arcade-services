@@ -99,14 +99,14 @@ stages:
               Set-Content -Path $(diffFolder)/after.json -Value $after
             displayName: Get containerapp information after the deployment
 
+        # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
         - powershell: |
             git --version
             $diff = git diff before.json after.json
-            Set-Content -Path diff -Value $diff
             $LASTEXITCODE = 0
+            Set-Content -Path diff -Value $diff
           displayName: Calculate Git Diff
           workingDirectory: $(diffFolder)
-          continueOnError: true
 
         - publish: $(diffFolder)
           artifact: DeploymentDiff
