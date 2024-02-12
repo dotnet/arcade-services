@@ -10,19 +10,23 @@ param(
     [Parameter(Mandatory=$true)][string]$pcsUrl
 )
 
-function StopAndWait([string]$pcsUrl) {
+$pcsStatusUrl = $pcsUrl + "/status"
+$pcsStopUrl = $pcsStatusUrl + "/stop"
+$pcsStartUrl = $pcsStatusUrl + "/start"
+
+function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
     try {
-        $pcsStopUrl = $pcsUrl + "/status/stop"
+        
         $stopResponse = Invoke-WebRequest -Uri $pcsStopUrl -Method Put
 
         if ($stopResponse.StatusCode -ne 200) {
-            Write-Host "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
+            Write-Warning "Service isn't responding to the stop request. Deploying the new revision without stopping the service."
             return
         }
 
         # wait for the service to finish processing the current job
         $sleep = $false
-        $pcsStatusUrl = $pcsUrl + "/status"
+        
         DO
         {
             if ($sleep -eq $true) 
@@ -31,7 +35,7 @@ function StopAndWait([string]$pcsUrl) {
             }
             $pcsStateResponse = Invoke-WebRequest -Uri $pcsStatusUrl -Method Get
             if ($pcsStateResponse.StatusCode -ne 200) {
-                Write-Host "Service isn't responding to the status request. Deploying the new revision without stopping the service."
+                Write-Warning "Service isn't responding to the status request. Deploying the new revision without stopping the service."
                 return
             }
             Write-Host "Product Construction Service state: $($pcsStateResponse.Content)"
@@ -39,7 +43,7 @@ function StopAndWait([string]$pcsUrl) {
         } While ($pcsStateResponse.Content -notmatch "Stopped")
     }
     catch {
-        Write-Host "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
+        Write-Error "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
     }
     return
 }
@@ -80,7 +84,7 @@ else
 
 # Tell the service to stop processing jobs after it finishes the current one
 Write-Host "Stopping the service from processing new jobs"
-StopAndWait $pcsUrl
+StopAndWait -pcsStatusUrl $pcsStatusUrl -pcsStopUrl $pcsStopUrl
 
 # deploy the new image
 $newImage = "$containerRegistryName.azurecr.io/$imageName`:$newImageTag"
@@ -115,7 +119,7 @@ try
         Write-Host "All traffic has been redirected to label $inactiveLabel"
     }
     else {
-        Write-Host "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
+        Write-Error "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
         az containerapp revision deactivate --revision $newRevisionName --name $containerappName --resource-group $resourceGroupName
         exit 1
     }
@@ -123,6 +127,5 @@ try
 finally {
     # Start the service. This either starts the new revision or the old one if the new one failed to start
     Write-Host "Starting the product construction service"
-    $pcsStartUrl = $pcsUrl + "/status/start"
     Invoke-WebRequest -Uri $pcsStartUrl -Method Put
 }
