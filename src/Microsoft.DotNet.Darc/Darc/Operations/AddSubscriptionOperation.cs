@@ -117,7 +117,7 @@ internal class AddSubscriptionOperation : Operation
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
         string failureNotificationTags = _options.PullRequestFailureNotificationTags;
-        List<string> excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
+        List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
         // just call the remote API

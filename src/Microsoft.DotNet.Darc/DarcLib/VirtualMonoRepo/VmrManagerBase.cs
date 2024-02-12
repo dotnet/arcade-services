@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -142,6 +143,15 @@ public abstract class VmrManagerBase
 
         // Commit without adding files as they were added to index directly
         await CommitAsync(commitMessage, author);
+
+        // TODO: Workaround for cases when we get CRLF problems on Windows
+        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
+        // https://github.com/dotnet/arcade-services/issues/3277
+        if (reapplyVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+        }
 
         return vmrPatchesToRestore;
     }
