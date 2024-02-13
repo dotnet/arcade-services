@@ -79,6 +79,12 @@ public abstract class EditorPopUp
     /// </returns>
     protected static string ParseSetting(string inputSetting, string originalSetting, bool isSecret)
     {
+        //if the setting is null, trimming will throw an exception
+        if (string.IsNullOrEmpty(inputSetting))
+        {
+            return inputSetting;
+        }
+
         string trimmedSetting = inputSetting.Trim();
         if (trimmedSetting.StartsWith('<') && trimmedSetting.EndsWith('>'))
         {
