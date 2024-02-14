@@ -36,4 +36,4 @@ RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com
  && git config --global user.name "dotnet-maestro[bot]"
 WORKDIR /app
 COPY --from=publish /app/publish .
-# ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
+ENTRYPOINT ["dotnet", "ProductConstructionService.Api.dll"]
