@@ -232,8 +232,9 @@ internal class UpdateDependenciesOperation : Operation
                 return Constants.SuccessCode;
             }
 
-            // Now call the local updater to run the update.
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, barClient);
+            // Now call the local updater to run the update
+            var gitRepoFactory = ActivatorUtilities.CreateInstance<GitRepoFactory>(Provider, Path.GetTempPath());
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory, gitRepoFactory, barClient);
 
             Console.WriteLine(finalMessage);
 
