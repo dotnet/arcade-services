@@ -55,9 +55,7 @@ public class Local : ILocal
     ///     Updates existing dependencies in the dependency files
     /// </summary>
     /// <param name="dependencies">Dependencies that need updates.</param>
-    /// <param name="remote">Remote instance for gathering eng/common script updates.</param>
-    /// <returns></returns>
-    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IBarApiClient barClient)
+    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IGitRepoFactory gitRepoFactory, IBarApiClient barClient)
     {
         // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
         // Update the incoming dependencies with locations.
@@ -70,11 +68,11 @@ public class Local : ILocal
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
-        IRemote arcadeRemote = null;
 
         if (arcadeItem != null)
         {
-            targetDotNetVersion = await _fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            var fileManager = new DependencyFileManager(gitRepoFactory, _versionDetailsParser, _logger);
+            targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
         }
 
         var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
@@ -84,6 +82,7 @@ public class Local : ILocal
         {
             try
             {
+                IRemote arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
                 List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                 filesToUpdate.AddRange(engCommonFiles);
 

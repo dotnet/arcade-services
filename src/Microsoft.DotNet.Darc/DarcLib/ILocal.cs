@@ -1,18 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib;
 
 internal interface ILocal
 {
-    Task UpdateDependenciesAsync(
-        List<DependencyDetail> dependencies,
-        IRemoteFactory remoteFactory,
-        IBarApiClient barClient);
-
     /// <summary>
     ///     Verify the local repository has correct and consistent dependency information
     /// </summary>

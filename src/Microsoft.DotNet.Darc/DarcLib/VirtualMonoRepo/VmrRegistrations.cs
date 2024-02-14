@@ -32,7 +32,7 @@ public static class VmrRegistrations
 
         services.TryAddTransient<ILogger>(sp => sp.GetRequiredService<ILogger<VmrManagerBase>>());
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
-        services.TryAddTransient<IGitRepoFactory, VmrGitClientFactory>();
+        services.TryAddTransient<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, sp.GetRequiredService<IVmrInfo>().TmpPath));
         services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
         services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddTransient<ILocalLibGit2Client, LocalLibGit2Client>();
