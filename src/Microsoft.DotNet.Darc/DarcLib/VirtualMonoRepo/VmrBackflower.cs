@@ -3,16 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -41,16 +38,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IBasicBarClient _barClient;
-    private readonly ILocalLibGit2Client _libGit2Client;
-    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
-    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -70,21 +62,28 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(
+            vmrInfo,
+            sourceManifest,
+            dependencyTracker,
+            localGitClient,
+            libGit2Client,
+            localGitRepoFactory,
+            versionDetailsParser,
+            dependencyFileManager,
+            coherencyUpdateResolver,
+            assetLocationResolver,
+            fileSystem,
+            logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
-        _dependencyFileManager = dependencyFileManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
-        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _barClient = basicBarClient;
-        _libGit2Client = libGit2Client;
-        _coherencyUpdateResolver = coherencyUpdateResolver;
-        _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -106,14 +105,15 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
-        if (shaToFlow is null)
+        Build? build = null;
+        if (buildToFlow.HasValue)
         {
-            shaToFlow = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
+            build = await _barClient.GetBuildAsync(buildToFlow.Value)
+                ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
         }
-        else
-        {
-            await CheckOutVmr(shaToFlow);
-        }
+
+        shaToFlow ??= build?.Commit ?? await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
+        await CheckOutVmr(shaToFlow);
 
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
@@ -123,17 +123,19 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             new Backflow(lastFlow.TargetSha, shaToFlow),
             targetRepo,
             mapping,
+            build,
             discardPatches,
             cancellationToken);
 
-        if (branchName is null)
+        if (branchName is null && build is null)
         {
-            // TODO: We should still probably update package versions or at least try?
+            // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
             // Should we clean up the repos?
             return null;
         }
 
-        await UpdateDependenciesAndToolset(targetRepo, shaToFlow, buildToFlow, cancellationToken);
+        await UpdateDependenciesAndToolset(LocalVmr, build, shaToFlow, updateSourceElement: true, cancellationToken);
+
         return branchName;
     }
 
@@ -142,6 +144,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
+        Build? build,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -188,7 +191,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         await targetRepo.CheckoutAsync(lastFlow.TargetSha);
         await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
 
-        // TODO: Remove VMR patches before we create the patches
+        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
 
         try
         {
@@ -201,7 +204,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             _logger.LogInformation(e.Message);
 
-            // TODO: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
+            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
@@ -222,13 +225,14 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
+                /* TODO: Find a previous build? */ null,
                 discardPatches,
                 cancellationToken);
 
             // The current patches should apply now
             foreach (VmrIngestionPatch patch in patches)
             {
-                // TODO: Catch exceptions?
+                // TODO https://github.com/dotnet/arcade-services/issues/2995: Catch exceptions?
                 await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
             }
         }
@@ -252,6 +256,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
+        Build? build,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -269,7 +274,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
-        // TODO: Remove VMR patches before we create the patches
+        // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
@@ -299,16 +304,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Now we insert the VMR files
         foreach (var patch in patches)
         {
-            // TODO: Handle exceptions
+            // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle exceptions
             await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, cancellationToken);
         }
 
-        // TODO: Check if there are any changes and only commit if there are
+        // TODO https://github.com/dotnet/arcade-services/issues/2995: Check if there are any changes and only commit if there are
         result = await targetRepo.ExecuteGitCommand(["diff-index", "--quiet", "--cached", "HEAD", "--"], cancellationToken);
 
         if (result.ExitCode == 0)
         {
-            // TODO: Handle + clean up the work branch
+            // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
             return null;
         }
 
@@ -322,87 +327,5 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         await targetRepo.ResetWorkingTree();
 
         return branchName;
-    }
-
-    private async Task UpdateDependenciesAndToolset(ILocalGitRepo repo, string currentVmrSha, int? buildToFlow, CancellationToken cancellationToken)
-    {
-        string versionDetailsXml = await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
-            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {repo.Path}");
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
-        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
-
-        SourceDependency? sourceOrigin;
-        List<DependencyUpdate> updates;
-
-        // Generate the <Source /> element and get updates
-        if (buildToFlow.HasValue)
-        {
-            Build build = await _barClient.GetBuildAsync(buildToFlow.Value)
-                ?? throw new Exception($"Failed to find build with ID {buildToFlow}");
-
-            sourceOrigin = new SourceDependency(
-                build.GitHubRepository ?? build.AzureDevOpsRepository,
-                currentVmrSha);
-
-            IEnumerable<AssetData> assetData = build.Assets.Select(
-                a => new AssetData(a.NonShipping)
-                {
-                    Name = a.Name,
-                    Version = a.Version
-                });
-
-            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                sourceOrigin.Uri,
-                sourceOrigin.Sha,
-                assetData,
-                versionDetails.Dependencies);
-
-            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
-        }
-        else
-        {
-            sourceOrigin = versionDetails.Source != null
-                ? versionDetails.Source with { Sha = currentVmrSha }
-                : new SourceDependency(Constants.DefaultVmrUri, currentVmrSha); // First ever backflow for the repo
-            updates = [];
-        }
-
-        // If we are updating the arcade sdk we need to update the eng/common files as well
-        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
-        SemanticVersion? targetDotNetVersion = null;
-
-        if (arcadeItem != null)
-        {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
-        }
-
-        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
-            updates.Select(u => u.To),
-            sourceOrigin,
-            repo.Path,
-            Constants.HEAD,
-            versionDetails.Dependencies,
-            targetDotNetVersion);
-
-        // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), repo.Path, null, null);
-
-        // Update eng/common files
-        if (arcadeItem != null)
-        {
-            var commonDir = repo.Path / Constants.CommonScriptFilesPath;
-            if (_fileSystem.DirectoryExists(commonDir))
-            {
-                _fileSystem.DeleteDirectory(commonDir, true);
-            }
-
-            _fileSystem.CopyDirectory(
-                _vmrInfo.VmrPath / Constants.CommonScriptFilesPath,
-                repo.Path / Constants.CommonScriptFilesPath,
-                true);
-        }
-
-        await repo.StageAsync(["."], cancellationToken);
-        await repo.CommitAsync($"Update dependency files to {currentVmrSha}", false, cancellationToken: cancellationToken);
     }
 }
