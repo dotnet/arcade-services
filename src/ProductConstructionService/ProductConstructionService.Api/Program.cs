@@ -27,7 +27,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 builder.AddTelemetry();
 builder.AddWorkitemQueues(credential);
 
-//builder.AddVmrRegistrations();
+builder.AddVmrRegistrations();
 
 builder.AddServiceDefaults();
 
