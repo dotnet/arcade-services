@@ -501,11 +501,19 @@ public class BarApiClient : IBarApiClient
     /// <returns>Latest build of <paramref name="repoUri"/> on channel <paramref name="channelId"/>,
     /// or null if there is no latest.</returns>
     /// <remarks>The build's assets are returned</remarks>
-    public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
+    public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
     {
-        return _barClient.Builds.GetLatestAsync(repository: repoUri,
-            channelId: channelId,
-            loadCollections: true);
+        try
+        {
+            return await _barClient.Builds.GetLatestAsync(
+                repository: repoUri,
+                channelId: channelId,
+                loadCollections: true);
+        }
+        catch (RestApiException<ApiError> e) when (e.Message.Contains("404 Not Found"))
+        {
+            return null;
+        }
     }
 
     /// <summary>
