@@ -59,4 +59,7 @@ if (app.Environment.IsDevelopment())
     await queueClient.CreateIfNotExistsAsync();
 }
 
+var a = app.Services.GetRequiredService<IRepositoryCloneManager>();
+await a.PrepareCloneAsync("https://github.com/dotnet/dotnet", "17a7bb483ced4ad57c400d96e88048ec6221ef3d", CancellationToken.None);
+
 app.Run();
