@@ -170,6 +170,18 @@ var env = [
         name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
         value: applicationInsights.properties.ConnectionString
     }
+    {
+        name: 'VmrPath'
+        value: '/mnt/datadir/vmr'
+    }
+    {
+        name: 'TmpPath'
+        value: '/mnt/datadir/tmp'
+    }
+    {
+        name: 'GitLocation'
+        value: '/usr/local/git'
+    }
 ]
 
 // container app hosting the Product Construction Service
