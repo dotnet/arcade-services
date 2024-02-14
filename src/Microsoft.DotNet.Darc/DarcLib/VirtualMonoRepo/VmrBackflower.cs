@@ -112,8 +112,16 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 ?? throw new Exception($"Failed to find build with BAR ID {buildToFlow}");
         }
 
-        shaToFlow ??= build?.Commit ?? await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
-        await CheckOutVmr(shaToFlow);
+        // SHA comes either directly or from the build or if none supplied, from tip of the VMR
+        shaToFlow ??= build?.Commit;
+        if (shaToFlow is null)
+        {
+            shaToFlow = await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
+        }
+        else
+        {
+            await CheckOutVmr(shaToFlow);
+        }
 
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
@@ -134,7 +142,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return null;
         }
 
-        await UpdateDependenciesAndToolset(LocalVmr, build, shaToFlow, updateSourceElement: true, cancellationToken);
+        await UpdateDependenciesAndToolset(targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
 
         return branchName;
     }

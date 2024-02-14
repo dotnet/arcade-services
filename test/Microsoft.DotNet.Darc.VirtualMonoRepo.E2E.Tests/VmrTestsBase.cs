@@ -125,7 +125,7 @@ internal abstract class VmrTestsBase
     protected static void CheckDirectoryContents(string directory, IList<NativePath> expectedFiles)
     {
         var filesInDir = GetAllFilesInDirectory(new DirectoryInfo(directory));
-        filesInDir.Should().BeEquivalentTo(expectedFiles);
+        filesInDir.OrderBy(f => f.Path).ToList().Should().BeEquivalentTo(expectedFiles.OrderBy(f => f.Path).ToList());
     }
 
     protected static void CheckFileContents(NativePath filePath, string expected, bool removeEmptyLines = true)

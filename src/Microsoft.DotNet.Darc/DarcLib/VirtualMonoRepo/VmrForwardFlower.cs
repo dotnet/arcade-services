@@ -93,8 +93,17 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         var sourceRepo = _localGitRepoFactory.Create(repoPath);
-        shaToFlow ??= build?.Commit ?? await sourceRepo.GetShaForRefAsync();
-        await sourceRepo.CheckoutAsync(shaToFlow);
+
+        // SHA comes either directly or from the build or if none supplied, from tip of the repo
+        shaToFlow ??= build?.Commit;
+        if (shaToFlow is null)
+        {
+            shaToFlow = await sourceRepo.GetShaForRefAsync();
+        }
+        else
+        {
+            await sourceRepo.CheckoutAsync(shaToFlow);
+        }
 
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
@@ -108,7 +117,10 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             discardPatches,
             cancellationToken);
 
-        await UpdateDependenciesAndToolset(LocalVmr, build, shaToFlow, updateSourceElement: false, cancellationToken);
+        if (branchName != null)
+        {
+            await UpdateDependenciesAndToolset(LocalVmr, build, shaToFlow, updateSourceElement: false, cancellationToken);
+        }
 
         return branchName;
     }
@@ -125,16 +137,24 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var branchName = currentFlow.GetBranchName();
         await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
+        List<AdditionalRemote> additionalRemotes =
+        [
+            new AdditionalRemote(mapping.Name, sourceRepo.Path)
+        ];
+
+        if (build is not null)
+        {
+            additionalRemotes.Add(new AdditionalRemote(mapping.Name, build.GitHubRepository ?? build.AzureDevOpsRepository));
+        }
+
         bool hadUpdates;
 
         try
         {
-            IReadOnlyCollection<AdditionalRemote>? additionalRemote = build is not null
-                ? [new AdditionalRemote(mapping.Name, build.GitHubRepository ?? build.AzureDevOpsRepository)]
-                : [];
-
+            // If the build produced any assets, we use the number to update VMR's git info files
+            // The git info files won't be important by then and probably removed but let's keep it for now
             string? targetVersion = null;
-            if (build is not null && build.Assets.Count > 0)
+            if (build?.Assets.Count > 0)
             {
                 targetVersion = build?.Assets[0].Version;
             }
@@ -144,7 +164,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 currentFlow.TargetSha,
                 targetVersion,
                 updateDependencies: false,
-                additionalRemotes: additionalRemote,
+                additionalRemotes: additionalRemotes,
                 componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: true,
@@ -153,7 +173,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
         catch (Exception e) when (e.Message.Contains("Failed to apply the patch"))
         {
-            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside. In this case, we should just stop. We need a flag for that.
+            // TODO https://github.com/dotnet/arcade-services/issues/2995: This can happen when we also update a PR branch but there are conflicting changes inside.
+            // In this case, we should just stop. We need a flag for that.
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#conflicts
@@ -173,7 +194,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
-                /* TODO: Find a previous build? */ null,
+                null, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
                 discardPatches,
                 cancellationToken);
 
@@ -185,8 +206,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // TODO - all parameters below should come from BAR build / options
                 "1.2.3",
                 updateDependencies: false,
-                // TODO - load last remote from source manifest
-                additionalRemotes: Array.Empty<AdditionalRemote>(),
+                additionalRemotes,
                 componentTemplatePath: null,
                 tpnTemplatePath: null,
                 generateCodeowners: false,
@@ -248,9 +268,9 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : [];
 
         string? targetVersion = null;
-        if (build is not null && build.Assets.Count > 0)
+        if (build?.Assets.Count > 0)
         {
-            targetVersion = build?.Assets[0].Version;
+            targetVersion = build.Assets[0].Version;
         }
 
         // TODO: Detect if no changes
