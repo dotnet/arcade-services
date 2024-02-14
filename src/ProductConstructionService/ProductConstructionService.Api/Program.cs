@@ -27,7 +27,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 builder.AddTelemetry();
 builder.AddWorkitemQueues(credential);
 
-builder.AddVmrRegistrations();
+//builder.AddVmrRegistrations();
 
 builder.AddServiceDefaults();
 
@@ -58,8 +58,5 @@ if (app.Environment.IsDevelopment())
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.JobQueueConfigurationKey]);
     await queueClient.CreateIfNotExistsAsync();
 }
-
-var vmr = app.Services.GetRequiredService<IRepositoryCloneManager>();
-await vmr.PrepareCloneAsync("https://github.com/dotnet/dotnet", "17a7bb483ced4ad57c400d96e88048ec6221ef3d", CancellationToken.None);
 
 app.Run();
