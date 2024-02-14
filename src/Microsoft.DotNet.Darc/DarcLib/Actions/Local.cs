@@ -14,7 +14,7 @@ using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib;
 
-public class Local : ILocal
+public class Local
 {
     private readonly DependencyFileManager _fileManager;
     private readonly ILocalLibGit2Client _gitClient;
