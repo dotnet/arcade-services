@@ -278,20 +278,14 @@ internal abstract class VmrCodeFlower
         VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
 
-        SourceDependency? sourceOrigin;
+        SourceDependency? sourceOrigin = null;
         List<DependencyUpdate> updates;
 
         if (updateSourceElement)
         {
             sourceOrigin = new SourceDependency(
-                build?.GitHubRepository ?? build?.AzureDevOpsRepository ?? Constants.DefaultVmrUri,
+                build?.Repository ?? Constants.DefaultVmrUri,
                 currentVmrSha);
-        }
-        else
-        {
-            sourceOrigin = versionDetails.Source != null
-                ? versionDetails.Source with { Sha = currentVmrSha }
-                : new SourceDependency(Constants.DefaultVmrUri, currentVmrSha); // First ever backflow for the repo
         }
 
         // Generate the <Source /> element and get updates
@@ -305,8 +299,8 @@ internal abstract class VmrCodeFlower
                 });
 
             updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                sourceOrigin.Uri,
-                sourceOrigin.Sha,
+                build.Repository ?? Constants.DefaultVmrUri,
+                build.Commit,
                 assetData,
                 versionDetails.Dependencies);
 

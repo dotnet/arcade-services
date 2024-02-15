@@ -37,7 +37,7 @@ public class ManifestHelper
             builds = downloadedBuilds.Select(build =>
                 new
                 {
-                    repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
+                    repo = build.Build.Repository,
                     commit = build.Build.Commit,
                     branch = build.Build.AzureDevOpsBranch,
                     produced = build.Build.DateProduced,

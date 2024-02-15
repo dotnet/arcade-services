@@ -60,7 +60,7 @@ internal class DeleteBuildFromChannelOperation : Operation
 
             // Let the user know they can trigger subscriptions if they'd like.
             Console.WriteLine("Subscriptions can be triggered to revert to the previous state using the following command:");
-            Console.WriteLine($"darc trigger-subscriptions --source-repo {build.GitHubRepository ?? build.AzureDevOpsRepository} --channel {targetChannel.Name}");
+            Console.WriteLine($"darc trigger-subscriptions --source-repo {build.Repository} --channel {targetChannel.Name}");
 
             return Constants.SuccessCode;
         }
