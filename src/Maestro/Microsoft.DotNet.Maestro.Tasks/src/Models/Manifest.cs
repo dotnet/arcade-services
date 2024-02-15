@@ -101,7 +101,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
 
-        [XmlAttribute(AttributeName = "NetCoreOwned")]
+        [XmlAttribute(AttributeName = "NetCoreAsset")]
         public bool NetCoreAsset { get; set; }
     }
 
