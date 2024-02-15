@@ -9,6 +9,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 public class UpdateSubscriptionPopUp : SubscriptionPopUp
@@ -101,12 +102,13 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
         var result = ParseAndValidateData(outputYamlData);
 
-        _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false);
         if (!bool.TryParse(outputYamlData.Enabled, out bool enabled))
         {
             _logger.LogError("Enabled is not a valid boolean value.");
             return Constants.ErrorCode;
         }
+
+        _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false)!;
 
         return result;
     }
@@ -115,6 +117,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
+    #nullable disable
     private class SubscriptionUpdateData : SubscriptionData
     {
         [YamlMember(ApplyNamingConventions = false)]

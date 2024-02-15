@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models;
 
 public abstract class EditorPopUp
@@ -18,6 +19,7 @@ public abstract class EditorPopUp
     public EditorPopUp(string path)
     {
         Path = path;
+        Contents = [];
     }
 
     [JsonIgnore]
@@ -56,7 +58,7 @@ public abstract class EditorPopUp
     /// <param name="defaultValue">Default value if the current setting value is empty</param>
     /// <param name="isSecret">If secret and current value is not empty, should display ***</param>
     /// <returns>String to display</returns>
-    protected static string GetCurrentSettingForDisplay(string currentValue, string defaultValue, bool isSecret)
+    protected static string GetCurrentSettingForDisplay(string? currentValue, string defaultValue, bool isSecret)
     {
         if (!string.IsNullOrEmpty(currentValue))
         {
@@ -77,7 +79,7 @@ public abstract class EditorPopUp
     ///     - Empty string if the setting starts+ends with <>
     ///     - New value if anything else.
     /// </returns>
-    protected static string ParseSetting(string inputSetting, string originalSetting, bool isSecret)
+    protected static string? ParseSetting(string? inputSetting, string originalSetting, bool isSecret)
     {
         //if the setting is null, trimming will throw an exception
         if (string.IsNullOrEmpty(inputSetting))
@@ -111,5 +113,5 @@ public class Line
         Text = null;
     }
 
-    public string Text { get; set; }
+    public string? Text { get; set; }
 }

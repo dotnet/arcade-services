@@ -9,6 +9,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 public class AddSubscriptionPopUp : SubscriptionPopUp

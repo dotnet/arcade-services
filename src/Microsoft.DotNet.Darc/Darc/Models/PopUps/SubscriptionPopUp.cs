@@ -8,6 +8,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 /// <summary>
@@ -159,6 +160,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
+    #nullable disable
     protected class SubscriptionData
     {
         [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
