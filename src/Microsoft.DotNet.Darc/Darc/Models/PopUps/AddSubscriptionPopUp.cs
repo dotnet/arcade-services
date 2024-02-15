@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -55,8 +54,8 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         string[] lines = yaml.Split(Environment.NewLine);
 
         // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents = new Collection<Line>(new List<Line>
-        {
+        Contents =
+        [
             new("Use this form to create a new subscription.", true),
             new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
             new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
@@ -64,19 +63,28 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
             new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
             new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
             new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
-            new("", true),
+            Line.Empty,
             new("ExcludedAssets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
             new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
-            new("", true),
+            Line.Empty,
             new("For additional information about subscriptions, please see", true),
             new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
-            new("", true),
+            Line.Empty,
             new("Fill out the following form.  Suggested values for fields are shown below.", true),
             new()
-        });
+        ];
 
         foreach (string line in lines)
         {
+            if (line.StartsWith(SourceEnabledElement))
+            {
+                Contents.AddRange(new List<Line>
+                {
+                    new(),
+                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
+                });
+            }
+
             Contents.Add(new Line(line));
         }
 

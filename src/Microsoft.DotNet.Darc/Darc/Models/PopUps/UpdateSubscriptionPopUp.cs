@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -41,15 +40,24 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         string[] lines = yaml.Split(Environment.NewLine);
 
         // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents = new Collection<Line>(new List<Line>
-        {
-            new($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-            new($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-            new()
-        });
+        Contents =
+        [
+            new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+            new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+            new Line()
+        ];
 
         foreach (string line in lines)
         {
+            if (line.StartsWith(SourceEnabledElement))
+            {
+                Contents.AddRange(
+                [
+                    new(),
+                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
+                ]);
+            }
+
             Contents.Add(new Line(line));
         }
 

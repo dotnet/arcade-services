@@ -1,16 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models;
 
 public abstract class EditorPopUp
 {
-    public EditorPopUp(string path, IList<Line> contents)
+    public EditorPopUp(string path, List<Line> contents)
     {
         Path = path;
         Contents = contents;
@@ -26,7 +26,7 @@ public abstract class EditorPopUp
     public string Path { get; set; }
 
     [JsonIgnore]
-    public IList<Line> Contents { get; set; }
+    public List<Line> Contents { get; set; }
 
     public static IList<Line> OnClose(string path)
     {
@@ -103,6 +103,8 @@ public abstract class EditorPopUp
 
 public class Line
 {
+    public static readonly Line Empty = new(string.Empty, true);
+
     public Line(string text, bool isComment = false)
     {
         Text = !isComment ? text : $"# {text}";

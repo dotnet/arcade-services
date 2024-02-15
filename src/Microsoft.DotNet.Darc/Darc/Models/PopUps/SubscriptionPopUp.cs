@@ -24,7 +24,8 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private const string MergePolicyElement = "Merge Policies";
     private const string BatchableElement = "Batchable";
     private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    private const string SourceEnabledElement = "Source Enabled";
+    protected const string SourceEnabledElement = "Source Enabled";
+    private const string SourceDirectoryElement = "Source Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
 
     protected readonly SubscriptionData _data;
@@ -125,35 +126,41 @@ public abstract class SubscriptionPopUp : EditorPopUp
     /// </summary>
     protected void PrintSuggestions()
     {
-        Contents.Add(new Line($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
+        Contents.Add(new($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
 
         foreach (string suggestedRepo in _suggestedRepositories)
         {
-            Contents.Add(new Line($"  {suggestedRepo}", true));
+            Contents.Add(new($"  {suggestedRepo}", true));
         }
 
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Suggested Channels", true));
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Suggested Channels", true));
 
         foreach (string suggestedChannel in _suggestedChannels)
         {
-            Contents.Add(new Line($"  {suggestedChannel}", true));
+            Contents.Add(new($"  {suggestedChannel}", true));
         }
 
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Available Merge Policies", true));
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Available Merge Policies", true));
 
         foreach (string mergeHelp in _availableMergePolicyHelp)
         {
-            Contents.Add(new Line($"  {mergeHelp}", true));
+            Contents.Add(new($"  {mergeHelp}", true));
         }
 
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true));
-        Contents.Add(new Line("They can contain * to ignore whole groups of assets.", true));
-        Contents.Add(new Line("Examples of excluded assets:", true));
-        Contents.Add(new Line($"  - Microsoft.DotNet.Arcade.Sdk", true));
-        Contents.Add(new Line($"  - Microsoft.Extensions.*", true));
+        Contents.AddRange(
+        [
+            Line.Empty,
+            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
+            Line.Empty,
+            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("They can contain * to ignore whole groups of assets.", true),
+            new("Examples of excluded assets:", true),
+            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
+            new($"  - Microsoft.Extensions.*", true),
+        ]);
     }
 
     /// <summary>
@@ -189,6 +196,9 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
         public string SourceEnabled { get; set; }
+
+        [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
+        public string SourceDirectory { get; set; }
 
         [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
         public List<string> ExcludedAssets { get; set; }

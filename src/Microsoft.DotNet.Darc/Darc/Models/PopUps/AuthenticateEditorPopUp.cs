@@ -1,11 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Models;
 
@@ -36,8 +35,8 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         }
 
         // Initialize line contents.
-        Contents = new ReadOnlyCollection<Line>(new List<Line>
-        {
+        Contents =
+        [
             new("Create new BAR tokens at https://maestro.dot.net/Account/Tokens", isComment: true),
             new($"{BarPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
             new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
@@ -49,7 +48,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             new(""),
             new("Storing the required settings...", true),
             new($"Set elements above depending on what you need", true),
-        });
+        ];
     }
 
     public LocalSettings settings { get; set; }
