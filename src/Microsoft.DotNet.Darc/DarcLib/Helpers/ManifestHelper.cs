@@ -2,23 +2,30 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public class ManifestHelper
 {
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, string outputPath, bool makeAssetsRelativePaths)
+    private const string MergedManifestFileName = "MergedManifest.xml";
+
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds,
+        string outputPath, bool makeAssetsRelativePaths, ILogger logger)
     {
-        return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths);
+        return GenerateDarcAssetJsonManifest(downloadedBuilds, null, outputPath, makeAssetsRelativePaths, logger);
     }
 
 
-    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,  string outputPath, bool makeAssetsRelativePaths)
+    public static JObject GenerateDarcAssetJsonManifest(IEnumerable<DownloadedBuild> downloadedBuilds, List<DownloadedAsset> alwaysDownloadedAssets,
+        string outputPath, bool makeAssetsRelativePaths, ILogger logger)
     {
 
         // Construct an ad-hoc object with the necessary fields and use the json
@@ -30,6 +37,9 @@ public class ManifestHelper
         {
             alwaysDownloadedAssets = null;
         }
+
+        List<DownloadedAsset> mergedManifestAssets = SelectMergedManifestAssets(downloadedBuilds);
+        Dictionary<string, string> assetOwnerMap = RetrieveAssetOwnerMap(mergedManifestAssets, logger);
 
         var manifestObject = new
         {
@@ -53,6 +63,7 @@ public class ManifestHelper
                         new
                         {
                             name = asset.Asset.Name,
+                            owner = assetOwnerMap.ContainsKey(asset.Asset.Name) ? assetOwnerMap[asset.Asset.Name] : null,
                             version = asset.Asset.Version,
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
@@ -101,5 +112,74 @@ public class ManifestHelper
             }
         }
         return JObject.FromObject(manifestObject, JsonSerializer.CreateDefault(new JsonSerializerSettings() { NullValueHandling = NullValueHandling.Ignore }));
+    }
+
+    private static List<DownloadedAsset> SelectMergedManifestAssets(IEnumerable<DownloadedBuild> downloadedBuilds)
+    {
+        return downloadedBuilds.Select(build =>
+            build.DownloadedAssets.Where(asset =>
+                asset.Asset.Name.EndsWith(MergedManifestFileName)))
+            .SelectMany(x => x).ToList();
+    }
+
+    private static Dictionary<string, string> RetrieveAssetOwnerMap(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
+    {
+        Dictionary<string, string> assetOwnerMap = new();
+
+        foreach (var mergedManifest in mergedManifests)
+        {
+            XDocument document = null;
+            try
+            {
+                document = XDocument.Load(mergedManifest.UnifiedLayoutTargetLocation);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning($"Warning: Loading '{mergedManifest.UnifiedLayoutTargetLocation}' failed with exception: {ex}.");
+                continue;
+            }
+
+            XElement buildElement = document.Element("Build");
+
+            string buildName = buildElement?.Attribute("Name")?.Value;
+            if (buildName == null)
+                continue;
+
+            string repoName = buildName.Replace("dotnet-", string.Empty);
+
+            foreach (var asset in buildElement?.Elements())
+            {
+                string assetName = asset.Attribute("Id")?.Value;
+                if (assetName == null)
+                    continue;
+
+                string assetOwner = asset.Attribute("Owner")?.Value;
+                if (assetOwner == null)
+                {
+                    // An Owner attribute has been added to the MergeManifest.xml file for the VMR build to differentiate assets produced by different repos,
+                    // as mentioned in https://github.com/dotnet/source-build/issues/3898.
+                    // To standardize the generation of the manifest.json file for .NET 6/7/8 and VMR builds,
+                    // the Owner attribute is taken from the MergeManifest.xml file if it exists, otherwise,
+                    // it is taken from the Build.Name, which corresponds to the repository name.
+                    assetOwner = repoName;
+                }
+
+                string existingAssetOwner = string.Empty;
+                if (assetOwnerMap.TryGetValue(assetName, out existingAssetOwner))
+                {
+                    if (existingAssetOwner != assetOwner)
+                    {
+                        logger.LogWarning($"Warning: The same asset '{assetName}' is listed in various '{MergedManifestFileName}', " +
+                            $"with differing owners specified in each: {existingAssetOwner}, {assetOwner}.");
+                    }
+                }
+                else
+                {
+                    assetOwnerMap.Add(assetName, assetOwner);
+                }
+            }
+        }
+
+        return assetOwnerMap;
     }
 }
