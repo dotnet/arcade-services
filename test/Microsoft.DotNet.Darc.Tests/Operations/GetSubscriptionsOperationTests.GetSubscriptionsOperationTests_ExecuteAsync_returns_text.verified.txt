@@ -4,4 +4,6 @@
   - Enabled: True
   - Batchable: False
   - PR Failure Notification tags: 
+  - Source-enabled: False
+  - Excluded Assets: []
   - Merge Policies: []

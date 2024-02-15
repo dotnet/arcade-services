@@ -16,6 +16,8 @@ variables:
   value: product-construction-service
 - name: containerName
   value: product-construction-service.api
+- name: diffFolder
+  value: $(Build.ArtifactStagingDirectory)/diff
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   - group: Product-Construction-Service-Int
   - name: containerappName
@@ -70,7 +72,40 @@ stages:
           inputs:
             azureSubscription: NetHelixStaging
             scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              New-Item -ItemType Directory -Path $(diffFolder)
+              $before = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/before.json -Value $before
+          displayName: Create before-deployment configuration snapshot
+
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: NetHelixStaging
+            scriptType: pscore
             scriptLocation: scriptPath
             scriptPath: $(Build.SourcesDirectory)/eng/deployment/product-construction-service-deploy.ps1
-            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName)
+            arguments: -resourceGroupName $(resourceGroupName) -containerappName $(containerappName) -newImageTag $(newDockerImageTag) -containerRegistryName $(containerRegistryName) -imageName $(containerName) -pcsUrl $(pcsUrl)
           displayName: Product Construction Service Deploy
+
+        - task: AzureCLI@2
+          inputs:
+            azureSubscription: NetHelixStaging
+            scriptType: pscore
+            scriptLocation: inlineScript
+            inlineScript: |
+              $after = az containerapp show --name $(containerappName) -g $(resourceGroupName) --output json
+              Set-Content -Path $(diffFolder)/after.json -Value $after
+          displayName: Create after-deployment configuration snapshot
+
+        # git diff will set the exit code to 1, since the files are different, we have to manually set it back to 0
+        - powershell: |
+            $diff = git diff before.json after.json
+            $LASTEXITCODE = 0
+            Set-Content -Path diff -Value $diff
+          displayName: Create configuration diff
+          workingDirectory: $(diffFolder)
+
+        - publish: $(diffFolder)
+          displayName: Upload configuration diff
+          artifact: DeploymentDiff

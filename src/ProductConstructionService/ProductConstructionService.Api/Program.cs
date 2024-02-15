@@ -6,6 +6,7 @@ using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Queue;
+using ProductConstructionService.Api.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
     options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
 });
 
+builder.AddTelemetry();
 builder.AddWorkitemQueues(credential);
 
 builder.AddServiceDefaults();
