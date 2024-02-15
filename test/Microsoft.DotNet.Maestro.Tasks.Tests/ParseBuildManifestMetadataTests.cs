@@ -107,7 +107,8 @@ public class ParseBuildManifestMetadataTests
     {
         Id = "Microsoft.Cci.Extensions",
         NonShipping = true,
-        Version = Version
+        Version = Version,
+        NetCoreAsset = true
     };
 
     private static readonly Package package2 = new()
@@ -121,7 +122,8 @@ public class ParseBuildManifestMetadataTests
     {
         Attributes = new Dictionary<string, string>()
         {
-            { "NonShipping", "true" }
+            { "NonShipping", "true" },
+            { "NetCoreAsset", "true" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
@@ -131,7 +133,8 @@ public class ParseBuildManifestMetadataTests
     {
         Attributes = new Dictionary<string, string>()
         {
-            { "NonShipping", "true" }
+            { "NonShipping", "true" },
+            { "NetCoreAsset", "false" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
         Version = Version
@@ -141,7 +144,8 @@ public class ParseBuildManifestMetadataTests
     {
         Attributes = new Dictionary<string, string>()
         {
-            { "NonShipping", "true" }
+            { "NonShipping", "true" },
+            { "NetCoreAsset", "false" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = null

@@ -494,6 +494,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Attributes = new Dictionary<string, string>
                     {
                         { "NonShipping", package.NonShipping.ToString().ToLower() },
+                        { "NetCoreAsset", package.NetCoreAsset.ToString().ToLower() }
                     },
                     Id = package.Id,
                     Version = package.Version

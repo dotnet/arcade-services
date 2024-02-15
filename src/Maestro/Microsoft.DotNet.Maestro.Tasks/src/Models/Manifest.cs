@@ -100,6 +100,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
+
+        [XmlAttribute(AttributeName = "NetCoreOwned")]
+        public bool NetCoreAsset { get; set; }
     }
 
     [XmlRoot(ElementName = "Blob")]
