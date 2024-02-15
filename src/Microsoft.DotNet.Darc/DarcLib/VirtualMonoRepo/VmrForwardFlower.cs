@@ -119,7 +119,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (branchName != null)
         {
-            await UpdateDependenciesAndToolset(LocalVmr, build, shaToFlow, updateSourceElement: false, cancellationToken);
+            await UpdateDependenciesAndToolset(repoPath, LocalVmr, build, shaToFlow, updateSourceElement: false, cancellationToken);
         }
 
         return branchName;

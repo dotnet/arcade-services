@@ -265,7 +265,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
 
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, buildToFlow: build.Id);
         branch.Should().NotBeNull();
-        await GitOperations.MergePrBranch(ProductRepoPath, branch!);
+        await GitOperations.MergePrBranch(VmrPath, branch!);
 
         CheckFileContents(_productRepoVmrFilePath, "Change that will have a build");
 
@@ -273,12 +273,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         Local local = GetLocal(VmrPath);
         List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
 
-        dependencies.Should().Contain(dep =>
-            dep.Name == FakePackageName
-            && dep.RepoUri == build.GitHubRepository
-            && dep.Commit == build.Commit
-            && dep.Version == newVersion);
-
+        dependencies.Should().HaveCount(1);
         dependencies.Should().Contain(dep =>
             dep.Name == DependencyFileManager.ArcadeSdkPackageName
             && dep.RepoUri == build.GitHubRepository

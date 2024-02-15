@@ -267,6 +267,7 @@ internal abstract class VmrCodeFlower
     }
 
     protected async Task UpdateDependenciesAndToolset(
+        NativePath sourceRepo,
         ILocalGitRepo targetRepo,
         Build? build,
         string currentVmrSha,
@@ -341,7 +342,7 @@ internal abstract class VmrCodeFlower
             }
 
             _fileSystem.CopyDirectory(
-                _vmrInfo.VmrPath / Constants.CommonScriptFilesPath,
+                sourceRepo / Constants.CommonScriptFilesPath,
                 targetRepo.Path / Constants.CommonScriptFilesPath,
                 true);
         }

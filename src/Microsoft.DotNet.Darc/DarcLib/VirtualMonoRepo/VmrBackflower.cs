@@ -142,7 +142,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             return null;
         }
 
-        await UpdateDependenciesAndToolset(targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
+        await UpdateDependenciesAndToolset(_vmrInfo.VmrPath, targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
 
         return branchName;
     }
