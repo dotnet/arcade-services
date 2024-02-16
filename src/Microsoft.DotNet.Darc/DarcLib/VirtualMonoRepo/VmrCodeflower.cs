@@ -275,7 +275,7 @@ internal abstract class VmrCodeFlower
         CancellationToken cancellationToken)
     {
         string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
-            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path}");
+            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
         VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
 
