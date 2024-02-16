@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -231,23 +228,23 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("version", Client.Serialize(version));
             }
-            if (buildId != default)
+            if (buildId != default(int?))
             {
                 _url.AppendQuery("buildId", Client.Serialize(buildId));
             }
-            if (nonShipping != default)
+            if (nonShipping != default(bool?))
             {
                 _url.AppendQuery("nonShipping", Client.Serialize(nonShipping));
             }
-            if (loadLocations != default)
+            if (loadLocations != default(bool?))
             {
                 _url.AppendQuery("loadLocations", Client.Serialize(loadLocations));
             }
-            if (page != default)
+            if (page != default(int?))
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default)
+            if (perPage != default(int?))
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
@@ -453,7 +450,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (assetLocationType == default)
+            if (assetLocationType == default(Models.LocationType))
             {
                 throw new ArgumentNullException(nameof(assetLocationType));
             }
@@ -476,7 +473,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("location", Client.Serialize(location));
             }
-            if (assetLocationType != default)
+            if (assetLocationType != default(Models.LocationType))
             {
                 _url.AppendQuery("assetLocationType", Client.Serialize(assetLocationType));
             }

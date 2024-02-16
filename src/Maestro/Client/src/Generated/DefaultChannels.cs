@@ -1,7 +1,5 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -18,8 +16,8 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
-            int? channelId = default,
             bool? enabled = default,
+            int? channelId = default,
             string repository = default,
             CancellationToken cancellationToken = default
         );
@@ -62,8 +60,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public async Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
-            int? channelId = default,
             bool? enabled = default,
+            int? channelId = default,
             string repository = default,
             CancellationToken cancellationToken = default
         )
@@ -86,11 +84,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default)
+            if (enabled != default(bool?))
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }

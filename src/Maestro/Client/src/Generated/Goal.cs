@@ -1,7 +1,6 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -17,14 +16,14 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         Task<Models.Goal> CreateAsync(
             Models.GoalRequestJson body,
-            string channelName,
             int definitionId,
+            string channelName,
             CancellationToken cancellationToken = default
         );
 
         Task<Models.Goal> GetGoalTimesAsync(
-            string channelName,
             int definitionId,
+            string channelName,
             CancellationToken cancellationToken = default
         );
 
@@ -45,8 +44,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public async Task<Models.Goal> CreateAsync(
             Models.GoalRequestJson body,
-            string channelName,
             int definitionId,
+            string channelName,
             CancellationToken cancellationToken = default
         )
         {
@@ -132,8 +131,8 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedGetGoalTimesRequest(RestApiException ex);
 
         public async Task<Models.Goal> GetGoalTimesAsync(
-            string channelName,
             int definitionId,
+            string channelName,
             CancellationToken cancellationToken = default
         )
         {

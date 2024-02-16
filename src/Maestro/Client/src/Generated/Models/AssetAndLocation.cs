@@ -1,13 +1,12 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
+using System;
+using System.Collections.Immutable;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class AssetAndLocation
     {
-        public AssetAndLocation(int assetId, LocationType locationType)
+        public AssetAndLocation(int assetId, Models.LocationType locationType)
         {
             AssetId = assetId;
             LocationType = locationType;
@@ -20,14 +19,14 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Location { get; set; }
 
         [JsonProperty("locationType")]
-        public LocationType LocationType { get; set; }
+        public Models.LocationType LocationType { get; set; }
 
         [JsonIgnore]
         public bool IsValid
         {
             get
             {
-                if (LocationType == default)
+                if (LocationType == default(Models.LocationType))
                 {
                     return false;
                 }

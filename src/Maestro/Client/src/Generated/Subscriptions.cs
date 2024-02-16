@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -18,8 +15,9 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial interface ISubscriptions
     {
         Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            int? channelId = default,
             bool? enabled = default,
+            int? channelId = default,
+            string sourceDirectory = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
@@ -91,8 +89,9 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
         public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            int? channelId = default,
             bool? enabled = default,
+            int? channelId = default,
+            string sourceDirectory = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
@@ -117,17 +116,21 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default)
+            if (enabled != default(bool?))
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
-            if (sourceEnabled != default)
+            if (sourceEnabled != default(bool?))
             {
                 _url.AppendQuery("sourceEnabled", Client.Serialize(sourceEnabled));
+            }
+            if (!string.IsNullOrEmpty(sourceDirectory))
+            {
+                _url.AppendQuery("sourceDirectory", Client.Serialize(sourceDirectory));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
@@ -503,7 +506,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (barBuildId != default)
+            if (barBuildId != default(int))
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }
@@ -682,11 +685,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/history".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (page != default)
+            if (page != default(int?))
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default)
+            if (perPage != default(int?))
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }

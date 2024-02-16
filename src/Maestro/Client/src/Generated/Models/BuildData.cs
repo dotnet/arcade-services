@@ -1,6 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
+using System;
 using System.Collections.Immutable;
 using Newtonsoft.Json;
 
@@ -24,10 +22,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Commit { get; set; }
 
         [JsonProperty("assets")]
-        public IImmutableList<AssetData> Assets { get; set; }
+        public IImmutableList<Models.AssetData> Assets { get; set; }
 
         [JsonProperty("dependencies")]
-        public IImmutableList<BuildRef> Dependencies { get; set; }
+        public IImmutableList<Models.BuildRef> Dependencies { get; set; }
 
         [JsonProperty("azureDevOpsBuildId")]
         public int? AzureDevOpsBuildId { get; set; }
@@ -63,7 +61,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool Stable { get; set; }
 
         [JsonProperty("incoherencies")]
-        public IImmutableList<BuildIncoherence> Incoherencies { get; set; }
+        public IImmutableList<Models.BuildIncoherence> Incoherencies { get; set; }
 
         [JsonIgnore]
         public bool IsValid

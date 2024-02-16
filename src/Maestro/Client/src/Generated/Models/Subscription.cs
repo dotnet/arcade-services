@@ -1,6 +1,3 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
 using System;
 using System.Collections.Immutable;
 using Newtonsoft.Json;
@@ -9,16 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(
-            Guid id,
-            bool enabled,
-            bool sourceEnabled,
-            string sourceRepository,
-            string targetRepository,
-            string targetBranch,
-            string pullRequestFailureNotificationTags,
-            string sourceDirectory,
-            IImmutableList<string> excludedAssets)
+        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string sourceDirectory, string pullRequestFailureNotificationTags, IImmutableList<string> excludedAssets)
         {
             Id = id;
             Enabled = enabled;
@@ -26,8 +14,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
-            PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
             SourceDirectory = sourceDirectory;
+            PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
             ExcludedAssets = excludedAssets;
         }
 
@@ -35,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public Guid Id { get; }
 
         [JsonProperty("channel")]
-        public Channel Channel { get; set; }
+        public Models.Channel Channel { get; set; }
 
         [JsonProperty("sourceRepository")]
         public string SourceRepository { get; }
@@ -47,10 +35,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string TargetBranch { get; }
 
         [JsonProperty("policy")]
-        public SubscriptionPolicy Policy { get; set; }
+        public Models.SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("lastAppliedBuild")]
-        public Build LastAppliedBuild { get; set; }
+        public Models.Build LastAppliedBuild { get; set; }
 
         [JsonProperty("enabled")]
         public bool Enabled { get; }
