@@ -285,7 +285,7 @@ internal abstract class VmrCodeFlower
         if (updateSourceElement)
         {
             sourceOrigin = new SourceDependency(
-                build?.Repository ?? Constants.DefaultVmrUri,
+                build?.GetRepository() ?? Constants.DefaultVmrUri,
                 currentVmrSha);
         }
 
@@ -300,7 +300,7 @@ internal abstract class VmrCodeFlower
                 });
 
             updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-                build.Repository ?? Constants.DefaultVmrUri,
+                build.GetRepository() ?? Constants.DefaultVmrUri,
                 build.Commit,
                 assetData,
                 versionDetails.Dependencies);

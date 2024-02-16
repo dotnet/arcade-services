@@ -144,7 +144,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (build is not null)
         {
-            additionalRemotes.Add(new AdditionalRemote(mapping.Name, build.Repository));
+            additionalRemotes.Add(new AdditionalRemote(mapping.Name, build.GetRepository()));
         }
 
         bool hadUpdates;
@@ -264,7 +264,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             Parent: null));
 
         IReadOnlyCollection<AdditionalRemote>? additionalRemote = build is not null
-            ? [new AdditionalRemote(mapping.Name, build.Repository)]
+            ? [new AdditionalRemote(mapping.Name, build.GetRepository())]
             : [];
 
         string? targetVersion = null;

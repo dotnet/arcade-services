@@ -109,8 +109,8 @@ internal class AddBuildToChannelOperation : Operation
             if (_options.AddToDefaultChannels)
             {
                 IEnumerable<DefaultChannel> defaultChannels = await barClient.GetDefaultChannelsAsync(
-                    build.Repository,
-                    build.Branch);
+                    build.GetRepository(),
+                    build.GetBranch());
 
                 targetChannels.AddRange(
                     defaultChannels.
@@ -173,7 +173,7 @@ internal class AddBuildToChannelOperation : Operation
             Console.Write(UxHelpers.GetTextBuildDescription(build));
 
             // Be helpful. Let the user know what will happen.
-            string buildRepo = build.Repository;
+            string buildRepo = build.GetRepository();
             List<Subscription> applicableSubscriptions = [];
 
             foreach (var targetChannel in targetChannels)
