@@ -76,7 +76,7 @@ public class DependencyFlowNodeTests
             WorstCasePathTime = worstCasePathTime,
         };
 
-        var subscription = new Subscription(Guid.NewGuid(), true, false, "source", "target", "test", string.Empty, sourceDirectory: null, excludedAssets: ImmutableList<string>.Empty)
+        var subscription = new Subscription(Guid.NewGuid(), true, false, "source", "target", "test", sourceDirectory: null, pullRequestFailureNotificationTags: string.Empty, excludedAssets: ImmutableList<string>.Empty)
         {
             LastAppliedBuild = new Build(
             id: 1,

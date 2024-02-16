@@ -41,9 +41,10 @@ public abstract class SubscriptionPopUp : EditorPopUp
     public string UpdateFrequency => _data.UpdateFrequency;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
     public bool Batchable => bool.Parse(_data.Batchable);
-    public string FailureNotificationTags => _data.FailureNotificationTags;
+    public string? FailureNotificationTags => _data.FailureNotificationTags;
     public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
     public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
+    public string? SourceDirectory => _data.SourceDirectory;
 
     protected SubscriptionPopUp(
         string path,
@@ -173,7 +174,22 @@ public abstract class SubscriptionPopUp : EditorPopUp
             return Constants.ErrorCode;
         }
 
+        // When we disable the source flow, we zero out the source directory
+        if (!sourceEnabled)
+        {
+            outputYamlData.SourceDirectory = null;
+        }
+        else
+        {
+            if (outputYamlData.SourceDirectory == null || outputYamlData.SourceDirectory.StartsWith("<default>"))
+            {
+                // When left empty/default, we can generate it out of the source repository URL
+                outputYamlData.SourceDirectory = ;
+            }
+        }
+
         _data.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _data.FailureNotificationTags, false);
+        _data.SourceDirectory = outputYamlData.SourceDirectory;
         _data.ExcludedAssets = outputYamlData.ExcludedAssets;
 
         return Constants.SuccessCode;

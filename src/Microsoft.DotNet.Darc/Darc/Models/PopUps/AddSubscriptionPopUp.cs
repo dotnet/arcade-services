@@ -31,6 +31,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
+        string? sourceDirectory,
         List<string> excludedAssets)
         : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger,
             new SubscriptionData
@@ -44,6 +45,7 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies),
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+                SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, "<default> # Will be derived from URL", false),
                 ExcludedAssets = excludedAssets,
             },
             header: [

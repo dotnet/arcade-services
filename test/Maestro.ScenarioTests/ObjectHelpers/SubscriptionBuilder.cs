@@ -35,9 +35,9 @@ public class SubscriptionBuilder
             repo1Uri,
             repo2Uri,
             targetBranch,
-            failureNotificationTags,
-            excludedAssets: ImmutableList<string>.Empty,
-            sourceDirectory: null)
+            pullRequestFailureNotificationTags: failureNotificationTags,
+            sourceDirectory: null,
+            excludedAssets: ImmutableList<string>.Empty)
         {
             Channel = new Channel(42, channelName, "test"),
             Policy = new SubscriptionPolicy(batchable, updateFrequency)

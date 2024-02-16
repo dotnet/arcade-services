@@ -1,14 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("update-subscription", HelpText = "Update an existing subscription. If no arguments beyond '--id' are specified, a text editor is popped up with the current values for the subscription.  (As they are specified via YAML, merge policy settings must use the editor)")]
-internal class UpdateSubscriptionCommandLineOptions : CommandLineOptions
+internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOptions
 {
     [Option("id", Required = true, HelpText = "Subscription's id.")]
     public string Id { get; set; }
@@ -28,20 +27,11 @@ internal class UpdateSubscriptionCommandLineOptions : CommandLineOptions
     [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies")]
     public bool? Batchable { get; set; }
 
-    [Option("update-frequency", HelpText = "How often subscription updates should occur.")]
-    public string UpdateFrequency { get; set; }
-
     [Option("enabled", HelpText = "Whether subscription is enabled (active) or not")]
     public bool? Enabled { get; set; }
 
-    [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags to notify for dependency flow failures from this subscription")]
-    public string FailureNotificationTags { get; set; }
-
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
-
-    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.")]
-    public string ExcludedAssets { get; set; }
 
     public override Operation GetOperation()
     {
