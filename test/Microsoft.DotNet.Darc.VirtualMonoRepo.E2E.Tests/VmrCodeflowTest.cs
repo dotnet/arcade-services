@@ -268,26 +268,6 @@ internal class VmrCodeflowTest :  VmrTestsBase
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
         CheckFileContents(_productRepoVmrFilePath, "Change that will have a build");
-
-        // Verify that Version.Details.xml got updated with the new package "built" in the repo
-        Local local = GetLocal(VmrPath);
-        List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
-
-        dependencies.Should().HaveCount(1);
-        dependencies.Should().Contain(dep =>
-            dep.Name == DependencyFileManager.ArcadeSdkPackageName
-            && dep.RepoUri == build.GitHubRepository
-            && dep.Commit == build.Commit
-            && dep.Version == newVersion);
-
-        // Verify that global.json got updated
-        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(VmrPath, "main");
-        JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
-        arcadeVersion?.ToString().Should().Be(newVersion);
-
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(VmrPath, "main");
-        dotnetVersion.ToString().Should().Be("9.0.200");
     }
 
     [Test]

@@ -108,7 +108,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
-        var branchName = await FlowCodeAsync(
+        return await FlowCodeAsync(
             lastFlow,
             new ForwardFlow(lastFlow.TargetSha, shaToFlow),
             sourceRepo,
@@ -116,13 +116,6 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build,
             discardPatches,
             cancellationToken);
-
-        if (branchName != null)
-        {
-            await UpdateDependenciesAndToolset(repoPath, LocalVmr, build, shaToFlow, updateSourceElement: false, cancellationToken);
-        }
-
-        return branchName;
     }
 
     protected override async Task<string?> SameDirectionFlowAsync(
