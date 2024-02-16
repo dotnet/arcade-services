@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -170,7 +171,7 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         if (outputYamlData.ExcludedAssets.Any() && !sourceEnabled)
         {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            _logger.LogError("Asset exclusion only works for source-enabled subscriptions");
             return Constants.ErrorCode;
         }
 
@@ -181,10 +182,19 @@ public abstract class SubscriptionPopUp : EditorPopUp
         }
         else
         {
+            // When left empty/default, we can generate it out of the source repository URL
             if (outputYamlData.SourceDirectory == null || outputYamlData.SourceDirectory.StartsWith("<default>"))
             {
-                // When left empty/default, we can generate it out of the source repository URL
-                outputYamlData.SourceDirectory = ;
+                var (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.SourceRepository);
+
+                // We need to take the repo that is not the VMR
+                if (repoName == "dotnet")
+                {
+                    (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.TargetRepository);
+                }
+
+                outputYamlData.SourceDirectory = repoName;
+                _logger.LogInformation($"Source directory was not provided, using '{repoName}'");
             }
         }
 
