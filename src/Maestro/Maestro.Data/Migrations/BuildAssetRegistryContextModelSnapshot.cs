@@ -174,7 +174,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("SubscriptionId");
 
-                    b.ToTable("AssetFilter");
+                    b.ToTable("AssetFilters");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.AssetLocation", b =>
