@@ -13,5 +13,6 @@ public class SubscriptionUpdate
     public bool? Enabled { get; set; }
     public bool? SourceEnabled { get; set; }
     public string PullRequestFailureNotificationTags { get; set; }
+    public string SourceDirectory { get; set; }
     public IReadOnlyCollection<string> ExcludedAssets { get; set; }
 }

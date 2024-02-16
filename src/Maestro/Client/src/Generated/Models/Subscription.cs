@@ -9,7 +9,16 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Subscription
     {
-        public Subscription(Guid id, bool enabled, bool sourceEnabled, string sourceRepository, string targetRepository, string targetBranch, string pullRequestFailureNotificationTags, IImmutableList<string> excludedAssets)
+        public Subscription(
+            Guid id,
+            bool enabled,
+            bool sourceEnabled,
+            string sourceRepository,
+            string targetRepository,
+            string targetBranch,
+            string pullRequestFailureNotificationTags,
+            string sourceDirectory,
+            IImmutableList<string> excludedAssets)
         {
             Id = id;
             Enabled = enabled;
@@ -18,6 +27,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
             PullRequestFailureNotificationTags = pullRequestFailureNotificationTags;
+            SourceDirectory = sourceDirectory;
             ExcludedAssets = excludedAssets;
         }
 
@@ -47,6 +57,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("sourceEnabled")]
         public bool SourceEnabled { get; }
+
+        [JsonProperty("sourceDirectory")]
+        public string SourceDirectory { get; }
 
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; }

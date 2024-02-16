@@ -242,7 +242,7 @@ public class PullRequestPolicyFailureNotifierTests
         BarClient.Object,
         Scope.ServiceProvider.GetRequiredService<ILogger<PullRequestPolicyFailureNotifier>>());
 
-    private List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
+    private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
     [
         new ClientModels.Subscription(
             new Guid("35684498-9C08-431F-8E66-8242D7C38598"),
@@ -252,7 +252,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
-            ImmutableList<string>.Empty),
+            null,
+            excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
             true,
@@ -261,7 +262,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             "@notifiedUser3;@notifiedUser4",
-            ImmutableList<string>.Empty),
+            null,
+            excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
             true,
@@ -270,7 +272,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
             string.Empty,
-            ImmutableList<string>.Empty)
+            null,
+            excludedAssets: ImmutableList<string>.Empty)
     ];
 
     #endregion

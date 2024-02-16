@@ -16,11 +16,28 @@ public class SubscriptionBuilder
     /// <summary>
     /// Creates a subscription object based on a standard set of test inputs
     /// </summary>
-    public static Subscription BuildSubscription(string repo1Uri, string repo2Uri, string targetBranch, string channelName, string subscriptionId,
-        UpdateFrequency updateFrequency, bool batchable, List<string> mergePolicyNames = null, List<string> ignoreChecks = null,
+    public static Subscription BuildSubscription(
+        string repo1Uri,
+        string repo2Uri,
+        string targetBranch,
+        string channelName,
+        string subscriptionId,
+        UpdateFrequency updateFrequency,
+        bool batchable,
+        List<string> mergePolicyNames = null,
+        List<string> ignoreChecks = null,
         string failureNotificationTags = null)
     {
-        var expectedSubscription = new Subscription(Guid.Parse(subscriptionId), true, false, repo1Uri, repo2Uri, targetBranch, failureNotificationTags, ImmutableList<string>.Empty)
+        var expectedSubscription = new Subscription(
+            Guid.Parse(subscriptionId),
+            true,
+            false,
+            repo1Uri,
+            repo2Uri,
+            targetBranch,
+            failureNotificationTags,
+            excludedAssets: ImmutableList<string>.Empty,
+            sourceDirectory: null)
         {
             Channel = new Channel(42, channelName, "test"),
             Policy = new SubscriptionPolicy(batchable, updateFrequency)

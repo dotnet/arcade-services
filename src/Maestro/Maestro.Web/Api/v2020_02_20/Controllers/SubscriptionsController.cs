@@ -61,7 +61,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         string targetRepository = null,
         int? channelId = null,
         bool? enabled = null,
-        bool? sourceEnabled = null)
+        bool? sourceEnabled = null,
+        string sourceDirectory = null)
     {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
@@ -91,6 +92,11 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         if (sourceEnabled.HasValue)
         {
             query = query.Where(sub => sub.SourceEnabled == sourceEnabled.Value);
+        }
+
+        if (!string.IsNullOrEmpty(sourceDirectory))
+        {
+            query = query.Where(sub => sub.SourceDirectory == sourceDirectory);
         }
 
         List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
@@ -207,8 +213,32 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             doUpdate = true;
         }
 
+        if (update.SourceDirectory != null)
+        {
+            subscription.SourceDirectory = update.SourceDirectory;
+            doUpdate = true;
+        }
+
         if (update.SourceEnabled.HasValue)
         {
+            // Turning off source-enabled will clear the source directory
+            if (!update.SourceEnabled.Value)
+            {
+                if (subscription.SourceDirectory != null)
+                {
+                    subscription.SourceDirectory = null;
+                    doUpdate = true;
+                }
+            }
+            // Turning on source-enabled will require a source directory
+            else if (subscription.SourceDirectory == null)
+            {
+                return BadRequest(
+                    new ApiError(
+                        "The request is invalid",
+                        new[] { $"Source-enabled subscriptions require source directory to be set" }));
+            }
+
             subscription.SourceEnabled = update.SourceEnabled.Value;
             doUpdate = true;
         }
@@ -238,7 +268,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             _context.Subscriptions.Update(subscription);
             await _context.SaveChangesAsync();
         }
-
 
         return Ok(new Subscription(subscription));
     }
