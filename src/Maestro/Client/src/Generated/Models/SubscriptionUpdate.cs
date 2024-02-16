@@ -1,4 +1,6 @@
-using System;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
 using Newtonsoft.Json;
 
@@ -17,7 +19,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string SourceRepository { get; set; }
 
         [JsonProperty("policy")]
-        public Models.SubscriptionPolicy Policy { get; set; }
+        public SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("enabled")]
         public bool? Enabled { get; set; }

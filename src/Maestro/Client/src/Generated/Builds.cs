@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -19,8 +22,8 @@ namespace Microsoft.DotNet.Maestro.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -33,8 +36,8 @@ namespace Microsoft.DotNet.Maestro.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -61,8 +64,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -101,8 +104,8 @@ namespace Microsoft.DotNet.Maestro.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -130,8 +133,8 @@ namespace Microsoft.DotNet.Maestro.Client
                             azdoBuildId,
                             azdoProject,
                             buildNumber,
-                            commit,
                             channelId,
+                            commit,
                             loadCollections,
                             notAfter,
                             notBefore,
@@ -162,8 +165,8 @@ namespace Microsoft.DotNet.Maestro.Client
             int? azdoBuildId = default,
             string azdoProject = default,
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -195,7 +198,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (azdoBuildId != default(int?))
+            if (azdoBuildId != default)
             {
                 _url.AppendQuery("azdoBuildId", Client.Serialize(azdoBuildId));
             }
@@ -207,27 +210,27 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("azdoProject", Client.Serialize(azdoProject));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset?))
+            if (notBefore != default)
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset?))
+            if (notAfter != default)
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool?))
+            if (loadCollections != default)
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
@@ -514,8 +517,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public async Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
-            string commit = default,
             int? channelId = default,
+            string commit = default,
             bool? loadCollections = default,
             DateTimeOffset? notAfter = default,
             DateTimeOffset? notBefore = default,
@@ -545,19 +548,19 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset?))
+            if (notBefore != default)
             {
                 _url.AppendQuery("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset?))
+            if (notAfter != default)
             {
                 _url.AppendQuery("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool?))
+            if (loadCollections != default)
             {
                 _url.AppendQuery("loadCollections", Client.Serialize(loadCollections));
             }

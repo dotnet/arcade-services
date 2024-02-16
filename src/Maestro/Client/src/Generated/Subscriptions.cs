@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -15,12 +18,12 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial interface ISubscriptions
     {
         Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
-            string sourceDirectory = default,
+            bool? enabled = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
+            string sourceDirectory = default,
             CancellationToken cancellationToken = default
         );
 
@@ -89,12 +92,12 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
         public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
-            bool? enabled = default,
             int? channelId = default,
-            string sourceDirectory = default,
+            bool? enabled = default,
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
+            string sourceDirectory = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -116,15 +119,15 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default(int?))
+            if (channelId != default)
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default(bool?))
+            if (enabled != default)
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
-            if (sourceEnabled != default(bool?))
+            if (sourceEnabled != default)
             {
                 _url.AppendQuery("sourceEnabled", Client.Serialize(sourceEnabled));
             }
@@ -506,7 +509,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (barBuildId != default(int))
+            if (barBuildId != default)
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }
@@ -685,11 +688,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/history".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (page != default(int?))
+            if (page != default)
             {
                 _url.AppendQuery("page", Client.Serialize(page));
             }
-            if (perPage != default(int?))
+            if (perPage != default)
             {
                 _url.AppendQuery("perPage", Client.Serialize(perPage));
             }
