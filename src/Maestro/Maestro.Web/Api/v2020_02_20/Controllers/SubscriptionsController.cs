@@ -453,6 +453,8 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             sub.ChannelId == updatedOrNewSubscription.Channel.Id &&
             sub.TargetRepository == updatedOrNewSubscription.TargetRepository &&
             sub.TargetBranch == updatedOrNewSubscription.TargetBranch &&
+            sub.SourceEnabled == updatedOrNewSubscription.SourceEnabled &&
+            sub.SourceDirectory == updatedOrNewSubscription.SourceDirectory &&
             sub.Id != updatedOrNewSubscription.Id);
     }
 }
