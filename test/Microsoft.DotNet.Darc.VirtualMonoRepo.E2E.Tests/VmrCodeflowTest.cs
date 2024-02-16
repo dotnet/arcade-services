@@ -176,7 +176,7 @@ internal class VmrCodeflowTest :  VmrTestsBase
         branch.Should().NotBeNull();
         await GitOperations.MergePrBranch(VmrPath, branch!);
 
-        // Backflow again - should be a no-op
+        // Flow again - should be a no-op
         branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().BeNull();
 
@@ -199,6 +199,95 @@ internal class VmrCodeflowTest :  VmrTestsBase
         // We used the changes from the repo - let's verify flowing back is a no-op
         branch = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath);
         branch.Should().BeNull();
+    }
+
+    [Test]
+    public async Task ForwardflowBuildsTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var branch = await ChangeRepoFileAndFlowIt("New content in the individual repo");
+        branch.Should().NotBeNull();
+        await GitOperations.MergePrBranch(VmrPath, branch!);
+
+        // Flow again - should be a no-op
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath);
+        branch.Should().BeNull();
+
+        // Update a file in the repo
+        await File.WriteAllTextAsync(_productRepoFilePath, "Change that will have a build");
+
+        // Update global.json in the repo
+        var updatedGlobalJson = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson);
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.GlobalJson, updatedGlobalJson.Replace("9.0.100", "9.0.200"));
+
+        // Update an eng/common file in the repo
+        Directory.CreateDirectory(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath);
+        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
+
+        await GitOperations.CommitAll(ProductRepoPath, "Changing a VMR's global.json and a file");
+
+        List<NativePath> expectedFiles =
+        [
+            .. GetExpectedVersionFiles(ProductRepoPath),
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1",
+            _productRepoScriptFilePath,
+            _productRepoFilePath,
+        ];
+
+        CheckDirectoryContents(ProductRepoPath, expectedFiles);
+
+        // Pretend we have a build of the repo
+        const string newVersion = "1.2.0";
+        var build = new Build(
+            id: 4050,
+            dateProduced: DateTimeOffset.Now,
+            staleness: 0,
+            released: false,
+            stable: true,
+            commit: await GitOperations.GetRepoLastCommit(ProductRepoPath),
+            channels: ImmutableList<Channel>.Empty,
+            assets: new[]
+            {
+                new Asset(123, 4050, true, FakePackageName, newVersion, null),
+                new Asset(124, 4050, true, DependencyFileManager.ArcadeSdkPackageName, newVersion, null),
+            }.ToImmutableList(),
+            dependencies: ImmutableList<BuildRef>.Empty,
+            incoherencies: ImmutableList<BuildIncoherence>.Empty)
+        {
+            GitHubBranch = "main",
+            GitHubRepository = ProductRepoPath,
+        };
+
+        _barClient
+            .Setup(x => x.GetBuildAsync(build.Id))
+            .ReturnsAsync(build);
+
+        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, buildToFlow: build.Id);
+        branch.Should().NotBeNull();
+        await GitOperations.MergePrBranch(VmrPath, branch!);
+
+        CheckFileContents(_productRepoVmrFilePath, "Change that will have a build");
+
+        // Verify that Version.Details.xml got updated with the new package "built" in the repo
+        Local local = GetLocal(VmrPath);
+        List<DependencyDetail> dependencies = await local.GetDependenciesAsync();
+
+        dependencies.Should().HaveCount(1);
+        dependencies.Should().Contain(dep =>
+            dep.Name == DependencyFileManager.ArcadeSdkPackageName
+            && dep.RepoUri == build.GitHubRepository
+            && dep.Commit == build.Commit
+            && dep.Version == newVersion);
+
+        // Verify that global.json got updated
+        DependencyFileManager dependencyFileManager = GetDependencyFileManager();
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(VmrPath, "main");
+        JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
+        arcadeVersion?.ToString().Should().Be(newVersion);
+
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(VmrPath, "main");
+        dotnetVersion.ToString().Should().Be("9.0.200");
     }
 
     [Test]

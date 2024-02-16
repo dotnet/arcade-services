@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,7 +10,9 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -24,7 +27,11 @@ internal abstract class VmrCodeFlower
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalLibGit2Client _libGit2Client;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+    private readonly IAssetLocationResolver _assetLocationResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -35,8 +42,12 @@ internal abstract class VmrCodeFlower
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
+        ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
+        IDependencyFileManager dependencyFileManager,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
+        IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
     {
@@ -44,7 +55,11 @@ internal abstract class VmrCodeFlower
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
+        _libGit2Client = libGit2Client;
         _versionDetailsParser = versionDetailsParser;
+        _dependencyFileManager = dependencyFileManager;
+        _coherencyUpdateResolver = coherencyUpdateResolver;
+        _assetLocationResolver = assetLocationResolver;
         _fileSystem = fileSystem;
         _logger = logger;
 
@@ -62,6 +77,7 @@ internal abstract class VmrCodeFlower
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
+        Build? build,
         bool discardPatches,
         CancellationToken cancellationToken = default)
     {
@@ -80,12 +96,12 @@ internal abstract class VmrCodeFlower
         if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, discardPatches, cancellationToken);
+            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, discardPatches, cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, discardPatches, cancellationToken);
+            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, discardPatches, cancellationToken);
         }
 
         if (branchName is null)
@@ -107,6 +123,7 @@ internal abstract class VmrCodeFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
+        Build? build,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -120,6 +137,7 @@ internal abstract class VmrCodeFlower
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
+        Build? build,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -246,6 +264,91 @@ internal abstract class VmrCodeFlower
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
+    }
+
+    protected async Task UpdateDependenciesAndToolset(
+        NativePath sourceRepo,
+        ILocalGitRepo targetRepo,
+        Build? build,
+        string currentVmrSha,
+        bool updateSourceElement,
+        CancellationToken cancellationToken)
+    {
+        string versionDetailsXml = await targetRepo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml)
+            ?? throw new Exception($"Failed to read {VersionFiles.VersionDetailsXml} from {targetRepo.Path} (file does not exist)");
+        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+        await _assetLocationResolver.AddAssetLocationToDependenciesAsync(versionDetails.Dependencies);
+
+        SourceDependency? sourceOrigin = null;
+        List<DependencyUpdate> updates;
+
+        if (updateSourceElement)
+        {
+            sourceOrigin = new SourceDependency(
+                build?.GetRepository() ?? Constants.DefaultVmrUri,
+                currentVmrSha);
+        }
+
+        // Generate the <Source /> element and get updates
+        if (build is not null)
+        {
+            IEnumerable<AssetData> assetData = build.Assets.Select(
+                a => new AssetData(a.NonShipping)
+                {
+                    Name = a.Name,
+                    Version = a.Version
+                });
+
+            updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+                build.GetRepository() ?? Constants.DefaultVmrUri,
+                build.Commit,
+                assetData,
+                versionDetails.Dependencies);
+
+            await _assetLocationResolver.AddAssetLocationToDependenciesAsync([.. updates.Select(u => u.To)]);
+        }
+        else
+        {
+            updates = [];
+        }
+
+        // If we are updating the arcade sdk we need to update the eng/common files as well
+        DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
+        SemanticVersion? targetDotNetVersion = null;
+
+        if (arcadeItem != null)
+        {
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+        }
+
+        GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
+            updates.Select(u => u.To),
+            sourceOrigin,
+            targetRepo.Path,
+            Constants.HEAD,
+            versionDetails.Dependencies,
+            targetDotNetVersion);
+
+        // TODO https://github.com/dotnet/arcade-services/issues/3251: Stop using LibGit2SharpClient for this
+        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
+
+        // Update eng/common files
+        if (arcadeItem != null)
+        {
+            var commonDir = targetRepo.Path / Constants.CommonScriptFilesPath;
+            if (_fileSystem.DirectoryExists(commonDir))
+            {
+                _fileSystem.DeleteDirectory(commonDir, true);
+            }
+
+            _fileSystem.CopyDirectory(
+                sourceRepo / Constants.CommonScriptFilesPath,
+                targetRepo.Path / Constants.CommonScriptFilesPath,
+                true);
+        }
+
+        await targetRepo.StageAsync(["."], cancellationToken);
+        await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
     }
 
     /// <summary>
