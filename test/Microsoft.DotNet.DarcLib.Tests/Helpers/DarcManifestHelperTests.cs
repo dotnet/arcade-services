@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using System;
@@ -26,11 +27,13 @@ public class DarcManifestHelperTests
         JObject testManifest;
         if (includeExtraAssets)
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, false);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(),
+                FakeOutputPath, false, NullLogger.Instance);
         }
         else
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, false);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(),
+                FakeOutputPath, false, NullLogger.Instance);
         }
 
         var builds = testManifest["builds"].ToList();
@@ -80,11 +83,13 @@ public class DarcManifestHelperTests
         JObject testManifest;
         if (includeExtraAssets)
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(), FakeOutputPath, true);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), GetSomeExtraDownloadedAssets(),
+                FakeOutputPath, true, NullLogger.Instance);
         }
         else
         {
-            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(), FakeOutputPath, true);
+            testManifest = ManifestHelper.GenerateDarcAssetJsonManifest(GetSomeShippingAssetsBuilds(),
+                FakeOutputPath, true, NullLogger.Instance);
         }
 
         var builds = testManifest["builds"].ToList();
@@ -176,7 +181,8 @@ public class DarcManifestHelperTests
     public void NoDownloadedBuildsProvided()
     {
         List<DownloadedBuild> downloadedBuilds = [];
-        JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds, FakeOutputPath, false);
+        JObject emptyManifest = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds,
+            FakeOutputPath, false, NullLogger.Instance);
         var builds = emptyManifest["builds"].ToList();
         builds.Count.Should().Be(0);
         emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
