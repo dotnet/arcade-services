@@ -313,8 +313,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     [ValidateModelState]
     public override async Task<IActionResult> DeleteSubscription(Guid id)
     {
-        Data.Models.Subscription subscription =
-            await _context.Subscriptions.FirstOrDefaultAsync(sub => sub.Id == id);
+        Data.Models.Subscription subscription = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(sub => sub.Id == id);
 
         if (subscription == null)
         {
