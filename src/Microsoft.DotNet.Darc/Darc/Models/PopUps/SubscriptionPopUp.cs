@@ -51,7 +51,8 @@ public abstract class SubscriptionPopUp : EditorPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
-        SubscriptionData data)
+        SubscriptionData data,
+        IEnumerable<Line> header)
         : base(path)
     {
         _data = data;
@@ -59,6 +60,63 @@ public abstract class SubscriptionPopUp : EditorPopUp
         _suggestedRepositories = suggestedRepositories;
         _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
+
+        GeneratePopUpContent(header);
+    }
+
+    private void GeneratePopUpContent(IEnumerable<Line> header)
+    {
+        Contents.AddRange(header);
+
+        ISerializer serializer = new SerializerBuilder().Build();
+        string yaml = serializer.Serialize(_data);
+        string[] lines = yaml.Split(Environment.NewLine);
+
+        foreach (string line in lines)
+        {
+            if (line.StartsWith(SourceEnabledElement))
+            {
+                Contents.AddRange(
+                [
+                    new(),
+                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
+                ]);
+            }
+
+            Contents.Add(new Line(line));
+        }
+
+        Contents.Add(new($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
+
+        foreach (string suggestedRepo in _suggestedRepositories)
+        {
+            Contents.Add(new($"  {suggestedRepo}", true));
+        }
+
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Suggested Channels:", true));
+        Contents.Add(new($"  {string.Join(", ", _suggestedChannels)}", true));
+
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Available Merge Policies", true));
+
+        foreach (string mergeHelp in _availableMergePolicyHelp)
+        {
+            Contents.Add(new($"  {mergeHelp}", true));
+        }
+
+        Contents.AddRange(
+        [
+            Line.Empty,
+            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
+            Line.Empty,
+            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("They can contain * to ignore whole groups of assets.", true),
+            new("Examples of excluded assets:", true),
+            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
+            new($"  - Microsoft.Extensions.*", true),
+        ]);
     }
 
     protected int ParseAndValidateData(SubscriptionData outputYamlData)
@@ -119,48 +177,6 @@ public abstract class SubscriptionPopUp : EditorPopUp
         _data.ExcludedAssets = outputYamlData.ExcludedAssets;
 
         return Constants.SuccessCode;
-    }
-
-    /// <summary>
-    /// Prints a section at the end that gives examples on usage
-    /// </summary>
-    protected void PrintSuggestions()
-    {
-        Contents.Add(new($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
-
-        foreach (string suggestedRepo in _suggestedRepositories)
-        {
-            Contents.Add(new($"  {suggestedRepo}", true));
-        }
-
-        Contents.Add(Line.Empty);
-        Contents.Add(new("Suggested Channels", true));
-
-        foreach (string suggestedChannel in _suggestedChannels)
-        {
-            Contents.Add(new($"  {suggestedChannel}", true));
-        }
-
-        Contents.Add(Line.Empty);
-        Contents.Add(new("Available Merge Policies", true));
-
-        foreach (string mergeHelp in _availableMergePolicyHelp)
-        {
-            Contents.Add(new($"  {mergeHelp}", true));
-        }
-
-        Contents.AddRange(
-        [
-            Line.Empty,
-            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
-            Line.Empty,
-            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
-            new("They can contain * to ignore whole groups of assets.", true),
-            new("Examples of excluded assets:", true),
-            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
-            new($"  - Microsoft.Extensions.*", true),
-        ]);
     }
 
     /// <summary>

@@ -28,40 +28,15 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdateData data)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data)
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data,
+            header: [
+                new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+                new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+                new Line()
+            ])
     {
         _logger = logger;
         _yamlData = data;
-
-        ISerializer serializer = new SerializerBuilder().Build();
-
-        string yaml = serializer.Serialize(_yamlData);
-
-        string[] lines = yaml.Split(Environment.NewLine);
-
-        // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents =
-        [
-            new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-            new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-            new Line()
-        ];
-
-        foreach (string line in lines)
-        {
-            if (line.StartsWith(SourceEnabledElement))
-            {
-                Contents.AddRange(
-                [
-                    new(),
-                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
-                ]);
-            }
-
-            Contents.Add(new Line(line));
-        }
-
-        PrintSuggestions();
     }
 
     public UpdateSubscriptionPopUp(

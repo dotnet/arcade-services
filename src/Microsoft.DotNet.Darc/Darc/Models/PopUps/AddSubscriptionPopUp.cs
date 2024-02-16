@@ -45,50 +45,27 @@ public class AddSubscriptionPopUp : SubscriptionPopUp
                 FailureNotificationTags = failureNotificationTags,
                 SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
                 ExcludedAssets = excludedAssets,
-            })
+            },
+            header: [
+                new("Use this form to create a new subscription.", true),
+                new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
+                new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
+                new("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
+                new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
+                new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
+                new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
+                Line.Empty,
+                new("ExcludedAssets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
+                new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
+                Line.Empty,
+                new("For additional information about subscriptions, please see", true),
+                new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
+                Line.Empty,
+                new("Fill out the following form.  Suggested values for fields are shown below.", true),
+                new()
+            ])
     {
         _logger = logger;
-
-        ISerializer serializer = new SerializerBuilder().Build();
-        string yaml = serializer.Serialize(_data);
-        string[] lines = yaml.Split(Environment.NewLine);
-
-        // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents =
-        [
-            new("Use this form to create a new subscription.", true),
-            new("A subscription maps a build of a source repository that has been applied to a specific channel", true),
-            new("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-            new("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-            new("set-repository-policies command should be used instead to set policies at the repository and branch level. ", true),
-            new("For non-batched subscriptions, providing a list of semicolon-delineated GitHub tags will tag these", true),
-            new("logins when monitoring the pull requests, once one or more policy checks fail.", true),
-            Line.Empty,
-            new("ExcludedAssets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
-            new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
-            Line.Empty,
-            new("For additional information about subscriptions, please see", true),
-            new("https://github.com/dotnet/arcade/blob/main/Documentation/BranchesChannelsAndSubscriptions.md", true),
-            Line.Empty,
-            new("Fill out the following form.  Suggested values for fields are shown below.", true),
-            new()
-        ];
-
-        foreach (string line in lines)
-        {
-            if (line.StartsWith(SourceEnabledElement))
-            {
-                Contents.AddRange(new List<Line>
-                {
-                    new(),
-                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
-                });
-            }
-
-            Contents.Add(new Line(line));
-        }
-
-        PrintSuggestions();
     }
 
     public override int ProcessContents(IList<Line> contents)
