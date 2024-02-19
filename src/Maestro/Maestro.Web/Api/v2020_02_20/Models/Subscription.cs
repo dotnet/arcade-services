@@ -21,6 +21,7 @@ public class Subscription
         TargetBranch = other.TargetBranch;
         Enabled = other.Enabled;
         SourceEnabled = other.SourceEnabled;
+        SourceDirectory = other.SourceDirectory;
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
         ExcludedAssets = other.ExcludedAssets != null ? [..other.ExcludedAssets.Select(s => s.Filter)] : [];
@@ -43,6 +44,8 @@ public class Subscription
     public bool Enabled { get; }
 
     public bool SourceEnabled { get; }
+
+    public string SourceDirectory { get; }
 
     public string PullRequestFailureNotificationTags { get; }
 

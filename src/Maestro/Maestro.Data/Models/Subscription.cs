@@ -75,6 +75,11 @@ public class Subscription
     public bool SourceEnabled { get; set; }
 
     /// <summary>
+    /// Denotes the directory of the VMR with which are the sources synchronized.
+    /// </summary>
+    public string SourceDirectory { get; set; }
+
+    /// <summary>
     /// Dependencies to ignore when synchronizing code of source-enabled subscriptions.
     /// </summary>
     public List<AssetFilter> ExcludedAssets { get; set; }

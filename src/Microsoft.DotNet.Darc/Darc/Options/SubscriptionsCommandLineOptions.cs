@@ -49,6 +49,9 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.")]
     public bool? SourceEnabled { get; set; }
 
+    [Option("source-directory", HelpText = "Get only source-enabled (VMR code flow) subscriptions that target a given VMR directory.")]
+    public string SourceDirectory { get; set; }
+
     [Option("batchable", HelpText = "Get only batchable subscriptions.")]
     public bool Batchable { get; set; }
 
@@ -75,6 +78,7 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
                SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
                SubscriptionEnabledParameterMatches(subscription) &&
                SubscriptionSourceEnabledParameterMatches(subscription) &&
+               SubscriptionSourceDirectoryParameterMatches(subscription) &&
                SubscriptionBatchableParameterMatches(subscription) &&
                SubscriptionIdsParameterMatches(subscription) &&
                SubscriptionFrequenciesParameterMatches(subscription) &&
@@ -91,6 +95,17 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
     public bool SubscriptionSourceEnabledParameterMatches(Subscription subscription)
     {
         return !SourceEnabled.HasValue || subscription.SourceEnabled == SourceEnabled;
+    }
+
+    public bool SubscriptionSourceDirectoryParameterMatches(Subscription subscription)
+    {
+        // If the parameter isn't set, it's a match
+        if (SourceDirectory == null)
+        {
+            return true;
+        }
+
+        return subscription.SourceDirectory == SourceDirectory;
     }
 
     public bool SubscriptionBatchableParameterMatches(Subscription subscription)
@@ -159,6 +174,7 @@ internal abstract class SubscriptionsCommandLineOptions : CommandLineOptions
         || Disabled
         || Enabled
         || SourceEnabled.HasValue
+        || SourceDirectory != null
         || Batchable
         || NotBatchable
         || SubscriptionIds.Any();

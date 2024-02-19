@@ -4,10 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 /// <summary>
@@ -23,7 +25,8 @@ public abstract class SubscriptionPopUp : EditorPopUp
     private const string MergePolicyElement = "Merge Policies";
     private const string BatchableElement = "Batchable";
     private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    private const string SourceEnabledElement = "Source Enabled";
+    protected const string SourceEnabledElement = "Source Enabled";
+    private const string SourceDirectoryElement = "Source Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
 
     protected readonly SubscriptionData _data;
@@ -39,9 +42,10 @@ public abstract class SubscriptionPopUp : EditorPopUp
     public string UpdateFrequency => _data.UpdateFrequency;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_data.MergePolicies);
     public bool Batchable => bool.Parse(_data.Batchable);
-    public string FailureNotificationTags => _data.FailureNotificationTags;
+    public string? FailureNotificationTags => _data.FailureNotificationTags;
     public bool SourceEnabled => bool.Parse(_data.SourceEnabled);
     public IReadOnlyCollection<string> ExcludedAssets => _data.ExcludedAssets;
+    public string? SourceDirectory => _data.SourceDirectory;
 
     protected SubscriptionPopUp(
         string path,
@@ -49,7 +53,8 @@ public abstract class SubscriptionPopUp : EditorPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         ILogger logger,
-        SubscriptionData data)
+        SubscriptionData data,
+        IEnumerable<Line> header)
         : base(path)
     {
         _data = data;
@@ -57,6 +62,63 @@ public abstract class SubscriptionPopUp : EditorPopUp
         _suggestedRepositories = suggestedRepositories;
         _availableMergePolicyHelp = availableMergePolicyHelp;
         _logger = logger;
+
+        GeneratePopUpContent(header);
+    }
+
+    private void GeneratePopUpContent(IEnumerable<Line> header)
+    {
+        Contents.AddRange(header);
+
+        ISerializer serializer = new SerializerBuilder().Build();
+        string yaml = serializer.Serialize(_data);
+        string[] lines = yaml.Split(Environment.NewLine);
+
+        foreach (string line in lines)
+        {
+            if (line.StartsWith(SourceEnabledElement))
+            {
+                Contents.AddRange(
+                [
+                    new(),
+                    new("Properties for code-enabled subscriptions (VMR code flow related):", true),
+                ]);
+            }
+
+            Contents.Add(new Line(line));
+        }
+
+        Contents.Add(new($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
+
+        foreach (string suggestedRepo in _suggestedRepositories)
+        {
+            Contents.Add(new($"  {suggestedRepo}", true));
+        }
+
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Suggested Channels:", true));
+        Contents.Add(new($"  {string.Join(", ", _suggestedChannels)}", true));
+
+        Contents.Add(Line.Empty);
+        Contents.Add(new("Available Merge Policies", true));
+
+        foreach (string mergeHelp in _availableMergePolicyHelp)
+        {
+            Contents.Add(new($"  {mergeHelp}", true));
+        }
+
+        Contents.AddRange(
+        [
+            Line.Empty,
+            new("Source directory only applies to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("It defines which directory of the VMR (under src/) are the sources synchronized with.", true),
+            Line.Empty,
+            new("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true),
+            new("They can contain * to ignore whole groups of assets.", true),
+            new("Examples of excluded assets:", true),
+            new($"  - Microsoft.DotNet.Arcade.Sdk", true),
+            new($"  - Microsoft.Extensions.*", true),
+        ]);
     }
 
     protected int ParseAndValidateData(SubscriptionData outputYamlData)
@@ -109,56 +171,45 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         if (outputYamlData.ExcludedAssets.Any() && !sourceEnabled)
         {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
+            _logger.LogError("Asset exclusion only works for source-enabled subscriptions");
             return Constants.ErrorCode;
         }
 
+        // When we disable the source flow, we zero out the source directory
+        if (!sourceEnabled)
+        {
+            outputYamlData.SourceDirectory = null;
+        }
+        else
+        {
+            // When left empty/default, we can generate it out of the source repository URL
+            if (outputYamlData.SourceDirectory == null || outputYamlData.SourceDirectory.StartsWith("<default>"))
+            {
+                var (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.SourceRepository);
+
+                // We need to take the repo that is not the VMR
+                if (repoName == "dotnet")
+                {
+                    (repoName, _) = GitRepoUrlParser.GetRepoNameAndOwner(outputYamlData.TargetRepository);
+                }
+
+                outputYamlData.SourceDirectory = repoName;
+                _logger.LogInformation($"Source directory was not provided, using '{repoName}'");
+            }
+        }
+
         _data.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _data.FailureNotificationTags, false);
+        _data.SourceDirectory = outputYamlData.SourceDirectory;
         _data.ExcludedAssets = outputYamlData.ExcludedAssets;
 
         return Constants.SuccessCode;
     }
 
     /// <summary>
-    /// Prints a section at the end that gives examples on usage
-    /// </summary>
-    protected void PrintSuggestions()
-    {
-        Contents.Add(new Line($"Suggested repository URLs for '{SourceRepoElement}' or '{TargetRepoElement}':", true));
-
-        foreach (string suggestedRepo in _suggestedRepositories)
-        {
-            Contents.Add(new Line($"  {suggestedRepo}", true));
-        }
-
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Suggested Channels", true));
-
-        foreach (string suggestedChannel in _suggestedChannels)
-        {
-            Contents.Add(new Line($"  {suggestedChannel}", true));
-        }
-
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Available Merge Policies", true));
-
-        foreach (string mergeHelp in _availableMergePolicyHelp)
-        {
-            Contents.Add(new Line($"  {mergeHelp}", true));
-        }
-
-        Contents.Add(new Line("", true));
-        Contents.Add(new Line("Excluded assets only apply to source-enabled subscription (VMR code flow subscriptions).", true));
-        Contents.Add(new Line("They can contain * to ignore whole groups of assets.", true));
-        Contents.Add(new Line("Examples of excluded assets:", true));
-        Contents.Add(new Line($"  - Microsoft.DotNet.Arcade.Sdk", true));
-        Contents.Add(new Line($"  - Microsoft.Extensions.*", true));
-    }
-
-    /// <summary>
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
+    #nullable disable
     protected class SubscriptionData
     {
         [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
@@ -187,6 +238,9 @@ public abstract class SubscriptionPopUp : EditorPopUp
 
         [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
         public string SourceEnabled { get; set; }
+
+        [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
+        public string SourceDirectory { get; set; }
 
         [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
         public List<string> ExcludedAssets { get; set; }

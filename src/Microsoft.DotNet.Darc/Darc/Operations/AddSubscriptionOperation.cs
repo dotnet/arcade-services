@@ -116,7 +116,8 @@ internal class AddSubscriptionOperation : Operation
         string updateFrequency = _options.UpdateFrequency;
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
-        string failureNotificationTags = _options.PullRequestFailureNotificationTags;
+        string sourceDirectory = _options.SourceDirectory;
+        string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
         // If in quiet (non-interactive mode), ensure that all options were passed, then
@@ -164,6 +165,7 @@ internal class AddSubscriptionOperation : Operation
                 Constants.AvailableMergePolicyYamlHelp, 
                 failureNotificationTags,
                 sourceEnabled,
+                sourceDirectory,
                 excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
@@ -185,6 +187,7 @@ internal class AddSubscriptionOperation : Operation
             batchable = addSubscriptionPopup.Batchable;
             failureNotificationTags = addSubscriptionPopup.FailureNotificationTags;
             sourceEnabled = addSubscriptionPopup.SourceEnabled;
+            sourceDirectory = addSubscriptionPopup.SourceDirectory;
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
@@ -241,6 +244,7 @@ internal class AddSubscriptionOperation : Operation
                 mergePolicies, 
                 failureNotificationTags,
                 sourceEnabled,
+                sourceDirectory,
                 excludedAssets);
 
             Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");

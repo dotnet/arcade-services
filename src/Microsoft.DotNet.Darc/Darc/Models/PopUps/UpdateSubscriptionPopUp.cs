@@ -3,12 +3,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
 public class UpdateSubscriptionPopUp : SubscriptionPopUp
@@ -28,31 +28,15 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableMergePolicyHelp,
         SubscriptionUpdateData data)
-        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data)
+        : base(path, suggestedChannels, suggestedRepositories, availableMergePolicyHelp, logger, data,
+            header: [
+                new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+                new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
+                new Line()
+            ])
     {
         _logger = logger;
         _yamlData = data;
-
-        ISerializer serializer = new SerializerBuilder().Build();
-
-        string yaml = serializer.Serialize(_yamlData);
-
-        string[] lines = yaml.Split(Environment.NewLine);
-
-        // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents = new Collection<Line>(new List<Line>
-        {
-            new($"Use this form to update the values of subscription '{subscription.Id}'.", true),
-            new($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
-            new()
-        });
-
-        foreach (string line in lines)
-        {
-            Contents.Add(new Line(line));
-        }
-
-        PrintSuggestions();
     }
 
     public UpdateSubscriptionPopUp(
@@ -65,6 +49,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
         IEnumerable<string> availableMergePolicyHelp,
         string failureNotificationTags,
         bool? sourceEnabled,
+        string sourceDirectory,
         List<string> excludedAssets)
         : this(path, logger, subscription, suggestedChannels, suggestedRepositories, availableMergePolicyHelp,
               new SubscriptionUpdateData
@@ -78,6 +63,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
                   FailureNotificationTags = GetCurrentSettingForDisplay(failureNotificationTags, failureNotificationTags, false),
                   MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies),
                   SourceEnabled = GetCurrentSettingForDisplay(sourceEnabled?.ToString(), false.ToString(), false),
+                  SourceDirectory = GetCurrentSettingForDisplay(sourceDirectory, subscription.SourceDirectory, false),
                   ExcludedAssets = excludedAssets,
               })
     {
@@ -101,12 +87,13 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
 
         var result = ParseAndValidateData(outputYamlData);
 
-        _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false);
         if (!bool.TryParse(outputYamlData.Enabled, out bool enabled))
         {
             _logger.LogError("Enabled is not a valid boolean value.");
             return Constants.ErrorCode;
         }
+
+        _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false)!;
 
         return result;
     }
@@ -115,6 +102,7 @@ public class UpdateSubscriptionPopUp : SubscriptionPopUp
     /// Helper class for YAML encoding/decoding purposes.
     /// This is used so that we can have friendly alias names for elements.
     /// </summary>
+    #nullable disable
     private class SubscriptionUpdateData : SubscriptionData
     {
         [YamlMember(ApplyNamingConventions = false)]

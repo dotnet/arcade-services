@@ -235,6 +235,7 @@ public class BarApiClient : IBarApiClient
     /// </param>
     /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>
     /// <param name="sourceEnabled">Whether this is a VMR code flow (special VMR subscription)</param>
+    /// <param name="sourceDirectory">Directory of the VMR to synchronize the sources with</param>
     /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
     /// <returns>Newly created subscription, if successful</returns>
     public Task<Subscription> CreateSubscriptionAsync(
@@ -247,6 +248,7 @@ public class BarApiClient : IBarApiClient
         List<MergePolicy> mergePolicies,
         string failureNotificationTags,
         bool sourceEnabled,
+        string sourceDirectory,
         IReadOnlyCollection<string> excludedAssets)
     {
         var subscriptionData = new SubscriptionData(
@@ -266,6 +268,7 @@ public class BarApiClient : IBarApiClient
             failureNotificationTags)
         {
             SourceEnabled = sourceEnabled,
+            SourceDirectory = sourceDirectory,
             ExcludedAssets = excludedAssets.ToImmutableList(),
         };
 

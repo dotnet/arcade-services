@@ -36,6 +36,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("sourceEnabled")]
         public bool? SourceEnabled { get; set; }
 
+        [JsonProperty("sourceDirectory")]
+        public string SourceDirectory { get; set; }
+
         [JsonProperty("policy")]
         public SubscriptionPolicy Policy { get; set; }
 
