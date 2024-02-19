@@ -41,7 +41,7 @@ public class ManifestHelper
         }
 
         List<DownloadedAsset> mergedManifestAssets = SelectMergedManifestAssets(downloadedBuilds);
-        Dictionary<string, string> assetCreatorMap = RetrieveAssetCreatorMap(mergedManifestAssets, logger);
+        Dictionary<string, string> assetOriginMap = RetrieveAssetOriginMap(mergedManifestAssets, logger);
 
         var manifestObject = new
         {
@@ -65,7 +65,7 @@ public class ManifestHelper
                         new
                         {
                             name = asset.Asset.Name,
-                            creator = assetCreatorMap.ContainsKey(asset.Asset.Name) ? assetCreatorMap[asset.Asset.Name] : null,
+                            origin = assetOriginMap.ContainsKey(asset.Asset.Name) ? assetOriginMap[asset.Asset.Name] : null,
                             version = asset.Asset.Version,
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
@@ -125,9 +125,9 @@ public class ManifestHelper
             .ToList();
     }
 
-    private static Dictionary<string, string> RetrieveAssetCreatorMap(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
+    private static Dictionary<string, string> RetrieveAssetOriginMap(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
     {
-        Dictionary<string, string> assetCreatorMap = new();
+        Dictionary<string, string> assetOriginMap = new();
 
         foreach (var mergedManifest in mergedManifests)
         {
@@ -156,30 +156,30 @@ public class ManifestHelper
                 if (assetName == null)
                     continue;
 
-                string? assetCreator = asset.Attribute("Creator")?.Value;
+                string? assetOrigin = asset.Attribute("Origin")?.Value;
 
-                // An Creator attribute has been added to the MergeManifest.xml file for the VMR build to differentiate assets produced by different repos,
+                // An Origin attribute has been added to the MergeManifest.xml file for the VMR build to differentiate assets produced by different repos,
                 // as mentioned in https://github.com/dotnet/source-build/issues/3898.
                 // To standardize the generation of the manifest.json file for .NET 6/7/8 and VMR builds,
-                // the Creator attribute is taken from the MergeManifest.xml file if it exists, otherwise,
+                // the Origin attribute is taken from the MergeManifest.xml file if it exists, otherwise,
                 // it is taken from the Build.Name, which corresponds to the repository name.
-                assetCreator ??= repoName;
+                assetOrigin ??= repoName;
 
-                if (assetCreatorMap.TryGetValue(assetName, out var existingAssetCreator))
+                if (assetOriginMap.TryGetValue(assetName, out var existingAssetOrigin))
                 {
-                    if (existingAssetCreator != assetCreator)
+                    if (existingAssetOrigin != assetOrigin)
                     {
                         logger.LogWarning($"Warning: The same asset '{assetName}' is listed in various '{MergedManifestFileName}', " +
-                            $"with differing creators specified in each: {existingAssetCreator}, {assetCreator}.");
+                            $"with differing origins specified in each: {existingAssetOrigin}, {assetOrigin}.");
                     }
                 }
                 else
                 {
-                    assetCreatorMap.Add(assetName, assetCreator);
+                    assetOriginMap.Add(assetName, assetOrigin);
                 }
             }
         }
 
-        return assetCreatorMap;
+        return assetOriginMap;
     }
 }
