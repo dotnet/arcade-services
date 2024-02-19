@@ -1,5 +1,9 @@
 # Starting the service locally
 
+If you're running the service from VS, install the latest Preview VS. Be sure to install the `Azure Development => .NET Aspire SDK (Preview)` optional workload in the VS installer.
+
+If you're building the project using the command line, run `dotnet workload install aspire` or `dotnet workload update` to install/update the aspire workload.
+
 To run the Product Construction Service locally, set the `ProductConstructionService.AppHost` as Startup Project, and run with F5.
 
 When running locally:
