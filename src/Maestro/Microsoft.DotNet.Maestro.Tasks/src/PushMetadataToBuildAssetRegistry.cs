@@ -45,9 +45,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string SearchPattern = "*.xml";
         private const string MergedManifestFileName = "MergedManifest.xml";
         private const string NoCategory = "NONE";
-        private const string NonShippingAttributeName = "NonShipping";
-        private const string NetCoreAssetAttributeName = "NetCoreAsset";
-        private const string CategoryAttributeName = "Category";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private string _gitHubRepository = "";
         private string _gitHubBranch = "";
@@ -56,6 +53,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         internal IVersionIdentifierProxy _versionIdentifier = new VersionIdentifierProxy();
         internal IGetEnvProxy _getEnvProxy = new GetEnvProxy();
 
+        public const string NonShippingAttributeName = "NonShipping";
+        public const string NetCoreAssetAttributeName = "NetCoreAsset";
+        public const string CategoryAttributeName = "Category";
         public void Cancel()
         {
             _tokenSource.Cancel();
