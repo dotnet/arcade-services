@@ -59,6 +59,11 @@ public interface IRepositoryCloneManager
         IReadOnlyCollection<string> requestedRefs,
         string checkoutRef,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Prepares a clone for the VMR repository.
+    /// </summary>
+    Task<ILocalGitRepo> PrepareVmrCloneAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

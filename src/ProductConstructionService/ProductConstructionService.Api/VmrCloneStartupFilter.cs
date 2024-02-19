@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api;
 
-public class VmrCloneStartupFilter(RepositoryCloneManager repositoryCloneManager, IVmrInfo vmrInfo) : IStartupFilter
+public class VmrCloneStartupFilter(IRepositoryCloneManager repositoryCloneManager, IVmrInfo vmrInfo) : IStartupFilter
 {
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
     {
