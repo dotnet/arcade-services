@@ -45,6 +45,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string SearchPattern = "*.xml";
         private const string MergedManifestFileName = "MergedManifest.xml";
         private const string NoCategory = "NONE";
+        private const string NonShippingAttributeName = "NonShipping";
+        private const string NetCoreAssetAttributeName = "NetCoreAsset";
+        private const string CategoryAttributeName = "Category";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private string _gitHubRepository = "";
         private string _gitHubBranch = "";
@@ -493,8 +496,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", package.NonShipping.ToString().ToLower() },
-                        { "NetCoreAsset", package.NetCoreAsset.ToString().ToLower() }
+                        { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
+                        { NetCoreAssetAttributeName, package.NetCoreAsset.ToString().ToLower() }
                     },
                     Id = package.Id,
                     Version = package.Version
@@ -509,9 +512,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     Attributes = new Dictionary<string, string>
                     {
-                        { "NonShipping", blob.NonShipping.ToString().ToLower() },
+                        { NonShippingAttributeName, blob.NonShipping.ToString().ToLower() },
                         {
-                            "Category",
+                            CategoryAttributeName,
                             !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : NoCategory
                         }
                     },
@@ -738,7 +741,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 Attributes = new Dictionary<string, string>()
                 {
-                    { "NonShipping", "true" }
+                    { NonShippingAttributeName, "true" }
                 },
                 Id = $"{Id}"
             };
