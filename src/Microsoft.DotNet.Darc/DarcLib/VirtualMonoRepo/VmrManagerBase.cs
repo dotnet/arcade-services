@@ -223,6 +223,7 @@ public abstract class VmrManagerBase
                 .Select(r => r.RemoteUri)
                 .Append(repo.RemoteUri)
                 .Prepend(repo.Mapping.DefaultRemote)
+                .Distinct()
                 .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther));
 
             IEnumerable<DependencyDetail>? repoDependencies = null;

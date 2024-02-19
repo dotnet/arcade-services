@@ -23,6 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
+            string sourceDirectory = default,
             CancellationToken cancellationToken = default
         );
 
@@ -96,6 +97,7 @@ namespace Microsoft.DotNet.Maestro.Client
             bool? sourceEnabled = default,
             string sourceRepository = default,
             string targetRepository = default,
+            string sourceDirectory = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -128,6 +130,10 @@ namespace Microsoft.DotNet.Maestro.Client
             if (sourceEnabled != default)
             {
                 _url.AppendQuery("sourceEnabled", Client.Serialize(sourceEnabled));
+            }
+            if (!string.IsNullOrEmpty(sourceDirectory))
+            {
+                _url.AppendQuery("sourceDirectory", Client.Serialize(sourceDirectory));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 

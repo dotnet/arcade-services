@@ -155,7 +155,7 @@ internal class GatherDropOperation : Operation
 
     private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
     {
-        var repoUri = string.IsNullOrEmpty(build.GitHubRepository) ? build.AzureDevOpsRepository : build.GitHubRepository;
+        var repoUri = build.GetRepository();
         IRemote remote = RemoteFactory.GetRemote(_options, repoUri, Logger);
         return await remote.GetDependenciesAsync(repoUri, build.Commit);
     }
@@ -463,7 +463,7 @@ internal class GatherDropOperation : Operation
         foreach (var downloadedBuild in downloadedBuilds)
         {
             // Start by determining whether we need to look at this build at all.
-            var repository = downloadedBuild.Build.GitHubRepository ?? downloadedBuild.Build.AzureDevOpsRepository;
+            var repository = downloadedBuild.Build.GetRepository();
 
             if (!repositories.TryGetValue(repository, out (string, string) categoryAndShortName))
             {
@@ -630,7 +630,7 @@ internal class GatherDropOperation : Operation
             {
                 if (build.Released)
                 {
-                    Console.WriteLine($"  Skipping download of released build {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
+                    Console.WriteLine($"  Skipping download of released build {build.AzureDevOpsBuildNumber} of {build.GetRepository()} @ {build.Commit}");
                 }
             }
             return nonReleasedBuilds;
@@ -707,9 +707,9 @@ internal class GatherDropOperation : Operation
         Console.WriteLine("Building graph of all dependencies under root builds...");
         foreach (Build rootBuild in rootBuilds)
         {
-            Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+            Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GetRepository()} @ {rootBuild.Commit}");
 
-            var rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
+            var rootBuildRepository = rootBuild.GetRepository();
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
                 Provider.GetRequiredService<IBarApiClient>(),
@@ -727,14 +727,14 @@ internal class GatherDropOperation : Operation
             Console.WriteLine("Full set of builds in graph:");
             foreach (var build in graph.ContributingBuilds)
             {
-                if ((build.GitHubRepository ?? build.AzureDevOpsRepository) == rootBuildRepository &&
+                if (build.GetRepository() == rootBuildRepository &&
                     build.Commit == rootBuild.Commit &&
                     build.Id != rootBuild.Id)
                 {
                     continue;
                 }
 
-                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
+                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GetRepository()} @ {build.Commit}");
                 builds.Add(build);
             }
 
@@ -812,7 +812,7 @@ internal class GatherDropOperation : Operation
         // Calculate the release directory name based on the last element of the build
         // repo uri plus the build number (to disambiguate overlapping builds)
         string releaseOutputDirectory = null;
-        var repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
+        var repoUri = build.GetRepository();
         var lastSlash = repoUri.LastIndexOf("/");
         if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
         {

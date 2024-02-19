@@ -1,12 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps;
@@ -40,19 +39,21 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         string[] lines = yaml.Split(Environment.NewLine);
 
         // Initialize line contents.  Augment the input lines with suggestions and explanation
-        Contents = new Collection<Line>(new List<Line>
-        {
+        Contents =
+        [
             new("Use this form to set repository auto-merge policies for batchable subscriptions.", true),
             new("Batchable subscriptions share merge policies for all subscriptions that target the same repo and branch.", true),
             new("If the branch has at least one merge policy and a PR satisfies that merge policy, the PR is automatically merged.", true),
-            new("", true),
+            Line.Empty,
             new("Fill out the following form. Suggested values for merge policies are shown below.", true),
             new()
-        });
+        ];
+
         foreach (string line in lines)
         {
             Contents.Add(new Line(line));
         }
+
         // Add helper comments
         Contents.Add(new Line("Available Merge Policies", true));
         foreach (string mergeHelp in availableMergePolicyHelp)

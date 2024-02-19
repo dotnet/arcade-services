@@ -51,6 +51,7 @@ public class SqlBarClient : IBasicBarClient
             sub.TargetRepository,
             sub.TargetBranch,
             sub.PullRequestFailureNotificationTags,
+            sub.SourceDirectory,
             sub.ExcludedAssets.Select(s => s.Filter).ToImmutableList());
     }
 
@@ -282,6 +283,7 @@ public class SqlBarClient : IBasicBarClient
             other.TargetRepository,
             other.TargetBranch,
             other.PullRequestFailureNotificationTags,
+            other.SourceDirectory,
             other.ExcludedAssets.Select(a => a.Filter).ToImmutableList())
         {
             Channel = ToClientModelChannel(other.Channel),

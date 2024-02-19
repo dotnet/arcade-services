@@ -17,7 +17,7 @@ public static class VMRConfiguration
     {
         builder.Services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
         builder.Services.AddVmrManagers(
-            Environment.GetEnvironmentVariable(GitLocationKey) ?? throw new ArgumentException($"{GitLocationKey} environmental variable must be set"),
+            "git", //Environment.GetEnvironmentVariable(GitLocationKey) ?? throw new ArgumentException($"{GitLocationKey} environmental variable must be set"),
             Environment.GetEnvironmentVariable(VmrPathKey) ?? throw new ArgumentException($"{VmrPathKey} environmental variable must be set"),
             Environment.GetEnvironmentVariable(TmpPathKey) ?? throw new ArgumentException($"{TmpPathKey} environmental variable must be set"),
             builder.Configuration["BotAccount-dotnet-bot-repo-PAT"],

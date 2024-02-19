@@ -50,6 +50,7 @@ internal class UpdateSubscriptionOperation : Operation
         List<MergePolicy> mergePolicies;
         bool sourceEnabled = subscription.SourceEnabled;
         List<string> excludedAssets = [..subscription.ExcludedAssets];
+        string sourceDirectory = subscription.SourceDirectory;
 
         if (UpdatingViaCommandLine())
         {
@@ -89,6 +90,11 @@ internal class UpdateSubscriptionOperation : Operation
                 sourceEnabled = _options.SourceEnabled.Value;
             }
 
+            if (_options.SourceDirectory != null)
+            {
+                sourceDirectory = _options.SourceDirectory;
+            }
+
             if (_options.ExcludedAssets != null)
             {
                 excludedAssets = [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)];
@@ -106,6 +112,7 @@ internal class UpdateSubscriptionOperation : Operation
                 Constants.AvailableMergePolicyYamlHelp,
                 subscription.PullRequestFailureNotificationTags ?? string.Empty,
                 sourceEnabled,
+                sourceDirectory,
                 excludedAssets);
 
             var uxManager = new UxManager(_options.GitLocation, Logger);
@@ -125,6 +132,7 @@ internal class UpdateSubscriptionOperation : Operation
             failureNotificationTags = updateSubscriptionPopUp.FailureNotificationTags;
             mergePolicies = updateSubscriptionPopUp.MergePolicies;
             sourceEnabled = updateSubscriptionPopUp.SourceEnabled;
+            sourceDirectory = updateSubscriptionPopUp.SourceDirectory;
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
@@ -145,6 +153,7 @@ internal class UpdateSubscriptionOperation : Operation
                 PullRequestFailureNotificationTags = failureNotificationTags,
                 SourceEnabled = sourceEnabled,
                 ExcludedAssets = excludedAssets.ToImmutableList(),
+                SourceDirectory = sourceDirectory,
             };
 
             subscriptionToUpdate.Policy.Batchable = batchable;
@@ -211,5 +220,6 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.Enabled != null
            || _options.FailureNotificationTags != null
            || _options.SourceEnabled != null
+           || _options.SourceDirectory != null
            || _options.ExcludedAssets != null;
 }

@@ -1,15 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Models;
 
 public abstract class EditorPopUp
 {
-    public EditorPopUp(string path, IList<Line> contents)
+    public EditorPopUp(string path, List<Line> contents)
     {
         Path = path;
         Contents = contents;
@@ -18,13 +19,14 @@ public abstract class EditorPopUp
     public EditorPopUp(string path)
     {
         Path = path;
+        Contents = [];
     }
 
     [JsonIgnore]
     public string Path { get; set; }
 
     [JsonIgnore]
-    public IList<Line> Contents { get; set; }
+    public List<Line> Contents { get; set; }
 
     public static IList<Line> OnClose(string path)
     {
@@ -56,7 +58,7 @@ public abstract class EditorPopUp
     /// <param name="defaultValue">Default value if the current setting value is empty</param>
     /// <param name="isSecret">If secret and current value is not empty, should display ***</param>
     /// <returns>String to display</returns>
-    protected static string GetCurrentSettingForDisplay(string currentValue, string defaultValue, bool isSecret)
+    protected static string GetCurrentSettingForDisplay(string? currentValue, string defaultValue, bool isSecret)
     {
         if (!string.IsNullOrEmpty(currentValue))
         {
@@ -77,8 +79,14 @@ public abstract class EditorPopUp
     ///     - Empty string if the setting starts+ends with <>
     ///     - New value if anything else.
     /// </returns>
-    protected static string ParseSetting(string inputSetting, string originalSetting, bool isSecret)
+    protected static string? ParseSetting(string? inputSetting, string originalSetting, bool isSecret)
     {
+        //if the setting is null, trimming will throw an exception
+        if (string.IsNullOrEmpty(inputSetting))
+        {
+            return inputSetting;
+        }
+
         string trimmedSetting = inputSetting.Trim();
         if (trimmedSetting.StartsWith('<') && trimmedSetting.EndsWith('>'))
         {
@@ -95,6 +103,8 @@ public abstract class EditorPopUp
 
 public class Line
 {
+    public static readonly Line Empty = new(string.Empty, true);
+
     public Line(string text, bool isComment = false)
     {
         Text = !isComment ? text : $"# {text}";
@@ -105,5 +115,5 @@ public class Line
         Text = null;
     }
 
-    public string Text { get; set; }
+    public string? Text { get; set; }
 }

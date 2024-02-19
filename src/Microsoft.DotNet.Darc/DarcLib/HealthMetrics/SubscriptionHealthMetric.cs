@@ -203,12 +203,8 @@ public class SubscriptionHealthMetric : HealthMetric
         foreach (Subscription subscription in Subscriptions)
         {
             // Look up the latest build and add it to the dictionary.
-            Build latestBuild = null;
-            try
-            {
-                latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-            }
-            catch (Exception)
+            Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (latestBuild == null)
             {
                 continue;
             }

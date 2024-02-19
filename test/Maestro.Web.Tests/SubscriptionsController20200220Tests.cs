@@ -92,6 +92,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             Policy = new Api.v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = Api.v2018_07_16.Models.UpdateFrequency.None },
             TargetBranch = defaultBranchName,
             SourceEnabled = true,
+            SourceDirectory = "sub-controller-test-source-repo",
             ExcludedAssets = [DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"],
         };
 
@@ -111,6 +112,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             createdSubscription2.TargetRepository.Should().Be(defaultAzdoTargetRepo);
             createdSubscription2.PullRequestFailureNotificationTags.Should().BeNull();
             createdSubscription2.SourceEnabled.Should().BeTrue();
+            createdSubscription2.SourceDirectory.Should().Be("sub-controller-test-source-repo");
             createdSubscription2.ExcludedAssets.Should().BeEquivalentTo([DependencyFileManager.ArcadeSdkPackageName, "Foo.Bar"]);
         }
 
