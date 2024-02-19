@@ -610,7 +610,8 @@ internal class GatherDropOperation : Operation
         var manifestJson = ManifestHelper.GenerateDarcAssetJsonManifest(downloadedBuilds,
             extraAssets,
             _options.OutputDirectory,
-            _options.UseRelativePathsInManifest);
+            _options.UseRelativePathsInManifest,
+            Logger);
 
         await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
     }
