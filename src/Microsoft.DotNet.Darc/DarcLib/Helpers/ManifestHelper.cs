@@ -65,7 +65,7 @@ public class ManifestHelper
                         new
                         {
                             name = asset.Asset.Name,
-                            origin = assetOriginMap.ContainsKey(asset.Asset.Name) ? assetOriginMap[asset.Asset.Name] : null,
+                            origin = assetOriginMap.TryGetValue(asset.Asset.Name, out var origin) ? origin : null,
                             version = asset.Asset.Version,
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
@@ -119,9 +119,8 @@ public class ManifestHelper
     private static List<DownloadedAsset> SelectMergedManifestAssets(IEnumerable<DownloadedBuild> downloadedBuilds)
     {
         return downloadedBuilds
-            .Select(build => build.DownloadedAssets
+            .SelectMany(build => build.DownloadedAssets
                 .Where(asset => asset.Asset.Name.EndsWith(MergedManifestFileName)))
-            .SelectMany(x => x)
             .ToList();
     }
 
@@ -148,7 +147,7 @@ public class ManifestHelper
             if (buildName == null)
                 continue;
 
-            string repoName = buildName.Replace("dotnet-", string.Empty);
+            string repoName = buildName.Replace("dotnet-", null);
 
             foreach (var asset in buildElement?.Elements() ?? [])
             {
