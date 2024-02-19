@@ -251,8 +251,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/source-repo1",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
             null,
+            "@notifiedUser1;@notifiedUser2;userWithoutAtSign;",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("80B3B6EE-4C9B-46AC-B275-E016E0D5AF41"),
@@ -261,8 +261,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            "@notifiedUser3;@notifiedUser4",
             null,
+            "@notifiedUser3;@notifiedUser4",
             excludedAssets: ImmutableList<string>.Empty),
         new ClientModels.Subscription(
             new Guid("1802E0D2-D6BF-4A14-BF4C-B2A292739E59"),
@@ -271,8 +271,8 @@ public class PullRequestPolicyFailureNotifierTests
             $"https://github.com/{FakeOrgName}/source-repo2",
             $"https://github.com/{FakeOrgName}/dest-repo",
             "fakebranch",
-            string.Empty,
             null,
+            string.Empty,
             excludedAssets: ImmutableList<string>.Empty)
     ];
 
