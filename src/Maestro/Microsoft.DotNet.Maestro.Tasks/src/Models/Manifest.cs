@@ -92,19 +92,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
     [XmlRoot(ElementName = "Package")]
     public class Package
     {
-        public const string NonShippingAttributeName = "NonShipping";
-        public const string NetCoreAssetAttributeName = "NetCoreAsset";
-
         [XmlAttribute(AttributeName = "Id")]
         public string Id { get; set; }
 
         [XmlAttribute(AttributeName = "Version")]
         public string Version { get; set; }
 
-        [XmlAttribute(AttributeName = NetCoreAssetAttributeName)]
+        [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
 
-        [XmlAttribute(AttributeName = NetCoreAssetAttributeName)]
+        [XmlAttribute(AttributeName = "NetCoreAsset")]
         public bool NetCoreAsset { get; set; }
     }
 
