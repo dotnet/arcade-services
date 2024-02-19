@@ -9,6 +9,9 @@ using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
+/// <summary>
+/// Clones the VMR repo, and refreshes the VMR info.
+/// </summary>
 public interface IVmrCloner
 {
     Task PrepareVmrCloneAsync(CancellationToken cancellationToken);

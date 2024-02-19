@@ -178,10 +178,6 @@ var env = [
         name: 'TmpPath'
         value: '/mnt/datadir/tmp'
     }
-    {
-        name: 'GitLocation'
-        value: '/usr/local/git'
-    }
 ]
 
 // container app hosting the Product Construction Service

@@ -4,7 +4,6 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
@@ -25,9 +24,10 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 });
 
 builder.AddTelemetry();
-builder.AddWorkitemQueues(credential);
 
 builder.AddVmrRegistrations();
+
+builder.AddWorkitemQueues(credential);
 
 builder.AddServiceDefaults();
 

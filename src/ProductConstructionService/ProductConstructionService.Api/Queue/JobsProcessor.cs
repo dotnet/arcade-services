@@ -17,7 +17,7 @@ public class JobsProcessor(
     JobsProcessorScopeManager scopeManager,
     QueueServiceClient queueServiceClient,
     IVmrCloner vmrCloner,
-    TelemetryRecorder telemetryRecorder)
+    ITelemetryRecorder telemetryRecorder)
     : BackgroundService
 {
     private readonly ILogger<JobsProcessor> _logger = logger;
