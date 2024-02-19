@@ -3,6 +3,7 @@
 
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.Queue.Jobs;
 
@@ -12,7 +13,8 @@ public class JobsProcessor(
     ILogger<JobsProcessor> logger,
     IOptions<JobProcessorOptions> options,
     JobsProcessorScopeManager scopeManager,
-    QueueServiceClient queueServiceClient)
+    QueueServiceClient queueServiceClient,
+    IVmrCloner vmrCloner)
     : BackgroundService
 {
     private readonly ILogger<JobsProcessor> _logger = logger;
@@ -23,6 +25,11 @@ public class JobsProcessor(
     {
         // The API won't be initialized until the BackgroundService goes async. Since the scopeManagers blocks aren't async, we have to do it here
         await Task.Delay(1000);
+
+        if (_options.Value.CloneVmr)
+        {
+            await vmrCloner.PrepareVmrCloneAsync(cancellationToken);
+        }
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
