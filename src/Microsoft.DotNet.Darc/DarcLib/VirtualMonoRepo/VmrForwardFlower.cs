@@ -16,11 +16,12 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrForwardFlower
 {
-    Task<string?> FlowForwardAsync(
+    Task<bool> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
         string? shaToFlow,
         int? buildToFlow,
+        string branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -77,11 +78,12 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _logger = logger;
     }
 
-    public async Task<string?> FlowForwardAsync(
+    public async Task<bool> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
         string? shaToFlow,
         int? buildToFlow,
+        string branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
@@ -114,20 +116,21 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             mapping,
             build,
+            branchName,
             discardPatches,
             cancellationToken);
     }
 
-    protected override async Task<string?> SameDirectionFlowAsync(
+    protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var branchName = currentFlow.GetBranchName();
         await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
         List<AdditionalRemote> additionalRemotes =
@@ -182,12 +185,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
-            branchName = await FlowCodeAsync(
+            await FlowCodeAsync(
                 lastLastFlow,
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
                 null, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
+                branchName,
                 discardPatches,
                 cancellationToken);
 
@@ -207,21 +211,21 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
-        return hadUpdates ? branchName : null;
+        return hadUpdates;
     }
 
-    protected override async Task<string?> OppositeDirectionFlowAsync(
+    protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
 
-        var branchName = currentFlow.GetBranchName();
         var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
@@ -267,7 +271,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         // TODO: Detect if no changes
-        var hadUpdates = await _vmrUpdater.UpdateRepository(
+        // TODO: Technically, if we only changed metadata files, there are no updates still
+        return await _vmrUpdater.UpdateRepository(
             mapping.Name,
             currentFlow.TargetSha,
             targetVersion,
@@ -278,8 +283,5 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             generateCodeowners: false,
             discardPatches,
             cancellationToken);
-
-        // TODO: Technically, if we only changed metadata files, there are no updates still
-        return hadUpdates ? branchName : null;
     }
 }
