@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.Api;
 
-public static class VMRConfiguration
+public static class VmrConfiguration
 {
     public const string VmrPathKey = "VmrPath";
     public const string TmpPathKey = "TmpPath";
@@ -21,5 +21,10 @@ public static class VMRConfiguration
             Environment.GetEnvironmentVariable(TmpPathKey) ?? throw new ArgumentException($"{TmpPathKey} environmental variable must be set"),
             builder.Configuration["BotAccount-dotnet-bot-repo-PAT"],
             builder.Configuration["dn-bot-all-orgs-code-r"]);
+
+        if (!builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddTransient<IStartupFilter, VmrCloneStartupFilter>();
+        }
     }
 }

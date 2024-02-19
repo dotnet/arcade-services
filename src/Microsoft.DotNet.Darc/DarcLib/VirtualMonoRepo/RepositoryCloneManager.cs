@@ -200,6 +200,15 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return repo;
     }
 
+    public async Task<ILocalGitRepo> PrepareVmrCloneAsync(CancellationToken cancellationToken)
+    {
+        // The vmr directory won't use a hash for it's name, so we don't accidentaly overwrite it
+        var path = await PrepareCloneInternal(Constants.VmrRepoName, Constants.VmrRepoName, cancellationToken);
+        var repo = _localGitRepoFactory.Create(path);
+        await repo.CheckoutAsync("main");
+        return repo;
+    }
+
     private async Task<NativePath> PrepareCloneInternal(string remoteUri, string dirName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

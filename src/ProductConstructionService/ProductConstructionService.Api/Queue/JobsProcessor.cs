@@ -15,9 +15,7 @@ public class JobsProcessor(
     ILogger<JobsProcessor> logger,
     IOptions<JobProcessorOptions> options,
     JobsProcessorScopeManager scopeManager,
-    QueueServiceClient queueServiceClient,
-    IVmrCloner vmrCloner,
-    ITelemetryRecorder telemetryRecorder)
+    QueueServiceClient queueServiceClient)
     : BackgroundService
 {
     private readonly ILogger<JobsProcessor> _logger = logger;
@@ -28,15 +26,6 @@ public class JobsProcessor(
     {
         // The API won't be initialized until the BackgroundService goes async. Since the scopeManagers blocks aren't async, we have to do it here
         await Task.Delay(1000);
-
-        if (_options.Value.CloneVmr)
-        {
-            using (ITelemetryScope scope = telemetryRecorder.RecordGitClone(Constants.DefaultVmrUri))
-            {
-                await vmrCloner.PrepareVmrCloneAsync(cancellationToken);
-                scope.SetSuccess();
-            }
-        }
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
