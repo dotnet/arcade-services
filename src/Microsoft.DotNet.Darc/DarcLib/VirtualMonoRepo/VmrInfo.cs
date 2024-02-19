@@ -79,7 +79,19 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath DefaultRelativeSourceManifestPath { get; } = RelativeSourcesDir / SourceManifestFileName;
 
-    public NativePath VmrPath { get; set; }
+    public NativePath VmrPath
+    {
+        get
+        {
+            return VmrPath;
+        }
+
+        set
+        {
+            VmrPath = value;
+            SourceManifestPath = value / SourcesDir / SourceManifestFileName;
+        }
+    }
 
     public NativePath TmpPath { get; set; }
 
@@ -108,5 +120,5 @@ public class VmrInfo : IVmrInfo
 
     public static UnixPath GetRelativeRepoSourcesPath(string mappingName) => RelativeSourcesDir / mappingName;
 
-    public NativePath SourceManifestPath { get; }
+    public NativePath SourceManifestPath { get; private set; }
 }

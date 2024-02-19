@@ -35,6 +35,7 @@ public class VmrCloner(
         ProcessExecutionResult result = await processManager.Execute("git", args, envVariables: envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed("Failed to clone the virtual mono-repo");
 
+        // Update the VMR info after cloning the repo
         vmrInfo.VmrPath = new NativePath(_vmrLocation);
     }
 }

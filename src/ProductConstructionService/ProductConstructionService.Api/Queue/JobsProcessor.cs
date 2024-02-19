@@ -3,9 +3,11 @@
 
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api.Queue;
 
@@ -14,7 +16,8 @@ public class JobsProcessor(
     IOptions<JobProcessorOptions> options,
     JobsProcessorScopeManager scopeManager,
     QueueServiceClient queueServiceClient,
-    IVmrCloner vmrCloner)
+    IVmrCloner vmrCloner,
+    TelemetryRecorder telemetryRecorder)
     : BackgroundService
 {
     private readonly ILogger<JobsProcessor> _logger = logger;
@@ -28,7 +31,11 @@ public class JobsProcessor(
 
         if (_options.Value.CloneVmr)
         {
-            await vmrCloner.PrepareVmrCloneAsync(cancellationToken);
+            using (ITelemetryScope scope = telemetryRecorder.RecordGitClone(Constants.DefaultVmrUri))
+            {
+                await vmrCloner.PrepareVmrCloneAsync(cancellationToken);
+                scope.SetSuccess();
+            }
         }
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);

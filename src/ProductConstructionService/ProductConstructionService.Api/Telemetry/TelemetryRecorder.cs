@@ -17,6 +17,11 @@ public class TelemetryRecorder(ILogger<TelemetryRecorder> logger, TelemetryClien
         return new TelemetryScope($"JobExecuted", _logger, _telemetryClient, new() { ["JobType"] = job.Type }, []);
     }
 
+    public ITelemetryScope RecordGitClone(string repo)
+    {
+        return new TelemetryScope($"GitClone", _logger, _telemetryClient, new() { ["Repo"] = repo }, []);   
+    }
+
     private class TelemetryScope(
         string telemetryName,
         ILogger logger,

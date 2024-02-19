@@ -11,4 +11,6 @@ public interface ITelemetryRecorder
     /// Records job duration and result in the customEvents table, with the `job.{jobType}` name
     /// </summary>
     ITelemetryScope RecordJob(Job job);
+
+    ITelemetryScope RecordGitClone(string repo);
 }
