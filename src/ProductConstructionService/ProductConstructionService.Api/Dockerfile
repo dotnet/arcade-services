@@ -16,12 +16,14 @@ COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductCons
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
 COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj", "./Maestro/Client/src/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj", "./Maestro/Maestro.Data/"]
+COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj", "./Maestro/Maestro.DataProviders/"]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.csproj", "./Maestro/Maestro.MergePolicyEvaluation/"]
 COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Microsoft.DotNet.Darc/DarcLib/"]
 RUN dotnet restore "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 COPY ["src/ProductConstructionService", "./ProductConstructionService"]
 COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
 COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
+COPY ["src/Maestro/Maestro.DataProviders", "./Maestro/Maestro.DataProviders]
 COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro/Maestro.MergePolicyEvaluation"]
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
 RUN dotnet build "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
