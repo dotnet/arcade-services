@@ -129,10 +129,8 @@ internal class CloneOperation : Operation
                     // Scenarios we handle: no/existing/orphaned master folder cross no/existing .gitdir
                     await HandleMasterCopy(remoteFactory, repo.RepoUri, masterGitRepoPath, masterRepoGitDirPath);
                     // if using the default .gitdir path, get that for use in the specific clone.
-                    if (masterRepoGitDirPath == null)
-                    {
-                        masterRepoGitDirPath = GetDefaultMasterGitDirPath(_options.ReposFolder, repo.RepoUri);
-                    }
+                    masterRepoGitDirPath ??= GetDefaultMasterGitDirPath(_options.ReposFolder, repo.RepoUri);
+
                     local = HandleRepoAtSpecificHash(repoPath, repo.Commit, masterRepoGitDirPath);
 
                     Logger.LogDebug($"Starting to look for dependencies in {repoPath}");

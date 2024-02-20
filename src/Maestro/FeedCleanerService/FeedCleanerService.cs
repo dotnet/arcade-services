@@ -322,7 +322,7 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
         string packageContentsUri = $"{FeedConstants.NuGetOrgPackageBaseUrl}{name.ToLower()}/{version}/{name.ToLower()}.{version}.nupkg";
         try
         {
-            using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, new Uri(packageContentsUri));
+            using HttpRequestMessage headRequest = new(HttpMethod.Head, new Uri(packageContentsUri));
             using HttpResponseMessage response = await _httpClient.SendAsync(headRequest);
 
             response.EnsureSuccessStatusCode();
@@ -344,16 +344,5 @@ public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementa
     private async Task PopulatePackagesForFeedAsync(AzureDevOpsFeed feed)
     {
         feed.Packages = await AzureDevOpsClients[feed.Account].GetPackagesForFeedAsync(feed.Account, feed.Project?.Name, feed.Name);
-    }
-
-    /// <summary>
-    /// Checks whether a feed is empty
-    /// (all the packages in the feed have had their versions deleted)
-    /// </summary>
-    /// <param name="feed"></param>
-    /// <returns>true if the feed is empty, false otherwise</returns>
-    private static bool IsFeedEmpty(AzureDevOpsFeed feed)
-    {
-        return feed.Packages.Count == 0 || feed.Packages.All(p => p.Versions.All(v => v.IsDeleted));
     }
 }

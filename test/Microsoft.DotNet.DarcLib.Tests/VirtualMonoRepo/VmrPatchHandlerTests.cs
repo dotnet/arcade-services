@@ -989,8 +989,6 @@ public class VmrPatchHandlerTests
 
     private void VerifyGitCall(IEnumerable<string> expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
 
-    private void VerifyGitCall(string[] expectedArguments, Times? times = null) => VerifyGitCall(expectedArguments, _vmrPath.Path, times);
-
     private void VerifyGitCall(string[] expectedArguments, string repoDir, Times? times = null)
     {
         _processManager

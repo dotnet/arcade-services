@@ -51,7 +51,7 @@ internal class MergedManifestTests
             NonShipping = false
         };
 
-        private Manifest Manifest1() => new()
+        private static Manifest Manifest1() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -64,7 +64,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        private Manifest Manifest2() => new()
+        private static Manifest Manifest2() => new()
         {
             AzureDevOpsAccount = "devdiv",
             AzureDevOpsBranch = "refs/heads/test",
@@ -77,7 +77,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        private Manifest Manifest3() => new()
+        private static Manifest Manifest3() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -90,7 +90,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        private Manifest Manifest4() => new()
+        private static Manifest Manifest4() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,
@@ -103,7 +103,7 @@ internal class MergedManifestTests
             Blobs = []
         };
 
-        private Manifest OutputManifest() => new()
+        private static Manifest OutputManifest() => new()
         {
             AzureDevOpsBranch = AzureDevOpsBranch1,
             AzureDevOpsAccount = AzureDevOpsAccount1,

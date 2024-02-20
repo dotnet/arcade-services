@@ -409,7 +409,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id)).LastOrDefault();
+        IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id))[^1];
         if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
         {
             await Client.Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
@@ -434,14 +434,11 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         // Get the sha of the latest commit for the current PR
-        string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha;
-        if (prSha == null) 
-        {
-            throw new InvalidOperationException("We cannot find the sha of the pull request");
-        }
+        string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha
+            ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
 
         // Get a list of all the merge policies checks runs for the current PR
-        List <CheckRun> existingChecksRuns = 
+        List<CheckRun> existingChecksRuns = 
             (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
             .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
@@ -490,7 +487,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>The updated CheckRun</returns>
     private static CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
     {
-        CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+        var updatedCheckRun = new CheckRunUpdate();
         UpdateCheckRun(updatedCheckRun, eval);
         return updatedCheckRun;
     }
@@ -1025,6 +1022,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             currentPath.Add(subfolder);
             TreeItem subfolderItem = tree.Tree.Where(ti => ti.Type == TreeType.Tree)
                 .FirstOrDefault(ti => ti.Path == subfolder);
+
             if (subfolderItem == null)
             {
                 throw new DirectoryNotFoundException(

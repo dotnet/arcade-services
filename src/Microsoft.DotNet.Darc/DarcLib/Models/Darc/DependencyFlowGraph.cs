@@ -183,12 +183,8 @@ public class DependencyFlowGraph
                 }
             }
 
-            if (newDom == null)
-            {
-                newDom = [];
-            }
-
             // Add the current node
+            newDom ??= [];
             newDom.Add(currentNode);
 
             // Compare to the existing dominator set for this node

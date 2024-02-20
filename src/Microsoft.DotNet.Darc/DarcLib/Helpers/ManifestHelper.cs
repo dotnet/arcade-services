@@ -126,7 +126,7 @@ public class ManifestHelper
 
     private static Dictionary<string, string> RetrieveAssetOriginMap(IEnumerable<DownloadedAsset> mergedManifests, ILogger logger)
     {
-        Dictionary<string, string> assetOriginMap = new();
+        Dictionary<string, string> assetOriginMap = [];
 
         foreach (var mergedManifest in mergedManifests)
         {

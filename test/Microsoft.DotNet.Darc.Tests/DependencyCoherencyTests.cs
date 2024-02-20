@@ -150,10 +150,10 @@ public class DependencyCoherencyTests
         var resolver = new CoherencyUpdateResolver(null, NullLogger.Instance);
 
         List<DependencyDetail> existingDetails = [];
-        DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: true);
-        DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
-        DependencyDetail depC = AddDependency(existingDetails, "depC", "v3", "repoC", "commit1", pinned: false, coherentParent: "depA");
-        DependencyDetail depD = AddDependency(existingDetails, "depD", "v3", "REPOC", "commit1", pinned: false, coherentParent: "DEPA");
+        AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: true);
+        AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
+        AddDependency(existingDetails, "depC", "v3", "repoC", "commit1", pinned: false, coherentParent: "depA");
+        AddDependency(existingDetails, "depD", "v3", "REPOC", "commit1", pinned: false, coherentParent: "DEPA");
 
         List<AssetData> assets =
         [
