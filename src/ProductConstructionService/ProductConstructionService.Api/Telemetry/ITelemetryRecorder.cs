@@ -12,5 +12,5 @@ public interface ITelemetryRecorder
     /// </summary>
     ITelemetryScope RecordJob(Job job);
 
-    ITelemetryScope RecordGitClone(string repo);
+    ITelemetryScope RecordGitClone(string repoUri);
 }
