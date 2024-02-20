@@ -16,7 +16,7 @@ internal class BackflowOperation(BackflowCommandLineOptions options)
 {
     private readonly BackflowCommandLineOptions _options = options;
 
-    protected override async Task<string?> FlowAsync(
+    protected override async Task<bool> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
         string? shaToFlow,
@@ -27,6 +27,7 @@ internal class BackflowOperation(BackflowCommandLineOptions options)
                 new NativePath(targetDirectory),
                 shaToFlow,
                 _options.Build,
+                _options.BranchName,
                 _options.DiscardPatches,
                 cancellationToken);
 }

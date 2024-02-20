@@ -32,7 +32,7 @@ public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
             throw new Exception(message);
         }
 
-        _logger.LogInformation("Creating a temporary work branch {branchName}", branchName);
+        _logger.LogInformation("Creating a branch {branchName}", branchName);
 
         await repo.CreateBranchAsync(branchName, overwriteExistingBranch: true);
 

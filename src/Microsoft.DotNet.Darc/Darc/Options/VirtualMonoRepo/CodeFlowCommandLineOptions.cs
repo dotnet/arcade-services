@@ -17,15 +17,18 @@ internal abstract class CodeFlowCommandLineOptions : VmrCommandLineOptions, IBas
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
     [Option("repository-dirs", Required = false, HelpText = "Path to where all repositories are checked out to (directory names must match mapping names). " +
-        "Substitutes the need to specify path for every backflown repository")]
+        "Substitutes the need to specify path for every backflown repository.")]
     public string RepositoryDirectory { get; set; }
 
     [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
     public bool DiscardPatches { get; set; } = false;
 
-    [Option("build", Required = false, HelpText = "If specified, flows the given build. Cannot be used with --ref")]
+    [Option("build", Required = false, HelpText = "If specified, flows the given build. Cannot be used with --ref.")]
     public int? Build { get; set; }
 
-    [Option("commit", Required = false, HelpText = "If specified, flows the given commit. Cannot be used with --build")]
+    [Option("commit", Required = false, HelpText = "If specified, flows the given commit. Cannot be used with --build.")]
     public string Commit { get; set; }
+
+    [Option("branch-name", Required = false, HelpText = "Name of the new branch that will be created in the target repository. Defaults to codeflow/backflow/SHA1-SHA2")]
+    public string BranchName { get; set; }
 }
