@@ -28,5 +28,5 @@ public class Constants
 
     public const string CommonScriptFilesPath = "eng/common";
 
-    public const string VmrRepoName = "vmr";
+    public const string VmrFolderName = "vmr";
 }
