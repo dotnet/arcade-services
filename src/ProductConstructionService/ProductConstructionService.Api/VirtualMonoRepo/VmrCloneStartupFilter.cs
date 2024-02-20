@@ -9,7 +9,6 @@ namespace ProductConstructionService.Api.VirtualMonoRepo;
 
 public class VmrCloneStartupFilter(
     IRepositoryCloneManager repositoryCloneManager,
-    IVmrInfo vmrInfo,
     VmrCloneStartupFilterOptions options) : IStartupFilter
 {
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
@@ -20,8 +19,6 @@ public class VmrCloneStartupFilter(
             CancellationTokenSource tokenSource = new(TimeSpan.FromMinutes(20));
             ILocalGitRepo repo = repositoryCloneManager.PrepareVmrCloneAsync(options.VmrUri, tokenSource.Token).GetAwaiter().GetResult();
             tokenSource.Token.ThrowIfCancellationRequested();
-
-            vmrInfo.VmrPath = repo.Path;
 
             next(builder);
         };

@@ -11,6 +11,10 @@ using ProductConstructionService.Api.VirtualMonoRepo;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var vmrPath = builder.Configuration[VmrConfiguration.VmrPathKey] ?? throw new ArgumentException($"{VmrConfiguration.VmrPathKey} environmental variable must be set");
+var tmpPath = builder.Configuration[VmrConfiguration.TmpPathKey] ?? throw new ArgumentException($"{VmrConfiguration.TmpPathKey} environmental variable must be set");
+var vmrUri = builder.Configuration[VmrConfiguration.VmrUriKey] ?? throw new ArgumentException($"{VmrConfiguration.VmrUriKey} environmental variable must be set");
+
 var managedIdentityClientId = builder.Configuration["ManagedIdentityClientId"] ?? string.Empty;
 DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId });
 
@@ -25,7 +29,7 @@ builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 
 builder.AddTelemetry();
 
-builder.AddVmrRegistrations();
+builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
 
 builder.AddWorkitemQueues(credential);
 

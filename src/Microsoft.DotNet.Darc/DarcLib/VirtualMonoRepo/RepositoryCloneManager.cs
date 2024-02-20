@@ -211,6 +211,9 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         var path = await PrepareCloneInternal(vmrUri, Constants.VmrFolderName, cancellationToken);
         var repo = _localGitRepoFactory.Create(path);
         await repo.CheckoutAsync("main");
+
+        _vmrInfo.VmrPath = path;
+
         return repo;
     }
 
