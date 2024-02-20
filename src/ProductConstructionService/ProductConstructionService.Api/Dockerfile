@@ -14,6 +14,7 @@ COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targ
 COPY ["eng/Versions.props", "./eng/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService/ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.ServiceDefaults/ProductConstructionService.ServiceDefaults.csproj", "./ProductConstructionService/ProductConstructionService.ServiceDefaults/"]
+COPY ["src/Maestro/Maestro.AzureDevOps/Maestro.AzureDevOps.csproj", "./Maestro/Maestro.AzureDevOps/"]
 COPY ["src/Maestro/Client/src/Microsoft.DotNet.Maestro.Client.csproj", "./Maestro/Client/src/"]
 COPY ["src/Maestro/Maestro.Data/Maestro.Data.csproj", "./Maestro/Maestro.Data/"]
 COPY ["src/Maestro/Maestro.DataProviders/Maestro.DataProviders.csproj", "./Maestro/Maestro.DataProviders/"]
@@ -21,6 +22,7 @@ COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.c
 COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Microsoft.DotNet.Darc/DarcLib/"]
 RUN dotnet restore "./ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj"
 COPY ["src/ProductConstructionService", "./ProductConstructionService"]
+COPY ["src/Maestro/Maestro.AzureDevOps", "./Maestro/Maestro.AzureDevOps"]
 COPY ["src/Maestro/Client/src", "./Maestro/Client/src"]
 COPY ["src/Maestro/Maestro.Data", "./Maestro/Maestro.Data"]
 COPY ["src/Maestro/Maestro.DataProviders", "./Maestro/Maestro.DataProviders"]
