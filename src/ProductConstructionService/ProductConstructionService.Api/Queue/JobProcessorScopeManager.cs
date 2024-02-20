@@ -13,9 +13,9 @@ public enum JobsProcessorState
     Stopping
 }
 
-public class JobsProcessorScopeManager
+public class JobProcessorScopeManager
 {
-    public JobsProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider)
+    public JobProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider)
     {
         _autoResetEvent = new AutoResetEvent(workOnStartup);
         State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;

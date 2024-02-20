@@ -8,9 +8,9 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobsProcessorScopeManager jobsProcessorScopeManager) : Controller
+public class StatusController(JobProcessorScopeManager jobsProcessorScopeManager) : Controller
 {
-    private readonly JobsProcessorScopeManager _jobsProcessorScopeManager = jobsProcessorScopeManager;
+    private readonly JobProcessorScopeManager _jobsProcessorScopeManager = jobsProcessorScopeManager;
 
     [HttpPut("stop")]
     public IActionResult StopPcsJobsProcessor()

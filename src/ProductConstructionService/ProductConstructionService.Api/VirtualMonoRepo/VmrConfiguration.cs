@@ -6,7 +6,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.VirtualMonoRepo;
 
 public static class VmrConfiguration
 {
@@ -26,10 +26,8 @@ public static class VmrConfiguration
 
         if (!builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IStartupFilter>(sp =>
-                ActivatorUtilities.CreateInstance<VmrCloneStartupFilter>(
-                    sp,
-                    Environment.GetEnvironmentVariable(VmrUriKey) ?? throw new ArgumentException($"{VmrUriKey} environmental variable must be set")));
+            builder.Services.AddSingleton(new VmrCloneStartupFilterOptions(Environment.GetEnvironmentVariable(VmrUriKey) ?? throw new ArgumentException($"{VmrUriKey} environmental variable must be set")));
+            builder.Services.AddTransient<IStartupFilter, VmrCloneStartupFilter>();
         }
     }
 }

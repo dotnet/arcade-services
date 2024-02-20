@@ -5,9 +5,9 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
+using ProductConstructionService.Api.VirtualMonoRepo;
 
 var builder = WebApplication.CreateBuilder(args);
 
