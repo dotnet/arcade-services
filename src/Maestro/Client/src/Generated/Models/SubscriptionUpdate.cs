@@ -30,6 +30,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; set; }
 
+        [JsonProperty("sourceDirectory")]
+        public string SourceDirectory { get; set; }
+
         [JsonProperty("excludedAssets")]
         public IImmutableList<string> ExcludedAssets { get; set; }
     }

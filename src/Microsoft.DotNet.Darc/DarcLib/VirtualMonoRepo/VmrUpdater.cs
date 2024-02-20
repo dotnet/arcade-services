@@ -208,6 +208,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .Append(update.RemoteUri)
             // Add the default remote
             .Prepend(update.Mapping.DefaultRemote)
+            .Distinct()
             // Prefer local git repos, then GitHub, then AzDO
             .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
             .ToArray();
@@ -535,8 +536,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                     .Select(r => r.RemoteUri)
                     .Prepend(sourceMapping.DefaultRemote)
                     .Append(source.RemoteUri)
-                    .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
                     .Distinct()
+                    .OrderBy(GitRepoUrlParser.ParseTypeFromUri, Comparer<GitRepoType>.Create(GitRepoUrlParser.OrderByLocalPublicOther))
                     .ToList();
 
                 clone = await _cloneManager.PrepareCloneAsync(sourceMapping, remotes, new[] { source.CommitSha }, source.CommitSha, cancellationToken);

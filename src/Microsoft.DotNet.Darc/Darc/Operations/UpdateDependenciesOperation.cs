@@ -117,8 +117,8 @@ internal class UpdateDependenciesOperation : Operation
                             return nonCoherencyResult;
                         }
 
-                        string sourceRepo = specificBuild.GitHubRepository ?? specificBuild.AzureDevOpsRepository;
-                        string sourceBranch = specificBuild.GitHubBranch ?? specificBuild.AzureDevOpsBranch;
+                        string sourceRepo = specificBuild.GetRepository();
+                        string sourceBranch = specificBuild.GetBranch();
 
                         finalMessage = $"Local dependencies updated based on build with BAR id {_options.BARBuildId} " +
                                        $"({specificBuild.AzureDevOpsBuildNumber} from {sourceRepo}@{sourceBranch})";
@@ -265,11 +265,9 @@ internal class UpdateDependenciesOperation : Operation
                 Version = a.Version
             });
 
-        string repository = build.GitHubRepository ?? build.AzureDevOpsRepository;
-
         // Now determine what needs to be updated.
         List<DependencyUpdate> updates = updateResolver.GetRequiredNonCoherencyUpdates(
-            repository,
+            build.GetRepository(),
             build.Commit,
             assetData,
             currentDependencies);
@@ -281,7 +279,7 @@ internal class UpdateDependenciesOperation : Operation
 
             // Print out what we are going to do.	
             Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}'"
-                              + $" (from build '{build.AzureDevOpsBuildNumber}' of '{repository}')");
+                              + $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.GetRepository()}')");
 
             // Replace in the current dependencies list so the correct data can be used in coherency updates.
             currentDependencies.Remove(from);

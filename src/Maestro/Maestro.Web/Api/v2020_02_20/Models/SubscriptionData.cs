@@ -26,6 +26,8 @@ public class SubscriptionData
 
     public bool? SourceEnabled { get; set; }
 
+    public string SourceDirectory { get; set; }
+
     [Required]
     public v2018_07_16.Models.SubscriptionPolicy Policy { get; set; }
 
@@ -41,6 +43,7 @@ public class SubscriptionData
         PolicyObject = Policy.ToDb(),
         Enabled = Enabled ?? true,
         SourceEnabled = SourceEnabled ?? false,
+        SourceDirectory = SourceDirectory,
         PullRequestFailureNotificationTags = PullRequestFailureNotificationTags,
         ExcludedAssets = ExcludedAssets == null ? [] : [..ExcludedAssets.Select(asset => new Data.Models.AssetFilter() { Filter = asset })],
     };

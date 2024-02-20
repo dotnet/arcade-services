@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-subscription", HelpText = "Add a new subscription.")]
-internal class AddSubscriptionCommandLineOptions : CommandLineOptions
+internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions
 {
     [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }
@@ -22,10 +22,7 @@ internal class AddSubscriptionCommandLineOptions : CommandLineOptions
     [Option("target-branch", HelpText = "Target branch for the subscription.")]
     public string TargetBranch { get; set; }
 
-    [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', or 'everyWeek'.")]
-    public string UpdateFrequency { get; set; }
-
-    [Option("batchable", HelpText = "Make subscription batchable.")]
+    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies")]
     public bool Batchable { get; set; }
 
     [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP, license/cla and auto-merge.config.enforce checks, " +
@@ -57,17 +54,11 @@ internal class AddSubscriptionCommandLineOptions : CommandLineOptions
     [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on creation.")]
     public bool NoTriggerOnCreate { get; set; }
 
-    [Option("failure-notification-tags", HelpText = "Semicolon-delineated list of GitHub tags (GitHub login or GitHub team) to notify in the case of non-batched subscription pull-request policy failure.  Users must be publicly a member of the Microsoft org.", Default = "")]
-    public string PullRequestFailureNotificationTags { get; set; }
-
     [Option("validate-coherency", HelpText="PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
 
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
-
-    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.")]
-    public string ExcludedAssets { get; set; }
 
     public override Operation GetOperation()
     {

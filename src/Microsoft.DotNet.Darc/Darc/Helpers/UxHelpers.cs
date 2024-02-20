@@ -104,8 +104,8 @@ public static class UxHelpers
         return JObject.FromObject(new
         {
             id = build.Id,
-            repository = build.GitHubRepository ?? build.AzureDevOpsRepository,
-            branch = build.GitHubBranch ?? build.AzureDevOpsBranch,
+            repository = build.GetRepository(),
+            branch = build.GetBranch(),
             commit = build.Commit,
             buildNumber = build.AzureDevOpsBuildNumber,
             dateProduced = build.DateProduced.ToLocalTime().ToString("g"),
@@ -124,8 +124,8 @@ public static class UxHelpers
     public static string GetTextBuildDescription(Build build)
     {
         var builder = new StringBuilder();
-        builder.AppendLine($"Repository:    {build.GitHubRepository ?? build.AzureDevOpsRepository}");
-        builder.AppendLine($"Branch:        {build.GitHubBranch ?? build.AzureDevOpsBranch}");
+        builder.AppendLine($"Repository:    {build.GetRepository()}");
+        builder.AppendLine($"Branch:        {build.GetBranch()}");
         builder.AppendLine($"Commit:        {build.Commit}");
         builder.AppendLine($"Build Number:  {build.AzureDevOpsBuildNumber}");
         builder.AppendLine($"Date Produced: {build.DateProduced.ToLocalTime().ToString("g")}");

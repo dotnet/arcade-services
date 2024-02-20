@@ -17,6 +17,7 @@
     "lastAppliedBuild": null,
     "enabled": true,
     "sourceEnabled": false,
+    "sourceDirectory": null,
     "pullRequestFailureNotificationTags": "",
     "excludedAssets": [
       "Foo.Bar",
