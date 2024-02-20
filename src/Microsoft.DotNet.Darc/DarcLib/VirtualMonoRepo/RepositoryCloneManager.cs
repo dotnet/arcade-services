@@ -213,6 +213,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         await repo.CheckoutAsync("main");
 
         _vmrInfo.VmrPath = path;
+        _vmrInfo.VmrUri = vmrUri;
 
         return repo;
     }

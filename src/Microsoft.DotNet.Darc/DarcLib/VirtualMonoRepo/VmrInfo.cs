@@ -22,6 +22,11 @@ public interface IVmrInfo
     NativePath VmrPath { get; set; }
 
     /// <summary>
+    /// Uri from which the VMR has been cloned
+    /// </summary>
+    string VmrUri { get; set; }
+
+    /// <summary>
     /// Path within the VMR where VMR patches are stored.
     /// These patches are applied on top of the synchronized content.
     /// The Path is UNIX style and relative (e.g. "src/patches").
@@ -101,6 +106,8 @@ public class VmrInfo : IVmrInfo
 
     public string? SourceMappingsPath { get; set; }
 
+    public string VmrUri { get; set; }
+
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
     public VmrInfo(NativePath vmrPath, NativePath tmpPath)
@@ -108,6 +115,7 @@ public class VmrInfo : IVmrInfo
         _vmrPath = vmrPath;
         TmpPath = tmpPath;
         SourceManifestPath = vmrPath / SourcesDir / SourceManifestFileName;
+        VmrUri = Constants.DefaultVmrUri;
     }
 
     public VmrInfo(string vmrPath, string tmpPath) : this(new NativePath(vmrPath), new NativePath(tmpPath))
