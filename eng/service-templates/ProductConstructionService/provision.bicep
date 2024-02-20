@@ -178,6 +178,10 @@ var env = [
         name: 'TmpPath'
         value: '/mnt/datadir/tmp'
     }
+    {
+        name: 'VmrUri'
+        value: 'https://github.com/maestro-auth-test/dnceng-vmr'
+    }
 ]
 
 // container app hosting the Product Construction Service
@@ -235,7 +239,7 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                                 port: 8080
                                 scheme: 'HTTP'
                             }
-                            initialDelaySeconds: 5
+                            initialDelaySeconds: 60
                             periodSeconds: 10
                             successThreshold: 1
                             failureThreshold: 3

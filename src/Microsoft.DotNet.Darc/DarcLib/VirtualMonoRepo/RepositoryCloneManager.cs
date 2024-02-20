@@ -63,7 +63,7 @@ public interface IRepositoryCloneManager
     /// <summary>
     /// Prepares a clone for the VMR repository.
     /// </summary>
-    Task<ILocalGitRepo> PrepareVmrCloneAsync(CancellationToken cancellationToken);
+    Task<ILocalGitRepo> PrepareVmrCloneAsync(string vmrUri, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -205,10 +205,10 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         return repo;
     }
 
-    public async Task<ILocalGitRepo> PrepareVmrCloneAsync(CancellationToken cancellationToken)
+    public async Task<ILocalGitRepo> PrepareVmrCloneAsync(string vmrUri, CancellationToken cancellationToken)
     {
         // The vmr directory won't use a hash for it's name, so we don't accidentally overwrite it
-        var path = await PrepareCloneInternal(Constants.DefaultVmrUri, Constants.VmrRepoName, cancellationToken);
+        var path = await PrepareCloneInternal(vmrUri, Constants.VmrRepoName, cancellationToken);
         var repo = _localGitRepoFactory.Create(path);
         await repo.CheckoutAsync("main");
         return repo;

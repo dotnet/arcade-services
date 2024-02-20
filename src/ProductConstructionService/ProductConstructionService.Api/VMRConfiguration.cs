@@ -12,6 +12,7 @@ public static class VmrConfiguration
 {
     public const string VmrPathKey = "VmrPath";
     public const string TmpPathKey = "TmpPath";
+    public const string VmrUriKey = "VmrUri";
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
@@ -25,7 +26,10 @@ public static class VmrConfiguration
 
         if (!builder.Environment.IsDevelopment())
         {
-            builder.Services.AddTransient<IStartupFilter, VmrCloneStartupFilter>();
+            builder.Services.AddTransient<IStartupFilter>(sp =>
+                ActivatorUtilities.CreateInstance<VmrCloneStartupFilter>(
+                    sp,
+                    Environment.GetEnvironmentVariable(VmrUriKey) ?? throw new ArgumentException($"{VmrUriKey} environmental variable must be set")));
         }
     }
 }
