@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string SourceDirectory { get; set; }
 
         [JsonProperty("policy")]
-        public SubscriptionPolicy Policy { get; set; }
+        public Models.SubscriptionPolicy Policy { get; set; }
 
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; set; }
@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                 {
                     return false;
                 }
-                if (Policy == default(SubscriptionPolicy))
+                if (Policy == default(Models.SubscriptionPolicy))
                 {
                     return false;
                 }
