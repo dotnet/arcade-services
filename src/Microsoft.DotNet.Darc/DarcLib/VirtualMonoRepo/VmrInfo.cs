@@ -91,7 +91,7 @@ public class VmrInfo : IVmrInfo
         set
         {
             _vmrPath = value;
-            SourceManifestPath = value / SourcesDir / SourceManifestFileName;
+            SourceManifestPath = value / DefaultRelativeSourceManifestPath;
         }
     }
 

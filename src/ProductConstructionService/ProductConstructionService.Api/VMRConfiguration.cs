@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,7 +15,7 @@ public static class VmrConfiguration
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
-        builder.Services.TryAddSingleton<IBasicBarClient>(sp => sp.GetRequiredService<IBarApiClient>());
+        builder.Services.TryAddSingleton<IBasicBarClient, SqlBarClient>();
         builder.Services.AddVmrManagers(
             "git",
             Environment.GetEnvironmentVariable(VmrPathKey) ?? throw new ArgumentException($"{VmrPathKey} environmental variable must be set"),
