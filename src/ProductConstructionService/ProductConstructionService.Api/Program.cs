@@ -66,13 +66,5 @@ if (app.Environment.IsDevelopment())
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.JobQueueConfigurationKey]);
     await queueClient.CreateIfNotExistsAsync();
 }
-// When running in Azure add the vmrCloned health check
-else
-{
-    app.MapHealthChecks("/vmrReady", new HealthCheckOptions
-    {
-        Predicate = healthCheck => healthCheck.Tags.Contains(VmrConfiguration.VmrReadyHealthCheckTag)
-    });
-}
 
 app.Run();
