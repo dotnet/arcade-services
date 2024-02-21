@@ -71,20 +71,21 @@ internal abstract class VmrCodeFlower
     /// The algorithm is described in depth in the Unified Build documentation
     /// https://github.com/dotnet/arcade/blob/main/Documentation/UnifiedBuild/VMR-Full-Code-Flow.md#the-code-flow-algorithm
     /// </summary>
-    /// <returns>Name of the PR branch that was created for the changes</returns>
-    protected async Task<string?> FlowCodeAsync(
+    /// <returns>True if there were changes to flow</returns>
+    protected async Task<bool> FlowCodeAsync(
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build? build,
+        string? branchName,
         bool discardPatches,
         CancellationToken cancellationToken = default)
     {
         if (lastFlow.SourceSha == currentFlow.TargetSha)
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
-            return null;
+            return false;
         }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
@@ -92,38 +93,41 @@ internal abstract class VmrCodeFlower
             lastFlow.SourceSha,
             lastFlow.TargetSha);
 
-        string? branchName;
+        branchName ??= currentFlow.GetBranchName();
+
+        bool hasChanges;
         if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            branchName = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, discardPatches, cancellationToken);
+            hasChanges = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            branchName = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, discardPatches, cancellationToken);
+            hasChanges = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
         }
 
-        if (branchName is null)
+        if (!hasChanges)
         {
             // TODO: Clean up repos?
             _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
         }
 
-        return branchName;
+        return hasChanges;
     }
 
     /// <summary>
     /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
     /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
     /// </summary>
-    /// <returns>Name of the PR branch that was created for the changes</returns>
-    protected abstract Task<string?> SameDirectionFlowAsync(
+    /// <returns>True if there were changes to flow</returns>
+    protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -131,13 +135,14 @@ internal abstract class VmrCodeFlower
     /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
     /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
     /// </summary>
-    /// <returns>Name of the PR branch that was created for the changes</returns>
-    protected abstract Task<string?> OppositeDirectionFlowAsync(
+    /// <returns>True if there were changes to flow</returns>
+    protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken);
 
@@ -375,7 +380,7 @@ internal abstract class VmrCodeFlower
 
         public abstract string VmrSha { get; init; }
 
-        public string GetBranchName() => $"codeflow/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
+        public string GetBranchName() => $"darc/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
 
         public abstract string Name { get; }
     }

@@ -279,9 +279,7 @@ public class ChannelsController : Controller
     public async Task<IActionResult> GetFlowGraphAsync(
         int channelId = 0, 
         bool includeDisabledSubscriptions = false,
-#pragma warning disable API0001 // Versioned API methods should not expose non-versioned types.
         IEnumerable<string> includedFrequencies = default,
-#pragma warning restore API0001 // Versioned API methods should not expose non-versioned types.
         bool includeBuildTimes = false,
         int days = 7,
         bool includeArcade = true)

@@ -61,7 +61,7 @@ public class Local
         // Update the incoming dependencies with locations.
         List<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-        var locationResolver = new AssetLocationResolver(barClient, _logger);
+        var locationResolver = new AssetLocationResolver(barClient);
         await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
         await locationResolver.AddAssetLocationToDependenciesAsync(dependencies);
 

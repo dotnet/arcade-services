@@ -408,7 +408,7 @@ public class GitHubClientTests
 
     #region Functions for creating fake review data
 
-    private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetApprovingPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
+    private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetApprovingPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
@@ -426,7 +426,7 @@ public class GitHubClientTests
         return data;
     }
 
-    private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetMixedPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
+    private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetMixedPullRequestData(string owner, string repoName, int requestId, int userCount, bool commentAfter)
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);
@@ -446,7 +446,7 @@ public class GitHubClientTests
         return data;
     }
 
-    private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetOnlyCommentsPullRequestData(string owner, string repoName, int requestId, int userCount)
+    private static Dictionary<Tuple<string, string, int>, List<PullRequestReview>> GetOnlyCommentsPullRequestData(string owner, string repoName, int requestId, int userCount)
     {
         var data = new Dictionary<Tuple<string, string, int>, List<PullRequestReview>>();
         var keyValue = new Tuple<string, string, int>(owner, repoName, requestId);

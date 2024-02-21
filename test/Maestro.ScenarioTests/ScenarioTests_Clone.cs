@@ -128,7 +128,7 @@ internal class ScenarioTests_Clone : MaestroScenarioTestBase
         CheckExpectedClonedRepos(expectedRepos2, expectedMasterRepos2, expectedGitDirs2, reposFolder);
     }
 
-    private void CheckExpectedClonedRepos(Dictionary<string, string> expectedRepos, string[] expectedMasterRepos, string[] expectedGitDirs, TemporaryDirectory reposFolder)
+    private static void CheckExpectedClonedRepos(Dictionary<string, string> expectedRepos, string[] expectedMasterRepos, string[] expectedGitDirs, TemporaryDirectory reposFolder)
     {
         using (ChangeDirectory(reposFolder.Directory))
         {

@@ -16,19 +16,21 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrBackFlower
 {
-    Task<string?> FlowBackAsync(
+    Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 
-    Task<string?> FlowBackAsync(
+    Task<bool> FlowBackAsync(
         string mapping,
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
@@ -88,20 +90,22 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger = logger;
     }
 
-    public Task<string?> FlowBackAsync(
+    public Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepoPath,
         string? shaToFlow,
         int? buildToFlow,
+        string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
-        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoPath), shaToFlow, buildToFlow, discardPatches, cancellationToken);
+        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoPath), shaToFlow, buildToFlow, branchName, discardPatches, cancellationToken);
 
-    public async Task<string?> FlowBackAsync(
+    public async Task<bool> FlowBackAsync(
         string mappingName,
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
+        string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
@@ -126,38 +130,38 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        var branchName = await FlowCodeAsync(
+        var hasChanges = await FlowCodeAsync(
             lastFlow,
             new Backflow(lastFlow.TargetSha, shaToFlow),
             targetRepo,
             mapping,
             build,
+            branchName,
             discardPatches,
             cancellationToken);
 
-        if (branchName is null && build is null)
+        if (!hasChanges && build is null)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/3168: We should still probably update package versions or at least try?
             // Should we clean up the repos?
-            return null;
+            return false;
         }
 
         await UpdateDependenciesAndToolset(_vmrInfo.VmrPath, targetRepo, build, shaToFlow, updateSourceElement: true, cancellationToken);
 
-        return branchName;
+        return true;
     }
 
-    protected override async Task<string?> SameDirectionFlowAsync(
+    protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var branchName = lastFlow.GetBranchName();
-
         // Exclude all submodules that belong to the mapping
         var submoduleExclusions = _sourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mapping.Name + '/'))
@@ -165,9 +169,11 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(VmrPatchHandler.GetExclusionRule)
             .ToList();
 
+        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
+
         // When flowing from the VMR, ignore all submodules
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
-            _vmrInfo.TmpPath / (mapping.Name + branchName.Replace('/', '-') + ".patch"),
+            patchName,
             lastFlow.VmrSha,
             currentFlow.TargetSha,
             path: null,
@@ -191,7 +197,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 }
             }
 
-            return null;
+            return false;
         }
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
@@ -228,12 +234,13 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-            branchName = await FlowCodeAsync(
+            await FlowCodeAsync(
                 lastLastFlow,
                 new Backflow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 targetRepo,
                 mapping,
                 /* TODO: Find a previous build? */ null,
+                branchName,
                 discardPatches,
                 cancellationToken);
 
@@ -256,22 +263,22 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", branchName, targetRepo);
 
-        return branchName;
+        return true;
     }
 
-    protected override async Task<string?> OppositeDirectionFlowAsync(
+    protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         await targetRepo.CheckoutAsync(lastFlow.SourceSha);
 
-        var branchName = currentFlow.GetBranchName();
-        var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
 
@@ -322,7 +329,7 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (result.ExitCode == 0)
         {
             // TODO https://github.com/dotnet/arcade-services/issues/2995: Handle + clean up the work branch
-            return null;
+            return false;
         }
 
         var commitMessage = $"""
@@ -334,6 +341,6 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         await targetRepo.CommitAsync(commitMessage, false, cancellationToken: cancellationToken);
         await targetRepo.ResetWorkingTree();
 
-        return branchName;
+        return true;
     }
 }

@@ -119,15 +119,15 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default)
+            if (channelId != default(int?))
             {
                 _url.AppendQuery("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default)
+            if (enabled != default(bool?))
             {
                 _url.AppendQuery("enabled", Client.Serialize(enabled));
             }
-            if (sourceEnabled != default)
+            if (sourceEnabled != default(bool?))
             {
                 _url.AppendQuery("sourceEnabled", Client.Serialize(sourceEnabled));
             }
@@ -509,7 +509,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/subscriptions/{id}/trigger".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (barBuildId != default)
+            if (barBuildId != default(int))
             {
                 _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
             }

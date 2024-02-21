@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib;
 
@@ -22,12 +21,10 @@ public interface IAssetLocationResolver
 public class AssetLocationResolver : IAssetLocationResolver
 {
     private readonly IBasicBarClient _barClient;
-    private readonly ILogger _logger;
 
-    public AssetLocationResolver(IBasicBarClient barClient, ILogger logger)
+    public AssetLocationResolver(IBasicBarClient barClient)
     {
         _barClient = barClient;
-        _logger = logger;
     }
 
     public async Task AddAssetLocationToDependenciesAsync(IReadOnlyCollection<DependencyDetail> dependencies)

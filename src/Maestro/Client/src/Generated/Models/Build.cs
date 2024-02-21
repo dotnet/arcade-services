@@ -9,7 +9,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Build
     {
-        public Build(int id, DateTimeOffset dateProduced, int staleness, bool released, bool stable, string commit, IImmutableList<Channel> channels, IImmutableList<Asset> assets, IImmutableList<BuildRef> dependencies, IImmutableList<BuildIncoherence> incoherencies)
+        public Build(int id, DateTimeOffset dateProduced, int staleness, bool released, bool stable, string commit, IImmutableList<Models.Channel> channels, IImmutableList<Models.Asset> assets, IImmutableList<Models.BuildRef> dependencies, IImmutableList<Models.BuildIncoherence> incoherencies)
         {
             Id = id;
             DateProduced = dateProduced;
@@ -60,16 +60,16 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public DateTimeOffset DateProduced { get; }
 
         [JsonProperty("channels")]
-        public IImmutableList<Channel> Channels { get; }
+        public IImmutableList<Models.Channel> Channels { get; }
 
         [JsonProperty("assets")]
-        public IImmutableList<Asset> Assets { get; }
+        public IImmutableList<Models.Asset> Assets { get; }
 
         [JsonProperty("dependencies")]
-        public IImmutableList<BuildRef> Dependencies { get; }
+        public IImmutableList<Models.BuildRef> Dependencies { get; }
 
         [JsonProperty("incoherencies")]
-        public IImmutableList<BuildIncoherence> Incoherencies { get; }
+        public IImmutableList<Models.BuildIncoherence> Incoherencies { get; }
 
         [JsonProperty("staleness")]
         public int Staleness { get; }

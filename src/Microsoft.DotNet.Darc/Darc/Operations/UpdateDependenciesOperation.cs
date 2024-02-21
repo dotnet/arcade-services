@@ -343,7 +343,7 @@ internal class UpdateDependenciesOperation : Operation
         }
     }
 
-    private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
+    private static IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
         Dictionary<string, string> dependencyVersionMap = [];
 

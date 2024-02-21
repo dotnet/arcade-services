@@ -40,10 +40,6 @@ public class SubscriptionHealthMetric : HealthMetric
     {
         Repository = repo;
         Branch = branch;
-        DependenciesThatDoNotFlow = Enumerable.Empty<DependencyDetail>();
-        DependenciesMissingSubscriptions = Enumerable.Empty<DependencyDetail>();
-        ConflictingSubscriptions = Enumerable.Empty<SubscriptionConflict>();
-        UnusedSubscriptions = Enumerable.Empty<Subscription>();
         DependencySelector = dependencySelector;
         _remoteFactory = remoteFactory;
         _barClient = barClient;
@@ -60,22 +56,22 @@ public class SubscriptionHealthMetric : HealthMetric
     public List<Subscription> Subscriptions { get; private set; }
     public List<DependencyDetail> Dependencies { get; private set; }
 
-    public IEnumerable<SubscriptionConflict> ConflictingSubscriptions { get; private set; }
+    public IEnumerable<SubscriptionConflict> ConflictingSubscriptions { get; private set; } = [];
 
     /// <summary>
     ///     Dependencies that are missing subscriptions
     /// </summary>
-    public IEnumerable<DependencyDetail> DependenciesMissingSubscriptions { get; private set; }
+    public IEnumerable<DependencyDetail> DependenciesMissingSubscriptions { get; private set; } = [];
 
     /// <summary>
     ///     Dependencies with subscriptions that do not flow (disabled or 'none' update frequency)
     /// </summary>
-    public IEnumerable<DependencyDetail> DependenciesThatDoNotFlow { get; private set; }
+    public IEnumerable<DependencyDetail> DependenciesThatDoNotFlow { get; private set; } = [];
 
     /// <summary>
     ///     Subscriptions that are not used;
     /// </summary>
-    public IEnumerable<Subscription> UnusedSubscriptions { get; private set; }
+    public IEnumerable<Subscription> UnusedSubscriptions { get; private set; } = [];
 
     /// <summary>
     ///     True if the version details file is missing from the repo+branch,
@@ -233,7 +229,7 @@ public class SubscriptionHealthMetric : HealthMetric
                     }
                     else
                     {
-                        SubscriptionConflict newConflict = new SubscriptionConflict(assetName,
+                        var newConflict = new SubscriptionConflict(assetName,
                             [otherSubscription, subscription],
                             Dependencies.Any(d => d.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)));
                         subscriptionConflicts.Add(assetName, newConflict);

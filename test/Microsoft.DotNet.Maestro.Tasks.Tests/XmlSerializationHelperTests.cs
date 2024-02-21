@@ -123,7 +123,7 @@ public class XmlSerializationHelperTests
         serializationResult.Name.LocalName.Should().Be("SigningInformation");
     }
 
-    private SigningInformation GetTestInfo()
+    private static SigningInformation GetTestInfo()
     {
         var signingInfo = new SigningInformation()
         {

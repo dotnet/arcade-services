@@ -16,9 +16,7 @@ namespace SubscriptionActorService.Tests;
 [TestFixture]
 public class PullRequestDescriptionBuilderTests : PullRequestActorTests
 {
-    private List<DependencyUpdate> CreateDependencyUpdates(char version)
-    {
-        return
+    private static List<DependencyUpdate> CreateDependencyUpdates(char version) =>
         [
             new DependencyUpdate
             {
@@ -57,7 +55,6 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
                 }
             }
         ];
-    }
 
     public static UpdateAssetsParameters CreateUpdateAssetsParameters(bool isCoherencyUpdate, string guid)
     {
@@ -79,7 +76,7 @@ public class PullRequestDescriptionBuilderTests : PullRequestActorTests
         return stringBuilder.ToString();
     }
 
-    private string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
+    private static string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
         var builder = new StringBuilder();
         List<string> urls = [];

@@ -60,16 +60,9 @@ public class BarApiClient : IBarApiClient
     /// <param name="channel">Channel to find.</param>
     /// <returns>Channel object or throws</returns>
     private async Task<Channel> GetChannel(string channel)
-    {
-        Channel foundChannel = (await _barClient.Channels.ListChannelsAsync())
-            .Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
-            .SingleOrDefault();
-        if (foundChannel == null)
-        {
-            throw new ArgumentException($"Channel {channel} is not a valid channel.");
-        }
-        return foundChannel;
-    }
+        => (await _barClient.Channels.ListChannelsAsync())
+            .SingleOrDefault(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
+            ?? throw new ArgumentException($"Channel {channel} is not a valid channel.");
 
     /// <summary>
     ///     Adds a default channel association.
@@ -118,7 +111,7 @@ public class BarApiClient : IBarApiClient
             foundChannel = await GetChannel(channel);
         }
 
-        DefaultChannelUpdateData updateData = new DefaultChannelUpdateData
+        var updateData = new DefaultChannelUpdateData
         {
             Branch = branch,
             ChannelId = foundChannel?.Id,
