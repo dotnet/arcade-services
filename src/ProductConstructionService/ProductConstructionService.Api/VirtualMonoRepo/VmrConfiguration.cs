@@ -15,7 +15,7 @@ public static class VmrConfiguration
     public const string VmrUriKey = "VmrUri";
 
     public const string VmrReadyHealthCheckName = "VmrReady";
-    public const string VmrReadyHealthCheckTag = "vmrCloned";
+    public const string VmrReadyHealthCheckTag = "vmrReady";
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string vmrUri)
     {
