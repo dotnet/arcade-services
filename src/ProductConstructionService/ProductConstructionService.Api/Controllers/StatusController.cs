@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Extensions;
+using ProductConstructionService.Api.Controllers.ActionResults;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Controllers;
@@ -25,7 +26,7 @@ public class StatusController(JobProcessorScopeManager jobProcessorScopeManager)
     {
         if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
-            return BadRequest("The background worker can't be started until the VMR is cloned");
+            return new PreconditionFailedActionResult("The background worker can't be started until the VMR is cloned");
         }
 
         _jobProcessorScopeManager.Start();
