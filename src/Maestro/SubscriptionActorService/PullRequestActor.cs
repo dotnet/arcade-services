@@ -1023,12 +1023,6 @@ namespace SubscriptionActorService
             TargetRepoDependencyUpdate targetRepositoryUpdates =
                 await GetRequiredUpdates(updates, _remoteFactory, targetRepository, targetBranch);
 
-            if (targetRepositoryUpdates.CoherencyCheckSuccessful)
-            {
-                _logger.LogInformation("Coherency check not successful for Pull Request {url}. No updates will be performed.", pr.Url);
-                return;
-            }
-
             if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
                 _logger.LogInformation("No updates found for Pull Request {url}", pr.Url);
