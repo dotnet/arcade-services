@@ -43,7 +43,7 @@ function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
         } While ($pcsStateResponse.Content -notmatch "Stopped")
     }
     catch {
-        Write-Error "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
+        Write-Warning "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
     }
     return
 }
