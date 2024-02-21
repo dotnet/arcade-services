@@ -25,7 +25,7 @@ public class StatusController(JobProcessorScopeManager jobProcessorScopeManager)
     {
         if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
-            return BadRequest("The JobProcessor can't be started until the VMR is cloned");
+            return BadRequest("The background worker can't be started until the VMR is cloned");
         }
 
         _jobProcessorScopeManager.Start();
