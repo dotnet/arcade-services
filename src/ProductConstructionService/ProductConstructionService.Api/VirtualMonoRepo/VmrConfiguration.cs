@@ -14,7 +14,8 @@ public static class VmrConfiguration
     public const string TmpPathKey = "TmpPath";
     public const string VmrUriKey = "VmrUri";
 
-    public const string VmrClonedHealthCheckTag = "vmrCloned";
+    public const string VmrReadyHealthCheckName = "VmrReady";
+    public const string VmrReadyHealthCheckTag = "vmrCloned";
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string vmrUri)
     {
@@ -30,7 +31,7 @@ public static class VmrConfiguration
         {
             builder.Services.AddSingleton(new VmrClonerBackgroundServiceOptions(vmrUri));
             builder.Services.AddHostedService<VmrClonerBackgroundService>();
-            builder.Services.AddHealthChecks().AddCheck<VmrClonedHealthCheck>("VmrCloned", tags: [VmrClonedHealthCheckTag]);
+            builder.Services.AddHealthChecks().AddCheck<VmrReadyHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
         }
     }
 }

@@ -69,9 +69,9 @@ if (app.Environment.IsDevelopment())
 // When running in Azure add the vmrCloned health check
 else
 {
-    app.MapHealthChecks("/vmrCloned", new HealthCheckOptions
+    app.MapHealthChecks("/vmrReady", new HealthCheckOptions
     {
-        Predicate = healthCheck => healthCheck.Tags.Contains(VmrConfiguration.VmrClonedHealthCheckTag)
+        Predicate = healthCheck => healthCheck.Tags.Contains(VmrConfiguration.VmrReadyHealthCheckTag)
     });
 }
 

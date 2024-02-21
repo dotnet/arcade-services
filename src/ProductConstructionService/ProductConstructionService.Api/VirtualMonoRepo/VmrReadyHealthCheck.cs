@@ -6,7 +6,7 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
 
-public class VmrClonedHealthCheck(JobProcessorScopeManager jobProcessorScopeManager) : IHealthCheck
+public class VmrReadyHealthCheck(JobProcessorScopeManager jobProcessorScopeManager) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
