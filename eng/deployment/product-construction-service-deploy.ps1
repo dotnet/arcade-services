@@ -119,7 +119,7 @@ try
         Write-Host "All traffic has been redirected to label $inactiveLabel"
     }
     else {
-        Write-Error "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
+        Write-Warning "New revision is not running. Check revision $newRevisionName logs in the inactive revisions. Deactivating the new revision"
         az containerapp revision deactivate --revision $newRevisionName --name $containerappName --resource-group $resourceGroupName
         exit 1
     }
