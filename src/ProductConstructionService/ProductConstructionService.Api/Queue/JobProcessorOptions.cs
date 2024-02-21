@@ -11,5 +11,4 @@ public class JobProcessorOptions
     public required string JobQueueName { get; init; }
     public required int MaxJobRetries { get; init; }
     public required TimeSpan QueueMessageInvisibilityTime { get; init; }
-    public required bool CloneVmr { get; init; }
 }

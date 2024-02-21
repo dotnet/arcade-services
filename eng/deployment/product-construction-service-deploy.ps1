@@ -13,7 +13,6 @@ param(
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
-$pcsHealthUrl = $pcsUrl + "/health"
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
     try {
@@ -111,9 +110,6 @@ try
     } While ($newRevisionRunningState -notmatch "Running" -and $newRevisionRunningState -notmatch "Failed")
 
     if ($newRevisionRunningState -match "Running") {
-        # At this point, the service has started, and is cloning the VMR. Since this takes more than the maximum InitialDelay time on the health probe, we will do a manual check
-
-
         Write-Host "Assigning label $inactiveLabel to the new revision"
         # assign the label to the new revision
         az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null
