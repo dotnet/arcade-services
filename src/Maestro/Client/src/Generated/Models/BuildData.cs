@@ -24,10 +24,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Commit { get; set; }
 
         [JsonProperty("assets")]
-        public IImmutableList<AssetData> Assets { get; set; }
+        public IImmutableList<Models.AssetData> Assets { get; set; }
 
         [JsonProperty("dependencies")]
-        public IImmutableList<BuildRef> Dependencies { get; set; }
+        public IImmutableList<Models.BuildRef> Dependencies { get; set; }
 
         [JsonProperty("azureDevOpsBuildId")]
         public int? AzureDevOpsBuildId { get; set; }
@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool Stable { get; set; }
 
         [JsonProperty("incoherencies")]
-        public IImmutableList<BuildIncoherence> Incoherencies { get; set; }
+        public IImmutableList<Models.BuildIncoherence> Incoherencies { get; set; }
 
         [JsonIgnore]
         public bool IsValid

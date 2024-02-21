@@ -29,10 +29,6 @@ public partial class Startup
 
     public const string MsftAuthorizationPolicyName = "msft";
 
-    private static string ProductName { get; } = "Maestro";
-
-    private static string ProductVersion { get; } = Assembly.GetEntryAssembly().GetName().Version.ToString();
-
     private void ConfigureAuthServices(IServiceCollection services)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(

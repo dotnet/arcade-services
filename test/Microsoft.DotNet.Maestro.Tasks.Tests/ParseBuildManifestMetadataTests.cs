@@ -441,7 +441,7 @@ public class ParseBuildManifestMetadataTests
         Manifest manifestWithUnversionedPackage = SharedMethods.GetCopyOfManifest(baseManifest);
         manifestWithUnversionedPackage.Packages = [unversionedPackage];
         var expectedPackages = new List<PackageArtifactModel>() { unversionedPackageArtifactModel };
-        var (actualPackages, actualBlobs) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
+        var (actualPackages, _) = PushMetadataToBuildAssetRegistry.GetPackagesAndBlobsInfo(manifestWithUnversionedPackage);
         actualPackages.Should().BeEquivalentTo(expectedPackages);
     }
 

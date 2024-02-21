@@ -874,13 +874,13 @@ namespace SubscriptionActorService
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             IRemote remote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
-            var locationResolver = new AssetLocationResolver(_barClient, _logger);
+            var locationResolver = new AssetLocationResolver(_barClient);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
-            PullRequestDescriptionBuilder pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(_loggerFactory, description);
+            var pullRequestDescriptionBuilder = new PullRequestDescriptionBuilder(_loggerFactory, description);
 
             foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
@@ -1216,7 +1216,7 @@ namespace SubscriptionActorService
             {
                 // For the update asset parameters, we don't have any information on the source of the update,
                 // since coherency can be run even without any updates.
-                UpdateAssetsParameters coherencyUpdateParameters = new UpdateAssetsParameters
+                var coherencyUpdateParameters = new UpdateAssetsParameters
                 {
                     IsCoherencyUpdate = true
                 };

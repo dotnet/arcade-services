@@ -17,7 +17,6 @@ public class AddAssetTests
     [Test]
     public void EmptyAssetList_NewAssetIsOnlyAssetInList()
     {
-        var pushMetadata = new PushMetadataToBuildAssetRegistry();
         List<AssetData> assetData = [];
         var expectedAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
@@ -36,7 +35,6 @@ public class AddAssetTests
             Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.Container) { Location = "oldTestLocation" })
         };
 
-        var pushMetadata = new PushMetadataToBuildAssetRegistry();
         List<AssetData> assetData = [existingAssetData];
 
         var newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };

@@ -70,8 +70,8 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), targetRepoUri);
-                await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), targetRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. source1Assets], targetRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. source2Assets], targetRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");
@@ -124,7 +124,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. sourceAssets], sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");
@@ -240,7 +240,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. sourceAssets], sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies 1");
@@ -305,7 +305,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             {
 
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. source1Assets], sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");
@@ -371,7 +371,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. sourceAssets], sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");
@@ -435,7 +435,7 @@ internal class EndToEndFlowLogic : MaestroScenarioTestBase
             await using (await CheckoutBranchAsync(targetBranch))
             {
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, [.. sourceAssets], sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies");

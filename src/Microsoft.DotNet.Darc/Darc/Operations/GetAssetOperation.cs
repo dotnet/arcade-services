@@ -94,7 +94,7 @@ internal class GetAssetOperation : Operation
             var now = DateTimeOffset.Now;
             int checkedAssets = 0;
 
-            List<(Asset asset, Build build)> matchingAssetsAfterDate = new List<(Asset, Build)>();
+            List<(Asset asset, Build build)> matchingAssetsAfterDate = [];
 
             Build buildInfo = null;
             if (_options.Build.HasValue)
