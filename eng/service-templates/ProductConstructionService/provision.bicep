@@ -245,6 +245,18 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                             failureThreshold: 3
                             type: 'Startup'
                         }
+                        {
+                            httpGet: {
+                                path: '/vmrReady'
+                                port: 8080
+                                scheme: 'HTTP'
+                            }
+                            initialDelaySeconds: 60
+                            failureThreshold: 10
+                            successThreshold: 1
+                            periodSeconds: 30
+                            type: 'Readiness'
+                        }
                     ]
                 } 
             ]

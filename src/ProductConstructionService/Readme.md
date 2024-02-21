@@ -27,3 +27,16 @@ The last part is setting up the pipeline:
  - Make sure the variable group referenced in the yaml points to the new Key Vault
 
 When creating a Container App with a bicep template, we have to give it some kind of boilerplate docker image, since our repository will be empty at the time of creation. Since we have a custom startup health probe, this revision will fail to activate. After the first run of the pipeline (deployment), make sure to deactivate the first, default revision.
+
+# General deployment notes
+
+The Product Construction Service uses the [Blue-Green](https://learn.microsoft.com/en-us/azure/container-apps/blue-green-deployment?pivots=bicep) deployment approach, implemented in the [product-construction-service-deploy.ps1](https://github.com/dotnet/arcade-services/blob/main/eng/deployment/product-construction-service-deploy.ps1) script. The script does the following:
+ - Figures out the label that should be assigned to the new revision and removes it from the old, inactive revision.
+ - Tells the currently active revision to stop processing new jobs and waits for the new one to finish.
+ - Deploys the new revision.
+ - Waits for the Health Probes to be successful. We currently have two health probes:
+   - A Startup probe, that is run after the service is started. This probe just tests if the service is responsive.
+   - A Readiness probe that waits for the service to fully initialize. Currently, this is probe just waits for the VMR to be cloned on the containerapp disk.
+ - Assigns the correct label to the new revision, and switches all traffic to it.
+ - Starts the JobProcessor once the service is ready.
+ - If there are any failures during the deployment, the old revision is started, and the deployment is cleaned up.
