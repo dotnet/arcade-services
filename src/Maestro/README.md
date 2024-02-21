@@ -31,7 +31,7 @@ flowchart
     PolicyState--Failed checks-->TagPeople
     TagPeople-->UpdatePR
     %% Cannot update
-    PolicyState--Pending policies--Set timer-->Timer
+    PolicyState--Pending policies-->Timer
     %% Can update
     PolicyState--Conflict-->UpdatePR
     Timer--Check PR-->State
@@ -52,6 +52,63 @@ class UpdateLastBuild,CleanUp,EndOfFlow End
 class SubscriptionTrigger,Timer,ExternalImpulse External
 linkStyle 2,12 stroke-width:2px,fill:none,stroke:#FFEE00,color:#FF9900
 ```
+
+The above flow only applies to the usual dependency flow updates (version files, etc.). The flow works a little bit different for the code-enabled subscriptions that flow code between product repos and the VMR.
+For those, the PR branch is created by the [Product Construction Service](../ProductConstructionService).
+
+```mermaid
+flowchart
+    SubscriptionTrigger(Code-enabled\nsubscription triggered)
+    Exist{Does a PR\nalready exist?}
+    Exist2{Does a PR\nalready exist?}
+    PRState{What state\nis the PR in?}
+    PolicyState{What state\nare the check\npolicies in?}
+    CreatePR(Create a new PR)
+    CleanUp((Clean up\nbranch))
+    TagPeople(Notify/tag people)
+    UpdatePR(Call to PCS\nUpdate branch)
+    MergePR(Merge PR)
+    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
+    Timer(Periodic timer)
+    CreateBranch(Call to PCS:\nCreate PR branch,)
+    PCSFinished(PCS pushed a branch\ncalls Maestro)
+
+    SubscriptionTrigger-->Exist
+    Exist--Yes-->PRState
+    Exist--No -->CreateBranch
+
+    PRState--Open-->PolicyState
+    PRState--Merged-->UpdateLastBuild
+    PRState--Closed-->CleanUp
+    PRState--Waiting on PCS-->Timer
+
+    PolicyState--Checks OK-->MergePR
+    MergePR-->UpdateLastBuild
+    PolicyState--Failed checks-->TagPeople
+    TagPeople-->UpdatePR
+    %% Cannot update
+    PolicyState--Pending policies-->Timer
+    %% Can update
+    PolicyState--Conflict-->UpdatePR
+    Timer--Check PR-->PRState
+    CreatePR--Set timer-->Timer
+    UpdatePR--Set timer-->Timer
+
+    PCSFinished-->Exist2
+    Exist2--Yes\nClear the waiting flag-->PRState
+    Exist2--No -->CreatePR
+
+classDef Action fill:#00DD00,stroke:#006600,stroke-width:1px,color:#006600
+classDef End fill:#9999EE,stroke:#0000AA,stroke-width:1px,color:#0000AA
+classDef External fill:#FFEE00,stroke:#FF9900,stroke-width:1px,color:#666600
+classDef PCSCall fill:#DD0000,stroke:#660000,stroke-width:1px,color:#ffffff
+
+class CreatePR,TagPeople,NoAction,MergePR,MaestroAction Action
+class UpdateLastBuild,CleanUp,EndOfFlow End
+class SubscriptionTrigger,Timer,ExternalImpulse,PCSFinished External
+class CreateBranch,UpdatePR PCSCall
+```
+
 
 ## Validation Process in dev and int environments
 
