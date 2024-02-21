@@ -6,7 +6,7 @@ The following diagram shows how a dependency update PR progresses from opening t
 
 ```mermaid
 flowchart
-    SubscriptionTrigger(⚡Subscription is triggered)
+    SubscriptionTrigger(Subscription is triggered)
     Exist{Does a PR\nalready exist?}
     State{What state\nis the PR in?}
     PolicyState{What state\nare the check\npolicies in?}
@@ -16,7 +16,7 @@ flowchart
     UpdatePR(Update PR,\nif possible)
     MergePR(Merge PR)
     UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
-    Timer(⏲️ Set timer)
+    Timer(Set timer)
 
     Exist--Yes-->State
     Exist--No -->Create
