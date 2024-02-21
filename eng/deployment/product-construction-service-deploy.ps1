@@ -13,6 +13,7 @@ param(
 $pcsStatusUrl = $pcsUrl + "/status"
 $pcsStopUrl = $pcsStatusUrl + "/stop"
 $pcsStartUrl = $pcsStatusUrl + "/start"
+$pcsHealthUrl = $pcsUrl + "/health"
 
 function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
     try {
@@ -46,6 +47,37 @@ function StopAndWait([string]$pcsStatusUrl, [string]$pcsStopUrl) {
         Write-Warning "An error occurred: $($_.Exception.Message).  Deploying the new revision without stopping the service."
     }
     return
+}
+
+function HealthProbe([string]$pcsHealthUrl) {
+    # The service needs a few min to clone the VMR. We'll give it a few min
+    $vmrCloneSleepTime = 200
+    Write-Host "Waiting for $vmrCloneSleepTime seconds for the VMR to clone"
+    Start-Sleep -Seconds $vmrCloneSleepTime
+
+    # Invoke web request to pcsHealthUrl, retry 5 times with 30 seconds interval
+    $retryCount = 0
+    $retryInterval = 30
+    $maxRetries = 5
+
+    do {
+        try {
+            $response = Invoke-WebRequest -Uri $pcsHealthUrl -Method Get
+            if ($response.StatusCode -eq 200) {
+                Write-Host "Health probe successful"
+                break
+            }
+        } catch {
+            Write-Host "Health probe failed. Retrying in $retryInterval seconds..."
+            Start-Sleep -Seconds $retryInterval
+        }
+
+        $retryCount++
+    } while ($retryCount -lt $maxRetries)
+
+    if ($retryCount -ge $maxRetries) {
+        Write-Host "Health probe failed after $maxRetries retries"
+    }
 }
 
 az extension add --name containerapp --upgrade
@@ -110,6 +142,9 @@ try
     } While ($newRevisionRunningState -notmatch "Running" -and $newRevisionRunningState -notmatch "Failed")
 
     if ($newRevisionRunningState -match "Running") {
+        # At this point, the service has started, and is cloning the VMR. Since this takes more than the maximum InitialDelay time on the health probe, we will do a manual check
+
+
         Write-Host "Assigning label $inactiveLabel to the new revision"
         # assign the label to the new revision
         az containerapp revision label add --label $inactiveLabel --name $containerappName --resource-group $resourceGroupName --revision $newRevisionName | Out-Null

@@ -10,15 +10,17 @@ public enum JobsProcessorState
     // The JobsProcessor isn't doing anything
     Stopped,
     // The JobsProcessor will finish its current job and stop
-    Stopping
+    Stopping,
+    // The JobsProcessor is waiting for VMR cloning to finish
+    WaitingForVmrClone
 }
 
 public class JobProcessorScopeManager
 {
-    public JobProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider)
+    public JobProcessorScopeManager(bool waitingForVmrCloneOnStartup, IServiceProvider serviceProvider)
     {
-        _autoResetEvent = new AutoResetEvent(workOnStartup);
-        State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;
+        _autoResetEvent = new AutoResetEvent(!waitingForVmrCloneOnStartup);
+        State = waitingForVmrCloneOnStartup ? JobsProcessorState.WaitingForVmrClone : JobsProcessorState.Working;
         _serviceProvider = serviceProvider;
     }
 
@@ -63,5 +65,11 @@ public class JobProcessorScopeManager
         }
     }
 
-    
+    public void VmrCloneDone()
+    {
+        if (State == JobsProcessorState.WaitingForVmrClone)
+        {
+            State = JobsProcessorState.Stopped;
+        }
+    }
 }

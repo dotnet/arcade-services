@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,14 @@ if (app.Environment.IsDevelopment())
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
     var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.JobQueueConfigurationKey]);
     await queueClient.CreateIfNotExistsAsync();
+}
+// When running in Azure add the vmrCloned health check
+else
+{
+    app.MapHealthChecks("/vmrCloned", new HealthCheckOptions
+    {
+        Predicate = healthCheck => healthCheck.Tags.Contains(VmrConfiguration.VmrClonedHealthCheckTag)
+    });
 }
 
 app.Run();

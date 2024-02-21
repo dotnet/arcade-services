@@ -235,11 +235,11 @@ resource containerapp 'Microsoft.App/containerApps@2023-04-01-preview' = {
                     probes: [
                         {
                             httpGet: {
-                                path: '/health'
+                                path: '/alive'
                                 port: 8080
                                 scheme: 'HTTP'
                             }
-                            initialDelaySeconds: 60
+                            initialDelaySeconds: 5
                             periodSeconds: 10
                             successThreshold: 1
                             failureThreshold: 3

@@ -7,7 +7,7 @@ namespace ProductConstructionService.Api.Queue.JobRunners;
 
 public class TextJobRunner(ILogger<TextJobRunner> logger) : IJobRunner
 {
-    readonly ILogger<TextJobRunner> _logger = logger;
+    private readonly ILogger<TextJobRunner> _logger = logger;
 
     public Task RunAsync(Job job, CancellationToken cancellationToken)
     {

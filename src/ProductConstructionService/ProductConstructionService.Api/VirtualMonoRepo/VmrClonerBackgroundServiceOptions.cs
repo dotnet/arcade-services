@@ -3,4 +3,4 @@
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
 
-public record VmrCloneStartupFilterOptions(string VmrUri);
+public record VmrClonerBackgroundServiceOptions(string VmrUri);

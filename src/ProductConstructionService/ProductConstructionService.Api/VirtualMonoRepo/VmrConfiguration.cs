@@ -14,6 +14,8 @@ public static class VmrConfiguration
     public const string TmpPathKey = "TmpPath";
     public const string VmrUriKey = "VmrUri";
 
+    public const string VmrClonedHealthCheckTag = "vmrCloned";
+
     public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string vmrUri)
     {
         builder.Services.TryAddSingleton<IBasicBarClient, SqlBarClient>();
@@ -26,8 +28,9 @@ public static class VmrConfiguration
 
         if (!builder.Environment.IsDevelopment())
         {
-            builder.Services.AddSingleton(new VmrCloneStartupFilterOptions(vmrUri));
-            builder.Services.AddTransient<IStartupFilter, VmrCloneStartupFilter>();
+            builder.Services.AddSingleton(new VmrClonerBackgroundServiceOptions(vmrUri));
+            builder.Services.AddHostedService<VmrClonerBackgroundService>();
+            builder.Services.AddHealthChecks().AddCheck<VmrClonedHealthCheck>("VmrCloned", tags: [VmrClonedHealthCheckTag]);
         }
     }
 }

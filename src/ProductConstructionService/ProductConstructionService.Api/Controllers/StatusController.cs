@@ -8,29 +8,34 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobProcessorScopeManager jobsProcessorScopeManager) : Controller
+public class StatusController(JobProcessorScopeManager jobProcessorScopeManager) : Controller
 {
-    private readonly JobProcessorScopeManager _jobsProcessorScopeManager = jobsProcessorScopeManager;
+    private readonly JobProcessorScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
 
     [HttpPut("stop")]
-    public IActionResult StopPcsJobsProcessor()
+    public IActionResult StopPcsJobProcessor()
     {
-        _jobsProcessorScopeManager.FinishJobAndStop();
+        _jobProcessorScopeManager.FinishJobAndStop();
 
-        return GetPcsJobsProcessorStatus();
+        return GetPcsJobProcessorStatus();
     }
 
     [HttpPut("start")]
-    public IActionResult StartPcsJobsProcessor()
+    public IActionResult StartPcsJobProcessor()
     {
-        _jobsProcessorScopeManager.Start();
+        if (_jobProcessorScopeManager.State == JobsProcessorState.WaitingForVmrClone)
+        {
+            return BadRequest("The JobProcessor can't be started until the VMR is cloned");
+        }
 
-        return GetPcsJobsProcessorStatus();
+        _jobProcessorScopeManager.Start();
+
+        return GetPcsJobProcessorStatus();
     }
 
     [HttpGet]
-    public IActionResult GetPcsJobsProcessorStatus()
+    public IActionResult GetPcsJobProcessorStatus()
     {
-        return Ok(_jobsProcessorScopeManager.State.GetDisplayName());
+        return Ok(_jobProcessorScopeManager.State.GetDisplayName());
     }
 }
