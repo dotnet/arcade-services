@@ -23,7 +23,7 @@ public class StatusController(JobProcessorScopeManager jobProcessorScopeManager)
     [HttpPut("start")]
     public IActionResult StartPcsJobProcessor()
     {
-        if (_jobProcessorScopeManager.State == JobsProcessorState.WaitingForVmrClone)
+        if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
             return BadRequest("The JobProcessor can't be started until the VMR is cloned");
         }

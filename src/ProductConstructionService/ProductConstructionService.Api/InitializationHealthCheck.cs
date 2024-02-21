@@ -4,15 +4,15 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using ProductConstructionService.Api.Queue;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.Api;
 
-public class VmrReadyHealthCheck(JobProcessorScopeManager jobProcessorScopeManager) : IHealthCheck
+public class InitializationHealthCheck(JobProcessorScopeManager jobProcessorScopeManager) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        if (jobProcessorScopeManager.State == JobsProcessorState.WaitingForVmrClone)
+        if (jobProcessorScopeManager.State == JobsProcessorState.Initializing)
         {
-            return Task.FromResult(HealthCheckResult.Unhealthy("The JobProcessor is waiting for the VMR to be cloned"));
+            return Task.FromResult(HealthCheckResult.Unhealthy("Background worker is waiting for initialization to finish"));
         }
 
         return Task.FromResult(HealthCheckResult.Healthy());

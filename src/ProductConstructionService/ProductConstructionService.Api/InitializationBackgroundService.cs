@@ -6,11 +6,11 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 
-namespace ProductConstructionService.Api.VirtualMonoRepo;
+namespace ProductConstructionService.Api;
 
-public class VmrClonerBackgroundService(IRepositoryCloneManager repositoryCloneManager,
+public class InitializationBackgroundService(IRepositoryCloneManager repositoryCloneManager,
     ITelemetryRecorder telemetryRecorder,
-    VmrClonerBackgroundServiceOptions options,
+    InitializationBackgroundServiceOptions options,
     JobProcessorScopeManager jobProcessorScopeManager) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -18,13 +18,13 @@ public class VmrClonerBackgroundService(IRepositoryCloneManager repositoryCloneM
         using (ITelemetryScope scope = telemetryRecorder.RecordGitClone(options.VmrUri))
         {
             // If Vmr cloning is taking more than 20 min, something is wrong
-            CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
-            
+            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);
+
             ILocalGitRepo repo = await repositoryCloneManager.PrepareVmrCloneAsync(options.VmrUri, linkedTokenSource.Token);
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             scope.SetSuccess();
-            jobProcessorScopeManager.VmrCloneDone();
+            jobProcessorScopeManager.InitializingDone();
         }
     }
 }

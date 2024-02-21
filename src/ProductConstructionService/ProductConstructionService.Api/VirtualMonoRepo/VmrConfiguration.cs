@@ -29,9 +29,9 @@ public static class VmrConfiguration
 
         if (!builder.Environment.IsDevelopment())
         {
-            builder.Services.AddSingleton(new VmrClonerBackgroundServiceOptions(vmrUri));
-            builder.Services.AddHostedService<VmrClonerBackgroundService>();
-            builder.Services.AddHealthChecks().AddCheck<VmrReadyHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
+            builder.Services.AddSingleton(new InitializationBackgroundServiceOptions(vmrUri));
+            builder.Services.AddHostedService<InitializationBackgroundService>();
+            builder.Services.AddHealthChecks().AddCheck<InitializationHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
         }
     }
 }
