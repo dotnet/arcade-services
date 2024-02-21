@@ -318,7 +318,7 @@ namespace SubscriptionActorService
 
             if (pr != null && !canUpdate)
             {
-                _logger.LogInformation("PR {url} cannot for {subscriptions} be updated", pr.Url, subscriptionIds);
+                _logger.LogInformation("PR {url} for {subscriptions} cannot be updated", pr.Url, subscriptionIds);
                 return ActionResult.Create(false, "PR cannot be updated.");
             }
 
@@ -327,7 +327,7 @@ namespace SubscriptionActorService
             {
                 await UpdatePullRequestAsync(pr, updates);
                 result = $"Pull Request '{pr.Url}' updated.";
-                _logger.LogInformation("Pull Request {url} for {subscriptions} updated", pr.Url, subscriptionIds);
+                _logger.LogInformation("Pull Request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
             }
             else
             {
@@ -1044,7 +1044,7 @@ namespace SubscriptionActorService
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
-            var previousSubscriptions = new List<SubscriptionPullRequestUpdate>(pr.ContainedSubscriptions);
+            List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
             // Update the list of contained subscriptions with the new subscription update.
             // Replace all existing updates for the subscription id with the new update.
