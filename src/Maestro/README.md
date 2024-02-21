@@ -16,7 +16,7 @@ flowchart
     UpdatePR(Update PR,\nif possible)
     MergePR(Merge PR)
     UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
-    Timer(Set timer)
+    Timer(Periodic timer)
 
     Exist--Yes-->State
     Exist--No -->Create
@@ -31,12 +31,12 @@ flowchart
     PolicyState--Failed checks-->TagPeople
     TagPeople-->UpdatePR
     %% Cannot update
-    PolicyState--Pending policies-->Timer
+    PolicyState--Pending policies--Set timer-->Timer
     %% Can update
     PolicyState--Conflict-->UpdatePR
     Timer--Check PR-->State
-    Create-->Timer
-    UpdatePR-->Timer
+    Create--Set timer-->Timer
+    UpdatePR--Set timer-->Timer
 
 subgraph Legend
     MaestroAction(Action)
