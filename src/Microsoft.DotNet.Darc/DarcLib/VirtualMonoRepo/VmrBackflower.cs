@@ -96,7 +96,6 @@ internal class VmrBackFlower(
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly ISourceManifest _sourceManifest = sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
-    private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient = localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IVmrPatchHandler _vmrPatchHandler = vmrPatchHandler;
@@ -120,7 +119,7 @@ internal class VmrBackFlower(
             buildToFlow,
             branchName,
             discardPatches,
-    cancellationToken);
+            cancellationToken);
 
     public async Task<bool> FlowBackAsync(
         string mappingName,

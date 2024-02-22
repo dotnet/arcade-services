@@ -141,7 +141,7 @@ public class SourceManifest : ISourceManifest
     {
         if (!File.Exists(path))
         {
-            return new SourceManifest(Array.Empty<RepositoryRecord>(), Array.Empty<SubmoduleRecord>());
+            return new SourceManifest([], []);
         }
 
         var options = new JsonSerializerOptions
@@ -176,7 +176,7 @@ public class SourceManifest : ISourceManifest
     /// </summary>
     private class SourceManifestWrapper
     {
-        public ICollection<RepositoryRecord> Repositories { get; init; } = Array.Empty<RepositoryRecord>();
-        public ICollection<SubmoduleRecord> Submodules { get; init; } = Array.Empty<SubmoduleRecord>();
+        public ICollection<RepositoryRecord> Repositories { get; init; } = [];
+        public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
     }
 }

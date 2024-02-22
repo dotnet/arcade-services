@@ -76,10 +76,8 @@ internal class VmrForwardFlower(
     IVmrForwardFlower
 {
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly ISourceManifest _sourceManifest = sourceManifest;
     private readonly IVmrUpdater _vmrUpdater = vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
-    private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly IBasicBarClient _barClient = basicBarClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
