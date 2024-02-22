@@ -107,7 +107,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             await sourceRepo.CheckoutAsync(shaToFlow);
         }
 
-        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
+        var mapping = _dependencyTracker.GetMapping(mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         return await FlowCodeAsync(

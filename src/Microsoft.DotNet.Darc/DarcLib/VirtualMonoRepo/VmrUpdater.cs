@@ -106,9 +106,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         await _dependencyTracker.InitializeSourceMappings();
 
-        var mapping = _dependencyTracker.Mappings
-            .FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase))
-            ?? throw new Exception($"No mapping named '{mappingName}' found");
+        var mapping = _dependencyTracker.GetMapping(mappingName);
 
         // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
@@ -530,7 +528,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             ILocalGitRepo clone;
             if (source is IVersionedSourceComponent repo)
             {
-                var sourceMapping = _dependencyTracker.Mappings.First(m => m.Name == repo.Path);
+                var sourceMapping = _dependencyTracker.GetMapping(repo.Path);
                 var remotes = additionalRemotes
                     .Where(r => r.Mapping == sourceMapping.Name)
                     .Select(r => r.RemoteUri)
@@ -627,7 +625,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             {
                 // patch is in the folder named as the mapping for which it is applied
                 var affectedRepo = affectedPatch.Path.Split(_fileSystem.DirectorySeparatorChar)[^2];
-                var affectedMapping = _dependencyTracker.Mappings.First(m => m.Name == affectedRepo);
+                var affectedMapping = _dependencyTracker.GetMapping(affectedRepo);
 
                 _logger.LogInformation("Detected a change of a VMR patch {patch} for {repo}", affectedPatch, affectedRepo);
                 patchesToRestore.Add(new VmrIngestionPatch(affectedPatch, affectedMapping));
@@ -653,7 +651,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         var deletedRepos = _sourceManifest
             .Repositories
-            .Where(r => _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == r.Path) == null)
+            .Where(r => !_dependencyTracker.TryGetMapping(r.Path, out _))
             .ToList();
 
         if (!deletedRepos.Any())
@@ -806,8 +804,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             _fileSystem.DeleteFile(tempFile);
         }
 
-        return _dependencyTracker.Mappings.FirstOrDefault(m => m.Name.Equals(mapping.Name, StringComparison.InvariantCultureIgnoreCase))
-            ?? throw new Exception($"No mapping named '{mapping.Name}' found");
+        return _dependencyTracker.GetMapping(mapping.Name);
     }
 
     private class RepositoryNotInitializedException(string message) : Exception(message)
