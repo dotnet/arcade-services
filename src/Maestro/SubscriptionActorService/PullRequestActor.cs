@@ -312,9 +312,13 @@ namespace SubscriptionActorService
 
             (InProgressPullRequest pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
+            var subscriptionIds = updates.Count > 1
+                ? "subscriptions " + string.Join(", ",updates.Select(u => u.SubscriptionId).Distinct())
+                : "subscription " + updates[0].SubscriptionId;
+
             if (pr != null && !canUpdate)
             {
-                _logger.LogInformation($"PR {pr?.Url} cannot be updated.");
+                _logger.LogInformation("PR {url} for {subscriptions} cannot be updated", pr.Url, subscriptionIds);
                 return ActionResult.Create(false, "PR cannot be updated.");
             }
 
@@ -323,18 +327,18 @@ namespace SubscriptionActorService
             {
                 await UpdatePullRequestAsync(pr, updates);
                 result = $"Pull Request '{pr.Url}' updated.";
-                _logger.LogInformation($"Pull Request '{pr.Url}' updated.");
+                _logger.LogInformation("Pull Request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
             }
             else
             {
                 string prUrl = await CreatePullRequestAsync(updates);
                 if (prUrl == null)
                 {
-                    result = "No changes required, no pull request created.";
+                    result = $"No changes required for {subscriptionIds}, no pull request created";
                 }
                 else
                 {
-                    result = $"Pull Request '{prUrl}' created.";
+                    result = $"Pull Request '{prUrl}' for {subscriptionIds} created";
                 }
                 _logger.LogInformation(result);
             }
@@ -365,6 +369,7 @@ namespace SubscriptionActorService
         {
             ConditionalValue<InProgressPullRequest> maybePr =
                 await _stateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
+
             if (maybePr.HasValue)
             {
                 InProgressPullRequest pr = maybePr.Value;
@@ -372,10 +377,13 @@ namespace SubscriptionActorService
                 {
                     // somehow a bad PR got in the collection, remove it
                     await _stateManager.RemoveStateAsync(PullRequest);
+                    _logger.LogWarning("Removing invalid PR {url} from state memory", pr.Url);
                     return (null, false);
                 }
 
                 SynchronizePullRequestResult result = await _actionRunner.ExecuteAction(() => SynchronizePullRequestAsync(pr.Url));
+
+                _logger.LogInformation("Pull Request {url} is {result}", pr.Url, result);
 
                 switch (result)
                 {
@@ -396,7 +404,7 @@ namespace SubscriptionActorService
                         // that were just obtained. We don't want to unregister the reminder in these cases.
                         return (null, false);
                     default:
-                        _logger.LogError($"Unknown pull request synchronization result {result}");
+                        _logger.LogError("Unknown pull request synchronization result {result}", result);
                         break;
                 }
             }
@@ -415,12 +423,12 @@ namespace SubscriptionActorService
         [ActionMethod("Synchronizing Pull Request: '{url}'")]
         private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
-            _logger.LogInformation($"Synchronizing Pull Request {prUrl}");
+            _logger.LogInformation("Synchronizing Pull Request {url}", prUrl);
             ConditionalValue<InProgressPullRequest> maybePr =
                 await _stateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
             if (!maybePr.HasValue || maybePr.Value.Url != prUrl)
             {
-                _logger.LogInformation($"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
+                _logger.LogInformation("Not Applicable: Pull Request {url} is not tracked by maestro anymore.", prUrl);
                 return ActionResult.Create(
                     SynchronizePullRequestResult.UnknownPR,
                     $"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
@@ -431,16 +439,18 @@ namespace SubscriptionActorService
 
             InProgressPullRequest pr = maybePr.Value;
 
-            _logger.LogInformation($"Get status for PullRequest: {prUrl}");
+            _logger.LogInformation("Getting status for Pull Request: {url}", prUrl);
             PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
+            _logger.LogInformation("Pull Request {url} is {status}", prUrl, status);
             switch (status)
             {
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
                 // merge the PR if they are successful.
                 case PrStatus.Open:
-                    _logger.LogInformation($"Status open for: {prUrl}");
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
+
+                    _logger.LogInformation("Policy check status for Pull Request {url} is {result}", prUrl, checkPolicyResult.Result);
 
                     switch (checkPolicyResult.Result)
                     {
@@ -468,7 +478,6 @@ namespace SubscriptionActorService
                 case PrStatus.Merged:
                 case PrStatus.Closed:
                     // If the PR has been merged, update the subscription information
-                    _logger.LogInformation($"Status closed for: {prUrl}");
                     if (status == PrStatus.Merged)
                     {
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
@@ -489,16 +498,17 @@ namespace SubscriptionActorService
                     // Also try to clean up the PR branch.
                     try
                     {
-                        _logger.LogInformation($"Try to clean up the PR branch {prUrl}");
+                        _logger.LogInformation("Trying to clean up the branch for Pull Request {url}", prUrl);
                         await darc.DeletePullRequestBranchAsync(prUrl);
                     }
                     catch (DarcException e)
                     {
-                        _logger.LogInformation(e, $"Failed to delete Branch associated with pull request {prUrl}");
+                        _logger.LogInformation(e, "Failed to delete branch associated with Pull Request {url}", prUrl);
                     }
+
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
-                    throw new NotImplementedException($"Unknown pr status '{status}'");
+                    throw new NotImplementedException($"Unknown PR status '{status}'");
             }
         }
 
@@ -646,6 +656,8 @@ namespace SubscriptionActorService
             {
                 if (pr != null && !canUpdate)
                 {
+                    _logger.LogInformation("Pull Request {url} cannot be updated at this moment", pr.Url);
+
                     await _stateManager.AddOrUpdateStateAsync(
                         PullRequestUpdate,
                         new List<UpdateAssetsParameters> { updateParameter },
@@ -1003,6 +1015,9 @@ namespace SubscriptionActorService
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
+
+            _logger.LogInformation("Updating Pull Request {url} branch {targetBranch} in {targetRepository}", pr.Url, targetBranch, targetRepository);
+
             IRemote darcRemote = await _remoteFactory.GetRemoteAsync(targetRepository, _logger);
 
             TargetRepoDependencyUpdate targetRepositoryUpdates =
@@ -1010,8 +1025,11 @@ namespace SubscriptionActorService
 
             if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
             {
+                _logger.LogInformation("No updates found for Pull Request {url}", pr.Url);
                 return;
             }
+
+            _logger.LogInformation("Found {count} required updates for Pull Request {url}", targetRepositoryUpdates.RequiredUpdates.Count, pr.Url);
 
             pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates, targetRepositoryUpdates.RequiredUpdates);
             pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
@@ -1020,7 +1038,7 @@ namespace SubscriptionActorService
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
-            List<SubscriptionPullRequestUpdate> previousSubscriptions = new List<SubscriptionPullRequestUpdate>(pr.ContainedSubscriptions);
+            List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
             // Update the list of contained subscriptions with the new subscription update.
             // Replace all existing updates for the subscription id with the new update.
