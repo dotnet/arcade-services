@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Maestro.Authentication;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -31,7 +32,6 @@ public class AccountController : Controller
     public SignInManager<ApplicationUser> SignInManager { get; }
     public UserManager<ApplicationUser> UserManager { get; }
     public BuildAssetRegistryContext Context { get; }
-    public const string AccountSignInRoute = "/Account/SignIn";
 
     [HttpGet("/Account/SignOut")]
     [AllowAnonymous]
@@ -41,14 +41,14 @@ public class AccountController : Controller
         return RedirectToPage("/Index");
     }
 
-    [HttpGet(AccountSignInRoute)]
+    [HttpGet(AuthenticationConfiguration.AccountSignInRoute)]
     [AllowAnonymous]
     public IActionResult SignIn(string returnUrl = null)
     {
         string redirectUrl = Url.Action(nameof(LogInCallback), "Account", new {returnUrl});
         AuthenticationProperties properties =
-            SignInManager.ConfigureExternalAuthenticationProperties(Startup.GitHubScheme, redirectUrl);
-        return Challenge(properties, Startup.GitHubScheme);
+            SignInManager.ConfigureExternalAuthenticationProperties(AuthenticationConfiguration.GitHubScheme, redirectUrl);
+        return Challenge(properties, AuthenticationConfiguration.GitHubScheme);
     }
 
     [HttpGet("/Account/LogInCallback")]
@@ -119,7 +119,7 @@ public class AccountController : Controller
                     return null;
                 }
 
-                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
+                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(AuthenticationConfiguration.ShouldAddClaimToUser);
 
                 result = await UserManager.AddClaimsAsync(user, claimsToAdd);
                 if (!result.Succeeded)
@@ -137,11 +137,6 @@ public class AccountController : Controller
                 return user;
             }
         });
-    }
-
-    public static bool ShouldAddClaimToUser(Claim c)
-    {
-        return c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" || c.Type == ClaimTypes.Role;
     }
 
     private IActionResult RedirectToLocal(string returnUrl)

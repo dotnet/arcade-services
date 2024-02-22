@@ -4,6 +4,7 @@
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.Api.VirtualMonoRepo;
@@ -17,9 +18,17 @@ public static class VmrConfiguration
     public const string VmrReadyHealthCheckName = "VmrReady";
     public const string VmrReadyHealthCheckTag = "vmrReady";
 
-    public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string vmrUri)
+    public const string KustoDatabaseKey = "KustoDatabase";
+
+    public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string? vmrUri)
     {
-        builder.Services.TryAddSingleton<IBasicBarClient, SqlBarClient>();
+        builder.Services.AddSingleton(new KustoClientProviderOptions
+        {
+            Database = builder.Configuration[KustoDatabaseKey] ?? throw new ArgumentException($"{KustoDatabaseKey} missing from the configuration"),
+            QueryConnectionString = builder.Configuration["nethelix-engsrv-kusto-connection-string-query"]
+        });
+        builder.Services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+        builder.Services.AddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddVmrManagers(
             "git",
             vmrPath,
@@ -29,6 +38,11 @@ public static class VmrConfiguration
 
         if (!builder.Environment.IsDevelopment())
         {
+            if (vmrUri == null)
+            {
+                throw new ArgumentException($"{VmrUriKey} environmental variable must be set");
+            }
+
             builder.Services.AddSingleton(new InitializationBackgroundServiceOptions(vmrUri));
             builder.Services.AddHostedService<InitializationBackgroundService>();
             builder.Services.AddHealthChecks().AddCheck<InitializationHealthCheck>(VmrReadyHealthCheckName, tags: [VmrReadyHealthCheckTag]);
