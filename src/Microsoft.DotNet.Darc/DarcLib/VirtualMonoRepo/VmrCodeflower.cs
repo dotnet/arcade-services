@@ -385,7 +385,7 @@ internal abstract class VmrCodeFlower
             .OrderRemotesByLocalPublicOther();
 
         ILocalGitRepo repo = await _repositoryCloneManager.PrepareCloneAsync(
-        mapping,
+            mapping,
             [.. remotes],
             repoRef,
             cancellationToken);
