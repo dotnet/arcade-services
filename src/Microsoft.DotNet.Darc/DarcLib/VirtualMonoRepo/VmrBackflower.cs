@@ -16,6 +16,17 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrBackFlower
 {
+    /// <summary>
+    /// Flows backward the code from the VMR to the target branch of a product repo.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="targetRepo">Local checkout of the repository</param>
+    /// <param name="shaToFlow">SHA to flow</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
+    /// <param name="discardPatches">Keep patch files?</param>
     Task<bool> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -25,6 +36,17 @@ public interface IVmrBackFlower
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Flows backward the code from the VMR to the target branch of a product repo.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="targetRepo">Local checkout of the repository</param>
+    /// <param name="shaToFlow">SHA to flow</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
+    /// <param name="discardPatches">Keep patch files?</param>
     Task<bool> FlowBackAsync(
         string mapping,
         ILocalGitRepo targetRepo,
@@ -33,26 +55,30 @@ public interface IVmrBackFlower
         string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flows backward the code from the VMR to the target branch of a product repo.
+    /// This overload is used in the context of the PCS.
+    /// </summary>
+    /// <param name="mappingName">Mapping to flow</param>
+    /// <param name="build">Build to flow</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
+    /// <returns>True when there were changes to be flown</returns>
+    Task<bool> FlowBackAsync(
+        string mappingName,
+        Build build,
+        string branchName,
+        string targetBranch,
+        CancellationToken cancellationToken = default);
 }
 
-internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
-{
-    private readonly IVmrInfo _vmrInfo;
-    private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ILocalGitClient _localGitClient;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVmrPatchHandler _vmrPatchHandler;
-    private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IBasicBarClient _barClient;
-    private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VmrCodeFlower> _logger;
-
-    public VmrBackFlower(
+internal class VmrBackFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
+        IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
@@ -64,31 +90,19 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(
-            vmrInfo,
-            sourceManifest,
-            dependencyTracker,
-            localGitClient,
-            libGit2Client,
-            localGitRepoFactory,
-            versionDetailsParser,
-            dependencyFileManager,
-            coherencyUpdateResolver,
-            assetLocationResolver,
-            fileSystem,
-            logger)
-    {
-        _vmrInfo = vmrInfo;
-        _sourceManifest = sourceManifest;
-        _dependencyTracker = dependencyTracker;
-        _localGitClient = localGitClient;
-        _localGitRepoFactory = localGitRepoFactory;
-        _vmrPatchHandler = vmrPatchHandler;
-        _workBranchFactory = workBranchFactory;
-        _barClient = basicBarClient;
-        _fileSystem = fileSystem;
-        _logger = logger;
-    }
+    : VmrCodeFlower(vmrInfo, sourceManifest, dependencyTracker, repositoryCloneManager, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger),
+    IVmrBackFlower
+{
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly ISourceManifest _sourceManifest = sourceManifest;
+    private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
+    private readonly ILocalGitClient _localGitClient = localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IVmrPatchHandler _vmrPatchHandler = vmrPatchHandler;
+    private readonly IWorkBranchFactory _workBranchFactory = workBranchFactory;
+    private readonly IBasicBarClient _barClient = basicBarClient;
+    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly ILogger<VmrCodeFlower> _logger = logger;
 
     public Task<bool> FlowBackAsync(
         string mapping,
@@ -98,7 +112,36 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string? branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
-        => FlowBackAsync(mapping, _localGitRepoFactory.Create(targetRepoPath), shaToFlow, buildToFlow, branchName, discardPatches, cancellationToken);
+        => FlowBackAsync(
+            mapping,
+            _localGitRepoFactory.Create(targetRepoPath),
+            shaToFlow,
+            buildToFlow,
+            branchName,
+            discardPatches,
+            cancellationToken);
+
+    public async Task<bool> FlowBackAsync(
+        string mappingName,
+        Build build,
+        string branchName,
+        string targetBranch,
+        CancellationToken cancellationToken = default)
+    {
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        ILocalGitRepo targetRepo = await PrepareRepoAndVmr(mapping, targetBranch, build.Commit, cancellationToken);
+        Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+
+        return await FlowBackAsync(
+            mapping,
+            targetRepo,
+            lastFlow,
+            build.Commit,
+            build,
+            branchName,
+            true,
+            cancellationToken);
+    }
 
     public async Task<bool> FlowBackAsync(
         string mappingName,
@@ -127,9 +170,29 @@ internal class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             await CheckOutVmr(shaToFlow);
         }
 
-        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
+        var mapping = _dependencyTracker.GetMapping(mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
+        return await FlowBackAsync(
+            mapping,
+            targetRepo,
+            lastFlow,
+            shaToFlow,
+            build,
+            branchName,
+            discardPatches,
+            cancellationToken);
+    }
 
+    private async Task<bool> FlowBackAsync(
+        SourceMapping mapping,
+        ILocalGitRepo targetRepo,
+        Codeflow lastFlow,
+        string shaToFlow,
+        Build? build,
+        string? branchName,
+        bool discardPatches,
+        CancellationToken cancellationToken)
+    {
         var hasChanges = await FlowCodeAsync(
             lastFlow,
             new Backflow(lastFlow.TargetSha, shaToFlow),
