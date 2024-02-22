@@ -28,7 +28,7 @@ public class JobScopeTests
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobsProcessorScopeManager scopeManager = new(true, serviceProvider);
+        JobProcessorScopeManager scopeManager = new(false, serviceProvider);
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {
@@ -60,7 +60,7 @@ public class JobScopeTests
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobsProcessorScopeManager scopeManager = new(true, serviceProvider);
+        JobProcessorScopeManager scopeManager = new(false, serviceProvider);
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {

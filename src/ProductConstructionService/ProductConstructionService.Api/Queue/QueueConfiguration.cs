@@ -19,12 +19,12 @@ public static class QueueConfiguration
             throw new ArgumentException($"{JobQueueConfigurationKey} missing from the configuration");
 
         // When running the service locally, the JobsProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobsProcessorScopeManager>(sp, builder.Environment.IsDevelopment()));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobProcessorScopeManager>(sp, !builder.Environment.IsDevelopment()));
         builder.Services.Configure<JobProcessorOptions>(
             builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
-        builder.Services.AddHostedService<JobsProcessor>();
+        builder.Services.AddHostedService<JobProcessor>();
 
         AddJobRunners(builder.Services);
     }
