@@ -26,6 +26,7 @@ internal abstract class VmrCodeFlower
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -41,6 +42,7 @@ internal abstract class VmrCodeFlower
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrDependencyTracker dependencyTracker,
+        IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -54,6 +56,7 @@ internal abstract class VmrCodeFlower
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
+        _repositoryCloneManager = repositoryCloneManager;
         _localGitClient = localGitClient;
         _libGit2Client = libGit2Client;
         _versionDetailsParser = versionDetailsParser;
@@ -99,12 +102,28 @@ internal abstract class VmrCodeFlower
         if (lastFlow.Name == currentFlow.Name)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            hasChanges = await SameDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
+            hasChanges = await SameDirectionFlowAsync(
+                mapping,
+                lastFlow,
+                currentFlow,
+                repo,
+                build,
+                branchName,
+                discardPatches,
+                cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            hasChanges = await OppositeDirectionFlowAsync(mapping, lastFlow, currentFlow, repo, build, branchName, discardPatches, cancellationToken);
+            hasChanges = await OppositeDirectionFlowAsync(
+                mapping,
+                lastFlow,
+                currentFlow,
+                repo,
+                build,
+                branchName,
+                discardPatches,
+                cancellationToken);
         }
 
         if (!hasChanges)
@@ -259,8 +278,7 @@ internal abstract class VmrCodeFlower
     /// </summary>
     private async Task<ForwardFlow> GetLastForwardFlow(string mappingName)
     {
-        IVersionedSourceComponent repoInVmr = _sourceManifest.Repositories.FirstOrDefault(r => r.Path == mappingName)
-            ?? throw new ArgumentException($"No repository mapping named {mappingName} found");
+        ISourceComponent repoInVmr = _sourceManifest.GetRepoVersion(mappingName);
 
         // Last forward flow SHAs come from source-manifest.json in the VMR
         string lastForwardRepoSha = repoInVmr.CommitSha;
@@ -354,6 +372,26 @@ internal abstract class VmrCodeFlower
 
         await targetRepo.StageAsync(["."], cancellationToken);
         await targetRepo.CommitAsync($"Update dependency files to {currentVmrSha}", allowEmpty: true, cancellationToken: cancellationToken);
+    }
+
+    protected async Task<ILocalGitRepo> PrepareRepoAndVmr(
+        SourceMapping mapping,
+        string repoRef,
+        string vmrRef,
+        CancellationToken cancellationToken)
+    {
+        var remotes = new[] { mapping.DefaultRef, _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri }
+            .Distinct()
+            .OrderRemotesByLocalPublicOther();
+
+        ILocalGitRepo repo = await _repositoryCloneManager.PrepareCloneAsync(
+        mapping,
+            [.. remotes],
+            repoRef,
+            cancellationToken);
+
+        await CheckOutVmr(vmrRef);
+        return repo;
     }
 
     /// <summary>
