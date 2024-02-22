@@ -44,7 +44,7 @@ public static class AuthenticationConfiguration
             options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
         })
             .AddPolicyScheme("Contextual", "Contextual",
-                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
+                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {

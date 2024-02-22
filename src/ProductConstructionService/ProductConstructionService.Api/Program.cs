@@ -6,6 +6,8 @@ using Azure.Storage.Queues;
 using Maestro.Authentication;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
+using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -48,7 +50,23 @@ builder.AddServiceDefaults();
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+                    "Bearer",
+                    new OpenApiSecurityScheme
+                    {
+                        Type = SecuritySchemeType.ApiKey,
+                        In = ParameterLocation.Header,
+                        Scheme = "bearer",
+                        Name = HeaderNames.Authorization
+                    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {new OpenApiSecurityScheme{Reference = new OpenApiReference{Id = "Bearer", Type = ReferenceType.SecurityScheme}}, Array.Empty<string>()},
+                });
+});
 
 var app = builder.Build();
 
