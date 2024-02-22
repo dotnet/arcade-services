@@ -4,9 +4,11 @@
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -22,6 +24,8 @@ public interface ISourceManifest
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string? packageVersion);
     VmrDependencyVersion? GetVersion(string repository);
+    bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out IVersionedSourceComponent? mapping);
+    IVersionedSourceComponent GetRepoVersion(string mappingName);
     void Refresh(string sourceManifestPath);
 }
 
@@ -121,6 +125,17 @@ public class SourceManifest : ISourceManifest
         _repositories = newManifst._repositories;
         _submodules = newManifst._submodules;
     }
+
+    public bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out IVersionedSourceComponent? version)
+    {
+        version = Repositories.FirstOrDefault(m => m.Path.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase));
+        return version != null;
+    }
+
+    public IVersionedSourceComponent GetRepoVersion(string mappingName)
+        => TryGetRepoVersion(mappingName, out var version)
+            ? version
+            : throw new Exception($"No manifest record named {mappingName} found");
 
     public static SourceManifest FromJson(string path)
     {

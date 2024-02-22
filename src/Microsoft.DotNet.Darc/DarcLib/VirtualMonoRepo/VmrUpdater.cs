@@ -202,7 +202,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             .Where(r => r.Mapping == update.Mapping.Name)
             .Select(r => r.RemoteUri)
             // Add remotes for where we synced last from and where we are syncing to (e.g. github.com -> dev.azure.com)
-            .Append(_sourceManifest.Repositories.First(r => r.Path == update.Mapping.Name).RemoteUri)
+            .Append(_sourceManifest.GetRepoVersion(update.Mapping.Name).RemoteUri)
             .Append(update.RemoteUri)
             // Add the default remote
             .Prepend(update.Mapping.DefaultRemote)
@@ -732,7 +732,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             TargetRevision: targetRevision,
             TargetVersion: targetVersion,
             Parent: null,
-            RemoteUri: _sourceManifest.Repositories.First(r => r.Path == mapping.Name).RemoteUri));
+            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri));
 
         var filesToAdd = new List<string>
         {
