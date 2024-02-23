@@ -17,7 +17,7 @@ public static class AuthenticationConfiguration
         gitHubAuthentication["ClientId"] = builder.Configuration["github-oauth-id"];
         gitHubAuthentication["ClientSecret"] = builder.Configuration["github-oauth-secret"];
 
-        builder.Services.AddSingleton<DarcRemoteMemoryCache>();
+        builder.Services.AddMemoryCache();
 
         builder.Services.ConfigureAuthServices(builder.Environment.IsDevelopment(), gitHubAuthentication);
     }
