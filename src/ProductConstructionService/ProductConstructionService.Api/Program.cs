@@ -4,7 +4,9 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
+using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api;

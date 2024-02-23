@@ -18,16 +18,14 @@ public static class VmrConfiguration
     public const string VmrReadyHealthCheckName = "VmrReady";
     public const string VmrReadyHealthCheckTag = "vmrReady";
 
-    public const string KustoDatabaseKey = "KustoDatabase";
+    public const string KustoSectionKey = "Kusto";
+    public const string KustoQueryConnectionStringKey = $"{KustoSectionKey}:QueryConnectionString";
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string? vmrUri)
     {
-        builder.Services.AddSingleton(new KustoClientProviderOptions
-        {
-            Database = builder.Configuration[KustoDatabaseKey] ?? throw new ArgumentException($"{KustoDatabaseKey} missing from the configuration"),
-            QueryConnectionString = builder.Configuration["nethelix-engsrv-kusto-connection-string-query"]
-        });
-        builder.Services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+        builder.Configuration[KustoQueryConnectionStringKey] = builder.Configuration["nethelix-engsrv-kusto-connection-string-query"];
+        builder.Services.AddKustoClientProvider("Kusto");
+
         builder.Services.AddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddVmrManagers(
             "git",

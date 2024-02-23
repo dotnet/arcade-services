@@ -262,10 +262,6 @@ public static class AuthenticationConfiguration
                     await entry.ReloadAsync();
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
         }
     }
 
