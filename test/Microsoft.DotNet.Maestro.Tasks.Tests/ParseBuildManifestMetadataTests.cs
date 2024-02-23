@@ -108,7 +108,7 @@ public class ParseBuildManifestMetadataTests
         Id = "Microsoft.Cci.Extensions",
         NonShipping = true,
         Version = Version,
-        NetCoreAsset = true
+        DotNetReleaseShipping = true
     };
 
     private static readonly Package package2 = new()
@@ -123,7 +123,7 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.NetCoreAssetAttributeName, "true" }
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "true" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
@@ -134,7 +134,7 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.NetCoreAssetAttributeName, "false" }
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
         Version = Version
@@ -145,7 +145,7 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.NetCoreAssetAttributeName, "false" }
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = null
@@ -175,7 +175,8 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "NONE" }
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "NONE" },
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" }
         },
         Id = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml"
     };
@@ -185,7 +186,8 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "OTHER" }
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "OTHER" },
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" }
         },
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
@@ -195,7 +197,8 @@ public class ParseBuildManifestMetadataTests
         Attributes = new Dictionary<string, string>()
         {
             { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
-            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "NONE" }
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "NONE" },
+            { PushMetadataToBuildAssetRegistry.DotNetReleaseShippingAttributeName, "false" }
         },
         Id = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
     };

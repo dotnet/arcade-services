@@ -101,8 +101,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
 
-        [XmlAttribute(AttributeName = "NetCoreAsset")]
-        public bool NetCoreAsset { get; set; }
+        [XmlAttribute(AttributeName = "DotNetReleaseShipping")]
+        public bool DotNetReleaseShipping { get; set; }
     }
 
     [XmlRoot(ElementName = "Blob")]
@@ -116,6 +116,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "Category")]
         public string Category { get; set; }
+
+        [XmlAttribute(AttributeName = "DotNetReleaseShipping")]
+        public bool DotNetReleaseShipping { get; set; }
     }
 
     [XmlRoot(ElementName = "SigningInformation")]

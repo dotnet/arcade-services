@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         internal IGetEnvProxy _getEnvProxy = new GetEnvProxy();
 
         public const string NonShippingAttributeName = "NonShipping";
-        public const string NetCoreAssetAttributeName = "NetCoreAsset";
+        public const string DotNetReleaseShippingAttributeName = "DotNetReleaseShipping";
         public const string CategoryAttributeName = "Category";
         public void Cancel()
         {
@@ -497,7 +497,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Attributes = new Dictionary<string, string>
                     {
                         { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
-                        { NetCoreAssetAttributeName, package.NetCoreAsset.ToString().ToLower() }
+                        { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() }
                     },
                     Id = package.Id,
                     Version = package.Version
@@ -516,7 +516,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         {
                             CategoryAttributeName,
                             !string.IsNullOrEmpty(blob.Category) ? blob.Category.ToString().ToUpper() : NoCategory
-                        }
+                        },
+                        { DotNetReleaseShippingAttributeName, blob.DotNetReleaseShipping.ToString().ToLower() }
                     },
                     Id = blob.Id,
                 };
