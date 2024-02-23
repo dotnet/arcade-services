@@ -3,11 +3,11 @@
 
 using Azure.Identity;
 using Azure.Storage.Queues;
-using Maestro.Authentication;
 using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
+using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -43,7 +43,8 @@ builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
 
 builder.AddWorkitemQueues(credential);
 
-builder.Services.ConfigureAuthServices(builder.Environment.IsDevelopment(), false);
+builder.AddAuthentication();
+//builder.Services.ConfigureAuthServices(builder.Environment.IsDevelopment(), false);
 
 builder.AddServiceDefaults();
 

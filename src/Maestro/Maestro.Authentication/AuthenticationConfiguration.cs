@@ -32,7 +32,7 @@ public static class AuthenticationConfiguration
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void ConfigureAuthServices(this IServiceCollection services, bool isDevelopment, bool addGitHubOAuth, IConfigurationSection gitHubAuthenticationSection = null)
+    public static void ConfigureAuthServices(this IServiceCollection services, bool isDevelopment, IConfigurationSection gitHubAuthenticationSection)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(
                 options => { options.Lockout.AllowedForNewUsers = false; })
@@ -99,17 +99,8 @@ public static class AuthenticationConfiguration
                             context.ReplacePrincipal(principal);
                         }
                     };
-                });
-
-        if (addGitHubOAuth)
-        {
-            if (gitHubAuthenticationSection == null)
-            {
-                throw new ArgumentException("GitHub authentication section is required when adding GitHub OAuth");
-            }
-
-            authBuilder.AddGitHubOAuth(gitHubAuthenticationSection, GitHubScheme);
-        }
+                }).AddGitHubOAuth(gitHubAuthenticationSection, GitHubScheme);
+        
 
         services.ConfigureExternalCookie(
             options =>
@@ -198,7 +189,7 @@ public static class AuthenticationConfiguration
                 };
             });
 
-        /*services.AddAuthorization(
+        services.AddAuthorization(
             options =>
             {
                 options.AddPolicy(
@@ -211,7 +202,7 @@ public static class AuthenticationConfiguration
                             policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
                         }
                     });
-            });*/
+            });
 
         services.Configure<MvcOptions>(
             options =>
