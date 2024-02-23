@@ -32,7 +32,7 @@ public static class AuthenticationConfiguration
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void ConfigureAuthServices(this IServiceCollection services, bool isDevelopment, IConfigurationSection gitHubAuthenticationSection)
+    public static void ConfigureAuthServices(this IServiceCollection services, bool isDevelopment, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(
                 options => { options.Lockout.AllowedForNewUsers = false; })
@@ -44,7 +44,7 @@ public static class AuthenticationConfiguration
             options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
         })
             .AddPolicyScheme("Contextual", "Contextual",
-                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
+                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath) ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {
@@ -261,6 +261,10 @@ public static class AuthenticationConfiguration
                 {
                     await entry.ReloadAsync();
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
     }

@@ -44,7 +44,6 @@ builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
 builder.AddWorkitemQueues(credential);
 
 builder.AddAuthentication();
-//builder.Services.ConfigureAuthServices(builder.Environment.IsDevelopment(), false);
 
 builder.AddServiceDefaults();
 

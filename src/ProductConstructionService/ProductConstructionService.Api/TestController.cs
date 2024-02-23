@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
@@ -11,6 +12,7 @@ public class TestController(JobProducerFactory pcsJobProducerFactory) : Controll
 {
     private readonly JobProducerFactory _jobProducerFactory = pcsJobProducerFactory;
 
+    [AllowAnonymous]
     [HttpPost("1")]
     public async Task<IActionResult> Index()
     {
