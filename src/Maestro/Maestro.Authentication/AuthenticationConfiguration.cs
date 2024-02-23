@@ -198,7 +198,7 @@ public static class AuthenticationConfiguration
                 };
             });
 
-        services.AddAuthorization(
+        /*services.AddAuthorization(
             options =>
             {
                 options.AddPolicy(
@@ -211,7 +211,7 @@ public static class AuthenticationConfiguration
                             policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
                         }
                     });
-            });
+            });*/
 
         services.Configure<MvcOptions>(
             options =>
