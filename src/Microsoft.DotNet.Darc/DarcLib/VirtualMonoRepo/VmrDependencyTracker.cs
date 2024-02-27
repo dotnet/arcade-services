@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -13,6 +16,10 @@ public record VmrDependencyVersion(string Sha, string? PackageVersion);
 
 public interface IVmrDependencyTracker
 {
+    bool TryGetMapping(string name, [NotNullWhen(true)] out SourceMapping? mapping);
+
+    SourceMapping GetMapping(string name);
+
     IReadOnlyCollection<SourceMapping> Mappings { get; }
 
     /// <summary>
@@ -46,7 +53,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
     public IReadOnlyCollection<SourceMapping> Mappings
     {
-        get => _mappings ?? throw new System.Exception("Source mappings have not been initialized.");
+        get => _mappings ?? throw new Exception("Source mappings have not been initialized.");
     }
             
     public VmrDependencyTracker(
@@ -63,6 +70,17 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _sourceMappingParser = sourceMappingParser;
         _mappings = null;
     }
+
+    public bool TryGetMapping(string name, [NotNullWhen(true)] out SourceMapping? mapping)
+    {
+        mapping = Mappings.FirstOrDefault(m => m.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+        return mapping != null;
+    }
+
+    public SourceMapping GetMapping(string name)
+        => TryGetMapping(name, out var mapping)
+            ? mapping
+            : throw new Exception($"No mapping named {name} found");
 
     public VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping)
         => _sourceManifest.GetVersion(mapping.Name);

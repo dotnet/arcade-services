@@ -1,12 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
@@ -22,6 +23,8 @@ public interface ISourceManifest
     void UpdateSubmodule(SubmoduleRecord submodule);
     void UpdateVersion(string repository, string uri, string sha, string? packageVersion);
     VmrDependencyVersion? GetVersion(string repository);
+    bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
+    ISourceComponent GetRepoVersion(string mappingName);
     void Refresh(string sourceManifestPath);
 }
 
@@ -122,11 +125,23 @@ public class SourceManifest : ISourceManifest
         _submodules = newManifst._submodules;
     }
 
+    public bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? version)
+    {
+        version = Repositories.FirstOrDefault(m => m.Path.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase));
+        version ??= Submodules.FirstOrDefault(m => m.Path.Equals(mappingName, StringComparison.InvariantCultureIgnoreCase));
+        return version != null;
+    }
+
+    public ISourceComponent GetRepoVersion(string mappingName)
+        => TryGetRepoVersion(mappingName, out var version)
+            ? version
+            : throw new Exception($"No manifest record named {mappingName} found");
+
     public static SourceManifest FromJson(string path)
     {
         if (!File.Exists(path))
         {
-            return new SourceManifest(Array.Empty<RepositoryRecord>(), Array.Empty<SubmoduleRecord>());
+            return new SourceManifest([], []);
         }
 
         var options = new JsonSerializerOptions
@@ -149,7 +164,7 @@ public class SourceManifest : ISourceManifest
         if (repositoryRecord != null)
         {
             return new(repositoryRecord.CommitSha, repositoryRecord.PackageVersion);
-        } 
+        }
         else
         {
             return null;
@@ -161,7 +176,7 @@ public class SourceManifest : ISourceManifest
     /// </summary>
     private class SourceManifestWrapper
     {
-        public ICollection<RepositoryRecord> Repositories { get; init; } = Array.Empty<RepositoryRecord>();
-        public ICollection<SubmoduleRecord> Submodules { get; init; } = Array.Empty<SubmoduleRecord>();
+        public ICollection<RepositoryRecord> Repositories { get; init; } = [];
+        public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
     }
 }
