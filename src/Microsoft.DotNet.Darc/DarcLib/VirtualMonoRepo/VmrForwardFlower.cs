@@ -16,32 +16,51 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrForwardFlower
 {
-    Task<string?> FlowForwardAsync(
+    /// <summary>
+    /// Flows forward the code from the source repo to the target branch of the VMR.
+    /// This overload is used in the context of the darc CLI.
+    /// </summary>
+    /// <param name="mapping">Mapping to flow</param>
+    /// <param name="sourceRepo">Local checkout of the repository</param>
+    /// <param name="shaToFlow">SHA to flow</param>
+    /// <param name="buildToFlow">Build to flow</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
+    /// <param name="discardPatches">Keep patch files?</param>
+    /// <returns>True when there were changes to be flown</returns>
+    Task<bool> FlowForwardAsync(
         string mapping,
         NativePath sourceRepo,
         string? shaToFlow,
         int? buildToFlow,
+        string branchName,
         bool discardPatches = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flows forward the code from the source repo to the target branch of the VMR.
+    /// This overload is used in the context of the PCS.
+    /// </summary>
+    /// <param name="mappingName">Mapping to flow</param>
+    /// <param name="build">Build to flow</param>
+    /// <param name="branchName">New branch name</param>
+    /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
+    /// <returns>True when there were changes to be flown</returns>
+    Task<bool> FlowForwardAsync(
+        string mappingName,
+        Build build,
+        string branchName,
+        string targetBranch,
         CancellationToken cancellationToken = default);
 }
 
-internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
-{
-    private readonly IVmrInfo _vmrInfo;
-    private readonly IVmrUpdater _vmrUpdater;
-    private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IBasicBarClient _barClient;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IProcessManager _processManager;
-    private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly ILogger<VmrCodeFlower> _logger;
-
-    public VmrForwardFlower(
+internal class VmrForwardFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
+        IRepositoryCloneManager repositoryCloneManager,
         ILocalGitClient localGitClient,
         ILocalLibGit2Client libGit2Client,
         IBasicBarClient basicBarClient,
@@ -53,35 +72,46 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         IAssetLocationResolver assetLocationResolver,
         IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
-        : base(
-            vmrInfo,
-            sourceManifest,
-            dependencyTracker,
-            localGitClient,
-            libGit2Client,
-            localGitRepoFactory,
-            versionDetailsParser,
-            dependencyFileManager,
-            coherencyUpdateResolver,
-            assetLocationResolver,
-            fileSystem,
-            logger)
+    : VmrCodeFlower(vmrInfo, sourceManifest, dependencyTracker, repositoryCloneManager, localGitClient, libGit2Client, localGitRepoFactory, versionDetailsParser, dependencyFileManager, coherencyUpdateResolver, assetLocationResolver, fileSystem, logger),
+    IVmrForwardFlower
+{
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrUpdater _vmrUpdater = vmrUpdater;
+    private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
+    private readonly IBasicBarClient _barClient = basicBarClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IProcessManager _processManager = processManager;
+    private readonly IWorkBranchFactory _workBranchFactory = workBranchFactory;
+    private readonly ILogger<VmrCodeFlower> _logger = logger;
+
+    public async Task<bool> FlowForwardAsync(
+        string mappingName,
+        Build build,
+        string branchName,
+        string targetBranch,
+        CancellationToken cancellationToken = default)
     {
-        _vmrInfo = vmrInfo;
-        _vmrUpdater = vmrUpdater;
-        _dependencyTracker = dependencyTracker;
-        _barClient = basicBarClient;
-        _localGitRepoFactory = localGitRepoFactory;
-        _processManager = processManager;
-        _workBranchFactory = workBranchFactory;
-        _logger = logger;
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+        ILocalGitRepo sourceRepo = await PrepareRepoAndVmr(mapping, build.Commit, targetBranch, cancellationToken);
+        Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
+
+        return await FlowCodeAsync(
+            lastFlow,
+            new ForwardFlow(lastFlow.TargetSha, build.Commit),
+            sourceRepo,
+            mapping,
+            build,
+            branchName,
+            discardPatches: true,
+            cancellationToken);
     }
 
-    public async Task<string?> FlowForwardAsync(
+    public async Task<bool> FlowForwardAsync(
         string mappingName,
         NativePath repoPath,
         string? shaToFlow,
         int? buildToFlow,
+        string branchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
@@ -105,7 +135,7 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             await sourceRepo.CheckoutAsync(shaToFlow);
         }
 
-        var mapping = _dependencyTracker.Mappings.First(m => m.Name == mappingName);
+        var mapping = _dependencyTracker.GetMapping(mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         return await FlowCodeAsync(
@@ -114,20 +144,21 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             mapping,
             build,
+            branchName,
             discardPatches,
             cancellationToken);
     }
 
-    protected override async Task<string?> SameDirectionFlowAsync(
+    protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
-        var branchName = currentFlow.GetBranchName();
         await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
         List<AdditionalRemote> additionalRemotes =
@@ -182,12 +213,13 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             // Reconstruct the previous flow's branch
             var lastLastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: true);
-            branchName = await FlowCodeAsync(
+            await FlowCodeAsync(
                 lastLastFlow,
                 new ForwardFlow(lastLastFlow.SourceSha, lastFlow.SourceSha),
                 sourceRepo,
                 mapping,
                 null, // TODO: This is an interesting one - should we try to find a build for that previous SHA?
+                branchName,
                 discardPatches,
                 cancellationToken);
 
@@ -207,21 +239,21 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
-        return hadUpdates ? branchName : null;
+        return hadUpdates;
     }
 
-    protected override async Task<string?> OppositeDirectionFlowAsync(
+    protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build? build,
+        string branchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
         await sourceRepo.CheckoutAsync(lastFlow.TargetSha);
 
-        var branchName = currentFlow.GetBranchName();
         var patchName = _vmrInfo.TmpPath / $"{branchName.Replace('/', '-')}.patch";
         var prBanch = await _workBranchFactory.CreateWorkBranchAsync(LocalVmr, branchName);
 
@@ -267,7 +299,8 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         // TODO: Detect if no changes
-        var hadUpdates = await _vmrUpdater.UpdateRepository(
+        // TODO: Technically, if we only changed metadata files, there are no updates still
+        return await _vmrUpdater.UpdateRepository(
             mapping.Name,
             currentFlow.TargetSha,
             targetVersion,
@@ -278,8 +311,5 @@ internal class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             generateCodeowners: false,
             discardPatches,
             cancellationToken);
-
-        // TODO: Technically, if we only changed metadata files, there are no updates still
-        return hadUpdates ? branchName : null;
     }
 }

@@ -217,7 +217,7 @@ public class FeedCleanerServiceTests : IDisposable
         context.SaveChanges();
     }
 
-    private Dictionary<string, AzureDevOpsFeed> SetupFeeds(string account)
+    private static Dictionary<string, AzureDevOpsFeed> SetupFeeds(string account)
     {
         var someProject = new AzureDevOpsProject("0", "someProject");
         var allFeeds = new Dictionary<string, AzureDevOpsFeed>();

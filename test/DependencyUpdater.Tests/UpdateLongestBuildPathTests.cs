@@ -120,7 +120,7 @@ public class UpdateLongestBuildPathTests : DependencyUpdaterTests
         Context.SaveChanges();
     }
 
-    private DependencyFlowGraph CreateGraph(
+    private static DependencyFlowGraph CreateGraph(
         params (string Repo, double BestCaseTime, double WorstCaseTime, bool OnLongestBuildPath)[] nodes)
     {
         var graphNodes = nodes

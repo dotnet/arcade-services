@@ -10,15 +10,17 @@ public enum JobsProcessorState
     // The JobsProcessor isn't doing anything
     Stopped,
     // The JobsProcessor will finish its current job and stop
-    Stopping
+    Stopping,
+    // The JobsProcessor is waiting for service to fully initialize
+    Initializing
 }
 
-public class JobsProcessorScopeManager
+public class JobProcessorScopeManager
 {
-    public JobsProcessorScopeManager(bool workOnStartup, IServiceProvider serviceProvider)
+    public JobProcessorScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider)
     {
-        _autoResetEvent = new AutoResetEvent(workOnStartup);
-        State = workOnStartup ? JobsProcessorState.Working : JobsProcessorState.Stopped;
+        _autoResetEvent = new AutoResetEvent(!initializingOnStartup);
+        State = initializingOnStartup ? JobsProcessorState.Initializing : JobsProcessorState.Working;
         _serviceProvider = serviceProvider;
     }
 
@@ -63,5 +65,11 @@ public class JobsProcessorScopeManager
         }
     }
 
-    
+    public void InitializingDone()
+    {
+        if (State == JobsProcessorState.Initializing)
+        {
+            State = JobsProcessorState.Stopped;
+        }
+    }
 }

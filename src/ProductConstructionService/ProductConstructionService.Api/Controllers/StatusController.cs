@@ -3,34 +3,40 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Extensions;
+using ProductConstructionService.Api.Controllers.ActionResults;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobsProcessorScopeManager jobsProcessorScopeManager) : Controller
+public class StatusController(JobProcessorScopeManager jobProcessorScopeManager) : Controller
 {
-    private readonly JobsProcessorScopeManager _jobsProcessorScopeManager = jobsProcessorScopeManager;
+    private readonly JobProcessorScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
 
     [HttpPut("stop")]
-    public IActionResult StopPcsJobsProcessor()
+    public IActionResult StopPcsJobProcessor()
     {
-        _jobsProcessorScopeManager.FinishJobAndStop();
+        _jobProcessorScopeManager.FinishJobAndStop();
 
-        return GetPcsJobsProcessorStatus();
+        return GetPcsJobProcessorStatus();
     }
 
     [HttpPut("start")]
-    public IActionResult StartPcsJobsProcessor()
+    public IActionResult StartPcsJobProcessor()
     {
-        _jobsProcessorScopeManager.Start();
+        if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
+        {
+            return new PreconditionFailedActionResult("The background worker can't be started until the VMR is cloned");
+        }
 
-        return GetPcsJobsProcessorStatus();
+        _jobProcessorScopeManager.Start();
+
+        return GetPcsJobProcessorStatus();
     }
 
     [HttpGet]
-    public IActionResult GetPcsJobsProcessorStatus()
+    public IActionResult GetPcsJobProcessorStatus()
     {
-        return Ok(_jobsProcessorScopeManager.State.GetDisplayName());
+        return Ok(_jobProcessorScopeManager.State.GetDisplayName());
     }
 }

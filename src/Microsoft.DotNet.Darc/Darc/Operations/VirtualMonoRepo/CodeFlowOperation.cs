@@ -57,7 +57,7 @@ internal abstract class CodeFlowOperation : VmrOperationBase
             cancellationToken);
     }
 
-    protected abstract Task<string?> FlowAsync(
+    protected abstract Task<bool> FlowAsync(
         string mappingName,
         NativePath targetDirectory,
         string? shaToFlow,

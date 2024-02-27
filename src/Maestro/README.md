@@ -1,3 +1,58 @@
+# Maestro
+
+## Dependency update flow
+
+The following diagram shows how a dependency update PR progresses from opening to merging. The flow is triggered when a subscription is triggered by a user or on a schedule.
+
+```mermaid
+flowchart
+    SubscriptionTrigger(Subscription is triggered)
+    Exist{Does a PR\nalready exist?}
+    State{What state\nis the PR in?}
+    PolicyState{What state\nare the check\npolicies in?}
+    Create(Create a new PR)
+    CleanUp((Clean up\nbranch))
+    TagPeople(Notify/tag people)
+    UpdatePR(Update PR,\nif possible)
+    MergePR(Merge PR)
+    UpdateLastBuild((Update\nLastAppliedBuild\nin BAR))
+    Timer(Periodic timer)
+
+    Exist--Yes-->State
+    Exist--No -->Create
+    SubscriptionTrigger-->Exist
+
+    State--Open-->PolicyState
+    State--Merged-->UpdateLastBuild
+    State--Closed-->CleanUp
+
+    PolicyState--Checks OK-->MergePR
+    MergePR-->UpdateLastBuild
+    PolicyState--Failed checks-->TagPeople
+    TagPeople-->UpdatePR
+    %% Cannot update
+    PolicyState--Pending policies--Set timer-->Timer
+    %% Can update
+    PolicyState--Conflict-->UpdatePR
+    Timer--Check PR-->State
+    Create--Set timer-->Timer
+    UpdatePR--Set timer-->Timer
+
+subgraph Legend
+    MaestroAction(Action)
+    ExternalImpulse(Trigger)
+    EndOfFlow((End of flow))
+end
+
+classDef Action fill:#00DD00,stroke:#006600,stroke-width:1px,color:#006600
+classDef End fill:#9999EE,stroke:#0000AA,stroke-width:1px,color:#0000AA
+classDef External fill:#FFEE00,stroke:#FF9900,stroke-width:1px,color:#666600
+class Create,TagPeople,NoAction,UpdatePR,MergePR,MaestroAction Action
+class UpdateLastBuild,CleanUp,EndOfFlow End
+class SubscriptionTrigger,Timer,ExternalImpulse External
+linkStyle 2,12 stroke-width:2px,fill:none,stroke:#FFEE00,color:#FF9900
+```
+
 ## Validation Process in dev and int environments
 
 For any non-deployment code changes, the expectation is to have run the tests corresponding to the service locally to confirm that the change works before putting up the PR. The tests for each of the major areas in arcade-services are as below:

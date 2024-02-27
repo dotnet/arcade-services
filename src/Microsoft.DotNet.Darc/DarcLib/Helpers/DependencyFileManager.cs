@@ -648,10 +648,8 @@ public class DependencyFileManager : IDependencyFileManager
         var repoList = maestroManagedFeedsByRepo.Keys.OrderBy(t => t).ToList();
 
         XmlComment blockBeginComment = GetFirstMatchingComment(packageSourcesNode, MaestroBeginComment);
-        if (blockBeginComment == null)
-        {
-            blockBeginComment = (XmlComment) packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
-        }
+        blockBeginComment ??= (XmlComment) packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), clearNode);
+
         currentNode = blockBeginComment;
 
         foreach (string repository in repoList)
@@ -1011,13 +1009,13 @@ public class DependencyFileManager : IDependencyFileManager
     {
         string versionElementName = itemToUpdate.Name;
 
-        JObject toolsNode = (JObject)token["tools"];
+        var toolsNode = (JObject)token["tools"];
 
         foreach (JProperty property in toolsNode?.Children<JProperty>())
         {
             if (property.Name.Equals(versionElementName, StringComparison.OrdinalIgnoreCase))
             {
-                JValue versionEntry = (JValue)property.Value.SelectToken("version", false);
+                var versionEntry = (JValue)property.Value.SelectToken("version", false);
 
                 if (versionEntry != null)
                 {
@@ -1272,7 +1270,7 @@ public class DependencyFileManager : IDependencyFileManager
                     result = false;
                     continue;
                 }
-                JProperty property = (JProperty)dependencyNode;
+                var property = (JProperty)dependencyNode;
                 // Validate that the casing matches for consistency
                 if (property.Name != versionedName)
                 {
@@ -1327,7 +1325,7 @@ public class DependencyFileManager : IDependencyFileManager
                         continue;
                     }
 
-                    JProperty property = (JProperty)dependencyNode;
+                    var property = (JProperty)dependencyNode;
                     // Validate that the casing matches for consistency
                     if (property.Name != versionedName)
                     {
@@ -1533,7 +1531,7 @@ public class DependencyFileManager : IDependencyFileManager
                 assetLocationMappings[dependency.Name] = [];
             }
 
-            assetLocationMappings[dependency.Name].UnionWith(dependency.Locations ?? Enumerable.Empty<string>());
+            assetLocationMappings[dependency.Name].UnionWith(dependency.Locations ?? []);
         }
 
         return assetLocationMappings;

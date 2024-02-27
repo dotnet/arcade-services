@@ -31,7 +31,7 @@ public interface IProcessManager
         CancellationToken cancellationToken = default);
 
     Task<ProcessExecutionResult> ExecuteGit(string repoPath, params string[] arguments)
-        => ExecuteGit(repoPath, arguments.ToArray(), null, default);
+        => ExecuteGit(repoPath, [.. arguments], null, default);
 
     Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,

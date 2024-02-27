@@ -1,0 +1,54 @@
+storageLocation:
+  type: azure-key-vault
+  parameters:
+    subscription: cab65fc3-d077-467d-931f-3932eabf36d3
+    name: ProductConstructionInt
+
+references:
+  maestroint:
+    type: azure-key-vault
+    parameters:
+      subscription: cab65fc3-d077-467d-931f-3932eabf36d3
+      name: maestroint
+
+  helixkv:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: helixkv
+  
+  engkeyvault:
+    type: azure-key-vault
+    parameters:
+      subscription: a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1
+      name: engkeyvault
+
+secrets:
+  build-asset-registry-sql-connection-string:
+    type: sql-connection-string
+    parameters:
+      adminConnection:
+        location: maestroint 
+        name: build-asset-registry-admin-connection-string
+      dataSource: tcp:maestro-int-server.database.windows.net,1433
+      database: BuildAssetRegistry
+      permissions: r
+
+  BotAccount-dotnet-bot-repo-PAT:
+    type: github-access-token
+    parameters:
+      gitHubBotAccountSecret: 
+        location: engkeyvault
+        name: BotAccount-dotnet-bot
+      gitHubBotAccountName: dotnet-bot
+
+  dn-bot-all-orgs-code-r:
+    type: azure-devops-access-token
+    parameters:
+      domainAccountName: dn-bot
+      domainAccountSecret:
+          location: helixkv
+          name: dn-bot-account-redmond
+      name: dn-bot-all-orgs-code-r
+      organizations: devdiv dnceng
+      scopes: code

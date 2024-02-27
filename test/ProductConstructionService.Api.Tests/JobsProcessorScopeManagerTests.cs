@@ -25,8 +25,12 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorStatusNormalFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
-        // When it starts, the processor is not working
+        JobProcessorScopeManager scopeManager = new(true, _serviceProvider);
+        // When it starts, the processor is not initializing
+        scopeManager.State.Should().Be(JobsProcessorState.Initializing);
+
+        // Initialization is done
+        scopeManager.InitializingDone();
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
         TaskCompletionSource jobCompletion1 = new();
@@ -86,8 +90,9 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStopFlow()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
+        JobProcessorScopeManager scopeManager = new(true, _serviceProvider);
 
+        scopeManager.InitializingDone();
         // The jobs processor should start in a stopped state
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 
@@ -121,7 +126,9 @@ public class JobsProcessorScopeManagerTests
     [Test, CancelAfter(30000)]
     public async Task JobsProcessorMultipleStartStop()
     {
-        JobsProcessorScopeManager scopeManager = new(false, _serviceProvider);
+        JobProcessorScopeManager scopeManager = new(true, _serviceProvider);
+
+        scopeManager.InitializingDone();
 
         scopeManager.State.Should().Be(JobsProcessorState.Stopped);
 

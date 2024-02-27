@@ -8,16 +8,16 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobsProcessor(
-    ILogger<JobsProcessor> logger,
+public class JobProcessor(
+    ILogger<JobProcessor> logger,
     IOptions<JobProcessorOptions> options,
-    JobsProcessorScopeManager scopeManager,
+    JobProcessorScopeManager scopeManager,
     QueueServiceClient queueServiceClient)
     : BackgroundService
 {
-    private readonly ILogger<JobsProcessor> _logger = logger;
+    private readonly ILogger<JobProcessor> _logger = logger;
     private readonly IOptions<JobProcessorOptions> _options = options;
-    private readonly JobsProcessorScopeManager _scopeManager = scopeManager;
+    private readonly JobProcessorScopeManager _scopeManager = scopeManager;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {

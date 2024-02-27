@@ -760,10 +760,7 @@ public class DependencyGraph
 
         if (remotesMap != null)
         {
-            if (_remotesMapping == null)
-            {
-                _remotesMapping = CreateRemotesMapping(remotesMap);
-            }
+            _remotesMapping ??= CreateRemotesMapping(remotesMap);
 
             if (!_remotesMapping.ContainsKey(repoPath))
             {

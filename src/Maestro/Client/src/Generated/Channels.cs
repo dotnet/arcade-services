@@ -55,8 +55,8 @@ namespace Microsoft.DotNet.Maestro.Client
         );
 
         Task<Models.FlowGraph> GetFlowGraphAsync(
-            int channelId,
             int days,
+            int channelId,
             bool includeArcade,
             bool includeBuildTimes,
             bool includeDisabledSubscriptions,
@@ -258,7 +258,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/channels/{id}/repositories".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
                 false);
 
-            if (withBuildsInDays != default)
+            if (withBuildsInDays != default(int?))
             {
                 _url.AppendQuery("withBuildsInDays", Client.Serialize(withBuildsInDays));
             }
@@ -601,7 +601,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 "/api/channels/{channelId}/graph".Replace("{channelId}", Uri.EscapeDataString(Client.Serialize(channelId))),
                 false);
 
-            if (includeDisabledSubscriptions != default)
+            if (includeDisabledSubscriptions != default(bool))
             {
                 _url.AppendQuery("includeDisabledSubscriptions", Client.Serialize(includeDisabledSubscriptions));
             }
@@ -612,15 +612,15 @@ namespace Microsoft.DotNet.Maestro.Client
                     _url.AppendQuery("includedFrequencies", Client.Serialize(_item));
                 }
             }
-            if (includeBuildTimes != default)
+            if (includeBuildTimes != default(bool))
             {
                 _url.AppendQuery("includeBuildTimes", Client.Serialize(includeBuildTimes));
             }
-            if (days != default)
+            if (days != default(int))
             {
                 _url.AppendQuery("days", Client.Serialize(days));
             }
-            if (includeArcade != default)
+            if (includeArcade != default(bool))
             {
                 _url.AppendQuery("includeArcade", Client.Serialize(includeArcade));
             }

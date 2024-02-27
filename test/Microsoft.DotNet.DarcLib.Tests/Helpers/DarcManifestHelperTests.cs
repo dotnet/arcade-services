@@ -188,7 +188,7 @@ public class DarcManifestHelperTests
         emptyManifest["outputPath"].Value<string>().Should().Be(FakeOutputPath);
     }
 
-    private List<DownloadedAsset> GetSomeExtraDownloadedAssets()
+    private static List<DownloadedAsset> GetSomeExtraDownloadedAssets()
     {
         List<DownloadedAsset> fakeAssets =
         [
@@ -212,7 +212,7 @@ public class DarcManifestHelperTests
         return fakeAssets;
     }
 
-    private List<DownloadedBuild> GetSomeShippingAssetsBuilds()
+    private static List<DownloadedBuild> GetSomeShippingAssetsBuilds()
     {
         List<DownloadedBuild> fakeDownloadedBuilds = [];
 

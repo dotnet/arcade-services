@@ -8,28 +8,28 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class FlowGraph
     {
-        public FlowGraph(IImmutableList<FlowRef> flowRefs, IImmutableList<FlowEdge> flowEdges)
+        public FlowGraph(IImmutableList<Models.FlowRef> flowRefs, IImmutableList<Models.FlowEdge> flowEdges)
         {
             FlowRefs = flowRefs;
             FlowEdges = flowEdges;
         }
 
         [JsonProperty("flowRefs")]
-        public IImmutableList<FlowRef> FlowRefs { get; set; }
+        public IImmutableList<Models.FlowRef> FlowRefs { get; set; }
 
         [JsonProperty("flowEdges")]
-        public IImmutableList<FlowEdge> FlowEdges { get; set; }
+        public IImmutableList<Models.FlowEdge> FlowEdges { get; set; }
 
         [JsonIgnore]
         public bool IsValid
         {
             get
             {
-                if (FlowRefs == default(IImmutableList<FlowRef>))
+                if (FlowRefs == default(IImmutableList<Models.FlowRef>))
                 {
                     return false;
                 }
-                if (FlowEdges == default(IImmutableList<FlowEdge>))
+                if (FlowEdges == default(IImmutableList<Models.FlowEdge>))
                 {
                     return false;
                 }

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Models.VirtualMonoRepo;
 
@@ -31,8 +30,7 @@ internal class VmrRepoVersionResolver : IVmrRepoVersionResolver
     {
         await _dependencyTracker.InitializeSourceMappings();
 
-        SourceMapping mapping = _dependencyTracker.Mappings.FirstOrDefault(m => m.Name == mappingName)
-            ?? throw new ArgumentException($"No mapping named {mappingName} found");
+        SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
         return _dependencyTracker.GetDependencyVersion(mapping)?.Sha
             ?? throw new Exception($"Mapping {mappingName} has not been initialized yet");
