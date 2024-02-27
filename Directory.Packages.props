@@ -65,7 +65,7 @@
     <PackageVersion Include="Microsoft.DncEng.CommandLineLib" Version="$(MicrosoftDncEngCommandLineLibVersion)" />
     <PackageVersion Include="Microsoft.DncEng.Configuration.Extensions" Version="$(MicrosoftDncEngConfigurationExtensionsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Authentication.Algorithms" Version="$(MicrosoftDotNetAuthenticationAlgorithmsVersion)" />
-    <PackageVersion Include="Microsoft.DotNet.GitHub.Authentication" Version="$(MicrosoftDotNetGitHubAuthenticationVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.GitHub.Authentication" Version="0.0.99-dev" />
     <PackageVersion Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" Version="$(MicrosoftDotNetInternalDependencyInjectionTestingVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.DependencyInjection" Version="$(MicrosoftDotNetInternalDependencyInjectionVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Health" Version="$(MicrosoftDotNetInternalHealthVersion)" />
@@ -79,7 +79,7 @@
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
     <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
-    <PackageVersion Include="Microsoft.DotNet.Web.Authentication" Version="$(MicrosoftDotNetWebAuthenticationVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.Web.Authentication" Version="0.0.99-dev" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspNetCoreVersion)" />
@@ -116,7 +116,7 @@
     <PackageVersion Include="NuGet.Protocol" Version="6.7.1" />
     <PackageVersion Include="NUnit" Version="4.0.1" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
-    <PackageVersion Include="Octokit" Version="0.49.0" />
+    <PackageVersion Include="Octokit" Version="10.0.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />

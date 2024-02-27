@@ -45,7 +45,7 @@ builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
 
 builder.AddWorkitemQueues(credential);
 
-if (!builder.Environment.IsDevelopment())
+if (builder.Environment.IsDevelopment())
 {
     builder.AddAuthentication();
 
