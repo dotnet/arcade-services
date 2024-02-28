@@ -78,7 +78,8 @@ builder.Services.AddSwaggerGen(options =>
                     Id = "Bearer",
                     Type = ReferenceType.SecurityScheme
                 }
-            }, []
+            },
+            []
         }
     });
 });
