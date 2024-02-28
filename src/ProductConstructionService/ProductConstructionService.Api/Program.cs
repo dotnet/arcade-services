@@ -46,11 +46,7 @@ else
 
 builder.Services.AddKustoClientProvider("Kusto");
 
-if (!builder.Environment.IsDevelopment())
-{
-    builder.AddAuthentication();
-
-}
+builder.AddAuthentication(builder.Environment.IsDevelopment());
 
 builder.AddServiceDefaults();
 

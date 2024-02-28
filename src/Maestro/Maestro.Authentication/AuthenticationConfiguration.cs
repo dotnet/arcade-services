@@ -38,7 +38,7 @@ public static class AuthenticationConfiguration
                 options => { options.Lockout.AllowedForNewUsers = false; })
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
-        AuthenticationBuilder authBuilder = services.AddAuthentication(options =>
+        services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
             options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
