@@ -5,6 +5,7 @@ using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.Api;
@@ -16,6 +17,9 @@ internal static class DatabaseConfiguration
         builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
+            // Do not log DB context initialization
+            options.ConfigureWarnings(w => w.Ignore(CoreEventId.ContextInitialized));
+
             options.UseSqlServer(connectionString, sqlOptions =>
             {
                 sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
