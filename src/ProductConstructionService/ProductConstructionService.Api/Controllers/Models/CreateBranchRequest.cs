@@ -3,9 +3,10 @@
 
 namespace ProductConstructionService.Api.Controllers.Models;
 
-internal class CreateBranchRequest
+#nullable disable
+public class CreateBranchRequest
 {
-    public required string SubscriptionId { get; init; }
-    public required int BuildId { get; init; }
-    public required string TargetBranch { get; init; }
+    public string SubscriptionId { get; set; }
+    public int BuildId { get; set; }
+    public string TargetBranch { get; set; }
 }

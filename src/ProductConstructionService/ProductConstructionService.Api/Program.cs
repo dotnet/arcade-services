@@ -6,6 +6,7 @@ using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.DotNet.Kusto;
 using ProductConstructionService.Api;
+using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -48,7 +49,7 @@ builder.AddServiceDefaults();
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().EnableInternalControllers();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();

@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.Controllers;
+
 [Route("test")]
 internal class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
 {
