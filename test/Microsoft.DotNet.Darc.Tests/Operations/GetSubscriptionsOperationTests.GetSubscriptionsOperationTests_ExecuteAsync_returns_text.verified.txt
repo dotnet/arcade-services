@@ -3,6 +3,6 @@
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
-  - PR Failure Notification tags:
+  - PR Failure Notification tags: 
   - Source-enabled: False
   - Merge Policies: []
