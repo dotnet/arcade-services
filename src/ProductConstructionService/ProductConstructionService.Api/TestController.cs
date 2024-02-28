@@ -15,7 +15,7 @@ public class TestController(JobProducerFactory pcsJobProducerFactory) : Controll
     public async Task<IActionResult> Index()
     {
         var jobProducer = _jobProducerFactory.Create<TextJob>();
-        await jobProducer.ProduceJobAsync(new() { Text = "some text", Id = Guid.NewGuid() });
+        await jobProducer.ProduceJobAsync(new() { Text = "some text" });
         return Ok("Message sent");
     }
 }

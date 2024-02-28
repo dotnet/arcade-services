@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using ProductConstructionService.Api.Queue.JobRunners;
+using ProductConstructionService.Api.Queue.JobProcessors;
 using ProductConstructionService.Api.Queue.Jobs;
 using ProductConstructionService.Api.Telemetry;
 
@@ -34,11 +34,11 @@ public class JobScope(
             throw new Exception($"{nameof(JobScope)} not initialized! Call InitializeScope before calling {nameof(RunJobAsync)}");
         }
 
-        var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobRunner>(_job.Type);
+        var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobProcessor>(_job.Type);
 
-        using (ITelemetryScope telemetryScope  = _telemetryRecorder.RecordJob(_job))
+        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordJob(_job))
         {
-            await jobRunner.RunAsync(_job, cancellationToken);
+            await jobRunner.ProcessJobAsync(_job, cancellationToken);
             telemetryScope.SetSuccess();
         }
     }

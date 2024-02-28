@@ -2,35 +2,40 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Identity;
-using ProductConstructionService.Api.Queue.JobRunners;
+using ProductConstructionService.Api.Queue.JobProcessors;
 using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public static class QueueConfiguration
+internal static class QueueConfiguration
 {
-    public const string JobQueueConfigurationKey = $"{JobProcessorOptions.ConfigurationKey}:JobQueueName";
+    public const string JobQueueNameConfigurationKey = $"{JobConsumerOptions.ConfigurationKey}:JobQueueName";
 
-    public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential)
+    public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
     {
-        builder.AddAzureQueueService("queues", (settings) => { settings.Credential = credential; });
+        builder.AddAzureQueueService("queues", settings => settings.Credential = credential);
 
-        var queueName = builder.Configuration[JobQueueConfigurationKey] ??
-            throw new ArgumentException($"{JobQueueConfigurationKey} missing from the configuration");
+        var queueName = builder.Configuration.GetRequiredValue(JobQueueNameConfigurationKey);
 
         // When running the service locally, the JobsProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobProcessorScopeManager>(sp, !builder.Environment.IsDevelopment()));
-        builder.Services.Configure<JobProcessorOptions>(
-            builder.Configuration.GetSection(JobProcessorOptions.ConfigurationKey));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobScopeManager>(sp, waitForInitialization));
+        builder.Services.Configure<JobConsumerOptions>(
+            builder.Configuration.GetSection(JobConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>
             ActivatorUtilities.CreateInstance<JobProducerFactory>(sp, queueName));
-        builder.Services.AddHostedService<JobProcessor>();
+        builder.Services.AddHostedService<JobConsumer>();
 
-        AddJobRunners(builder.Services);
+        // Register all job processors
+        builder.Services.RegisterJobProcessor<TextJob, TextJobProcessor>();
+        builder.Services.RegisterJobProcessor<CodeFlowJob, CodeFlowJobProcessor>();
     }
+}
 
-    private static void AddJobRunners(IServiceCollection services)
+static file class JobProcessorExtensions
+{
+    public static void RegisterJobProcessor<TJob, TProcessor>(this IServiceCollection services)
+        where TProcessor : class, IJobProcessor
     {
-        services.AddKeyedTransient<IJobRunner, TextJobRunner>(nameof(TextJob));
+        services.AddKeyedTransient<IJobProcessor, TProcessor>(typeof(TJob).Name);
     }
 }
