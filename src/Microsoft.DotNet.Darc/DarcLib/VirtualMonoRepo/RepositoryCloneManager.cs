@@ -78,6 +78,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
     private readonly IGitRepoCloner _gitRepoCloner;
     private readonly ILocalGitClient _localGitRepo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrPatchHandler> _logger;
 
@@ -92,6 +93,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         IGitRepoCloner gitRepoCloner,
         ILocalGitClient localGitRepo,
         ILocalGitRepoFactory localGitRepoFactory,
+        ITelemetryRecorder telemetryRecorder,
         IFileSystem fileSystem,
         ILogger<VmrPatchHandler> logger)
     {
@@ -99,6 +101,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         _gitRepoCloner = gitRepoCloner;
         _localGitRepo = localGitRepo;
         _localGitRepoFactory = localGitRepoFactory;
+        _telemetryRecorder = telemetryRecorder;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -240,7 +243,10 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         if (!_fileSystem.DirectoryExists(clonePath))
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
+
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitClone(remoteUri);
             await _gitRepoCloner.CloneNoCheckoutAsync(remoteUri, clonePath, null);
+            scope.SetSuccess();
         }
         else
         {

@@ -57,6 +57,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<IAssetLocationResolver, AssetLocationResolver>();
+        services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
 
         services.AddHttpClient("GraphQL", httpClient =>
         {
