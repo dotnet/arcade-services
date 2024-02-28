@@ -4,9 +4,7 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
-using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api;
@@ -59,19 +57,27 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition(
-                    "Bearer",
-                    new OpenApiSecurityScheme
-                    {
-                        Type = SecuritySchemeType.ApiKey,
-                        In = ParameterLocation.Header,
-                        Scheme = "bearer",
-                        Name = HeaderNames.Authorization
-                    });
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Scheme = "bearer",
+            Name = HeaderNames.Authorization
+        });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {   Reference = new OpenApiReference
                 {
-                    {new OpenApiSecurityScheme{Reference = new OpenApiReference{Id = "Bearer", Type = ReferenceType.SecurityScheme}}, Array.Empty<string>()},
-                });
+                    Id = "Bearer",
+                    Type = ReferenceType.SecurityScheme
+                }
+            }, []
+        }
+    });
 });
 
 var app = builder.Build();
