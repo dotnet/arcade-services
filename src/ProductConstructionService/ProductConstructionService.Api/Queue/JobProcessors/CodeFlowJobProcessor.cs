@@ -37,7 +37,9 @@ public class CodeFlowJobProcessor(
         Build build = await _barClient.GetBuildAsync(codeflowJob.BuildId)
             ?? throw new Exception($"Build {codeflowJob.BuildId} not found");
 
-        var isForwardFlow = build.GitHubRepository != _vmrInfo.VmrUri && build.AzureDevOpsRepository != _vmrInfo.VmrUri;
+        var isForwardFlow = build.GitHubRepository != _vmrInfo.VmrUri
+            && build.AzureDevOpsRepository != _vmrInfo.VmrUri;
+
         var branchName = $"darc-{subscription.TargetBranch}-{Guid.NewGuid()}";
 
         _logger.LogInformation("{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
