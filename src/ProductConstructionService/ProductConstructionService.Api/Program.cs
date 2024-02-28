@@ -4,14 +4,9 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
-<<<<<<< HEAD
-using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.Kusto;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
-=======
-using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
->>>>>>> source/main
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;

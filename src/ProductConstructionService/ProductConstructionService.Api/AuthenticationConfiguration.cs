@@ -24,15 +24,15 @@ public static class AuthenticationConfiguration
         // TODO: https://github.com/dotnet/arcade-services/issues/3351
         IConfigurationSection gitHubAuthentication = builder.Configuration.GetSection(GitHubAuthenticationKey);
 
-        gitHubAuthentication[GitHubClientIdKey] = builder.Configuration["github-oauth-id"];
-        gitHubAuthentication[GitHubClientSecretKey] = builder.Configuration["github-oauth-secret"];
+        gitHubAuthentication[GitHubClientIdKey] = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientId);
+        gitHubAuthentication[GitHubClientSecretKey] = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientSecret);
 
         builder.Services.AddMemoryCache();
 
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue(
-                "PCS",
+                builder.Configuration.GetRequiredValue(GitHubAgentNameKey),
                 Assembly.GetEntryAssembly() 
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
