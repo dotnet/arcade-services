@@ -5,7 +5,6 @@
   - Batchable: False
   - PR Failure Notification tags: 
   - Source-enabled: False
-  - Excluded Assets: []
   - Merge Policies: []
 source2 (name) ==> 'target2' ('test')
   - Id: 00000000-0000-0000-0000-000000000000
@@ -13,6 +12,7 @@ source2 (name) ==> 'target2' ('test')
   - Enabled: True
   - Batchable: False
   - PR Failure Notification tags: 
-  - Source-enabled: False
+  - Source-enabled: True
+  - Source Directory: repo-name
   - Excluded Assets: []
   - Merge Policies: []
