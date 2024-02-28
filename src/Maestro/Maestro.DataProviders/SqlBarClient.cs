@@ -50,8 +50,8 @@ public class SqlBarClient : IBasicBarClient
             sub.SourceRepository,
             sub.TargetRepository,
             sub.TargetBranch,
-            sub.PullRequestFailureNotificationTags,
             sub.SourceDirectory,
+            sub.PullRequestFailureNotificationTags,
             sub.ExcludedAssets.Select(s => s.Filter).ToImmutableList());
     }
 

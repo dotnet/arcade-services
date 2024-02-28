@@ -210,6 +210,7 @@ public static class UxHelpers
         subInfo.AppendLine($"  - Batchable: {subscription.Policy.Batchable}");
         subInfo.AppendLine($"  - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}");
         subInfo.AppendLine($"  - Source-enabled: {subscription.SourceEnabled}");
+        subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
 
         string excludedAssets;
         if (subscription.ExcludedAssets.Any())
