@@ -6,7 +6,7 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api;
 
-public class InitializationHealthCheck(JobProcessorScopeManager jobProcessorScopeManager) : IHealthCheck
+public class InitializationHealthCheck(JobScopeManager jobProcessorScopeManager) : IHealthCheck
 {
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {

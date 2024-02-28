@@ -8,10 +8,12 @@ using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api;
 
-public class InitializationBackgroundService(IRepositoryCloneManager repositoryCloneManager,
-    ITelemetryRecorder telemetryRecorder,
-    InitializationBackgroundServiceOptions options,
-    JobProcessorScopeManager jobProcessorScopeManager) : BackgroundService
+public class InitializationBackgroundService(
+        IRepositoryCloneManager repositoryCloneManager,
+        ITelemetryRecorder telemetryRecorder,
+        InitializationBackgroundServiceOptions options,
+        JobScopeManager jobScopeManager)
+    : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -24,7 +26,7 @@ public class InitializationBackgroundService(IRepositoryCloneManager repositoryC
             linkedTokenSource.Token.ThrowIfCancellationRequested();
 
             scope.SetSuccess();
-            jobProcessorScopeManager.InitializingDone();
+            jobScopeManager.InitializingDone();
         }
     }
 }
