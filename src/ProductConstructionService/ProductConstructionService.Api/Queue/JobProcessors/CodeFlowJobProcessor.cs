@@ -79,7 +79,7 @@ public class CodeFlowJobProcessor(
             return;
         }
 
-        if (hadUpdates)
+        if (!hadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}",
                 subscription.Id);
