@@ -224,7 +224,13 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
         if (_upToDateRepos.Contains(remoteUri))
         {
-            return _clones[remoteUri];
+            var path = _clones[remoteUri];
+            if (_fileSystem.DirectoryExists(path))
+            {
+                return _clones[remoteUri];
+            }
+
+            _upToDateRepos.Remove(remoteUri);
         }
 
         var clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)

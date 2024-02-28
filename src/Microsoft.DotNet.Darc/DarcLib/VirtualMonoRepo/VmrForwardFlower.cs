@@ -91,8 +91,8 @@ internal class VmrForwardFlower(
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
+        ILocalGitRepo sourceRepo = await PrepareRepoAndVmr(mappingName, build.Commit, targetBranch, cancellationToken);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        ILocalGitRepo sourceRepo = await PrepareRepoAndVmr(mapping, build.Commit, targetBranch, cancellationToken);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         return await FlowCodeAsync(
