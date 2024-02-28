@@ -5,7 +5,6 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;

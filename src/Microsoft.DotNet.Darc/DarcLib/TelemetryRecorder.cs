@@ -16,6 +16,11 @@ public interface ITelemetryRecorder
     /// Records git clone duration and result.
     /// </summary>
     ITelemetryScope RecordGitClone(string repoUri);
+
+    /// <summary>
+    /// Records git fetch duration and result.
+    /// </summary>
+    ITelemetryScope RecordGitFetch(string repoUri);
 }
 
 public interface ITelemetryScope : IDisposable
@@ -33,8 +38,9 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 {
     private static readonly NoTelemetryScope _instance = new();
 
-    public ITelemetryScope RecordGitClone(string repoUri) => _instance;
     public ITelemetryScope RecordJob(string jobName) => _instance;
+    public ITelemetryScope RecordGitClone(string repoUri) => _instance;
+    public ITelemetryScope RecordGitFetch(string repoUri) => _instance;
 
     public class NoTelemetryScope : ITelemetryScope
     {

@@ -9,7 +9,7 @@ using ProductConstructionService.Api.Queue;
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("status")]
-public class StatusController(JobScopeManager jobProcessorScopeManager) : Controller
+internal class StatusController(JobScopeManager jobProcessorScopeManager) : Controller
 {
     private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
 

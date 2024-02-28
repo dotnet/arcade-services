@@ -5,7 +5,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue.JobProcessors;
 
-public class TextJobProcessor(ILogger<TextJobProcessor> logger) : IJobProcessor
+internal class TextJobProcessor(ILogger<TextJobProcessor> logger) : IJobProcessor
 {
     private readonly ILogger<TextJobProcessor> _logger = logger;
 

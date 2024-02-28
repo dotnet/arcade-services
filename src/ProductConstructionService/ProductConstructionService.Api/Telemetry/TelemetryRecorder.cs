@@ -25,6 +25,11 @@ public class TelemetryRecorder(
         return new TelemetryScope($"GitClone", _logger, _telemetryClient, new() { ["Uri"] = repoUri }, []);   
     }
 
+    public ITelemetryScope RecordGitFetch(string repoUri)
+    {
+        return new TelemetryScope($"GitFetch", _logger, _telemetryClient, new() { ["Uri"] = repoUri }, []);
+    }
+
     private class TelemetryScope(
         string telemetryName,
         ILogger logger,

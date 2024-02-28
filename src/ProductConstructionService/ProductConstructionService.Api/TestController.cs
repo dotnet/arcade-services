@@ -7,7 +7,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api;
 [Route("test")]
-public class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
+internal class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
 {
     private readonly JobProducerFactory _jobProducerFactory = pcsJobProducerFactory;
 

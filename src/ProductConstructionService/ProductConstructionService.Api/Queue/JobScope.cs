@@ -7,10 +7,11 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobScope(
-    Action finalizer,
-    IServiceScope serviceScope,
-    ITelemetryRecorder telemetryRecorder) : IDisposable
+internal class JobScope(
+        Action finalizer,
+        IServiceScope serviceScope,
+        ITelemetryRecorder telemetryRecorder)
+    : IDisposable
 {
     private readonly IServiceScope _serviceScope = serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;

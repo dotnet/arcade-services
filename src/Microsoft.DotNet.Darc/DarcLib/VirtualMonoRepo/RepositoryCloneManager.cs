@@ -255,7 +255,9 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
             // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
             // So we need to call `remote update origin` to fetch everything
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitFetch(remoteUri);
             await _localGitRepo.UpdateRemoteAsync(clonePath, remote, cancellationToken);
+            scope.SetSuccess();
         }
 
         _upToDateRepos.Add(remoteUri);

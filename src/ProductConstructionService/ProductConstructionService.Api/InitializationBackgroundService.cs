@@ -7,7 +7,7 @@ using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api;
 
-public class InitializationBackgroundService(
+internal class InitializationBackgroundService(
         IRepositoryCloneManager repositoryCloneManager,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,
