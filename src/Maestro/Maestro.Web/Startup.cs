@@ -212,7 +212,7 @@ public partial class Startup : StartupBase
 
         services.AddSingleton(Configuration);
 
-        services.ConfigureAuthServices(HostingEnvironment.IsDevelopment(), Configuration.GetSection("GitHubAuthentication"), "/api");
+        services.ConfigureAuthServices(!HostingEnvironment.IsDevelopment(), Configuration.GetSection("GitHubAuthentication"), "/api");
 
         services.AddSingleton<BackgroundQueue>();
         services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());

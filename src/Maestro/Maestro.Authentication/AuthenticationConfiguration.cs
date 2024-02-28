@@ -32,7 +32,7 @@ public static class AuthenticationConfiguration
 
     public const string AccountSignInRoute = "/Account/SignIn";
 
-    public static void ConfigureAuthServices(this IServiceCollection services, bool isDevelopment, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
+    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(
                 options => { options.Lockout.AllowedForNewUsers = false; })
@@ -197,7 +197,7 @@ public static class AuthenticationConfiguration
                     policy =>
                     {
                         policy.RequireAuthenticatedUser();
-                        if (!isDevelopment)
+                        if (requirePolicyRole)
                         {
                             policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
                         }

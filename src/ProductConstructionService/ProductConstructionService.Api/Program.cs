@@ -32,12 +32,15 @@ string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConf
 builder.AddBuildAssetRegistry(databaseConnectionString);
 builder.AddTelemetry();
 builder.AddVmrRegistrations(vmrPath, tmpPath);
+builder.AddGitHubClientFactory();
 
 // When not running locally, wait for the VMR to be initialized before starting the background processor
+// and don't add authentication to the API endpoints
 if (!builder.Environment.IsDevelopment())
 {
     builder.AddVmrInitialization(vmrUri);
     builder.AddWorkitemQueues(credential, waitForInitialization: true);
+    builder.AddEndpointAuthentication(requirePolicyRole: true);
 }
 else
 {
@@ -45,8 +48,6 @@ else
 }
 
 builder.Services.AddKustoClientProvider("Kusto");
-
-builder.AddAuthentication(builder.Environment.IsDevelopment());
 
 builder.AddServiceDefaults();
 
