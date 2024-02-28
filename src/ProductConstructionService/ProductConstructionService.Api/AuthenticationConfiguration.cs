@@ -12,6 +12,7 @@ public static class AuthenticationConfiguration
     public const string GitHubAuthenticationKey = "GitHubAuthentication";
     public const string GitHubClientIdKey = "ClientId";
     public const string GitHubClientSecretKey = "ClientSecret";
+    public const string GitHubAgentNameKey = $"{GitHubAuthenticationKey}:AgentName";
 
     // The ConfigureAuthServices we're using has a parameter that tells the service which Authentication scheme to use
     // If an endpoints path matches the AuthenticationSchemeRequestPath, it will use the authentication scheme, otherwise, it will use the
@@ -30,7 +31,8 @@ public static class AuthenticationConfiguration
 
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
-            o.ProductHeader = new Octokit.ProductHeaderValue("PCS",
+            o.ProductHeader = new Octokit.ProductHeaderValue(
+                "PCS",
                 Assembly.GetEntryAssembly() 
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
