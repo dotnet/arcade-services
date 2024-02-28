@@ -19,7 +19,7 @@
     <PackageReference Include="Aspire.Azure.Storage.Queues" />
 	  <!-- Health check for the Azure Storage Queue fails if this is not pinned to 8.0.0. -->
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
-	  <PackageReference Include="Microsoft.DotNet.Kusto" />
+	<PackageReference Include="Microsoft.DotNet.Kusto" />
   </ItemGroup>
 
   <ItemGroup>
