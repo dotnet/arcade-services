@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Queue.JobRunners;
 using ProductConstructionService.Api.Queue.Jobs;
+using ProductConstructionService.Api.Queue.JobProcessors;
 
 namespace ProductConstructionService.Api.Tests;
 public class JobScopeTests
@@ -19,16 +19,16 @@ public class JobScopeTests
 
         Mock<ITelemetryScope> telemetryScope = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
+        TextJob textJob = new() { Text = string.Empty };
 
         metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(telemetryScope.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
-        services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobRunner>().Object);
+        services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobProcessor>().Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobProcessorScopeManager scopeManager = new(false, serviceProvider);
+        JobScopeManager scopeManager = new(false, serviceProvider);
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {
@@ -48,19 +48,19 @@ public class JobScopeTests
 
         Mock<ITelemetryScope> metricRecorderScopeMock = new();
         Mock<ITelemetryRecorder> metricRecorderMock = new();
-        TextJob textJob = new() { Id = Guid.NewGuid(), Text = string.Empty };
+        TextJob textJob = new() { Text = string.Empty };
 
         metricRecorderMock.Setup(m => m.RecordJob(textJob)).Returns(metricRecorderScopeMock.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
 
-        Mock<IJobRunner> jobRunnerMock = new();
-        jobRunnerMock.Setup(j => j.RunAsync(textJob, It.IsAny<CancellationToken>())).Throws<Exception>();
+        Mock<IJobProcessor> jobRunnerMock = new();
+        jobRunnerMock.Setup(j => j.ProcessJobAsync(textJob, It.IsAny<CancellationToken>())).Throws<Exception>();
         services.AddKeyedSingleton(nameof(TextJob), jobRunnerMock.Object);
 
         IServiceProvider serviceProvider = services.BuildServiceProvider();
 
-        JobProcessorScopeManager scopeManager = new(false, serviceProvider);
+        JobScopeManager scopeManager = new(false, serviceProvider);
 
         using (JobScope jobScope = scopeManager.BeginJobScopeWhenReady())
         {

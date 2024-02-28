@@ -4,38 +4,42 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
+using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var vmrPath = builder.Configuration[VmrConfiguration.VmrPathKey]
-    ?? throw new ArgumentException($"{VmrConfiguration.VmrPathKey} environmental variable must be set");
-var tmpPath = builder.Configuration[VmrConfiguration.TmpPathKey]
-    ?? throw new ArgumentException($"{VmrConfiguration.TmpPathKey} environmental variable must be set");
-var vmrUri = builder.Configuration[VmrConfiguration.VmrUriKey]
-    ?? throw new ArgumentException($"{VmrConfiguration.VmrUriKey} environmental variable must be set");
+string vmrPath = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrPathKey);
+string tmpPath = builder.Configuration.GetRequiredValue(VmrConfiguration.TmpPathKey);
+string vmrUri = builder.Configuration.GetRequiredValue(VmrConfiguration.VmrUriKey);
 
-var managedIdentityClientId = builder.Configuration["ManagedIdentityClientId"] ?? string.Empty;
-DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions { ManagedIdentityClientId = managedIdentityClientId });
+DefaultAzureCredential credential = new(new DefaultAzureCredentialOptions
+{
+    ManagedIdentityClientId = builder.Configuration[PcsConfiguration.ManagedIdentityId]
+});
 
 builder.Configuration.AddAzureKeyVault(
-    new Uri($"https://{builder.Configuration["KeyVaultName"]}.vault.azure.net/"),
+    new Uri($"https://{builder.Configuration.GetRequiredValue(PcsConfiguration.KeyVaultName)}.vault.azure.net/"),
     credential);
+
+string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConfiguration.DatabaseConnectionString);
 
 builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration["build-asset-registry-sql-connection-string"] ?? string.Empty);
+    options.UseSqlServer(databaseConnectionString, sqlOptions =>
+    {
+        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+    });
 });
 
 builder.AddTelemetry();
 
 builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
-
 builder.AddWorkitemQueues(credential);
+builder.Services.AddKustoClientProvider("Kusto");
 
 builder.AddServiceDefaults();
 
@@ -63,7 +67,7 @@ app.MapControllers();
 if (app.Environment.IsDevelopment())
 {
     var queueServiceClient = app.Services.GetRequiredService<QueueServiceClient>();
-    var queueClient = queueServiceClient.GetQueueClient(app.Configuration[QueueConfiguration.JobQueueConfigurationKey]);
+    var queueClient = queueServiceClient.GetQueueClient(app.Configuration.GetRequiredValue(QueueConfiguration.JobQueueNameConfigurationKey));
     await queueClient.CreateIfNotExistsAsync();
 }
 

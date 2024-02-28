@@ -8,22 +8,19 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobProcessor(
-    ILogger<JobProcessor> logger,
-    IOptions<JobProcessorOptions> options,
-    JobProcessorScopeManager scopeManager,
+public class JobConsumer(
+    ILogger<JobConsumer> logger,
+    IOptions<JobConsumerOptions> options,
+    JobScopeManager scopeManager,
     QueueServiceClient queueServiceClient)
     : BackgroundService
 {
-    private readonly ILogger<JobProcessor> _logger = logger;
-    private readonly IOptions<JobProcessorOptions> _options = options;
-    private readonly JobProcessorScopeManager _scopeManager = scopeManager;
+    private readonly ILogger<JobConsumer> _logger = logger;
+    private readonly IOptions<JobConsumerOptions> _options = options;
+    private readonly JobScopeManager _scopeManager = scopeManager;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        // The API won't be initialized until the BackgroundService goes async. Since the scopeManagers blocks aren't async, we have to do it here
-        await Task.Delay(1000);
-
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
@@ -86,8 +83,8 @@ public class JobProcessor(
             // Let the job retry a few times. If it fails a few times, delete it from the queue, it's a bad job
             if (message.DequeueCount == _options.Value.MaxJobRetries)
             {
-                _logger.LogError("Job {jobId} has failed {maxAttempts} times. Discarding the message {message} from the queue"
-                    , job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
+                _logger.LogError("Job {jobId} has failed {maxAttempts} times. Discarding the message {message} from the queue",
+                    job.Id, _options.Value.MaxJobRetries, message.Body.ToString());
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }
         }

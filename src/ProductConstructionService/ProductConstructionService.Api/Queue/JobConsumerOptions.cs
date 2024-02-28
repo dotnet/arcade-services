@@ -3,9 +3,9 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobProcessorOptions
+public class JobConsumerOptions
 {
-    public const string ConfigurationKey = "JobProcessorOptions";
+    public const string ConfigurationKey = "JobConsumerOptions";
 
     public required TimeSpan QueuePollTimeout { get; init; }
     public required string JobQueueName { get; init; }

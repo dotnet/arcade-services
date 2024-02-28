@@ -19,13 +19,13 @@ public static class VmrConfiguration
 
     public static void AddVmrRegistrations(this WebApplicationBuilder builder, string vmrPath, string tmpPath, string vmrUri)
     {
-        builder.Services.TryAddSingleton<IBasicBarClient, SqlBarClient>();
+        builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddVmrManagers(
             "git",
             vmrPath,
             tmpPath,
-            builder.Configuration["BotAccount-dotnet-bot-repo-PAT"],
-            builder.Configuration["dn-bot-all-orgs-code-r"]);
+            builder.Configuration[PcsConfiguration.GitHubToken],
+            builder.Configuration[PcsConfiguration.AzDOToken]);
 
         if (!builder.Environment.IsDevelopment())
         {
