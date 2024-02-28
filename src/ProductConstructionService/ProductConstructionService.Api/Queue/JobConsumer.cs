@@ -21,6 +21,8 @@ public class JobConsumer(
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        Thread.Yield();
+
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
         while (!cancellationToken.IsCancellationRequested)
