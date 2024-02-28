@@ -78,7 +78,7 @@ public class CodeFlowJobProcessor(
             _logger.LogError(e, "Failed to flow changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
-            return;
+            throw;
         }
 
         if (!hadUpdates)
