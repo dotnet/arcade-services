@@ -5,7 +5,8 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Net.Http.Headers;
+using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
@@ -31,12 +32,15 @@ string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConf
 builder.AddBuildAssetRegistry(databaseConnectionString);
 builder.AddTelemetry();
 builder.AddVmrRegistrations(vmrPath, tmpPath);
+builder.AddGitHubClientFactory();
 
 // When not running locally, wait for the VMR to be initialized before starting the background processor
+// and don't add authentication to the API endpoints
 if (!builder.Environment.IsDevelopment())
 {
     builder.AddVmrInitialization(vmrUri);
     builder.AddWorkitemQueues(credential, waitForInitialization: true);
+    builder.AddEndpointAuthentication(requirePolicyRole: true);
 }
 else
 {
@@ -50,7 +54,32 @@ builder.AddServiceDefaults();
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.ApiKey,
+            In = ParameterLocation.Header,
+            Scheme = "bearer",
+            Name = HeaderNames.Authorization
+        });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {   Reference = new OpenApiReference
+                {
+                    Id = "Bearer",
+                    Type = ReferenceType.SecurityScheme
+                }
+            },
+            []
+        }
+    });
+});
 
 var app = builder.Build();
 

@@ -1,48 +1,50 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Linq;
-using System.Reflection;
-using System.Security.Claims;
 using System.Threading.Tasks;
-using Maestro.Data;
-using Maestro.Web.Pages.Account;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
+using Maestro.Data;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
+using Microsoft.DotNet.Web.Authentication.AccessToken;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.Web.Authentication.GitHub;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Web.Authentication;
-using Microsoft.DotNet.Web.Authentication.AccessToken;
-using Microsoft.DotNet.Web.Authentication.GitHub;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
 
-namespace Maestro.Web;
+namespace Maestro.Authentication;
 
-public partial class Startup
+public static class AuthenticationConfiguration
 {
     public const string GitHubScheme = "GitHub";
 
     public const string MsftAuthorizationPolicyName = "msft";
 
-    private void ConfigureAuthServices(IServiceCollection services)
+    public static readonly TimeSpan LoginCookieLifetime = new(hours: 0, minutes: 30, seconds: 0);
+
+    public const string AccountSignInRoute = "/Account/SignIn";
+
+    public static void ConfigureAuthServices(this IServiceCollection services, bool requirePolicyRole, IConfigurationSection gitHubAuthenticationSection, string authenticationSchemeRequestPath)
     {
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(
                 options => { options.Lockout.AllowedForNewUsers = false; })
             .AddEntityFrameworkStores<BuildAssetRegistryContext>();
-            
+
         services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
-                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-            })
-            .AddPolicyScheme("Contextual","Contextual",
-                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
-            .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
+        {
+            options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
+            options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+        })
+            .AddPolicyScheme("Contextual", "Contextual",
+                policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments(authenticationSchemeRequestPath) ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
             .AddPersonalAccessToken<ApplicationUser>(
                 options =>
                 {
@@ -97,13 +99,15 @@ public partial class Startup
                             context.ReplacePrincipal(principal);
                         }
                     };
-                });
+                }).AddGitHubOAuth(gitHubAuthenticationSection, GitHubScheme);
+        
+
         services.ConfigureExternalCookie(
             options =>
             {
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                 options.ReturnUrlParameter = "returnUrl";
-                options.LoginPath = AccountController.AccountSignInRoute;
+                options.LoginPath = AccountSignInRoute;
                 options.Events = new CookieAuthenticationEvents
                 {
                     OnRedirectToLogin = ctx =>
@@ -130,7 +134,7 @@ public partial class Startup
                 options.ExpireTimeSpan = LoginCookieLifetime;
                 options.SlidingExpiration = true;
                 options.ReturnUrlParameter = "returnUrl";
-                options.LoginPath = AccountController.AccountSignInRoute;
+                options.LoginPath = AccountSignInRoute;
                 options.Events = new CookieAuthenticationEvents
                 {
                     OnSigningIn = async ctx =>
@@ -193,9 +197,9 @@ public partial class Startup
                     policy =>
                     {
                         policy.RequireAuthenticatedUser();
-                        if (!HostingEnvironment.IsDevelopment())
+                        if (requirePolicyRole)
                         {
-                            policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","arcade-contrib"));
+                            policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet", "dnceng"), GitHubClaimResolver.GetTeamRole("dotnet", "arcade-contrib"));
                         }
                     });
             });
@@ -205,6 +209,11 @@ public partial class Startup
             {
                 options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
             });
+    }
+
+    public static bool ShouldAddClaimToUser(Claim c)
+    {
+        return c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" || c.Type == ClaimTypes.Role;
     }
 
     private static async Task UpdateUserTokenAsync(BuildAssetRegistryContext dbContext,
@@ -275,7 +284,7 @@ public partial class Startup
                 string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
                 var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
                     await gitHubClaimResolver.GetMembershipClaims(token)
-                ).Where(AccountController.ShouldAddClaimToUser);
+                ).Where(ShouldAddClaimToUser);
                 var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
 
                 // remove old claims

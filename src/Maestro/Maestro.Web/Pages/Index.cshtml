@@ -1,6 +1,7 @@
 @page
 @model Maestro.Web.Pages.IndexModel
 @using System.Web
+@using Maestro.Authentication
 @using Maestro.Data
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
@@ -84,7 +85,7 @@
         window.applicationData = {
           brand: '@Html.Raw(ViewBag.Brand)',
           userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))', // lgtm [cs/inappropriate-encoding] Generating javascript object
-          authorized: @Html.Raw((await Authorization.AuthorizeAsync(HttpContext.User, Startup.MsftAuthorizationPolicyName)).Succeeded.ToString().ToLower()),
+          authorized: @Html.Raw((await Authorization.AuthorizeAsync(HttpContext.User, AuthenticationConfiguration.MsftAuthorizationPolicyName)).Succeeded.ToString().ToLower()),
           themes: [
             @foreach (var theme in Model.Themes)
             {
