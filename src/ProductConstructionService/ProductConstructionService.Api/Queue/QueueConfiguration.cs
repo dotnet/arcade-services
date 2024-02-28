@@ -7,18 +7,18 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public static class QueueConfiguration
+internal static class QueueConfiguration
 {
     public const string JobQueueNameConfigurationKey = $"{JobConsumerOptions.ConfigurationKey}:JobQueueName";
 
-    public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential)
+    public static void AddWorkitemQueues(this WebApplicationBuilder builder, DefaultAzureCredential credential, bool waitForInitialization)
     {
-        builder.AddAzureQueueService("queues", (settings) => { settings.Credential = credential; });
+        builder.AddAzureQueueService("queues", settings => settings.Credential = credential);
 
         var queueName = builder.Configuration.GetRequiredValue(JobQueueNameConfigurationKey);
 
         // When running the service locally, the JobsProcessor should start in the Working state
-        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobScopeManager>(sp, !builder.Environment.IsDevelopment()));
+        builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<JobScopeManager>(sp, waitForInitialization));
         builder.Services.Configure<JobConsumerOptions>(
             builder.Configuration.GetSection(JobConsumerOptions.ConfigurationKey));
         builder.Services.AddTransient(sp =>

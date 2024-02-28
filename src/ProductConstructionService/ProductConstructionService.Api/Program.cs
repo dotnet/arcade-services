@@ -5,7 +5,8 @@ using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
 using Microsoft.DotNet.Kusto;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using ProductConstructionService.Api;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -27,18 +28,21 @@ builder.Configuration.AddAzureKeyVault(
 
 string databaseConnectionString = builder.Configuration.GetRequiredValue(PcsConfiguration.DatabaseConnectionString);
 
-builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
-{
-    options.UseSqlServer(databaseConnectionString, sqlOptions =>
-    {
-        sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-    });
-});
-
+builder.AddBuildAssetRegistry(databaseConnectionString);
 builder.AddTelemetry();
+builder.AddVmrRegistrations(vmrPath, tmpPath);
 
-builder.AddVmrRegistrations(vmrPath, tmpPath, vmrUri);
-builder.AddWorkitemQueues(credential);
+// When not running locally, wait for the VMR to be initialized before starting the background processor
+if (!builder.Environment.IsDevelopment())
+{
+    builder.AddVmrInitialization(vmrUri);
+    builder.AddWorkitemQueues(credential, waitForInitialization: true);
+}
+else
+{
+    builder.AddWorkitemQueues(credential, waitForInitialization: false);
+}
+
 builder.Services.AddKustoClientProvider("Kusto");
 
 builder.AddServiceDefaults();

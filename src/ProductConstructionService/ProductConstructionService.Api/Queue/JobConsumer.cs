@@ -21,7 +21,9 @@ public class JobConsumer(
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        Thread.Yield();
+        // We yield so that the rest of the service can progress initialization
+        // Otherwise, the service will be stuck here
+        await Task.Yield();
 
         QueueClient queueClient = queueServiceClient.GetQueueClient(_options.Value.JobQueueName);
         _logger.LogInformation("Starting to process PCS jobs {queueName}", _options.Value.JobQueueName);
