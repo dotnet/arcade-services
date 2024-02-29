@@ -3,7 +3,7 @@
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobScopeManager
+internal class JobScopeManager
 {
     public JobScopeManager(bool initializingOnStartup, IServiceProvider serviceProvider)
     {

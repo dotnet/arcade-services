@@ -128,8 +128,8 @@ internal class VmrBackFlower(
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
+        ILocalGitRepo targetRepo = await PrepareRepoAndVmr(mappingName, targetBranch, build.Commit, cancellationToken);
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-        ILocalGitRepo targetRepo = await PrepareRepoAndVmr(mapping, targetBranch, build.Commit, cancellationToken);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
         return await FlowBackAsync(

@@ -1,47 +1,50 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using ProductConstructionService.Api.Controllers.Models;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Controllers;
 
 [Route("codeflow")]
-public class CodeFlowController(
+internal class CodeFlowController(
         IBasicBarClient barClient,
         JobProducerFactory jobProducerFactory)
-    : Controller
+    : InternalController
 {
     private readonly IBasicBarClient _barClient = barClient;
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
-    [HttpPost("create-branch")]
-    public async Task<IActionResult> CreateBranch(string subscriptionId, int buildId)
+    [HttpPost]
+    public async Task<IActionResult> CreateBranch([Required, FromBody] CreateBranchRequest request)
     {
-        if (!Guid.TryParse(subscriptionId, out Guid subId))
+        if (!ModelState.IsValid)
         {
-            return BadRequest("Provided subscription ID is not a GUID");
+            return BadRequest(ModelState);
         }
 
-        Subscription subscription = await _barClient.GetSubscriptionAsync(subId);
+        Subscription subscription = await _barClient.GetSubscriptionAsync(request.SubscriptionId);
         if (subscription == null)
         {
-            return NotFound($"Subscription {subscriptionId} not found");
+            return NotFound($"Subscription {request.SubscriptionId} not found");
         }
 
-        Build build = await _barClient.GetBuildAsync(buildId);
+        Build build = await _barClient.GetBuildAsync(request.BuildId);
         if (build == null)
         {
-            return NotFound($"Build {buildId} not found");
+            return NotFound($"Build {request.BuildId} not found");
         }
 
         await _jobProducerFactory.Create<CodeFlowJob>().ProduceJobAsync(new()
         {
-            BuildId = buildId,
-            SubscriptionId = subscriptionId,
+            BuildId = request.BuildId,
+            SubscriptionId = request.SubscriptionId,
+            TargetBranch = request.TargetBranch,
         });
 
         return Ok();

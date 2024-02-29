@@ -8,6 +8,7 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api;
+using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
@@ -48,12 +49,9 @@ else
 }
 
 builder.Services.AddKustoClientProvider("Kusto");
-
 builder.AddServiceDefaults();
+builder.Services.AddControllers().EnableInternalControllers();
 
-// Add services to the container.
-
-builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition(

@@ -1,16 +1,17 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.DarcLib;
 using ProductConstructionService.Api.Queue.JobProcessors;
 using ProductConstructionService.Api.Queue.Jobs;
-using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobScope(
-    Action finalizer,
-    IServiceScope serviceScope,
-    ITelemetryRecorder telemetryRecorder) : IDisposable
+internal class JobScope(
+        Action finalizer,
+        IServiceScope serviceScope,
+        ITelemetryRecorder telemetryRecorder)
+    : IDisposable
 {
     private readonly IServiceScope _serviceScope = serviceScope;
     private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
@@ -36,7 +37,7 @@ public class JobScope(
 
         var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobProcessor>(_job.Type);
 
-        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordJob(_job))
+        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordJob(_job.Type))
         {
             await jobRunner.ProcessJobAsync(_job, cancellationToken);
             telemetryScope.SetSuccess();

@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.Queue;
 
 namespace ProductConstructionService.Api.Tests;

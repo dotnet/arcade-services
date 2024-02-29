@@ -4,11 +4,10 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using ProductConstructionService.Api.Queue;
-using ProductConstructionService.Api.Telemetry;
 
 namespace ProductConstructionService.Api;
 
-public class InitializationBackgroundService(
+internal class InitializationBackgroundService(
         IRepositoryCloneManager repositoryCloneManager,
         ITelemetryRecorder telemetryRecorder,
         InitializationBackgroundServiceOptions options,

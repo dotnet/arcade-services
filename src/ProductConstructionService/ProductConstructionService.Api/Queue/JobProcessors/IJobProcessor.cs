@@ -5,7 +5,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue.JobProcessors;
 
-public interface IJobProcessor
+internal interface IJobProcessor
 {
     Task ProcessJobAsync(Job job, CancellationToken cancellationToken);
 }

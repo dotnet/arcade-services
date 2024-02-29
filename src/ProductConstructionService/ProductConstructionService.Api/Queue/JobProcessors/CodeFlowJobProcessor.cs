@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue.JobProcessors;
 
-public class CodeFlowJobProcessor(
+internal class CodeFlowJobProcessor(
         IVmrInfo vmrInfo,
         IBasicBarClient barClient,
         IVmrBackFlower vmrBackFlower,
@@ -78,20 +78,19 @@ public class CodeFlowJobProcessor(
             _logger.LogError(e, "Failed to flow changes for build {buildId} in subscription {subscriptionId}",
                 build.Id,
                 subscription.Id);
-            return;
+            throw;
         }
 
         if (!hadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}",
                 subscription.Id);
+            return;
         }
-        else
-        {
-            _logger.LogInformation("Code changes for {subscriptionId} ready in branch {branch} {targetRepository}",
-                subscription.Id,
-                subscription.TargetBranch,
-                subscription.TargetRepository);
-        }
+
+        _logger.LogInformation("Code changes for {subscriptionId} ready in branch {branch} {targetRepository}",
+            subscription.Id,
+            subscription.TargetBranch,
+            subscription.TargetRepository);
     }
 }

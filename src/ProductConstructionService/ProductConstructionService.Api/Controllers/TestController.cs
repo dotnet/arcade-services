@@ -6,9 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Queue.Jobs;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.Controllers;
+
 [Route("test")]
-public class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
+internal class TestController(JobProducerFactory pcsJobProducerFactory) : Controller
 {
     private readonly JobProducerFactory _jobProducerFactory = pcsJobProducerFactory;
 

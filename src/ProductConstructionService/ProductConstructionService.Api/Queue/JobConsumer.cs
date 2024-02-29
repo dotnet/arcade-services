@@ -8,7 +8,7 @@ using ProductConstructionService.Api.Queue.Jobs;
 
 namespace ProductConstructionService.Api.Queue;
 
-public class JobConsumer(
+internal class JobConsumer(
     ILogger<JobConsumer> logger,
     IOptions<JobConsumerOptions> options,
     JobScopeManager scopeManager,
