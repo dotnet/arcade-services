@@ -49,12 +49,9 @@ else
 }
 
 builder.Services.AddKustoClientProvider("Kusto");
-
 builder.AddServiceDefaults();
+builder.Services.AddControllers().EnableInternalControllers();
 
-// Add services to the container.
-
-builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition(
