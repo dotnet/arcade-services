@@ -52,3 +52,24 @@ secrets:
       name: dn-bot-all-orgs-code-r
       organizations: devdiv dnceng
       scopes: code
+
+  nethelix-engsrv-kusto-connection-string-query:
+    type: kusto-connection-string
+    parameters:
+      adApplication:
+        location: helixkv
+        name: nethelix-staging-kusto-ad-application
+      dataSource: https://engdata.kusto.windows.net:443
+      additionalParameters: Authority Id=72f988bf-86f1-41af-91ab-2d7cd011db47
+
+  github:
+    type: github-app-secret
+    parameters:
+      hasPrivateKey: true
+      hasWebhookSecret: false
+      hasOAuthSecret: true
+
+  maestro-token:
+    type: maestro-access-token
+    parameters:
+      environment: maestro.int-dot.net/
