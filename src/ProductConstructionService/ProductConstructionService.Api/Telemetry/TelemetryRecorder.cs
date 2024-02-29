@@ -15,19 +15,18 @@ public class TelemetryRecorder(
     private readonly ILogger<TelemetryRecorder> _logger = logger;
     private readonly TelemetryClient _telemetryClient = telemetryClient;
 
-    public ITelemetryScope RecordJob(string jobName)
-    {
-        return new TelemetryScope($"JobExecuted", _logger, _telemetryClient, new() { ["JobType"] = jobName }, []);
-    }
+    public ITelemetryScope RecordJob(string jobType)
+        => CreateScope("JobExecuted", new() {{ "JobType", jobType }});
 
     public ITelemetryScope RecordGitClone(string repoUri)
-    {
-        return new TelemetryScope($"GitClone", _logger, _telemetryClient, new() { ["Uri"] = repoUri }, []);   
-    }
+        => CreateScope("GitClone", new() { { "Uri", repoUri } });
 
     public ITelemetryScope RecordGitFetch(string repoUri)
+        => CreateScope("GitFetch", new() { { "Uri", repoUri } });
+
+    private TelemetryScope CreateScope(string metricName, Dictionary<string, string> customDimensions)
     {
-        return new TelemetryScope($"GitFetch", _logger, _telemetryClient, new() { ["Uri"] = repoUri }, []);
+        return new TelemetryScope(metricName, _logger, _telemetryClient, customDimensions, []);
     }
 
     private class TelemetryScope(
