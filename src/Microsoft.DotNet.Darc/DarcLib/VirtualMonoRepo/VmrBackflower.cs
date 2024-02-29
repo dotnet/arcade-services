@@ -64,8 +64,11 @@ public interface IVmrBackFlower
     /// <param name="build">Build to flow</param>
     /// <param name="branchName">New branch name</param>
     /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
-    /// <returns>True when there were changes to be flown</returns>
-    Task<bool> FlowBackAsync(
+    /// <returns>
+    ///     Boolean whether there were any changes to be flown
+    ///     and a path to the local repo where the new branch is created
+    ///  </returns>
+    Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
         string mappingName,
         Build build,
         string branchName,
@@ -121,7 +124,7 @@ internal class VmrBackFlower(
             discardPatches,
             cancellationToken);
 
-    public async Task<bool> FlowBackAsync(
+    public async Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
         string mappingName,
         Build build,
         string branchName,
@@ -132,7 +135,7 @@ internal class VmrBackFlower(
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        return await FlowBackAsync(
+        var hadUpdates = await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
@@ -141,6 +144,8 @@ internal class VmrBackFlower(
             branchName,
             true,
             cancellationToken);
+
+        return (hadUpdates, targetRepo.Path);
     }
 
     public async Task<bool> FlowBackAsync(

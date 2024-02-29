@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Maestro.Client.Models;
 using ProductConstructionService.Api.Queue.Jobs;
@@ -13,6 +14,8 @@ internal class CodeFlowJobProcessor(
         IBasicBarClient barClient,
         IVmrBackFlower vmrBackFlower,
         IVmrForwardFlower vmrForwardFlower,
+        ILocalLibGit2Client gitClient,
+        ITelemetryRecorder telemetryRecorder,
         ILogger<CodeFlowJobProcessor> logger)
     : IJobProcessor
 {
@@ -20,6 +23,8 @@ internal class CodeFlowJobProcessor(
     private readonly IBasicBarClient _barClient = barClient;
     private readonly IVmrBackFlower _vmrBackFlower = vmrBackFlower;
     private readonly IVmrForwardFlower _vmrForwardFlower = vmrForwardFlower;
+    private readonly ILocalLibGit2Client _gitClient = gitClient;
+    private readonly ITelemetryRecorder _telemetryRecorder = telemetryRecorder;
     private readonly ILogger<CodeFlowJobProcessor> _logger = logger;
 
     public async Task ProcessJobAsync(Job job, CancellationToken cancellationToken)
@@ -51,11 +56,13 @@ internal class CodeFlowJobProcessor(
             branchName);
 
         bool hadUpdates;
+        NativePath targetRepo;
 
         try
         {
             if (isForwardFlow)
             {
+                targetRepo = _vmrInfo.VmrPath;
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription.SourceDirectory,
                     build,
@@ -65,7 +72,7 @@ internal class CodeFlowJobProcessor(
             }
             else
             {
-                hadUpdates = await _vmrBackFlower.FlowBackAsync(
+                (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
                     subscription.SourceDirectory,
                     build,
                     branchName,
@@ -88,9 +95,12 @@ internal class CodeFlowJobProcessor(
             return;
         }
 
-        _logger.LogInformation("Code changes for {subscriptionId} ready in branch {branch} {targetRepository}",
+        _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
             subscription.Id,
-            subscription.TargetBranch,
-            subscription.TargetRepository);
+            subscription.TargetBranch);
+
+        using var scope = _telemetryRecorder.RecordGitPush(subscription.TargetRepository);
+        await _gitClient.Push(targetRepo, subscription.TargetBranch, subscription.TargetRepository);
+        scope.SetSuccess();
     }
 }
