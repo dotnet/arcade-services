@@ -73,6 +73,14 @@ public class RepositoryCloneManagerTests
     [Test]
     public async Task RepoIsClonedOnceTest()
     {
+        _fileSystem
+            .SetupSequence(x => x.DirectoryExists(_clonePath))
+            .Returns(false)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true);
+
         var clone = await _manager.PrepareCloneAsync(RepoUri, Ref, default);
         clone.Path.Should().Be(_clonePath);
         clone = await _manager.PrepareCloneAsync(RepoUri, "main", default);
@@ -119,6 +127,9 @@ public class RepositoryCloneManagerTests
         _fileSystem
             .SetupSequence(x => x.DirectoryExists(clonePath))
             .Returns(false)
+            .Returns(true)
+            .Returns(true)
+            .Returns(true)
             .Returns(true)
             .Returns(true)
             .Returns(true)
