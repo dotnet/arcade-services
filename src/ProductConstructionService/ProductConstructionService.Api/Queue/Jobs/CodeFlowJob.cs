@@ -8,7 +8,7 @@ namespace ProductConstructionService.Api.Queue.Jobs;
 /// </summary>
 internal class CodeFlowJob : Job
 {
-    public required string SubscriptionId { get; init; }
+    public required Guid SubscriptionId { get; init; }
     public required int BuildId { get; init; }
     public required string TargetBranch { get; init; }
 

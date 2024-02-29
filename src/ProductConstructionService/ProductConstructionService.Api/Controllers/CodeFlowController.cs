@@ -23,12 +23,12 @@ internal class CodeFlowController(
     [HttpPost]
     public async Task<IActionResult> CreateBranch([Required, FromBody] CreateBranchRequest request)
     {
-        if (!Guid.TryParse(request?.SubscriptionId, out Guid subId))
+        if (!ModelState.IsValid)
         {
-            return BadRequest("Provided subscription ID is not a GUID");
+            return BadRequest(ModelState);
         }
 
-        Subscription subscription = await _barClient.GetSubscriptionAsync(subId);
+        Subscription subscription = await _barClient.GetSubscriptionAsync(request.SubscriptionId);
         if (subscription == null)
         {
             return NotFound($"Subscription {request.SubscriptionId} not found");
