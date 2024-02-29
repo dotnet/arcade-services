@@ -16,7 +16,7 @@ internal class InitializationBackgroundService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using (ITelemetryScope scope = telemetryRecorder.RecordGitClone(options.VmrUri))
+        using (ITelemetryScope scope = telemetryRecorder.RecordGitOperation(TrackedGitOperation.Clone, options.VmrUri))
         {
             // If Vmr cloning is taking more than 20 min, something is wrong
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, new CancellationTokenSource(TimeSpan.FromMinutes(20)).Token);

@@ -99,8 +99,11 @@ internal class CodeFlowJobProcessor(
             subscription.Id,
             subscription.TargetBranch);
 
-        using var scope = _telemetryRecorder.RecordGitPush(subscription.TargetRepository);
-        await _gitClient.Push(targetRepo, subscription.TargetBranch, subscription.TargetRepository);
-        scope.SetSuccess();
+        // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
+        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+        {
+            await _gitClient.Push(targetRepo, subscription.TargetBranch, subscription.TargetRepository);
+            scope.SetSuccess();
+        }
     }
 }

@@ -244,7 +244,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
         {
             _logger.LogDebug("Cloning {repo} to {clonePath}", remoteUri, clonePath);
 
-            using ITelemetryScope scope = _telemetryRecorder.RecordGitClone(remoteUri);
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Clone, remoteUri);
             await _gitRepoCloner.CloneNoCheckoutAsync(remoteUri, clonePath, null);
             scope.SetSuccess();
         }
@@ -255,7 +255,7 @@ public class RepositoryCloneManager : IRepositoryCloneManager
 
             // We cannot do `fetch --all` as tokens might be needed but fetch +refs/heads/*:+refs/remotes/origin/* doesn't fetch new refs
             // So we need to call `remote update origin` to fetch everything
-            using ITelemetryScope scope = _telemetryRecorder.RecordGitFetch(remoteUri);
+            using ITelemetryScope scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Fetch, remoteUri);
             await _localGitRepo.UpdateRemoteAsync(clonePath, remote, cancellationToken);
             scope.SetSuccess();
         }

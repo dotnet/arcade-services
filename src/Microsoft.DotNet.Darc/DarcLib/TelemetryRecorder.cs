@@ -5,22 +5,24 @@ using System;
 
 namespace Microsoft.DotNet.DarcLib;
 
+public enum TrackedGitOperation
+{
+    Clone,
+    Fetch,
+    Push,
+}
+
 public interface ITelemetryRecorder
 {
     /// <summary>
     /// Records job duration and result in the customEvents table, with the `job.{jobType}` name
     /// </summary>
-    ITelemetryScope RecordJob(string jobName);
+    ITelemetryScope RecordJobCompletion(string jobName);
 
     /// <summary>
-    /// Records git clone duration and result.
+    /// Records git operation duration and result.
     /// </summary>
-    ITelemetryScope RecordGitClone(string repoUri);
-
-    /// <summary>
-    /// Records git fetch duration and result.
-    /// </summary>
-    ITelemetryScope RecordGitFetch(string repoUri);
+    ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri);
 }
 
 public interface ITelemetryScope : IDisposable
@@ -38,9 +40,8 @@ public class NoTelemetryRecorder : ITelemetryRecorder
 {
     private static readonly NoTelemetryScope _instance = new();
 
-    public ITelemetryScope RecordJob(string jobName) => _instance;
-    public ITelemetryScope RecordGitClone(string repoUri) => _instance;
-    public ITelemetryScope RecordGitFetch(string repoUri) => _instance;
+    public ITelemetryScope RecordJobCompletion(string jobName) => _instance;
+    public ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri) => _instance;
 
     public class NoTelemetryScope : ITelemetryScope
     {
