@@ -4,7 +4,6 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
-using Microsoft.DotNet.Kusto;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using ProductConstructionService.Api;
@@ -48,7 +47,6 @@ else
     builder.AddWorkitemQueues(credential, waitForInitialization: false);
 }
 
-builder.Services.AddKustoClientProvider("Kusto");
 builder.AddServiceDefaults();
 builder.Services.AddControllers().EnableInternalControllers();
 

@@ -10,6 +10,7 @@ internal static class PcsConfiguration
     public const string AzDOToken = "dn-bot-all-orgs-code-r";
     public const string GitHubClientId = "github-oauth-id";
     public const string GitHubClientSecret = "github-oauth-secret";
+    public const string KustoConnectionString = "nethelix-engsrv-kusto-connection-string-query";
 
     public static string GetRequiredValue(this IConfiguration configuration, string key)
         => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");

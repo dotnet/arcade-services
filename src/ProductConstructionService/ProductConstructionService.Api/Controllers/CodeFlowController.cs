@@ -44,7 +44,7 @@ internal class CodeFlowController(
         {
             BuildId = request.BuildId,
             SubscriptionId = request.SubscriptionId,
-            TargetBranch = request.TargetBranch,
+            PrBranch = request.PrBranch,
         });
 
         return Ok();
