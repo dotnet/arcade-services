@@ -2,18 +2,17 @@
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
-    <Description>This package provides access to the PCS Api</Description>
+    <Description>This package provides access to the PCS API</Description>
     <LangVersion>8.0</LangVersion>
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>ProductConstructionServiceApi</SwaggerClientName>
-    <SwaggerDocumentUri>https://localhost:53180/api/swagger.json</SwaggerDocumentUri>
+    <SwaggerDocumentUri>https://localhost:53180/swagger/v1/swagger.json</SwaggerDocumentUri>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="Newtonsoft.Json" />
-
     <PackageReference Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" />
   </ItemGroup>
 
