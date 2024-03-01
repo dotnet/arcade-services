@@ -20,8 +20,8 @@ internal class CodeFlowController(
     private readonly IBasicBarClient _barClient = barClient;
     private readonly JobProducerFactory _jobProducerFactory = jobProducerFactory;
 
-    [HttpPost]
-    public async Task<IActionResult> CreateBranch([Required, FromBody] CreateBranchRequest request)
+    [HttpPost(Name = "Flow")]
+    public async Task<IActionResult> FlowBuild([Required, FromBody] CreateBranchRequest request)
     {
         if (!ModelState.IsValid)
         {

@@ -15,7 +15,7 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager)
 {
     private readonly JobScopeManager _jobProcessorScopeManager = jobProcessorScopeManager;
 
-    [HttpPut("stop")]
+    [HttpPut("stop", Name = "Stop")]
     public IActionResult StopPcsJobProcessor()
     {
         _jobProcessorScopeManager.FinishJobAndStop();
@@ -23,7 +23,7 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager)
         return GetPcsJobProcessorStatus();
     }
 
-    [HttpPut("start")]
+    [HttpPut("start", Name = "Start")]
     public IActionResult StartPcsJobProcessor()
     {
         if (_jobProcessorScopeManager.State == JobsProcessorState.Initializing)
@@ -37,7 +37,7 @@ internal class StatusController(JobScopeManager jobProcessorScopeManager)
     }
 
     [AllowAnonymous]
-    [HttpGet]
+    [HttpGet(Name = "Status")]
     public IActionResult GetPcsJobProcessorStatus()
     {
         return Ok(_jobProcessorScopeManager.State.GetDisplayName());
