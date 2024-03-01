@@ -24,7 +24,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
-    /// <param name="branchName">New branch name</param>
+    /// <param name="newBranchName">New branch name</param>
     /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
     /// <param name="discardPatches">Keep patch files?</param>
     Task<bool> FlowBackAsync(
@@ -32,7 +32,7 @@ public interface IVmrBackFlower
         NativePath targetRepo,
         string? shaToFlow,
         int? buildToFlow,
-        string? branchName,
+        string? newBranchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 
@@ -44,7 +44,7 @@ public interface IVmrBackFlower
     /// <param name="targetRepo">Local checkout of the repository</param>
     /// <param name="shaToFlow">SHA to flow</param>
     /// <param name="buildToFlow">Build to flow</param>
-    /// <param name="branchName">New branch name</param>
+    /// <param name="newBranchName">New branch name</param>
     /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
     /// <param name="discardPatches">Keep patch files?</param>
     Task<bool> FlowBackAsync(
@@ -52,7 +52,7 @@ public interface IVmrBackFlower
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
-        string? branchName,
+        string? newBranchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default);
 
@@ -62,13 +62,16 @@ public interface IVmrBackFlower
     /// </summary>
     /// <param name="mappingName">Mapping to flow</param>
     /// <param name="build">Build to flow</param>
-    /// <param name="branchName">New branch name</param>
+    /// <param name="newBranchName">New branch name</param>
     /// <param name="targetBranch">Target branch to create the PR branch on top of</param>
-    /// <returns>True when there were changes to be flown</returns>
-    Task<bool> FlowBackAsync(
+    /// <returns>
+    ///     Boolean whether there were any changes to be flown
+    ///     and a path to the local repo where the new branch is created
+    ///  </returns>
+    Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
         string mappingName,
         Build build,
-        string branchName,
+        string newBranchName,
         string targetBranch,
         CancellationToken cancellationToken = default);
 }
@@ -121,10 +124,10 @@ internal class VmrBackFlower(
             discardPatches,
             cancellationToken);
 
-    public async Task<bool> FlowBackAsync(
+    public async Task<(bool HadUpdates, NativePath RepoPath)> FlowBackAsync(
         string mappingName,
         Build build,
-        string branchName,
+        string newBranchName,
         string targetBranch,
         CancellationToken cancellationToken = default)
     {
@@ -132,15 +135,17 @@ internal class VmrBackFlower(
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         Codeflow lastFlow = await GetLastFlowAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        return await FlowBackAsync(
+        var hadUpdates = await FlowBackAsync(
             mapping,
             targetRepo,
             lastFlow,
             build.Commit,
             build,
-            branchName,
+            newBranchName,
             true,
             cancellationToken);
+
+        return (hadUpdates, targetRepo.Path);
     }
 
     public async Task<bool> FlowBackAsync(
@@ -148,7 +153,7 @@ internal class VmrBackFlower(
         ILocalGitRepo targetRepo,
         string? shaToFlow,
         int? buildToFlow,
-        string? branchName,
+        string? newBranchName,
         bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
@@ -178,7 +183,7 @@ internal class VmrBackFlower(
             lastFlow,
             shaToFlow,
             build,
-            branchName,
+            newBranchName,
             discardPatches,
             cancellationToken);
     }
@@ -189,7 +194,7 @@ internal class VmrBackFlower(
         Codeflow lastFlow,
         string shaToFlow,
         Build? build,
-        string? branchName,
+        string? newBranchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -199,7 +204,7 @@ internal class VmrBackFlower(
             targetRepo,
             mapping,
             build,
-            branchName,
+            newBranchName,
             discardPatches,
             cancellationToken);
 
@@ -221,7 +226,7 @@ internal class VmrBackFlower(
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build? build,
-        string branchName,
+        string newBranchName,
         bool discardPatches,
         CancellationToken cancellationToken)
     {
@@ -266,7 +271,7 @@ internal class VmrBackFlower(
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
         await targetRepo.CheckoutAsync(lastFlow.TargetSha);
-        await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName);
+        await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName);
 
         // TODO https://github.com/dotnet/arcade-services/issues/3302: Remove VMR patches before we create the patches
 
@@ -303,7 +308,7 @@ internal class VmrBackFlower(
                 targetRepo,
                 mapping,
                 /* TODO: Find a previous build? */ null,
-                branchName,
+                newBranchName,
                 discardPatches,
                 cancellationToken);
 
@@ -324,7 +329,7 @@ internal class VmrBackFlower(
         await targetRepo.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
         await targetRepo.ResetWorkingTree();
 
-        _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", branchName, targetRepo);
+        _logger.LogInformation("New branch {branch} with flown code is ready in {repoDir}", newBranchName, targetRepo);
 
         return true;
     }

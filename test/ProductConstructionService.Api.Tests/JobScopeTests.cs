@@ -22,7 +22,7 @@ public class JobScopeTests
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Text = string.Empty };
 
-        metricRecorderMock.Setup(m => m.RecordJob(textJob.Type)).Returns(telemetryScope.Object);
+        metricRecorderMock.Setup(m => m.RecordJobCompletion(textJob.Type)).Returns(telemetryScope.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
         services.AddKeyedSingleton(nameof(TextJob), new Mock<IJobProcessor>().Object);
@@ -38,7 +38,7 @@ public class JobScopeTests
             await jobScope.RunJobAsync(CancellationToken.None);
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(textJob.Type), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJobCompletion(textJob.Type), Times.Once);
         telemetryScope.Verify(m => m.SetSuccess(), Times.Once);
     }
 
@@ -51,7 +51,7 @@ public class JobScopeTests
         Mock<ITelemetryRecorder> metricRecorderMock = new();
         TextJob textJob = new() { Text = string.Empty };
 
-        metricRecorderMock.Setup(m => m.RecordJob(textJob.Type)).Returns(metricRecorderScopeMock.Object);
+        metricRecorderMock.Setup(m => m.RecordJobCompletion(textJob.Type)).Returns(metricRecorderScopeMock.Object);
 
         services.AddSingleton(metricRecorderMock.Object);
 
@@ -71,7 +71,7 @@ public class JobScopeTests
             func.Should().ThrowAsync<Exception>();
         }
 
-        metricRecorderMock.Verify(m => m.RecordJob(textJob.Type), Times.Once);
+        metricRecorderMock.Verify(m => m.RecordJobCompletion(textJob.Type), Times.Once);
         metricRecorderScopeMock.Verify(m => m.SetSuccess(), Times.Never);
     }
 }

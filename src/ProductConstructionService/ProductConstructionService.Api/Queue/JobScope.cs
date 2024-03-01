@@ -37,7 +37,7 @@ internal class JobScope(
 
         var jobRunner = _serviceScope.ServiceProvider.GetRequiredKeyedService<IJobProcessor>(_job.Type);
 
-        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordJob(_job.Type))
+        using (ITelemetryScope telemetryScope = _telemetryRecorder.RecordJobCompletion(_job.Type))
         {
             await jobRunner.ProcessJobAsync(_job, cancellationToken);
             telemetryScope.SetSuccess();
