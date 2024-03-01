@@ -45,15 +45,14 @@ internal class CodeFlowJobProcessor(
         var isForwardFlow = build.GitHubRepository != _vmrInfo.VmrUri
             && build.AzureDevOpsRepository != _vmrInfo.VmrUri;
 
-        var branchName = $"darc-{subscription.TargetBranch}-{Guid.NewGuid()}";
-
-        _logger.LogInformation("{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
+        _logger.LogInformation(
+            "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
             isForwardFlow ? "Forward" : "Back",
             build.Id,
             subscription.Id,
             subscription.TargetRepository,
             subscription.TargetBranch,
-            branchName);
+            codeflowJob.PrBranch);
 
         bool hadUpdates;
         NativePath targetRepo;
@@ -66,7 +65,7 @@ internal class CodeFlowJobProcessor(
                 hadUpdates = await _vmrForwardFlower.FlowForwardAsync(
                     subscription.SourceDirectory,
                     build,
-                    branchName,
+                    codeflowJob.PrBranch,
                     subscription.TargetBranch,
                     cancellationToken);
             }
@@ -75,7 +74,7 @@ internal class CodeFlowJobProcessor(
                 (hadUpdates, targetRepo) = await _vmrBackFlower.FlowBackAsync(
                     subscription.SourceDirectory,
                     build,
-                    branchName,
+                    codeflowJob.PrBranch,
                     subscription.TargetBranch,
                     cancellationToken);
             }
@@ -102,7 +101,7 @@ internal class CodeFlowJobProcessor(
         // TODO https://github.com/dotnet/arcade-services/issues/3318: Handle failures (conflict, non-ff etc)
         using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
         {
-            await _gitClient.Push(targetRepo, subscription.TargetBranch, subscription.TargetRepository);
+            await _gitClient.Push(targetRepo, codeflowJob.PrBranch, subscription.TargetRepository);
             scope.SetSuccess();
         }
     }
