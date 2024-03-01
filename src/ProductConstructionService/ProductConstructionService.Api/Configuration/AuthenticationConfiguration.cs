@@ -1,12 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Reflection;
 using Maestro.Authentication;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.Configuration;
 
 public static class AuthenticationConfiguration
 {
@@ -18,9 +16,9 @@ public static class AuthenticationConfiguration
     private static readonly string AuthenticationSchemeRequestPath = string.Empty;
 
     public static void AddEndpointAuthentication(this WebApplicationBuilder builder, bool requirePolicyRole)
-    {       
+    {
         builder.Services.AddMemoryCache();
-     
+
         // TODO: https://github.com/dotnet/arcade-services/issues/3351
         IConfigurationSection gitHubAuthentication = builder.Configuration.GetSection(GitHubAuthenticationKey);
 
@@ -29,6 +27,6 @@ public static class AuthenticationConfiguration
         gitHubAuthentication[nameof(GitHubAuthenticationOptions.ClientSecret)]
             = builder.Configuration.GetRequiredValue(PcsConfiguration.GitHubClientSecret);
 
-        builder.Services.ConfigureAuthServices(requirePolicyRole, gitHubAuthentication, AuthenticationSchemeRequestPath);        
+        builder.Services.ConfigureAuthServices(requirePolicyRole, gitHubAuthentication, AuthenticationSchemeRequestPath);
     }
 }
