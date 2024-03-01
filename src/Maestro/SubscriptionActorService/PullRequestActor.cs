@@ -186,7 +186,6 @@ namespace SubscriptionActorService
 
         private readonly ILogger _logger;
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ActorId _id;
         private readonly IReminderManager _reminders;
         private readonly IActorStateManager _stateManager;
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
@@ -210,7 +209,6 @@ namespace SubscriptionActorService
             IActionRunner actionRunner,
             IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            _id = id;
             _reminders = reminders;
             _stateManager = stateManager;
             _mergePolicyEvaluator = mergePolicyEvaluator;
