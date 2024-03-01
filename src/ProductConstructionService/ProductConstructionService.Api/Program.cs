@@ -12,6 +12,7 @@ using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
 using ProductConstructionService.Api.VirtualMonoRepo;
+using Swashbuckle.AspNetCore.Swagger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,24 @@ builder.Services.AddSwaggerGen(options =>
             []
         }
     });
+});
+
+builder.Services.Configure<SwaggerOptions>(options =>
+{
+    options.SerializeAsV2 = false;
+    options.PreSerializeFilters.Add(
+        (doc, req) =>
+        {
+            doc.Servers = new List<OpenApiServer>
+            {
+                new()
+                {
+                    Url = $"{req.Scheme}://{req.Host.Value}/",
+                },
+            };
+
+            req.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
+        });
 });
 
 var app = builder.Build();
