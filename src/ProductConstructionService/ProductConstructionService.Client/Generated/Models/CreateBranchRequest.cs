@@ -19,7 +19,7 @@ namespace ProductConstructionService.Client.Models
         [JsonProperty("buildId")]
         public int? BuildId { get; set; }
 
-        [JsonProperty("targetBranch")]
-        public string TargetBranch { get; set; }
+        [JsonProperty("prBranch")]
+        public string PrBranch { get; set; }
     }
 }
