@@ -41,19 +41,15 @@ public class DependencyRegistrationTests
             initializeService: true,
             addEndpointAuthentication: true);
 
-        DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
-        {
-            foreach (ServiceDescriptor descriptor in builder.Services)
-            {
-                s.Add(descriptor);
-            }
-        },
-        out string message,
-        additionalExemptTypes: [
-            "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
-            "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"
-        ]).Should().BeTrue(message);
+        DependencyInjectionValidation.IsDependencyResolutionCoherent(
+            s => s.AddRange(builder.Services),
+            out string message,
+            additionalExemptTypes: [
+                "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
+                "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
+                "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
+                "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"
+            ])
+        .Should().BeTrue(message);
     }
 }
