@@ -43,8 +43,9 @@ stages:
   - job: Publish
     displayName: Publish Product Construction Service
     pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-ubuntu-2004
+      # name: NetCore1ESPool-Internal
+      # demands: ImageOverride -equals 1es-ubuntu-2004
+      vmImage: 'ubuntu-latest'
 
     steps:
     - checkout: self
@@ -52,7 +53,7 @@ stages:
     - powershell: |
         Write-Host "Dev branch suffix is $(devBranchSuffix)"
         $shortSha = "$(Build.SourceVersion)".Substring(0,10)
-        $newDockerTag = "$(Build.BuildNumber)-$shortSha$(devBranchSuffix)"
+        $newDockerTag = "$(Build.BuildNumber)-$shortSha$(devBranchSuffix)-$(System.JobAttempt)"
         Write-Host "##vso[task.setvariable variable=newDockerImageTag]$newDockerTag"
         Write-Host "set newDockerImageTag to $newDockerTag"
       displayName: Set new docker image tag variable
