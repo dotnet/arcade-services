@@ -53,7 +53,7 @@ public class DependencyRegistrationTests
             "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
             "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
             "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
-            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"])
-            .Should().BeTrue(message);
+            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"
+        ]).Should().BeTrue(message);
     }
 }

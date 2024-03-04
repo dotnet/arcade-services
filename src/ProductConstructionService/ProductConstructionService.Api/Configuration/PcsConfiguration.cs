@@ -22,6 +22,17 @@ internal static class PcsConfiguration
     public static string GetRequiredValue(this IConfiguration configuration, string key)
         => configuration[key] ?? throw new ArgumentException($"{key} missing from the configuration / environment settings");
 
+    /// <summary>
+    /// Registers all necessary services for the Product Construction Service
+    /// </summary>
+    /// <param name="vmrPath">Path to the VMR on local disk</param>
+    /// <param name="tmpPath">Path to the VMR tmp folder</param>
+    /// <param name="vmrUri">Uri of the VMR</param>
+    /// <param name="credential">Credentials used to authenticate to Azure Resources</param>
+    /// <param name="databaseConnectionString">ConnectionString to the BAR database</param>
+    /// <param name="initializeService">Run service initialization? Currently this just means cloning the VMR</param>
+    /// <param name="addEndpointAuthentication">Add endpoint authentication?</param>
+    /// <param name="keyVaultUri">Uri to used KeyVault</param>
     public static void ConfigurePcs(
         this WebApplicationBuilder builder,
         string vmrPath,
