@@ -56,6 +56,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public const string NonShippingAttributeName = "NonShipping";
         public const string DotNetReleaseShippingAttributeName = "DotNetReleaseShipping";
         public const string CategoryAttributeName = "Category";
+
         public void Cancel()
         {
             _tokenSource.Cancel();
