@@ -38,7 +38,7 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
         Version = Version
@@ -48,7 +48,7 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = Version
@@ -58,7 +58,7 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" }
         },
         Id = "Microsoft.Cci.Extensions",
         Version = null
@@ -68,7 +68,7 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "false" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "false" }
         },
         Id = "Microsoft.DotNet.ApiCompat",
         Version = Version
@@ -80,8 +80,8 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" },
-            { "Category", "other" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "other" }
         },
         Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg"
     };
@@ -90,7 +90,7 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" }
         },
         Id = $"assets/manifests/{BuildRepoName}/{Id}/{MergedManifestName}"
     };
@@ -99,8 +99,8 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "true" },
-            { "Category", "none" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "true" },
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "none" }
         },
         Id = "assets/symbols/Microsoft.DotNet.ApiCompat.6.0.0-beta.20516.5.symbols.nupkg"
     };
@@ -109,8 +109,8 @@ internal class CreateMergedManifestBuildModelTests
     {
         Attributes = new Dictionary<string, string>
         {
-            { "NonShipping", "false" },
-            { "Category", "none" }
+            { PushMetadataToBuildAssetRegistry.NonShippingAttributeName, "false" },
+            { PushMetadataToBuildAssetRegistry.CategoryAttributeName, "none" }
         },
         Id = "assets/symbols/Microsoft.DotNet.Maestro.Client.6.0.0-beta.20516.5.symbols.nupkg"
     };
