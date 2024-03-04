@@ -1,10 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using ProductConstructionService.Api.Controllers;
-using ProductConstructionService.Api.Telemetry;
-using ProductConstructionService.Api.VirtualMonoRepo;
-using ProductConstructionService.Api.Queue;
 using Microsoft.AspNetCore.Builder;
 using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +8,7 @@ using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using FluentAssertions;
 using Microsoft.Extensions.Hosting;
+using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Tests;
 public class DependencyRegistrationTests
@@ -35,16 +32,14 @@ public class DependencyRegistrationTests
 
         DefaultAzureCredential credential = new();
 
-        builder.AddBuildAssetRegistry(_databaseConnectionString);
-        builder.AddTelemetry();
-        builder.AddVmrRegistrations(_vmrPath, _tmpPath);
-        builder.AddGitHubClientFactory();
-
-        builder.AddVmrInitialization(_vmrUri);
-        builder.AddWorkitemQueues(credential, waitForInitialization: true);
-        builder.AddEndpointAuthentication(requirePolicyRole: true);
-
-        builder.Services.AddControllers().EnableInternalControllers();
+        builder.ConfigurePcs(
+            vmrPath: _vmrPath,
+            tmpPath: _tmpPath,
+            vmrUri: _vmrUri,
+            credential: credential,
+            databaseConnectionString: _databaseConnectionString,
+            initializeService: true,
+            addEndpointAuthentication: true);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
         {
@@ -56,7 +51,9 @@ public class DependencyRegistrationTests
         out string message,
         additionalExemptTypes: [
             "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
-            "Microsoft.Extensions.Azure.AzureClientsGlobalOptions"])
+            "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
+            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ConfigurationServiceEndPointResolverOptions",
+            "Microsoft.Extensions.ServiceDiscovery.Abstractions.ServiceEndPointResolverOptions"])
             .Should().BeTrue(message);
     }
 }
