@@ -4,9 +4,7 @@
 using Azure.Identity;
 using Azure.Storage.Queues;
 using Maestro.Data;
-using Microsoft.Net.Http.Headers;
-using Microsoft.OpenApi.Models;
-using ProductConstructionService.Api;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Queue;
 using ProductConstructionService.Api.Telemetry;
@@ -49,33 +47,7 @@ else
 
 builder.AddServiceDefaults();
 builder.Services.AddControllers().EnableInternalControllers();
-
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition(
-        "Bearer",
-        new OpenApiSecurityScheme
-        {
-            Type = SecuritySchemeType.ApiKey,
-            In = ParameterLocation.Header,
-            Scheme = "bearer",
-            Name = HeaderNames.Authorization
-        });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {   Reference = new OpenApiReference
-                {
-                    Id = "Bearer",
-                    Type = ReferenceType.SecurityScheme
-                }
-            },
-            []
-        }
-    });
-});
+builder.ConfigureSwagger();
 
 var app = builder.Build();
 

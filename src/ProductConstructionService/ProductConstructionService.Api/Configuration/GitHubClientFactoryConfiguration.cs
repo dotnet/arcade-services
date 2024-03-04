@@ -4,7 +4,7 @@
 using System.Reflection;
 using Microsoft.DotNet.GitHub.Authentication;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.Configuration;
 
 public static class GitHubClientFactoryConfiguration
 {
@@ -20,8 +20,7 @@ public static class GitHubClientFactoryConfiguration
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
         });
+
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-
     }
-
 }

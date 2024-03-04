@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace ProductConstructionService.Api;
+namespace ProductConstructionService.Api.Configuration;
 
 internal static class DatabaseConfiguration
 {
