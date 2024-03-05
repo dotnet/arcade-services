@@ -310,23 +310,11 @@ namespace SubscriptionActorService
             (InProgressPullRequest? pr, bool canUpdate) = await SynchronizeInProgressPullRequestAsync();
 
             var subscriptionIds = updates.Count > 1
-                ? "subscriptions " + string.Join(", ",updates.Select(u => u.SubscriptionId).Distinct())
+                ? "subscriptions " + string.Join(", ", updates.Select(u => u.SubscriptionId).Distinct())
                 : "subscription " + updates[0].SubscriptionId;
 
             string result;
-            if (pr != null)
-            {
-                if (!canUpdate)
-                {
-                    _logger.LogInformation("PR {url} for {subscriptions} cannot be updated", pr.Url, subscriptionIds);
-                    return ActionResult.Create(false, "PR cannot be updated.");
-                }
-
-                await UpdatePullRequestAsync(pr, updates);
-                result = $"Pull Request '{pr.Url}' updated.";
-                _logger.LogInformation("Pull Request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
-            }
-            else
+            if (pr == null)
             {
                 // Create regular dependency update PR
                 string? prUrl = await CreatePullRequestAsync(updates);
@@ -335,7 +323,22 @@ namespace SubscriptionActorService
                     : $"Pull Request '{prUrl}' for {subscriptionIds} created";
 
                 _logger.LogInformation(result);
+
+                await _stateManager.RemoveStateAsync(PullRequestUpdate);
+                await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
+
+                return ActionResult.Create(true, "Pending updates applied. " + result);
             }
+
+            if (!canUpdate)
+            {
+                _logger.LogInformation("PR {url} for {subscriptions} cannot be updated", pr.Url, subscriptionIds);
+                return ActionResult.Create(false, "PR cannot be updated.");
+            }
+
+            await UpdatePullRequestAsync(pr, updates);
+            result = $"Pull Request '{pr.Url}' updated.";
+            _logger.LogInformation("Pull Request {url} for {subscriptions} was updated", pr.Url, subscriptionIds);
 
             await _stateManager.RemoveStateAsync(PullRequestUpdate);
             await _reminders.TryUnregisterReminderAsync(PullRequestUpdate);
