@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Common;
@@ -201,6 +202,28 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
         await DeleteBranchAsync(accountName, projectName, repoName, branch);
+    }
+
+    /// <summary>
+    ///     Finds out whether a branch exists in the target repo.
+    /// </summary>
+    /// <param name="repoUri">Repository to find the branch in</param>
+    /// <param name="branch">Branch to find</param>
+    public async Task<bool> DoesBranchExistAsync(string repoUri, string branch)
+    {
+        branch = GitHelpers.NormalizeBranchName(branch);
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/refs?filter=heads/{branch}",
+            _logger,
+            versionOverride: "7.0");
+
+        var refs = ((JArray)content["value"]).ToObject<List<AzureDevOpsRef>>();
+        return refs.Any(refs => refs.Name == $"refs/heads/{branch}");
     }
 
     /// <summary>

@@ -195,6 +195,26 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
+    ///     Finds out whether a branch exists in the target repo.
+    /// </summary>
+    /// <param name="repoUri">Repository to find the branch in</param>
+    /// <param name="branch">Branch to find</param>
+    public async Task<bool> DoesBranchExistAsync(string repoUri, string branch)
+    {
+        branch = GitHelpers.NormalizeBranchName(branch);
+        (string owner, string repo) = ParseRepoUri(repoUri);
+        try
+        {
+            await Client.Repository.Branch.Get(owner, repo, branch);
+            return true;
+        }
+        catch (NotFoundException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Deletes a branch in a repository
     /// </summary>
     /// <param name="owner">Repository owner</param>
